@@ -1,6 +1,8 @@
 # Rust kernel: tăng tốc simulation trước thực nghiệm RL
 
 Ngày cập nhật: **2026-09-12**. Trạng thái: **spec triển khai; chưa implement Rust**.
+Implementation plan (English): [rust_improve.md](../plan/rust_improve.md).
+
 
 ## 1. Quyết định và quan hệ với kế hoạch RL
 
@@ -8,7 +10,7 @@ Ngày cập nhật: **2026-09-12**. Trạng thái: **spec triển khai; chưa im
 
 Thứ tự chung: **R0 khóa oracle → R1 kernel → R2 observation/mask → R3 tích hợp → R4 parity/speed acceptance → L0 baseline RL → L1 tuning → L2 mở rộng có điều kiện → L3 báo cáo**. R0–R4 được định nghĩa ở tài liệu này; L0–L3 ở tài liệu RL. Chỉ bắt đầu thực nghiệm thuật toán khi R4 đạt.
 
-Spec nền: [spec.md](../spec.md). Plan nghiên cứu: [plan.md](../plan.md). Hai tài liệu improve bổ sung thứ tự triển khai mới; không tự đánh dấu T9–T11 hay các thực nghiệm đã hoàn thành. Tình trạng kết quả phải dựa vào artifacts thực tế.
+Spec nền: [spec_v1.0.md](spec_v1.0.md). Plan nghiên cứu: [plan_v1.0.md](../plan/plan_v1.0.md). Hai tài liệu improve bổ sung thứ tự triển khai mới; không tự đánh dấu T9–T11 hay các thực nghiệm đã hoàn thành. Tình trạng kết quả phải dựa vào artifacts thực tế.
 
 Mục tiêu port là giữ nguyên bài toán và thuật toán, giảm thời gian thực nghiệm. Tăng throughput không đồng nghĩa tăng chất lượng policy trên cùng số transitions.
 

@@ -1,0 +1,222 @@
+# Rust Backend Implementation Plan
+
+Date: 2026-09-12. Status: planned; no task below is accepted yet.
+
+## 1. Scope and execution contract
+
+Implement the [Rust specification](../spec/rust_improve.md) before starting the [RL improvement plan](improve_RL.md). Preserve the [base specification](../spec/spec_v1.0.md). The [original implementation plan](plan_v1.0.md) remains historical context and does not establish completion of new work.
+
+Sequence: **R0 Oracle -> R1 Kernel -> R2 Observation/masks -> R3 Integration -> R4 Acceptance -> RL L0-L3**.
+
+The specification defines behavior and acceptance thresholds; this plan defines executable work packages. If implementation exposes a contradiction, record it with a reproducer and resolve the contract before accepting dependent work. Do not silently change physics, reward, observation semantics, or acceptance thresholds.
+
+Each task starts unchecked. Mark it complete only after its acceptance criteria pass and evidence is recorded. Record task ID, source revision, exact command, exit status, artifact paths/hashes, and any remaining limitations in `reports/rust-migration.md`. Failed gates remain open. Proposed files and interfaces below are not claims that those files or commands already exist.
+
+## 2. Task dependencies
+
+| Task | Stage | Depends on | Deliverable |
+|---|---|---|---|
+| R0.1 | Oracle | None | Frozen contract and provenance manifest |
+| R0.2 | Oracle | R0.1 | Golden fixtures and replay harness |
+| R0.3 | Oracle | R0.1, R0.2 | Unprofiled Python reference measurements |
+| R1.1 | Kernel | R0 accepted | Buildable native domain and scenario loader |
+| R1.2 | Kernel | R1.1 | Passenger and vehicle lifecycle |
+| R1.3 | Kernel | R1.2 | Actions, ticks, travel, and costs |
+| R2.1 | Observation | R1.3 | Equivalent incremental observation |
+| R2.2 | Masks | R1.3 | Validated mask cache |
+| R3.1 | Integration | R2.1, R2.2 | PyO3 and Gym wrapper |
+| R3.2 | Integration | R3.1 | Evaluator, traces, and forecast compatibility |
+| R3.3 | Integration | R3.2 | Backend selection and checkpoint provenance |
+| R4.1 | Acceptance | R3.3 | Correctness and training verification |
+| R4.2 | Acceptance | R4.1, R0.3 | Unprofiled speed acceptance |
+| R4.3 | Handoff | R4.2 | Full workflow benchmark and frozen backend |
+
+## 3. R0: freeze the Python oracle
+
+### R0.1 - Inventory and freeze the reference
+
+- [ ] Record the Python after revision, dirty state, dependency lock, config hashes, manifests, scenario order, seeds, and machine/thread settings.
+- [ ] Inventory available checkpoints and reports without overwriting historical artifacts.
+- [ ] Document action IDs, observation keys/shapes/dtypes/scales, cost components, terminal behavior, RNG selection, and deterministic iteration order.
+- [ ] Record any source/base-spec discrepancy, especially time thresholds, rounding, boarded-channel semantics, and terminal settlement.
+
+**Implementation surface:** `domain.py`, `env/`, `sim/`, `control/`, `rewards/`, `training/checkpoint.py`; proposed `reports/rust-migration/oracle-manifest.json`.
+
+**Verification:** resolve every manifest reference and hash; reset identical scenarios repeatedly and compare initial state/observation/mask; review discrepancies against source and base spec.
+
+**Acceptance:** the exact reference can be reconstructed, no unresolved discrepancy affects the port contract, and reference artifacts are immutable. Python performance improvements are not a prerequisite.
+
+### R0.2 - Build golden fixtures and a differential harness
+
+- [ ] Export per-tick state/counters/events and per-control-step action, observation, mask, reward, and cost components.
+- [ ] Store input tapes, action traces, scenario/config hashes, and expected outputs separately from native outputs.
+- [ ] Cover zero, normal, peak, burst, and traffic cases; multiple seeds; M1/M2/M3; every action family; invalid actions; partial boarding/splits; capacity; abandonment; donor/cooldown guards; short turns; and terminal settlement.
+- [ ] Add fixtures for history boundaries, immediate completion after boarding, repeated splits, and finished passengers remaining in recent arrival history.
+- [ ] Select a fixed checkpoint for paired evaluation. Reuse the historical 15471.25 reference only if its exact checkpoint/config/days are recoverable; otherwise create and label a new Python reference.
+
+**Implementation surface:** proposed `tests/backend_parity/`, fixture exporter under `scripts/`, raw `runs/rust-migration/oracle/`.
+
+**Verification:** replay exported actions on Python and reproduce the fixture; deliberately alter a fixture value to demonstrate useful first-divergence reporting.
+
+**Acceptance:** all coverage categories have named fixtures; counters/status/IDs/masks compare exactly; observations use `rtol=1e-6, atol=1e-6`, costs/rewards use `rtol=1e-9, atol=1e-9`. Reports identify scenario, tick/step, field, expected value, and actual value. Equal mean reward alone never passes parity.
+
+### R0.3 - Establish an unprofiled Python benchmark
+
+- [ ] Build a benchmark entry point for fixed-action simulation, isolated learn, and fixed-checkpoint evaluation.
+- [ ] Disable cProfile and TIMERS, use matching trace/conservation settings, and separate setup from steady-state execution.
+- [ ] Warm up separately; collect at least five repetitions, raw wall times, actual transitions, thread settings, and peak RSS.
+- [ ] Use at least 12,288 transitions for isolated learn with the core hyperparameters, periodic evaluation disabled, and a reproducible initial model.
+
+**Outputs:** proposed `reports/rust-migration/python-benchmark.json` and exact reproduction commands in the report.
+
+**Verification:** Audit benchmark config and profiler flags; recompute median/min/max from raw repetitions and verify actual transition counts.
+
+**Acceptance:** raw repetitions and median/min/max are available; no comparison uses the profiled 266 decisions/s as the production reference. R4 will remeasure Python interleaved with Rust on the same machine.
+
+**R0 gate:** R0.1-R0.3 accepted. Freeze the oracle before native implementation.
+
+## 4. R1: implement the native kernel
+
+### R1.1 - Native build, domain, and scenario ownership
+
+- [ ] Create `crates/bus-sim/` and the chosen PyO3 packaging layout; document the release build/install procedure while retaining the existing Python CLI.
+- [ ] Implement enums, IDs, vehicles, cohort storage, cached loads, and incremental totals with checked bounds.
+- [ ] Pack immutable network/tapes/traffic/config once; define native ownership or a valid retained Python owner.
+- [ ] Implement reset and debug snapshots with deterministic vehicle/cohort ordering.
+
+**Verification:** native unit tests for reset, invalid dimensions/IDs, capacity bounds, ownership/lifetime, and initial snapshots against R0 fixtures.
+
+**Acceptance:** release build succeeds from documented commands; initial state matches the oracle; reset does not read files or repack all scenarios; no dangling borrowed buffers or overflow-prone unchecked counters.
+
+### R1.2 - Passenger and vehicle lifecycle
+
+- [ ] Implement arrivals, eligibility, partial boarding, lineage-preserving splits, alighting/completion, abandonment, and load/counter transitions.
+- [ ] Implement phase completion, travel duration/rounding, and terminal-idle behavior.
+- [ ] Retain finished records needed for metrics; remove them from active scans without losing historical information.
+
+**Verification:** targeted native tests and differential fixtures for full/partial buses, repeated splits, expiration boundaries, same-tick transitions, and zero demand. Enable conservation in tests.
+
+**Acceptance:** passenger mass, lineage, vehicle loads, statuses, event counts, and transition timing match Python at every tested tick. No cohort is duplicated or lost.
+
+### R1.3 - Actions, tick order, and costs
+
+- [ ] Implement NOOP, DISPATCH, RECALL, REASSIGN, SHORT_TURN, and SET_HEADWAY with unchanged mappings and guards.
+- [ ] Preserve action-before-interval and the complete tick order in Rust spec section 3.3.
+- [ ] Implement raw cost integration, weighted reward, mission changes, and one-time terminal unfinished settlement.
+- [ ] Derive ticks per interval from config; preserve reference semantics for supported configs.
+
+**Verification:** replay every R0 action trace; compare per-tick events/state and every cost component; test invalid action rejection before mutation.
+
+**Acceptance:** all kernel fixtures pass with the specified tolerances, terminal cost is charged exactly once, and no physics/reward change is bundled into migration.
+
+**R1 gate:** R1.1-R1.3 accepted; kernel behavior is equivalent before observation optimization.
+
+## 5. R2: observations and masks
+
+### R2.1 - Incremental observation with history parity
+
+- [ ] Implement current queue/age statistics and bounded history/completion statistics.
+- [ ] Preserve recent arrivals for completed/abandoned passengers without scanning the full finished list.
+- [ ] Preserve the current boarded-channel rule: currently ONBOARD cohorts whose boarding time lies in the window, not all boarding events.
+- [ ] Preserve all shapes, float32 outputs, normalization, validity tensors, context, and forecast placeholders.
+
+**Verification:** differential tests for every observation channel at reset and every step; exact window boundaries; repeated splits; board-then-complete; abandonment; final episode state; tapes identical in the past but different in the future.
+
+**Acceptance:** all observation fixtures meet tolerance and no feature leaks future data. A simple waiting-plus-onboard scan that drops finished-derived information fails acceptance.
+
+### R2.2 - Cache masks safely
+
+- [ ] Compute the initial mask at reset, validate against the current-state mask, and compute the next-state mask after step.
+- [ ] Remove redundant computation across collector/step/dispatcher where safe; retain guards for independently callable APIs.
+- [ ] Protect cache ownership and invalidate after any supported debug mutation.
+
+**Verification:** compare all 221 bits across fixtures; repeatedly call `action_masks()` without mutation; test masked/out-of-range actions, reset, cooldown boundaries, and caller attempts to modify returned arrays.
+
+**Acceptance:** masks match exactly, invalid actions leave state unchanged, NOOP stays valid, and repeated reads do not recompute or corrupt native cache.
+
+**R2 gate:** R2.1 and R2.2 accepted; observation and action semantics remain unchanged.
+
+## 6. R3: integrate the backend
+
+### R3.1 - PyO3 and Gym contract
+
+- [ ] Expose reset and one native step per control decision using the contract in Rust spec section 5.
+- [ ] Preserve Gym seeding/scenario selection, terminated/truncated behavior, terminal observations, and VecEnv auto-reset.
+- [ ] Convert native cost output into the existing `StepCosts` contract.
+- [ ] Return arrays with safe lifetime/ownership; do not rebuild Python WorldState each training step.
+
+**Verification:** Gym environment checks plus project environment tests; retain old obs/mask arrays across later steps/resets and prove they are unchanged; interleave two env instances to detect shared mutable state; test DummyVecEnv auto-reset.
+
+**Acceptance:** existing observation/action spaces and step/reset tuple contracts remain compatible; saved rollout inputs cannot be overwritten by subsequent native operations.
+
+### R3.2 - Evaluation, traces, and forecast
+
+- [ ] Add a common terminal-summary/trace interface with adapters for both backends.
+- [ ] Supply cohort/lineage data, departures, actions, totals, and vehicle snapshots needed by `evaluation/runner.py`.
+- [ ] Keep statistics and plots in Python; export detailed snapshots only at episode end or when tracing is enabled.
+- [ ] Keep forecast causal and reproduce context flags and episode reset behavior.
+
+**Verification:** fixed-checkpoint and heuristic paired evaluation; compare every metric, categorical/None output, raw component, and trace; exercise zero-demand/censored episodes and forecast on/off; render report outputs through the normal reporting pipeline.
+
+**Acceptance:** metrics and traces are equivalent within the frozen tolerances; forecast has no future access; no routine train step requires full Python state reconstruction.
+
+### R3.3 - Backend selection and lineage
+
+- [ ] Implement proposed `runtime.backend` selection throughout CLI/config, train, validation callbacks, diagnose, evaluate, and baselines.
+- [ ] Fail explicitly when Rust is requested but unavailable; retain Python fallback through explicit selection.
+- [ ] Record native build/version, backend, hashes, dependency lock, and source revision in metadata.
+- [ ] Preserve checkpoint compatibility checks; permit cross-backend loading only under matching contracts and verified parity.
+
+**Verification:** run all entry points for each backend; inspect validation metadata for accidental Python fallback; test missing extension, mismatched physics/schema, and matching cross-backend checkpoint load.
+
+**Acceptance:** backend choice is honored end to end and provenance checks remain effective.
+
+**R3 gate:** R3.1-R3.3 accepted; the Rust backend supports the complete workflow.
+
+## 7. R4: acceptance and handoff
+
+### R4.1 - Correctness and train smoke
+
+- [ ] Run the full differential suite, existing Python regression suite, native tests, Python lint/format checks, and native format/lint checks applicable to the selected layout.
+- [ ] Run a 2048-transition MaskablePPO smoke with finite obs/reward/loss, no masked invalid actions, and checkpoint save/load.
+- [ ] Compare fixed-checkpoint trajectories and per-day evaluation, not only means.
+
+**Evidence:** exact commands and logs, test counts, parity coverage matrix, checkpoint hashes.
+
+**Acceptance:** no required test fails; unexpected policy divergence is investigated. Newly trained weights or smoke cost are not required to equal the historical 15471.25 result.
+
+### R4.2 - Speed acceptance
+
+- [ ] Build release; warm up; rerun both backends in interleaved order, at least five repetitions each, with cProfile/TIMERS disabled.
+- [ ] Match hardware, threads, dependencies, scenario/action traces, model initialization, logging, and conservation settings.
+- [ ] Measure simulation-only and isolated learn of at least 12,288 transitions; measure fixed-checkpoint eval separately.
+- [ ] Report raw times, median/min/max, per-workload behavior, setup cost, and peak RSS. Investigate unstable measurements before deciding.
+
+**Verification:** Recompute both speedup ratios from raw paired benchmark files; inspect workload-level results and verify all protocol settings against R0.3.
+
+**Acceptance:** median total simulation wall over the trace suite is at most 50% of Python after; median isolated learn wall is at most 50% of Python after. Both require **at least 2x speedup**. **4x is a stretch goal**, not a completion requirement. Native-only speedup cannot substitute for end-to-end learn speedup.
+
+**On failure:** profile, optimize, rerun affected correctness checks, then repeat benchmarks. Keep R4 open; do not start RL tuning or silently reduce the threshold.
+
+### R4.3 - Full workflow and release decision
+
+- [ ] Run one full 245,760-transition seed on each backend with identical validation/checkpoint schedules, preferably the L0 protocol to permit reuse.
+- [ ] Measure actual total wall including validation/checkpoint, with setup reported separately; explain any evaluation or memory regression.
+- [ ] Complete `reports/rust-migration.md`, link raw evidence, and freeze the native revision/build used by RL experiments.
+- [ ] Document clean build/install, backend selection, fallback, and reproduction commands.
+
+**Verification:** Compare full-run timing and validation schedules from metadata; reproduce the documented release installation and a saved-checkpoint evaluation.
+
+**Acceptance:** full Rust workflow is faster than Python; all preceding gates pass; evidence is reproducible; the report explicitly marks R4 accepted. Reuse this seed for RL only if every L0 setting and artifact matches.
+
+## 8. Final acceptance checklist
+
+- [ ] R0: immutable oracle, golden coverage, and unprofiled reference accepted.
+- [ ] R1: domain/lifecycle/actions/ticks/costs accepted.
+- [ ] R2: observation/history and mask parity accepted.
+- [ ] R3: wrapper/evaluator/forecast/backend/provenance accepted.
+- [ ] R4: correctness, 2x simulation and learn gates, and faster full workflow accepted.
+- [ ] Historical reports preserved; new report distinguishes measured results from projections.
+- [ ] Handoff records the frozen backend revision and unlocks task L0.1 in the [RL plan](improve_RL.md).
+
+Until these items pass, the document remains an implementation plan, not proof of an accepted Rust backend.

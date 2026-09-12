@@ -1,6 +1,8 @@
 # Cải thiện RL sau khi tăng tốc bằng Rust
 
 Ngày: **2026-09-12**. Trạng thái: **đề xuất thực nghiệm; chưa triển khai theo tài liệu này**.
+Implementation plan (English): [improve_RL.md](../plan/improve_RL.md).
+
 
 ## 1. Quyết định và mục tiêu
 
@@ -8,7 +10,7 @@ Ngày: **2026-09-12**. Trạng thái: **đề xuất thực nghiệm; chưa tri�
 
 Thứ tự chung: **R0 khóa oracle → R1 kernel → R2 observation/mask → R3 tích hợp → R4 parity/speed acceptance → L0 baseline RL → L1 tuning → L2 mở rộng có điều kiện → L3 báo cáo**.
 
-[rust_improve.md](rust_improve.md) là nguồn chuẩn của R0–R4, đặc biệt benchmark/gates §7. Tài liệu này là nguồn chuẩn của L0–L3. [spec.md](../spec.md) và [plan.md](../plan.md) vẫn xác định physics, metrics và nghiên cứu core/ablation. Không suy luận rằng T9–T11 hay full study đã xong chỉ từ code/spec tồn tại.
+[rust_improve.md](rust_improve.md) là nguồn chuẩn của R0–R4, đặc biệt benchmark/gates §7. Tài liệu này là nguồn chuẩn của L0–L3. [spec_v1.0.md](spec_v1.0.md) và [plan_v1.0.md](../plan/plan_v1.0.md) vẫn xác định physics, metrics và nghiên cứu core/ablation. Không suy luận rằng T9–T11 hay full study đã xong chỉ từ code/spec tồn tại.
 
 Ba câu hỏi phải báo cáo riêng:
 
@@ -163,7 +165,7 @@ Manifest experiment ghi backend/build, data/config/obs/action/physical/reward ha
 
 ## 9. Nguồn và điểm bắt đầu triển khai
 
-- [Rust migration spec](rust_improve.md), [spec nền](../spec.md), [plan T9–T11](../plan.md).
+- [Rust migration spec](rust_improve.md), [spec nền](spec_v1.0.md), [plan T9–T11](../plan/plan_v1.0.md).
 - [Pilot report](../../reports/pilot.md), [Python after](../../reports/training-diagnosis-after.md), [forecast diagnostic](../../reports/forecast.md).
 - Code: `src/bus_rl/training/{train,callbacks,diagnose}.py`, `models/features.py`, `rewards/costs.py`, `evaluation/{runner,statistics}.py`, `configs/experiments/`.
 - [SB3 RL Tips](https://stable-baselines3.readthedocs.io/en/master/guide/rl_tips.html): đánh giá môi trường riêng, nhiều runs và tuning có kiểm soát. Các candidates trong tài liệu này là đề xuất cho project, không phải kết quả đã xác nhận từ tài liệu SB3.
