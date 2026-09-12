@@ -1,20 +1,21 @@
 # Rust migration report
 
-Status: **R0–R3 accepted (native kernel, observations, mask cache and backend integration at parity). R4 not started.**
+Status: **R0–R3 accepted; R4 partial (R4.1 correctness and the R4.2 light speed pass are recorded; R4.3 full workflow deferred).**
 Date: 2026-09-12.
 Spec: [docs/spec/rust_improve.md](spec/rust_improve.md). Plan: [docs/plan/rust_improve.md](plan/rust_improve.md).
 
-This report records measured evidence only. R0–R2 are accepted; R3 (integration)
-and R4 (speed/parity acceptance) are still open and no production backend is
-claimed yet.
+This report records measured evidence only. R0–R3 are accepted. The native
+crate exists and R4.1/R4.2 light evidence is recorded in section 7; R4.3 (a
+full 245,760-transition workflow on each backend) is deferred, so R4 is **not**
+marked accepted.
 
-## 0. Why R0 and not RL L0
+## 0. Why R0 first
 
-The RL plan's **L0 baseline** is gated on an *accepted Rust R4* (parity + ≥2×
-simulation/learn gates). No Rust crate exists in this revision, so RL L0 cannot
-run without violating the plan. The first executable stage in the documents
-referenced for this task is **R0 — freeze the Python oracle**. R0.1–R0.3 are
-implemented and accepted here; R1 is the next task.
+The RL plan's **L0 baseline** is gated on an *accepted Rust R4* (parity + >=2x
+simulation/learn gates). No Rust crate existed when this work started, so the
+first executable stage in the referenced documents was **R0 — freeze the Python
+oracle**. R0.1–R0.3 are implemented and accepted here; R1–R3 followed and are
+also accepted (sections 4–6). R4.3 is still open, so RL L0 is not yet unlocked.
 
 ## 1. R0.1 — Inventory and freeze the reference
 
@@ -342,36 +343,73 @@ cross-backend checkpoint rules;
 metadata) and `evaluate` with both backends producing identical
 `total_cost` (1e-9).
 
-## 7. R4 — light interleaved benchmark (partial)
+## 7. R4 — light benchmark and optimization profile (partial)
 
 R4.1 correctness is covered by `tests/backend_parity/test_rust_acceptance.py`:
 a 2048-transition MaskablePPO smoke on both backends (finite obs/reward/loss,
 checkpoint save/load) and fixed-checkpoint per-day parity over 10 validation
 days (per-day cost and full trace identical).
 
-R4.2 light pass, measured interleaved on one machine (24 CPUs, 16 torch
-threads, CPU-only) with profiler and TIMERS disabled, conservation off, 5
-repetitions and 1 warm-up per backend. Raw per-repetition times are in
+R4.2 light pass, measured interleaved on one machine (24 CPUs, 16 torch threads,
+CPU-only) with profiler and TIMERS disabled, conservation off, 5 repetitions and
+1 warm-up per backend. "Simulation" is the **median of per-repetition totals**
+(sum over the 5 workloads), not a sum of per-workload medians. Raw times are in
 `reports/rust-migration/speed-acceptance.json`.
 
 | Workload | Python median | Rust median | Speedup |
 |---|---:|---:|---:|
-| Simulation, 5 workloads / 600 decisions | 0.399 s | 0.0135 s | **29.59x** |
-| Isolated learn, 12,288 transitions | 34.80 s (353 t/s) | 8.63 s (1425 t/s) | **4.03x** |
-| Fixed-checkpoint eval, 10 days | 3.744 s | 1.660 s | **2.25x** |
+| Simulation, 5 workloads / 600 decisions | 0.343 s | 0.0138 s | **24.90x** |
+| Isolated learn, 12,288 transitions | 30.01 s (409 t/s) | 7.61 s (1614 t/s) | **3.94x** |
+| Fixed-checkpoint eval, 10 days | 3.330 s | 1.378 s | **2.42x** |
 
-- Per-workload simulation speedups range 21.8x (zero demand) to 31.7x (burst).
+- Per-workload simulation speedups range 17.6x (zero demand) to 27.0x (burst).
 - Isolated learn matches the core protocol (4 envs, n_steps 256, batch 256,
-  n_epochs 4, seed 11, no periodic eval); setup cost is reported separately
-  (Python 0.024 s vs Rust 0.031 s).
+  n_epochs 4, seed 11, no periodic eval); setup cost is reported separately.
 - Fixed-checkpoint evaluation reproduces mean `total_cost` **15471.25** on both
   backends with identical per-day costs and traces.
-- Peak RSS for the combined process: 500 MB.
+- Peak RSS **491 MB** is the peak of the process running **both** backends; it is
+  not a per-backend figure and cannot be used to compare memory use.
+- Learn timing is noisy across runs: a previous identical run measured Python
+  34.80 s / Rust 8.63 s (4.03x). The learn ratio therefore sits around
+  **3.9–4.0x**, comfortably above the 2x gate but not a guaranteed 4x.
 
-Gate status: simulation median total is 29.6x (>=2x required) and isolated learn
-is 4.03x (>=2x required, 4x stretch reached). The full 245,760-transition
-workflow (R4.3) is **deferred**: no heavy full run has been executed yet, so R4
-is not marked accepted.
+### Where the remaining time goes (Rust)
+
+Short Rust profile (4096 transitions, 4 envs, 1024/rollout; TIMERS on, so
+absolute times are inflated but shares are informative) in
+`reports/rust-migration/profile-native.json`:
+
+- Learn is now **PPO-update bound**: rollout collect 0.44 s vs PPO update
+  0.60 s (~57% of learn).
+- Inside a rollout, `env.step` is 0.37 s (84%); inference + buffer overhead is
+  only 0.06 s. Within `env.step`, Python-side observation post-processing
+  (`np.asarray` + `validate_observation`'s `isfinite` scan) is 0.19 s, about
+  half of the env step.
+- Eval is **inference bound**: over 10 days, `env.step` 0.135 s vs PPO inference
+  1.07 s (82%); metric summarization 0.064 s.
+- **Torch threads** (same config, median learn wall): 1 thread 1.12 s, 2 threads
+  0.99 s, 4 threads 0.99 s, 8 threads 1.15 s, 16 threads 2.71 s. The default 16
+  threads is ~2.7x slower than 2–4 here; a lower thread count is recommended
+  before the full workflow.
+
+### Optimizations applied in this pass
+
+- **Shared native scenario store**: `crates/bus-sim-py` `ScenarioStore` +
+  `Kernel.from_store` pack each scenario once per process and share immutable
+  tapes via `Arc`; `src/bus_rl/backend/native.py` caches stores by
+  `(scenario_hash, M-flags)`. 100 scenarios x 4 envs measure **40.6 MB shared**
+  vs **160 MB per-env copy** (~120 MB saved, ~4x), so 4x500 envs no longer
+  implies ~800 MB.
+- **Wrapper mask reuse**: `reset_contract`/`step_contract` already return the
+  next mask; `NativeBusDispatchEnv` keeps it and `action_masks()` serves a copy,
+  dropping the extra native `action_mask()` FFI call per step (verified by
+  `mask_computations` in the integration tests).
+
+Gate status: simulation ~24.9x (>=2x required) and isolated learn ~3.9–4.0x
+(>=2x required; the 4x stretch is borderline, not guaranteed). R4.3 (full
+245,760-transition workflow on each backend) is **deferred**, so R4 is not marked
+accepted. Next measured steps: R4.3 plus a Rust training profile at a lower
+thread count.
 
 ## 8. Evidence
 
@@ -383,10 +421,11 @@ is not marked accepted.
 | `cargo test -p bus-sim` | 0 | 12 native unit tests |
 | `python -m pytest tests/backend_parity/test_rust_kernel.py -q` | 0 | 26 kernel parity tests |
 | `python -m pytest tests/backend_parity/test_rust_observation.py -q` | 0 | 15 observation/mask parity tests |
-| `python -m pytest tests/backend_parity/test_rust_integration.py -q` | 0 | 21 integration tests |
+| `python -m pytest tests/backend_parity/test_rust_integration.py -q` | 0 | 23 integration tests |
 | `python -m pytest tests/backend_parity/test_rust_acceptance.py -q` | 0 | 4 R4.1 smoke/parity tests |
 | `python scripts/benchmark_backends.py --repetitions 5 --transitions 12288` | 0 | `speed-acceptance.json` (light R4.2) |
-| `python -m pytest -q` | 0 | 146 passed |
+| `python scripts/profile_native_training.py` | 0 | `profile-native.json` (segments/threads/eval/memory) |
+| `python -m pytest -q` | 0 | 148 passed |
 | `python scripts/benchmark_python.py --repetitions 5 --transitions 12288` | 0 | `python-benchmark.json` |
 
 Artifacts:
@@ -395,6 +434,8 @@ Artifacts:
 - `reports/rust-migration/fixtures-summary.json` — fixture hashes/coverage.
 - `reports/rust-migration/python-benchmark.json` — raw repetitions.
 - `reports/rust-migration/speed-acceptance.json` — interleaved light R4.2 raw times.
+- `reports/rust-migration/profile-native.json` — Rust training segments, torch
+  thread sweep, eval segments and shared-store memory.
 - `reports/rust-migration/native-build.json` — native toolchain/revision/hash.
 - `crates/bus-sim/`, `crates/bus-sim-py/` — native kernel + PyO3 bridge.
 - `crates/bus-sim/src/observation.rs` — incremental observation + ring.
@@ -407,8 +448,8 @@ Artifacts:
 
 ## 9. Limitations and next steps
 
-- R0–R3 are accepted. R4.2 light gates already pass (29.6x simulation, 4.03x
-  isolated learn); R4.3 (full 245,760-transition workflow on each backend) has
+- R0–R3 are accepted. R4.2 light gates already pass (simulation ~24.9x, isolated
+  learn ~3.9–4.0x); R4.3 (full 245,760-transition workflow on each backend) has
   not been run, so R4 remains open.
 - The manifest records `git_dirty=true` because R0–R3 artifacts were added in
   the same working tree; the revision field pins the pre-R1 commit `1c34457`.

@@ -215,9 +215,9 @@ selection, metadata and cross-backend checkpoint rules. Details in
 
 ### R4.1 - Correctness and train smoke
 
-- [ ] Run the full differential suite, existing Python regression suite, native tests, Python lint/format checks, and native format/lint checks applicable to the selected layout.
-- [ ] Run a 2048-transition MaskablePPO smoke with finite obs/reward/loss, no masked invalid actions, and checkpoint save/load.
-- [ ] Compare fixed-checkpoint trajectories and per-day evaluation, not only means.
+- [x] Run the full differential suite, existing Python regression suite, native tests, Python lint/format checks, and native format/lint checks applicable to the selected layout.
+- [x] Run a 2048-transition MaskablePPO smoke with finite obs/reward/loss, no masked invalid actions, and checkpoint save/load.
+- [x] Compare fixed-checkpoint trajectories and per-day evaluation, not only means.
 
 **Evidence:** exact commands and logs, test counts, parity coverage matrix, checkpoint hashes.
 
@@ -225,10 +225,18 @@ selection, metadata and cross-backend checkpoint rules. Details in
 
 ### R4.2 - Speed acceptance
 
-- [ ] Build release; warm up; rerun both backends in interleaved order, at least five repetitions each, with cProfile/TIMERS disabled.
-- [ ] Match hardware, threads, dependencies, scenario/action traces, model initialization, logging, and conservation settings.
-- [ ] Measure simulation-only and isolated learn of at least 12,288 transitions; measure fixed-checkpoint eval separately.
-- [ ] Report raw times, median/min/max, per-workload behavior, setup cost, and peak RSS. Investigate unstable measurements before deciding.
+- [x] Build release; warm up; rerun both backends in interleaved order, at least five repetitions each, with cProfile/TIMERS disabled.
+- [x] Match hardware, threads, dependencies, scenario/action traces, model initialization, logging, and conservation settings.
+- [x] Measure simulation-only and isolated learn of at least 12,288 transitions; measure fixed-checkpoint eval separately.
+- [x] Report raw times, median/min/max, per-workload behavior, setup cost, and peak RSS. Investigate unstable measurements before deciding.
+
+**Evidence (light pass, 2026-09-12):** `reports/rust-migration/speed-acceptance.json`
+and `profile-native.json`. Median totals: simulation 0.343 s vs 0.0138 s
+(**24.90x**); isolated learn 12,288 transitions 30.01 s vs 7.61 s (**3.94x**,
+a prior identical run measured 4.03x, so the ratio is ~3.9–4.0x);
+fixed-checkpoint eval 10 days 3.330 s vs 1.378 s (2.42x), mean cost 15471.25 and
+per-day costs identical. Peak RSS 491 MB is the combined two-backend process.
+R4.3 (full workflow) remains open.
 
 **Verification:** Recompute both speedup ratios from raw paired benchmark files; inspect workload-level results and verify all protocol settings against R0.3.
 

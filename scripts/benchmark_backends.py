@@ -143,9 +143,17 @@ def benchmark_simulation(repetitions: int, warmup: int) -> dict:
         )
     for backend in BACKENDS:
         rows = results[backend]["workloads"]
+        repetitions = len(next(iter(rows.values()))["wall_times_s"])
+        totals = [
+            sum(rows[name]["wall_times_s"][index] for name in rows) for index in range(repetitions)
+        ]
         results[backend]["aggregate"] = {
-            "median_total_s": sum(row["median_s"] for row in rows.values()),
+            "per_rep_total_s": [round(value, 6) for value in totals],
+            "median_total_s": statistics.median(totals),
+            "min_total_s": min(totals),
+            "max_total_s": max(totals),
             "decisions_total": sum(row["decisions"] for row in rows.values()),
+            "sum_of_workload_medians_s": sum(row["median_s"] for row in rows.values()),
         }
     py_total = results["python"]["aggregate"]["median_total_s"]
     rust_total = results["rust"]["aggregate"]["median_total_s"]
@@ -250,6 +258,10 @@ def benchmark_eval(repetitions: int) -> dict:
     controller = make_controller("ppo", model=model, seed=metadata.get("seed", 11))
 
     results = {backend: {"wall_s": [], "mean_cost": [], "per_day": []} for backend in BACKENDS}
+    for backend in BACKENDS:  # warm-up per backend, reported separately
+        env = make_env_for_run(scenarios, replace(run, runtime=RuntimeConfig(backend=backend)))
+        for index in range(len(scenarios)):
+            rollout(env, controller, index)
     for _ in range(repetitions):
         for backend in BACKENDS:
             env = make_env_for_run(scenarios, replace(run, runtime=RuntimeConfig(backend=backend)))
@@ -307,6 +319,7 @@ def main() -> None:
         "protocol": {
             "repetitions": args.repetitions,
             "warmup": args.warmup,
+            "eval_warmup": 1,
             "interleaved": True,
             "profiler": "disabled",
             "timers": "disabled",

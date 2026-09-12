@@ -80,6 +80,55 @@ def build_kernel(scenario: Scenario, *, conservation: bool = True):
     return kernel
 
 
+class NativeScenarioStore:
+    """Owns packed native scenarios so many env kernels share immutable tapes.
+
+    Without this, ``n_envs`` envs each copy every scenario tape; with a shared
+    store the tapes exist once per distinct scenario list.
+    """
+
+    def __init__(self, scenarios) -> None:
+        require_native()
+        import bus_sim
+
+        self._store = bus_sim.ScenarioStore()
+        for scenario in scenarios:
+            arrivals = np.ascontiguousarray(scenario.arrival_tape, dtype=np.int32)
+            traffic = np.ascontiguousarray(scenario.traffic_tape, dtype=np.float32)
+            self._store.add(scenario_payload(scenario), arrivals, traffic)
+
+    def __len__(self) -> int:
+        return len(self._store)
+
+    def kernel(self, index: int, *, conservation: bool = True):
+        import bus_sim
+
+        kernel = bus_sim.Kernel.from_store(self._store, index)
+        kernel.set_conservation_checks(conservation)
+        return kernel
+
+
+_STORE_CACHE: dict[tuple, NativeScenarioStore] = {}
+_STORE_CACHE_LIMIT = 4
+
+
+def shared_store(scenarios) -> NativeScenarioStore:
+    """Reuse one packed store for an identical scenario list within a process."""
+    scenarios = tuple(scenarios)
+    key = tuple(
+        (scenario.scenario_hash, bool(scenario.enable_reassign), bool(scenario.enable_short_turn))
+        for scenario in scenarios
+    )
+    cached = _STORE_CACHE.get(key)
+    if cached is not None:
+        return cached
+    store = NativeScenarioStore(scenarios)
+    if len(_STORE_CACHE) >= _STORE_CACHE_LIMIT:
+        _STORE_CACHE.pop(next(iter(_STORE_CACHE)))
+    _STORE_CACHE[key] = store
+    return store
+
+
 def native_build_info(root: Path | None = None) -> dict | None:
     path = (root / "reports/rust-migration/native-build.json") if root else NATIVE_BUILD_REPORT
     if not Path(path).exists():

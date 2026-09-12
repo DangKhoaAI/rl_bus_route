@@ -79,8 +79,10 @@ def rollout(
     from bus_rl.control.actions import ACTION_TABLE
 
     while True:
-        mask = env.action_masks()
-        action = controller.act(observation, mask)
+        with TIMERS.span("eval.action_mask"):
+            mask = env.action_masks()
+        with TIMERS.span("eval.infer"):
+            action = controller.act(observation, mask)
         observation, reward, terminated, truncated, info = env.step(action)
         reward_sum += float(reward)
         costs = add_costs(costs, info["costs"])

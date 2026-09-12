@@ -17,6 +17,7 @@ use numpy::{
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
+use std::sync::Arc;
 
 /// Cost field order must match `bus_rl.parity.snapshot.COST_FIELDS`.
 const COST_FIELDS: [&str; 10] = [
@@ -157,13 +158,73 @@ fn obs_dict<'py>(py: Python<'py>, obs: Observation) -> PyResult<Bound<'py, PyDic
 
 #[pyclass]
 struct Kernel {
-    scenario: Scenario,
+    scenario: Arc<Scenario>,
     state: Option<WorldState>,
     reward: RewardConfig,
     conservation_checks: bool,
     /// Guard-derived mask owned by the kernel; `action_mask()` returns a copy.
     mask_cache: Option<Vec<bool>>,
     mask_computations: u64,
+}
+
+/// Owns packed scenarios once so many kernels (envs) can share the immutable
+/// tapes instead of copying them per env.
+#[pyclass]
+struct ScenarioStore {
+    scenarios: Vec<Arc<Scenario>>,
+}
+
+fn build_scenario(
+    scenario_json: &str,
+    arrivals: &PyReadonlyArray5<i32>,
+    traffic: &PyReadonlyArray2<f32>,
+) -> PyResult<Scenario> {
+    let shape = arrivals.shape();
+    let arrival_dims = [shape[0], shape[1], shape[2], shape[3], shape[4]];
+    let arrival_tape = arrivals
+        .as_slice()
+        .map_err(|error| PyValueError::new_err(error.to_string()))?
+        .to_vec();
+    let tshape = traffic.shape();
+    let traffic_dims = [tshape[0], tshape[1]];
+    let traffic_tape = traffic
+        .as_slice()
+        .map_err(|error| PyValueError::new_err(error.to_string()))?
+        .to_vec();
+    scenario_from_json(
+        scenario_json,
+        arrival_tape,
+        arrival_dims,
+        traffic_tape,
+        traffic_dims,
+    )
+    .map_err(to_py)
+}
+
+#[pymethods]
+impl ScenarioStore {
+    #[new]
+    fn new() -> Self {
+        Self {
+            scenarios: Vec::new(),
+        }
+    }
+
+    /// Pack one scenario and return its reusable index. Tapes are copied once.
+    fn add(
+        &mut self,
+        scenario_json: &str,
+        arrivals: PyReadonlyArray5<i32>,
+        traffic: PyReadonlyArray2<f32>,
+    ) -> PyResult<usize> {
+        let scenario = build_scenario(scenario_json, &arrivals, &traffic)?;
+        self.scenarios.push(Arc::new(scenario));
+        Ok(self.scenarios.len() - 1)
+    }
+
+    fn __len__(&self) -> usize {
+        self.scenarios.len()
+    }
 }
 
 #[pymethods]
@@ -174,26 +235,24 @@ impl Kernel {
         arrivals: PyReadonlyArray5<i32>,
         traffic: PyReadonlyArray2<f32>,
     ) -> PyResult<Self> {
-        let shape = arrivals.shape();
-        let arrival_dims = [shape[0], shape[1], shape[2], shape[3], shape[4]];
-        let arrival_tape = arrivals
-            .as_slice()
-            .map_err(|error| PyValueError::new_err(error.to_string()))?
-            .to_vec();
-        let tshape = traffic.shape();
-        let traffic_dims = [tshape[0], tshape[1]];
-        let traffic_tape = traffic
-            .as_slice()
-            .map_err(|error| PyValueError::new_err(error.to_string()))?
-            .to_vec();
-        let scenario = scenario_from_json(
-            scenario_json,
-            arrival_tape,
-            arrival_dims,
-            traffic_tape,
-            traffic_dims,
-        )
-        .map_err(to_py)?;
+        Ok(Self {
+            scenario: Arc::new(build_scenario(scenario_json, &arrivals, &traffic)?),
+            state: None,
+            reward: RewardConfig::default(),
+            conservation_checks: false,
+            mask_cache: None,
+            mask_computations: 0,
+        })
+    }
+
+    /// Create a kernel that shares a packed scenario from a store (env reuse).
+    #[staticmethod]
+    fn from_store(store: PyRef<'_, ScenarioStore>, index: usize) -> PyResult<Self> {
+        let scenario = store
+            .scenarios
+            .get(index)
+            .ok_or_else(|| PyValueError::new_err(format!("scenario index {index} out of range")))?
+            .clone();
         Ok(Self {
             scenario,
             state: None,
@@ -518,6 +577,7 @@ fn cost_fields() -> Vec<&'static str> {
 #[pymodule]
 fn bus_sim(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Kernel>()?;
+    m.add_class::<ScenarioStore>()?;
     m.add_function(wrap_pyfunction!(cost_fields, m)?)?;
     Ok(())
 }

@@ -163,6 +163,37 @@ def test_interleaved_native_envs_do_not_share_state():
         assert left[1] == right[1] == reference[1]
 
 
+def test_native_envs_share_one_scenario_store():
+    scenarios = [generate_scenario(2001), generate_scenario(2002), generate_scenario(2003)]
+    envs = [
+        NativeBusDispatchEnv(scenarios, scenarios[0].config, control=ControlConfig())
+        for _ in range(3)
+    ]
+    assert envs[0]._scenario_store is envs[1]._scenario_store is envs[2]._scenario_store
+    assert len(envs[0]._scenario_store) == 3
+    # Kernels are per env (independent episode state) but share the packed tapes.
+    assert envs[0]._kernels[0] is not envs[1]._kernels[0]
+    envs[0].reset(seed=0, options={"scenario_index": 0})
+    envs[1].reset(seed=0, options={"scenario_index": 0})
+    envs[0].step(0)
+    assert envs[0].kernel.current_time_s != envs[1].kernel.current_time_s
+
+
+def test_action_masks_reuse_the_step_mask_without_recompute():
+    scenario = generate_scenario(2001)
+    env = NativeBusDispatchEnv([scenario], scenario.config, control=ControlConfig())
+    env.reset(seed=0)
+    before = env.kernel.mask_computations
+    for _ in range(5):
+        env.action_masks()
+    assert env.kernel.mask_computations == before
+    env.step(0)
+    assert env.kernel.mask_computations == before + 1
+    for _ in range(5):
+        env.action_masks()
+    assert env.kernel.mask_computations == before + 1
+
+
 def test_dummy_vec_env_auto_reset():
     from stable_baselines3.common.vec_env import DummyVecEnv
 

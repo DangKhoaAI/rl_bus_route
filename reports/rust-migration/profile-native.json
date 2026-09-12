@@ -1,0 +1,117 @@
+{
+  "eval": {
+    "days": 10,
+    "env_action_masks_s": 0.0027723299645003863,
+    "env_step_s": 0.13509940901349182,
+    "eval_infer_s": 1.0743856689732638,
+    "eval_summarize_s": 0.06402008299846784,
+    "last_rep_wall_s": 1.3106929019995732,
+    "overhead_s": 0.034415411049849354,
+    "repetitions": 3
+  },
+  "machine": {
+    "numpy": "2.4.6",
+    "platform": "Linux-7.0.0-31-generic-x86_64-with-glibc2.39",
+    "python": "3.11.14",
+    "torch": "2.14.0+cpu",
+    "torch_threads_default": 16
+  },
+  "memory": {
+    "envs": 4,
+    "note": "per_env_copy rebuilds every scenario kernel per env (old path)",
+    "per_env_copy": {
+      "mode": "per_env",
+      "rss_delta_kb": 164160
+    },
+    "saving_kb": 122600,
+    "scenarios": 100,
+    "shared": {
+      "mode": "shared",
+      "rss_delta_kb": 41560
+    }
+  },
+  "profile_schema_version": 1,
+  "protocol": {
+    "thread_repetitions": 3,
+    "timers_disabled_for_thread_sweep": true,
+    "timers_enabled_for_segments": true,
+    "transitions": 4096
+  },
+  "role": "r4-optimization-profile",
+  "segments": {
+    "env_action_masks_s": 0.006292048037721543,
+    "env_observe_s": 0.19092373891180614,
+    "env_share_of_rollout": 0.842982044442169,
+    "env_step_s": 0.3725062628982414,
+    "inference_and_buffer_s": 0.06309278906337568,
+    "n_envs": 4,
+    "n_steps": 256,
+    "ppo_update_s": 0.5953119219993823,
+    "rollout_collect_s": 0.4418910999993386,
+    "transitions": 4096,
+    "update_share_of_learn": 0.5739589158274901
+  },
+  "thread_sweep": {
+    "best": "4",
+    "repetitions": 3,
+    "results": {
+      "1": {
+        "max_s": 1.125082463000581,
+        "median_s": 1.1151166060008109,
+        "min_s": 1.1124116319988389,
+        "transitions_per_s_median": 3673.1584642880134,
+        "wall_times_s": [
+          1.112412,
+          1.125082,
+          1.115117
+        ]
+      },
+      "16": {
+        "max_s": 2.838892954001494,
+        "median_s": 2.712688616000378,
+        "min_s": 2.4815728979992855,
+        "transitions_per_s_median": 1509.9410879082739,
+        "wall_times_s": [
+          2.481573,
+          2.712689,
+          2.838893
+        ]
+      },
+      "2": {
+        "max_s": 0.9972517380010686,
+        "median_s": 0.9855176370001573,
+        "min_s": 0.9841712970010121,
+        "transitions_per_s_median": 4156.191473617784,
+        "wall_times_s": [
+          0.997252,
+          0.985518,
+          0.984171
+        ]
+      },
+      "4": {
+        "max_s": 0.9890918390010484,
+        "median_s": 0.9855064440016577,
+        "min_s": 0.9784568350005429,
+        "transitions_per_s_median": 4156.238678022394,
+        "wall_times_s": [
+          0.985506,
+          0.978457,
+          0.989092
+        ]
+      },
+      "8": {
+        "max_s": 1.1512862390009104,
+        "median_s": 1.145619193001039,
+        "min_s": 1.1358380790006777,
+        "transitions_per_s_median": 3575.359094037354,
+        "wall_times_s": [
+          1.135838,
+          1.151286,
+          1.145619
+        ]
+      }
+    },
+    "transitions": 4096
+  },
+  "wall_total_s": 41.009084469998925
+}

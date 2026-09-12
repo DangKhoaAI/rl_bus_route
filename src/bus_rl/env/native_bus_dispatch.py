@@ -13,12 +13,13 @@ from dataclasses import replace
 import gymnasium as gym
 import numpy as np
 
-from bus_rl.backend.native import build_kernel
+from bus_rl.backend.native import shared_store
 from bus_rl.config import RunConfig
 from bus_rl.domain import StepCosts, initial_state
 from bus_rl.env.observation import observe, validate_observation
 from bus_rl.evaluation.summary import from_native_payload
 from bus_rl.rewards.costs import RewardConfig
+from bus_rl.timing import TIMERS
 
 
 def _step_costs(values) -> StepCosts:
@@ -49,7 +50,15 @@ def _step_costs(values) -> StepCosts:
 
 
 class NativeBusDispatchEnv(gym.Env):
-    def __init__(self, scenarios, config, forecaster=None, reward=None, control=None):
+    def __init__(
+        self,
+        scenarios,
+        config,
+        forecaster=None,
+        reward=None,
+        control=None,
+        scenario_store=None,
+    ):
         applied = tuple(scenarios)
         if control is not None:
             applied = tuple(
@@ -74,25 +83,32 @@ class NativeBusDispatchEnv(gym.Env):
                 ).items()
             }
         )
-        # Pack every scenario once; each kernel fully owns its tape buffers.
-        self._kernels = tuple(build_kernel(scenario) for scenario in self.scenarios)
+        # Pack scenarios once per process and share immutable tapes across envs.
+        self._scenario_store = scenario_store or shared_store(self.scenarios)
+        self._kernels = tuple(
+            self._scenario_store.kernel(index) for index in range(len(self.scenarios))
+        )
         self.kernel = None
         self.scenario = None
         self._scenario_index: int | None = None
+        self._mask: np.ndarray | None = None
 
     @property
     def scenario_index(self) -> int | None:
         return self._scenario_index
 
     def _observation(self, raw) -> dict[str, np.ndarray]:
-        observation = {key: np.asarray(value) for key, value in raw.items()}
-        if self.forecaster is not None:
-            forecast = self.forecaster.predict(observation, int(self.kernel.current_time_s))
-            observation["forecast"] = np.asarray(forecast.expected, dtype=np.float32)
-            observation["context"] = np.array(
-                [observation["context"][0], observation["context"][1], 1.0], np.float32
-            )
-        validate_observation(observation)
+        with TIMERS.span("env.observe"):
+            observation = {key: np.asarray(value) for key, value in raw.items()}
+            if self.forecaster is not None:
+                with TIMERS.span("env.forecast"):
+                    forecast = self.forecaster.predict(observation, int(self.kernel.current_time_s))
+                observation["forecast"] = np.asarray(forecast.expected, dtype=np.float32)
+                observation["context"] = np.array(
+                    [observation["context"][0], observation["context"][1], 1.0], np.float32
+                )
+            with TIMERS.span("env.validate_obs"):
+                validate_observation(observation)
         return observation
 
     def reset(self, *, seed=None, options=None):
@@ -104,20 +120,28 @@ class NativeBusDispatchEnv(gym.Env):
         self.scenario = self.scenarios[index]
         self.kernel = self._kernels[index]
         result = self.kernel.reset_contract()
+        self._mask = np.asarray(result["mask"], dtype=bool)
         return self._observation(result["obs"]), {}
 
     def action_masks(self) -> np.ndarray:
-        return np.asarray(self.kernel.action_mask(), dtype=bool)
+        with TIMERS.span("env.action_masks"):
+            if self._mask is None:
+                raise ValueError("reset() must be called before action_masks()")
+            # Serve a fresh copy so callers cannot corrupt the cached mask.
+            return self._mask.copy()
 
     def step(self, action_index):
-        result = self.kernel.step_contract(int(action_index))
-        observation = self._observation(result["obs"])
+        with TIMERS.span("env.step"):
+            result = self.kernel.step_contract(int(action_index))
+            self._mask = np.asarray(result["mask"], dtype=bool)
+            observation = self._observation(result["obs"])
+            costs = _step_costs(result["costs"])
         return (
             observation,
             float(result["reward"]),
             bool(result["terminated"]),
             bool(result["truncated"]),
-            {"costs": _step_costs(result["costs"])},
+            {"costs": costs},
         )
 
     def summary_inputs(self):
