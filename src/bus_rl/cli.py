@@ -9,9 +9,10 @@ from dataclasses import replace
 from pathlib import Path
 from time import perf_counter
 
-from bus_rl.config import ControlConfig, load_run_config, parse_counts
+from bus_rl.config import ControlConfig, RuntimeConfig, load_run_config, parse_counts
 from bus_rl.data.io import load_manifest, load_split, save_manifest
 from bus_rl.data.scenario import generate_manifest
+from bus_rl.env.factory import make_env_for_run
 from bus_rl.evaluation.plots import render_plots
 from bus_rl.evaluation.profile import run_profile
 from bus_rl.evaluation.runner import evaluate_scenarios, write_results
@@ -24,7 +25,11 @@ from bus_rl.training.train import fit_algorithm, train_run
 
 
 def _run_config(args) -> object:
-    return load_run_config(Path(args.config))
+    run = load_run_config(Path(args.config))
+    backend = getattr(args, "backend", None)
+    if backend and backend != run.runtime.backend:
+        run = replace(run, runtime=RuntimeConfig(backend=backend))
+    return run
 
 
 def _maybe_forecaster(args, run, train_scenarios=None):
@@ -161,8 +166,6 @@ def cmd_evaluate(args) -> None:
     method = args.method
     forecaster = None
     if args.checkpoint:
-        from bus_rl.env.bus_dispatch import BusDispatchEnv
-
         metadata = load_metadata(Path(args.checkpoint))
         run = replace(
             run,
@@ -175,14 +178,10 @@ def cmd_evaluate(args) -> None:
             forecaster = HistoricalForecaster.load(frozen)
         elif run.forecast.enabled:
             forecaster = _maybe_forecaster(args, run)
-        env = BusDispatchEnv(
-            scenarios[:1],
-            run.physical,
-            forecaster=forecaster,
-            reward=run.reward,
-            control=run.control,
+        env = make_env_for_run(scenarios[:1], run, forecaster=forecaster)
+        model, metadata = load_model(
+            Path(args.checkpoint), env, run.physical, backend=run.runtime.backend
         )
-        model, metadata = load_model(Path(args.checkpoint), env, run.physical)
         model_seed = metadata.get("seed", model_seed)
         method = "ppo"
     else:
@@ -244,6 +243,7 @@ def build_parser() -> argparse.ArgumentParser:
     baseline.add_argument("--output", required=True)
     baseline.add_argument("--trace", action="store_true")
     baseline.add_argument("--limit", type=int)
+    baseline.add_argument("--backend", choices=("python", "rust"))
     baseline.set_defaults(func=cmd_baseline)
 
     profile = sub.add_parser("profile")
@@ -260,6 +260,7 @@ def build_parser() -> argparse.ArgumentParser:
     train.add_argument("--timesteps", type=int)
     train.add_argument("--n-envs", type=int, dest="n_envs")
     train.add_argument("--eval-limit", type=int, dest="eval_limit")
+    train.add_argument("--backend", choices=("python", "rust"))
     train.set_defaults(func=cmd_train)
 
     diagnose = sub.add_parser("diagnose")
@@ -270,6 +271,7 @@ def build_parser() -> argparse.ArgumentParser:
     diagnose.add_argument("--timesteps", type=int, default=2048)
     diagnose.add_argument("--n-envs", type=int, dest="n_envs")
     diagnose.add_argument("--eval-limit", type=int, dest="eval_limit", default=10)
+    diagnose.add_argument("--backend", choices=("python", "rust"))
     diagnose.set_defaults(func=cmd_diagnose)
 
     evaluate = sub.add_parser("evaluate")
@@ -282,6 +284,7 @@ def build_parser() -> argparse.ArgumentParser:
     evaluate.add_argument("--output", required=True)
     evaluate.add_argument("--trace", action="store_true")
     evaluate.add_argument("--limit", type=int)
+    evaluate.add_argument("--backend", choices=("python", "rust"))
     evaluate.set_defaults(func=cmd_evaluate)
 
     report = sub.add_parser("report")

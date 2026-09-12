@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from collections import defaultdict
-from itertools import pairwise
 from pathlib import Path
 from time import perf_counter
 
@@ -17,9 +15,10 @@ from bus_rl.baselines import (
     ThresholdController,
 )
 from bus_rl.config import ControlConfig, RunConfig
-from bus_rl.domain import PassengerStatus, StepCosts
-from bus_rl.env.bus_dispatch import BusDispatchEnv
-from bus_rl.rewards.costs import DEFAULT_REWARD, RewardConfig, add_costs, interval_cost
+from bus_rl.domain import StepCosts
+from bus_rl.env.factory import make_env_for_run
+from bus_rl.evaluation.summary import from_python_state, summarize_inputs
+from bus_rl.rewards.costs import RewardConfig, add_costs
 from bus_rl.timing import TIMERS
 
 
@@ -48,23 +47,6 @@ class PPOController:
         return int(np.asarray(action).reshape(-1)[0])
 
 
-def _wait_minutes(cohort, state, tick_s: int) -> tuple[float, bool]:
-    arrival_s = cohort.arrival_tick * tick_s
-    if cohort.status is PassengerStatus.COMPLETED and cohort.boarding_tick is not None:
-        return (cohort.boarding_tick * tick_s - arrival_s) / 60.0, False
-    if cohort.status is PassengerStatus.ABANDONED and cohort.abandonment_tick is not None:
-        return (cohort.abandonment_tick * tick_s - arrival_s) / 60.0, False
-    if cohort.status is PassengerStatus.ONBOARD and cohort.boarding_tick is not None:
-        return (cohort.boarding_tick * tick_s - arrival_s) / 60.0, False
-    return (state.current_time_s - arrival_s) / 60.0, True
-
-
-def _percentile(values: list[float], q: float) -> float | None:
-    if not values:
-        return None
-    return float(np.percentile(values, q))
-
-
 def summarize_episode(
     state,
     scenario,
@@ -72,121 +54,18 @@ def summarize_episode(
     reward: float,
     reward_config: RewardConfig | None = None,
 ) -> dict:
-    tick_s = scenario.config.tick_s
-    waits: list[float] = []
-    censored_flags: list[bool] = []
-    route_waits: dict[int, list[float]] = defaultdict(list)
-    excessive = 0
-    unique_denied = 0
-    for cohort in state.iter_cohorts():
-        wait, censored = _wait_minutes(cohort, state, tick_s)
-        waits.extend([wait] * cohort.count)
-        censored_flags.extend([censored] * cohort.count)
-        route_waits[cohort.route_id].extend([wait] * cohort.count)
-        if wait >= 15:
-            excessive += cohort.count
-        if cohort.first_denied:
-            unique_denied += cohort.count
-    generated = state.generated_count
-    none = generated == 0
-    mean_wait = None if none else float(np.mean(waits))
-    p95_wait = None if none else _percentile(waits, 95)
-    worst_route = None
-    worst_mean = None
-    for route_id, values in route_waits.items():
-        route_mean = float(np.mean(values))
-        if worst_mean is None or route_mean > worst_mean:
-            worst_mean, worst_route = route_mean, route_id
-    gaps: list[float] = []
-    grouped: dict[tuple[int, int], list[int]] = defaultdict(list)
-    for event in state.departures:
-        if event.get("pattern") != "FULL":
-            continue
-        grouped[int(event["route_id"]), int(event["direction"])].append(int(event["time_s"]))
-    for times in grouped.values():
-        ordered = sorted(times)
-        gaps.extend(later - earlier for earlier, later in pairwise(ordered))
-    kinds = [event["kind"] for event in state.accepted_actions]
-    core_cost = interval_cost(costs, DEFAULT_REWARD)
-    trained_cost = interval_cost(costs, reward_config or DEFAULT_REWARD)
-    return {
-        "scenario_seed": scenario.seed,
-        "scenario_hash": scenario.scenario_hash,
-        "generated": generated,
-        "completed": state.completed_count,
-        "abandoned": state.abandoned_count,
-        "unfinished": state.waiting_count + state.onboard_count,
-        "unique_denied": unique_denied,
-        "waiting_pm": costs.waiting_pm,
-        "onboard_pm": costs.onboard_pm,
-        "crowding_pm": costs.crowding_pm,
-        "active_bus_min": costs.active_bus_min,
-        "deadhead_bus_min": costs.deadhead_bus_min,
-        "excessive_wait_pm": costs.excessive_wait_pm,
-        "first_denied_count": costs.first_denied_count,
-        "abandoned_count": costs.abandoned_count,
-        "mission_changes": costs.mission_changes,
-        "terminal_unfinished_count": costs.terminal_unfinished_count,
-        "total_cost": trained_cost,
-        "total_cost_core": core_cost,
-        "reward": reward,
-        "mean_wait": mean_wait,
-        "p95_wait": p95_wait,
-        "completed_share": None if none else state.completed_count / generated,
-        "abandoned_share": None if none else state.abandoned_count / generated,
-        "unfinished_share": None
-        if none
-        else (state.waiting_count + state.onboard_count) / generated,
-        "unique_denied_share": None if none else unique_denied / generated,
-        "excessive_wait_share": None if none else excessive / generated,
-        "censored_share": None if none else sum(censored_flags) / generated,
-        "worst_route_id": worst_route,
-        "worst_route_mean_wait": worst_mean,
-        "mean_headway_s": float(np.mean(gaps)) if gaps else None,
-        "p95_headway_s": _percentile(gaps, 95),
-        "gap20_count": sum(gap > 1_200 for gap in gaps),
-        "headway_target_violations": sum(gap > 900 for gap in gaps),
-        "reserve_dispatches": kinds.count("DISPATCH"),
-        "reassigns": kinds.count("REASSIGN"),
-        "short_turns": kinds.count("SHORT_TURN"),
-        "recalls": kinds.count("RECALL"),
-        "decisions": scenario.config.horizon_s // scenario.config.control_interval_s,
-    }
+    """Compatibility wrapper around the shared backend-agnostic summary."""
+    return summarize_inputs(from_python_state(state), scenario, costs, reward, reward_config)
 
 
 def _trace_row(env, action_kind: str) -> dict:
-    state = env.state
-    queues = []
-    for route in range(env.config.route_count):
-        queues.append(sum(cohort.count for cohort in state.cohorts if cohort.route_id == route))
-    buses = [
-        {
-            "id": bus.vehicle_id,
-            "phase": bus.phase.name,
-            "route_id": bus.route_id,
-            "pattern": bus.pattern.name,
-            "load": bus.load,
-        }
-        for bus in state.vehicles.values()
-    ]
-    return {
-        "time_s": state.current_time_s,
-        "action": action_kind,
-        "queues": queues,
-        "headway_targets": [
-            state.headway_targets_s[route] for route in range(env.config.route_count)
-        ],
-        "buses": buses,
-        "waiting": state.waiting_count,
-        "onboard": state.onboard_count,
-        "generated": state.generated_count,
-        "abandoned": state.abandoned_count,
-        "completed": state.completed_count,
-    }
+    row = dict(env.trace_snapshot())
+    row["action"] = action_kind
+    return row
 
 
 def rollout(
-    env: BusDispatchEnv,
+    env,
     controller,
     scenario_index: int,
     *,
@@ -210,7 +89,9 @@ def rollout(
         if terminated or truncated:
             break
     with TIMERS.span("eval.summarize"):
-        metrics = summarize_episode(env.state, env.scenario, costs, reward_sum, env.reward)
+        metrics = summarize_inputs(
+            env.summary_inputs(), env.scenario, costs, reward_sum, env.reward
+        )
     metrics["wall_s"] = perf_counter() - started
     metrics["scenario_index"] = scenario_index
     return metrics, rows
@@ -227,12 +108,10 @@ def evaluate_scenarios(
     forecaster=None,
     trace_index: int | None = None,
 ) -> tuple[pd.DataFrame, dict[int, list[dict]]]:
-    env = BusDispatchEnv(
+    env = make_env_for_run(
         scenarios,
-        run.physical,
+        run,
         forecaster=forecaster,
-        reward=run.reward,
-        control=run.control,
     )
     controller = make_controller(method, model=model, seed=model_seed or 0)
     records = []
@@ -278,6 +157,7 @@ def apply_control(run: RunConfig, control: ControlConfig | None) -> RunConfig:
             reward=run.reward,
             algorithm=run.algorithm,
             forecast=run.forecast,
+            runtime=run.runtime,
             source=run.source,
         )
     )

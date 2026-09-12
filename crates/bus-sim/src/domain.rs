@@ -24,6 +24,17 @@ impl Phase {
     pub fn as_i64(self) -> i64 {
         self as i64
     }
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Phase::DepotIdle => "DEPOT_IDLE",
+            Phase::Deadhead => "DEADHEAD",
+            Phase::TerminalIdle => "TERMINAL_IDLE",
+            Phase::ServiceMoving => "SERVICE_MOVING",
+            Phase::ServiceDwell => "SERVICE_DWELL",
+            Phase::Layover => "LAYOVER",
+        }
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

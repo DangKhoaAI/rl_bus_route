@@ -1,6 +1,6 @@
 # Rust migration report
 
-Status: **R0–R2 accepted (Python oracle frozen; kernel, observations and mask cache at parity). R3–R4 not started.**
+Status: **R0–R3 accepted (native kernel, observations, mask cache and backend integration at parity). R4 not started.**
 Date: 2026-09-12.
 Spec: [docs/spec/rust_improve.md](spec/rust_improve.md). Plan: [docs/plan/rust_improve.md](plan/rust_improve.md).
 
@@ -297,7 +297,52 @@ differentials plus cache/copy/reset/rejection cases). Native window-boundary,
 future-tape-independence and recent-finished eviction are covered by the core
 unit tests. Native unit tests in total: 12.
 
-## 6. Evidence
+## 6. R3 — backend integration
+
+R3.1 (Gym contract): the PyO3 bridge exposes `Kernel.reset_contract()`
+(`{obs, mask}`) and `Kernel.step_contract(action)`
+(`{obs, reward, terminated, truncated, mask, costs}`), rejecting masked or
+out-of-range actions before any mutation. `bus_rl.env.native_bus_dispatch`
+wraps it in a `gym.Env` with the same spaces, seeding, scenario selection,
+`terminated=True/truncated=False` horizon behavior and `StepCosts` conversion as
+the oracle. Every kernel owns its packed tapes; no Python `WorldState` is built
+per training step, and returned obs/mask arrays are fresh copies.
+
+R3.2 (evaluator/traces/forecast): `bus_rl.evaluation.summary` defines
+`SummaryInputs`/`CohortView` and the shared metric math, with adapters for the
+Python `WorldState` and for `Kernel.episode_summary_inputs()`. `evaluation/runner`
+now consumes `env.summary_inputs()` and `env.trace_snapshot()`, so cohort/lineage
+data, departures, actions, totals and vehicle snapshots flow through one
+interface. Statistics and plots stay in Python; detailed data is exported once
+per episode (or when tracing is enabled). Forecast remains Python: the native
+wrapper predicts from the current obs and time and sets the context flag exactly
+like the oracle.
+
+R3.3 (selection/lineage): `runtime.backend = "python" | "rust"` is read from
+config, overridable with `--backend` on train/diagnose/evaluate/baseline, and
+honored by the env factory used by training, the validation callback, diagnose,
+evaluation and baselines. Requesting `rust` without the extension raises a clear
+`RuntimeError`; Python fallback requires explicit selection. Checkpoint metadata
+records `backend`, `native_build` (crate version, `.so` hash, rustc, git sha) and
+`backend_parity_verified`; cross-backend loading is allowed only when the
+physical/action/obs hashes match and parity is marked verified.
+
+### R3 verification result
+
+21 tests in `tests/backend_parity/test_rust_integration.py`:
+
+- native/py env step parity for six fixtures (obs tolerance `1e-6`, mask
+exact, reward/costs `1e-9`), Gym contract and masked-action rejection, output
+ownership across steps/resets, interleaved envs, `DummyVecEnv` auto-reset;
+- evaluator + trace parity for fixed/threshold/proportional/random controllers,
+forecast on/off, zero-demand censoring, and the normal plotting pipeline;
+- backend default/override, missing-extension failure, metadata provenance and
+cross-backend checkpoint rules;
+- a CLI end-to-end run: `train --backend rust` (32 transitions, checkpoint +
+metadata) and `evaluate` with both backends producing identical
+`total_cost` (1e-9).
+
+## 7. Evidence
 
 | Command | Exit | Artifacts |
 |---|---:|---|
@@ -307,10 +352,9 @@ unit tests. Native unit tests in total: 12.
 | `cargo test -p bus-sim` | 0 | 12 native unit tests |
 | `python -m pytest tests/backend_parity/test_rust_kernel.py -q` | 0 | 26 kernel parity tests |
 | `python -m pytest tests/backend_parity/test_rust_observation.py -q` | 0 | 15 observation/mask parity tests |
-| `python -m pytest tests/backend_parity -q` | 0 | 73 passed |
+| `python -m pytest tests/backend_parity/test_rust_integration.py -q` | 0 | 21 integration tests |
+| `python -m pytest -q` | 0 | 142 passed |
 | `python scripts/benchmark_python.py --repetitions 5 --transitions 12288` | 0 | `python-benchmark.json` |
-| `python -m pytest tests/backend_parity -q` | 0 | 32 passed |
-| `python -m pytest -q` | 0 | full existing suite + parity |
 
 Artifacts:
 
@@ -320,14 +364,18 @@ Artifacts:
 - `reports/rust-migration/native-build.json` — native toolchain/revision/hash.
 - `crates/bus-sim/`, `crates/bus-sim-py/` — native kernel + PyO3 bridge.
 - `crates/bus-sim/src/observation.rs` — incremental observation + ring.
+- `src/bus_rl/backend/native.py` — scenario packing + native provenance.
+- `src/bus_rl/env/native_bus_dispatch.py` — native Gym wrapper.
+- `src/bus_rl/env/factory.py` — `runtime.backend` selection.
+- `src/bus_rl/evaluation/summary.py` — shared summary/trace inputs + metrics.
 - `tests/backend_parity/fixtures/` — golden fixtures (committed).
 - `tests/backend_parity/reference/` — committed reference checkpoint.
 
-## 7. Limitations and next steps
+## 8. Limitations and next steps
 
-- R0–R2 are accepted; backend integration (R3) and speed/parity acceptance (R4)
-  remain.
-- The manifest records `git_dirty=true` because R0–R2 artifacts were added in
+- R0–R3 are accepted; R4 (correctness smoke, interleaved speed gates, full
+  workflow) remains and must not be short-circuited.
+- The manifest records `git_dirty=true` because R0–R3 artifacts were added in
   the same working tree; the revision field pins the pre-R1 commit `1c34457`.
 - The git-ignored `runs/` and `data/generated/` inventories are documented but
   optional for verification; the committed reference checkpoint and
@@ -341,10 +389,10 @@ Artifacts:
   numbers are the Python baseline for the ≥2× simulation and isolated-learn
   gates.
 
-## 8. Stage checklist
+## 9. Stage checklist
 
 - [x] R0: immutable oracle, golden coverage, and unprofiled reference accepted.
 - [x] R1: native domain/lifecycle/actions/ticks/costs at oracle parity.
 - [x] R2: observation/history and mask parity accepted.
-- [ ] R3 integration.
+- [x] R3: wrapper/evaluator/forecast/backend/provenance accepted.
 - [ ] R4 acceptance.

@@ -25,7 +25,9 @@ git-ignored; the release build is not part of the Python package install.
 
 R1 implements the domain, lifecycle, actions/guards, the fixed tick order and
 cost/reward integration. R2 adds the incremental observation tensors
-(`observation.rs`) and the kernel-owned mask cache. The Gym wrapper is R3; the
-PyO3 surface here is deliberately a thin debug bridge
-(`Kernel.observe`, `Kernel.debug_snapshot`, `Kernel.debug_step`,
-`Kernel.action_mask`).
+(`observation.rs`) and the kernel-owned mask cache. R3 adds the per-decision
+contract (`reset_contract`/`step_contract`), the evaluator summary/trace
+surfaces and the Python Gym wrapper (`src/bus_rl/env/native_bus_dispatch.py`)
+selected via `runtime.backend`. R4 (speed/parity acceptance) is still open.
+`Kernel.observe`, `Kernel.debug_snapshot` and `Kernel.debug_step` remain the
+golden-test surfaces.

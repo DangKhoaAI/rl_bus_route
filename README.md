@@ -57,9 +57,10 @@ recreated. Selected reports live in `reports/`.
 
 The Rust migration (`docs/spec/rust_improve.md`, `docs/plan/rust_improve.md`)
 ports the simulator kernel. R0 (Python oracle + golden fixtures), R1 (domain,
-passenger/vehicle lifecycle, actions/guards, tick order, costs) and R2
-(observation tensors + mask cache) are accepted; the Python CLI and backend are
-unchanged.
+passenger/vehicle lifecycle, actions/guards, tick order, costs), R2
+(observation tensors + mask cache) and R3 (native Gym wrapper, shared evaluator
+interface, `runtime.backend` selection) are accepted; the Python CLI and
+backend remain the default and the oracle.
 
 ```bash
 python scripts/build_native.py       # cargo build --release + install src/bus_sim.so
@@ -67,9 +68,17 @@ cargo test -p bus-sim                # native unit tests
 python -m pytest tests/backend_parity -q
 ```
 
-`bus_sim` is a debug/parity bridge (`Kernel.observe`, `Kernel.debug_snapshot`,
-`Kernel.debug_step`) until R3 adds the wrapped Gym environment. See
-`crates/README.md` and `reports/rust-migration.md`.
+Select the backend per run (default `python`, configurable via `[runtime]
+backend` or `--backend`):
+
+```bash
+uv run bus-rl evaluate --config configs/eval.toml --manifest data/generated/base/manifest.json \
+  --split validation --method threshold --output runs/eval-rust --backend rust
+```
+
+Requesting `--backend rust` without the extension fails loudly; Python is kept
+as an explicit fallback. Run metadata records the backend and native build hash.
+See `crates/README.md` and `reports/rust-migration.md`.
 
 ## What is in the observation
 

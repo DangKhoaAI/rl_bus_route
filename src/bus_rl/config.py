@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import tomllib
-from dataclasses import asdict, dataclass, fields
+from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 
 from bus_rl.domain import SimConfig
@@ -42,6 +42,16 @@ class ForecastConfig:
 
 
 @dataclass(frozen=True)
+class RuntimeConfig:
+    # "python" keeps the R0 oracle; "rust" selects the native kernel.
+    backend: str = "python"
+
+    def __post_init__(self) -> None:
+        if self.backend not in {"python", "rust"}:
+            raise ValueError(f"unknown backend: {self.backend!r}")
+
+
+@dataclass(frozen=True)
 class RunConfig:
     physical: SimConfig
     control: ControlConfig
@@ -49,6 +59,7 @@ class RunConfig:
     algorithm: AlgorithmConfig
     forecast: ForecastConfig
     source: str
+    runtime: RuntimeConfig = field(default_factory=RuntimeConfig)
 
     @property
     def control_hash(self) -> str:
@@ -95,6 +106,7 @@ def load_run_config(path: Path, project_root: Path | None = None) -> RunConfig:
         algorithm=_from_section(AlgorithmConfig, merged.get("algorithm", {})),
         forecast=_from_section(ForecastConfig, merged.get("forecast", {})),
         source=str(path),
+        runtime=_from_section(RuntimeConfig, merged.get("runtime", {})),
     )
 
 

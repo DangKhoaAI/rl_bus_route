@@ -67,6 +67,43 @@ class BusDispatchEnv(gym.Env):
         with TIMERS.span("env.action_masks"):
             return valid_action_mask(self.state, self.scenario)
 
+    def summary_inputs(self):
+        """Episode-end inputs for the shared evaluator interface (R3.2)."""
+        from bus_rl.evaluation.summary import from_python_state
+
+        return from_python_state(self.state)
+
+    def trace_snapshot(self) -> dict:
+        """Per-decision trace row shared with the native backend (R3.2)."""
+        state = self.state
+        queues = [
+            sum(cohort.count for cohort in state.cohorts if cohort.route_id == route)
+            for route in range(self.config.route_count)
+        ]
+        buses = [
+            {
+                "id": vehicle.vehicle_id,
+                "phase": vehicle.phase.name,
+                "route_id": vehicle.route_id,
+                "pattern": vehicle.pattern.name,
+                "load": vehicle.load,
+            }
+            for vehicle in state.vehicles.values()
+        ]
+        return {
+            "time_s": state.current_time_s,
+            "queues": queues,
+            "headway_targets": [
+                state.headway_targets_s[route] for route in range(self.config.route_count)
+            ],
+            "buses": buses,
+            "waiting": state.waiting_count,
+            "onboard": state.onboard_count,
+            "generated": state.generated_count,
+            "abandoned": state.abandoned_count,
+            "completed": state.completed_count,
+        }
+
     def step(self, action_index):
         with TIMERS.span("env.step"):
             if not self.action_masks()[action_index]:

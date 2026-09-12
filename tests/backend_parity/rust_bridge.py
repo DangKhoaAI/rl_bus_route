@@ -6,11 +6,12 @@ This is test/report tooling, not the R3 Gym wrapper.
 
 from __future__ import annotations
 
-import json
-from dataclasses import asdict
+from dataclasses import replace
 
 import numpy as np
 
+from bus_rl.backend.native import build_kernel as _build_kernel
+from bus_rl.backend.native import scenario_payload
 from bus_rl.parity.fixtures import flatten
 from bus_rl.parity.scenarios import CONTROL_FLAGS, build_scenario
 from bus_rl.parity.snapshot import COST_FIELDS
@@ -18,45 +19,18 @@ from bus_rl.parity.snapshot import COST_FIELDS
 
 def scenario_json(scenario, control) -> str:
     enable_reassign, enable_short_turn = control
-    return json.dumps(
-        {
-            "config": asdict(scenario.config),
-            "network": {
-                "routes": [
-                    {
-                        "route_id": route.route_id,
-                        "stops": list(route.stops),
-                        "short_turn_stop": route.short_turn_stop,
-                    }
-                    for route in scenario.network.routes
-                ],
-                "depot_node": scenario.network.depot_node,
-                "edge_base_s": list(scenario.network.edge_base_s),
-            },
-            "fleet": [
-                {
-                    "vehicle_id": spec.vehicle_id,
-                    "route_id": spec.route_id,
-                    "node": spec.node,
-                    "direction": spec.direction,
-                }
-                for spec in scenario.fleet
-            ],
-            "enable_reassign": enable_reassign,
-            "enable_short_turn": enable_short_turn,
-        }
-    )
+    return scenario_payload(scenario, enable_reassign, enable_short_turn)
 
 
 def make_kernel(spec: dict, *, conservation: bool = True):
-    import bus_sim
-
     scenario = build_scenario(spec)
-    control = CONTROL_FLAGS[spec.get("control", "M3")]
-    arrivals = np.ascontiguousarray(scenario.arrival_tape)
-    traffic = np.ascontiguousarray(scenario.traffic_tape)
-    kernel = bus_sim.Kernel(scenario_json(scenario, control), arrivals, traffic)
-    kernel.set_conservation_checks(conservation)
+    enable_reassign, enable_short_turn = CONTROL_FLAGS[spec.get("control", "M3")]
+    scenario = replace(
+        scenario,
+        enable_reassign=enable_reassign,
+        enable_short_turn=enable_short_turn,
+    )
+    kernel = _build_kernel(scenario, conservation=conservation)
     kernel.reset()
     return kernel
 

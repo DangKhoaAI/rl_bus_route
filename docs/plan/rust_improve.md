@@ -166,10 +166,10 @@ Details in [reports/rust-migration.md](../reports/rust-migration.md).
 
 ### R3.1 - PyO3 and Gym contract
 
-- [ ] Expose reset and one native step per control decision using the contract in Rust spec section 5.
-- [ ] Preserve Gym seeding/scenario selection, terminated/truncated behavior, terminal observations, and VecEnv auto-reset.
-- [ ] Convert native cost output into the existing `StepCosts` contract.
-- [ ] Return arrays with safe lifetime/ownership; do not rebuild Python WorldState each training step.
+- [x] Expose reset and one native step per control decision using the contract in Rust spec section 5.
+- [x] Preserve Gym seeding/scenario selection, terminated/truncated behavior, terminal observations, and VecEnv auto-reset.
+- [x] Convert native cost output into the existing `StepCosts` contract.
+- [x] Return arrays with safe lifetime/ownership; do not rebuild Python WorldState each training step.
 
 **Verification:** Gym environment checks plus project environment tests; retain old obs/mask arrays across later steps/resets and prove they are unchanged; interleave two env instances to detect shared mutable state; test DummyVecEnv auto-reset.
 
@@ -177,10 +177,10 @@ Details in [reports/rust-migration.md](../reports/rust-migration.md).
 
 ### R3.2 - Evaluation, traces, and forecast
 
-- [ ] Add a common terminal-summary/trace interface with adapters for both backends.
-- [ ] Supply cohort/lineage data, departures, actions, totals, and vehicle snapshots needed by `evaluation/runner.py`.
-- [ ] Keep statistics and plots in Python; export detailed snapshots only at episode end or when tracing is enabled.
-- [ ] Keep forecast causal and reproduce context flags and episode reset behavior.
+- [x] Add a common terminal-summary/trace interface with adapters for both backends.
+- [x] Supply cohort/lineage data, departures, actions, totals, and vehicle snapshots needed by `evaluation/runner.py`.
+- [x] Keep statistics and plots in Python; export detailed snapshots only at episode end or when tracing is enabled.
+- [x] Keep forecast causal and reproduce context flags and episode reset behavior.
 
 **Verification:** fixed-checkpoint and heuristic paired evaluation; compare every metric, categorical/None output, raw component, and trace; exercise zero-demand/censored episodes and forecast on/off; render report outputs through the normal reporting pipeline.
 
@@ -188,16 +188,28 @@ Details in [reports/rust-migration.md](../reports/rust-migration.md).
 
 ### R3.3 - Backend selection and lineage
 
-- [ ] Implement proposed `runtime.backend` selection throughout CLI/config, train, validation callbacks, diagnose, evaluate, and baselines.
-- [ ] Fail explicitly when Rust is requested but unavailable; retain Python fallback through explicit selection.
-- [ ] Record native build/version, backend, hashes, dependency lock, and source revision in metadata.
-- [ ] Preserve checkpoint compatibility checks; permit cross-backend loading only under matching contracts and verified parity.
+- [x] Implement proposed `runtime.backend` selection throughout CLI/config, train, validation callbacks, diagnose, evaluate, and baselines.
+- [x] Fail explicitly when Rust is requested but unavailable; retain Python fallback through explicit selection.
+- [x] Record native build/version, backend, hashes, dependency lock, and source revision in metadata.
+- [x] Preserve checkpoint compatibility checks; permit cross-backend loading only under matching contracts and verified parity.
 
 **Verification:** run all entry points for each backend; inspect validation metadata for accidental Python fallback; test missing extension, mismatched physics/schema, and matching cross-backend checkpoint load.
 
 **Acceptance:** backend choice is honored end to end and provenance checks remain effective.
 
 **R3 gate:** R3.1-R3.3 accepted; the Rust backend supports the complete workflow.
+
+**Evidence (2026-09-12, accepted):** `Kernel.reset_contract`/
+`step_contract` plus `bus_rl.env.native_bus_dispatch.NativeBusDispatchEnv`
+mirror the oracle Gym contract; `bus_rl.evaluation.summary` is the shared
+summary/trace interface with Python and native adapters; `runtime.backend`
+selects the backend across config/CLI/train/validation/evaluate/baselines and
+fails loudly when Rust is missing. 21 integration tests
+(`tests/backend_parity/test_rust_integration.py`) cover the Gym contract, VecEnv
+auto-reset, output ownership, interleaved envs, evaluator/trace parity for four
+controllers, forecast on/off, zero-demand censoring, plotting, backend
+selection, metadata and cross-backend checkpoint rules. Details in
+[reports/rust-migration.md](../reports/rust-migration.md).
 
 ## 7. R4: acceptance and handoff
 
@@ -240,7 +252,7 @@ Details in [reports/rust-migration.md](../reports/rust-migration.md).
 - [x] R0: immutable oracle, golden coverage, and unprofiled reference accepted.
 - [x] R1: domain/lifecycle/actions/ticks/costs accepted.
 - [x] R2: observation/history and mask parity accepted.
-- [ ] R3: wrapper/evaluator/forecast/backend/provenance accepted.
+- [x] R3: wrapper/evaluator/forecast/backend/provenance accepted.
 - [ ] R4: correctness, 2x simulation and learn gates, and faster full workflow accepted.
 - [ ] Historical reports preserved; new report distinguishes measured results from projections.
 - [ ] Handoff records the frozen backend revision and unlocks task L0.1 in the [RL plan](improve_RL.md).

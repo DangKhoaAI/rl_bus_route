@@ -302,7 +302,7 @@
   ],
   "git": {
     "dirty": true,
-    "sha": "6bb8c992d3cb8d15a7801de578db07989dd86b59"
+    "sha": "d4d8e93f88ebb18a84d80e53d04d9d3f9a3853a1"
   },
   "hashes": {
     "action_schema_hash": "ff62ae3cfa7478758a5370e575dbfc3c15729c0ea10a3ccbb2bd7a207cab761a",
@@ -422,7 +422,7 @@
     {
       "path": "reports/rust-migration.md",
       "required": true,
-      "sha256": "fd923bcb51fa11caab3c164e053da73003395c675030b94900fb9586d8fca3d6"
+      "sha256": "3e14ab76d8ca850c825ecd4140f4eff52800e3f4ba6edd475cb2c230fc3b144e"
     },
     {
       "path": "reports/training-diagnose/cprofile.txt",
@@ -534,5 +534,5 @@
       "validation": 2001
     }
   },
-  "self_hash": "6dd792961fafa72e4095fb0b60670be48438e5628b904fe172d183002317470e"
+  "self_hash": "f6ae17bd91deee52fa8d2fee287a343c1f764f671044e893b48d216d67062749"
 }

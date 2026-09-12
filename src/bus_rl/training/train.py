@@ -9,7 +9,7 @@ from stable_baselines3.common.callbacks import BaseCallback, CallbackList
 from stable_baselines3.common.vec_env import DummyVecEnv
 
 from bus_rl.config import AlgorithmConfig, RunConfig
-from bus_rl.env.bus_dispatch import BusDispatchEnv
+from bus_rl.env.factory import make_env_for_run
 from bus_rl.models.features import POLICY_KWARGS
 from bus_rl.training.callbacks import BestValidationCallback
 from bus_rl.training.checkpoint import run_metadata, write_metadata
@@ -68,13 +68,7 @@ def make_model(env, seed: int, algorithm: AlgorithmConfig | None = None):
 
 def make_env(scenarios, run: RunConfig, seed: int, forecaster=None):
     def _init():
-        env = BusDispatchEnv(
-            scenarios,
-            run.physical,
-            forecaster=forecaster,
-            reward=run.reward,
-            control=run.control,
-        )
+        env = make_env_for_run(scenarios, run, forecaster=forecaster)
         env.reset(seed=seed)
         return env
 

@@ -13,3 +13,8 @@ demand_end_s = 10800
 base_route_hourly_demand = [180, 160, 140]
 traffic_log_std = 0.15
 traffic_bucket_s = 300
+
+[runtime]
+# "python" keeps the R0 oracle; "rust" selects the native kernel.
+# The CLI also accepts --backend python|rust to override this per run.
+backend = "python"
