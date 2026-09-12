@@ -10,7 +10,14 @@
 
 **Spec:** [spec.md](spec.md). **Research:** [docs/research.md](docs/research.md).
 
-Thay thế plan v0.1 tại commit `a806bb6`; không còn task candidate selection/TNDP. Mọi file code/lệnh CLI bên dưới là dự kiến, chưa tồn tại hoặc chạy thành công tại thời điểm viết tài liệu.
+Thay thế plan v0.1 tại commit `a806bb6`; không còn task candidate selection/TNDP.
+
+## Trạng thái triển khai
+
+- **T1 hoàn thành:** domain/scenario/JSON+NPZ IO, hashing, deterministic manifest seeds và test data đã có.
+- **T2 hoàn thành:** passenger lifecycle, frozen travel, dwell/layover và fixed-tick NOOP engine đã có.
+- Kiểm tra T1–T2: `10 passed`, `ruff check .`, format check `src tests` (2026-09-12).
+- PyTorch CPU-only đã được khóa trong `uv.lock`; cần chạy lại `uv sync --extra dev` để hoàn tất wheel trong môi trường mới trước Task 5.
 
 ## Global Constraints
 

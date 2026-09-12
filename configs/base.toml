@@ -1,0 +1,15 @@
+[physical]
+route_count = 3
+stops_per_route = 6
+fleet_size = 12
+capacity = 40
+comfort_capacity = 30
+tick_s = 30
+control_interval_s = 120
+horizon_s = 14400
+demand_end_s = 10800
+
+[generation]
+base_route_hourly_demand = [180, 160, 140]
+traffic_log_std = 0.15
+traffic_bucket_s = 300
