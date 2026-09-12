@@ -20,6 +20,7 @@ Thay thế plan v0.1 tại commit `a806bb6`; không còn task candidate selectio
 - **T4 hoàn thành:** raw passenger/vehicle interval costs, event penalties và terminal-unfinished settlement đã có.
 - **T5 hoàn thành:** Gymnasium adapter, fixed-shape observation, horizon/no-future tests, four baselines và MaskablePPO CPU save/load smoke đã qua.
 - **T6 hoàn thành:** guarded `REASSIGN` chạy deadhead tới terminal nhận; loaded/moving/cooldown/no-replacement donor đều bị mask trong test.
+- **T7 hoàn thành:** `SHORT_TURN` 0→3→0, boarding theo pattern, layover turnpoint/s0, restore FULL, donor/cooldown và threshold prior-share đã có test.
 - PyTorch CPU-only đã được khóa và kiểm tra trong `.venv` (`2.14.0+cpu`, CUDA `False`).
 
 ## Global Constraints
@@ -273,7 +274,7 @@ def test_masked_ppo_save_load_preserves_action(tmp_path):
 
 **Produces:** SHORT_TURN một round trip0→3→0, đủ điều kiện boarding/layover, rồi FULL.
 
-- [ ] Viết test khách đi tới s5 không được lên short mission từ s0.
+- [x] Viết test khách đi tới s5 không được lên short mission từ s0.
 
 ```python
 def test_short_turn_does_not_strand_long_distance_passenger():
@@ -286,12 +287,12 @@ def test_short_turn_does_not_strand_long_distance_passenger():
     assert state.waiting_count == 1
 ```
 
-- [ ] Chạy fail, implement passenger eligibility trước boarding. Test reverse direction khách s3→s1 được đi sau turnaround; all outbound khách xuống đúng destination.
-- [ ] Test short action chỉ từ reserve hoặc empty/ready cùng route s0; short nhận từ assigned bus phải qua donor guard và tạm không tính FULL floor.
-- [ ] Implement layover120s tại turnpoint và lúc về s0, pattern restore FULL sau completion. Không reset cooldown để tạo chuỗi short miễn phí.
-- [ ] Threshold ước lượng short-eligible mass từ aggregate origin/direction queues và prior downstream `exp(-distance/2)`; nếu estimated share≥0.7 và Q≥40 chọn short reserve trước full reserve, không đọc actual hidden destinations. Targeted short-ready assigned bus là fallback chỉ khi mask hợp lệ.
-- [ ] Test long-distance starvation case và excessive-wait metrics; không auto-reassign người ngoài pattern sang tuyến khác.
-- [ ] `uv run pytest tests/test_passengers.py tests/test_control.py tests/test_engine.py -q`; commit `feat: operate predefined short-turn reinforcement trips`.
+- [x] Chạy fail, implement passenger eligibility trước boarding. Test reverse direction khách s3→s1 được đi sau turnaround; all outbound khách xuống đúng destination.
+- [x] Test short action chỉ từ reserve hoặc empty/ready cùng route s0; short nhận từ assigned bus phải qua donor guard và tạm không tính FULL floor.
+- [x] Implement layover120s tại turnpoint và lúc về s0, pattern restore FULL sau completion. Không reset cooldown để tạo chuỗi short miễn phí.
+- [x] Threshold ước lượng short-eligible mass từ aggregate origin/direction queues và prior downstream `exp(-distance/2)`; nếu estimated share≥0.7 và Q≥40 chọn short reserve trước full reserve, không đọc actual hidden destinations. Targeted short-ready assigned bus là fallback chỉ khi mask hợp lệ.
+- [x] Test long-distance starvation case và excessive-wait metrics; không auto-reassign người ngoài pattern sang tuyến khác.
+- [x] `uv run pytest tests/test_passengers.py tests/test_control.py tests/test_engine.py -q`; commit `feat: operate predefined short-turn reinforcement trips`.
 
 **Gate M3:** đủ core actions, mọi khách được bảo toàn và không ai bị buộc xuống trước đích.
 

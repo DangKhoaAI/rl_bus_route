@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from bus_rl.domain import PassengerCohort, PassengerStatus, WorldState
+from bus_rl.domain import PassengerCohort, PassengerStatus, Pattern, Vehicle, WorldState
 
 
 @dataclass(frozen=True)
@@ -14,12 +14,19 @@ class PassengerEvents:
     first_denied_count: int = 0
 
 
-def _eligible(cohort: PassengerCohort, direction: int, stop_index: int) -> bool:
-    return (
-        cohort.status is PassengerStatus.WAITING
-        and cohort.direction == direction
-        and cohort.origin_index == stop_index
-    )
+def _eligible(cohort: PassengerCohort, bus: Vehicle, direction: int, stop_index: int) -> bool:
+    if (
+        cohort.status is not PassengerStatus.WAITING
+        or cohort.direction != direction
+        or cohort.origin_index != stop_index
+    ):
+        return False
+    if bus.pattern is Pattern.FULL:
+        return True
+    turn = bus.turn_stop if bus.turn_stop is not None else 3
+    if direction == 1:
+        return cohort.destination_index <= turn
+    return stop_index <= turn
 
 
 def _split_for_boarding(
@@ -57,7 +64,7 @@ def board_visit(
         (
             c
             for c in state.cohorts
-            if c.route_id == route_id and _eligible(c, direction, stop_index)
+            if c.route_id == route_id and _eligible(c, bus, direction, stop_index)
         ),
         key=lambda c: (c.arrival_tick, c.cohort_id),
     )

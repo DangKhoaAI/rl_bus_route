@@ -1,7 +1,8 @@
 from bus_rl.control.actions import ACTION_TABLE, action_id
 from bus_rl.control.guards import valid_action_mask
-from bus_rl.domain import Phase, initial_state
+from bus_rl.domain import Pattern, Phase, initial_state
 from bus_rl.sim.engine import advance_interval
+from bus_rl.sim.vehicles import complete_expired_phase
 from tests.fixtures import empty_scenario
 
 
@@ -11,8 +12,9 @@ def test_static_action_table_has_221_slots_and_noop_is_valid():
     mask = valid_action_mask(state, scenario)
     assert len(ACTION_TABLE) == 221
     assert mask[0]
-    assert mask[action_id("REASSIGN", bus_id=0, route_id=1)]
+    assert not mask[action_id("REASSIGN", bus_id=0, route_id=1)]
     assert not mask[action_id("SHORT_TURN", bus_id=0, route_id=0)]
+    assert empty_scenario("M1").scenario_hash == empty_scenario("M3").scenario_hash
 
 
 def test_dispatch_consumes_time_and_one_reserve():
@@ -36,3 +38,40 @@ def test_headway_target_does_not_create_a_vehicle_and_recall_keeps_floor():
     for bus_id in (0, 1):
         state.vehicles[bus_id].phase = Phase.DEPOT_IDLE
     assert not valid_action_mask(state, scenario)[action_id("RECALL", bus_id=2)]
+
+
+def test_short_turn_from_reserve_or_ready_s0_and_respects_donor_guard():
+    scenario = empty_scenario("M3")
+    state = initial_state(scenario)
+    mask = valid_action_mask(state, scenario)
+    assert mask[action_id("SHORT_TURN", 9, 0)]
+    assert mask[action_id("SHORT_TURN", 0, 0)]
+    assert not mask[action_id("SHORT_TURN", 2, 0)]
+    state.vehicles[1].phase = Phase.SERVICE_MOVING
+    mask = valid_action_mask(state, scenario)
+    assert not mask[action_id("SHORT_TURN", 0, 0)]
+    assert mask[action_id("SHORT_TURN", 9, 0)]
+    for stage in ("M1", "M2"):
+        other = empty_scenario(stage)
+        assert not valid_action_mask(initial_state(other), other)[action_id("SHORT_TURN", 9, 0)]
+
+
+def test_short_turn_reserve_deadheads_and_keeps_cooldown():
+    scenario = empty_scenario("M3")
+    state = initial_state(scenario)
+    action = ACTION_TABLE[action_id("SHORT_TURN", bus_id=9, route_id=0)]
+    advance_interval(state, scenario, action)
+    bus = state.vehicles[9]
+    assert bus.phase is Phase.DEADHEAD
+    assert bus.pattern is Pattern.SHORT
+    assert bus.load == 0
+    assert bus.cooldown_until_s == 1200
+    assert state.depot_count == 2
+    bus.phase = Phase.LAYOVER
+    bus.node = scenario.network.routes[0].stops[0]
+    bus.direction = 1
+    bus.remaining_s = 0
+    complete_expired_phase(state, scenario, bus)
+    assert bus.pattern is Pattern.FULL
+    assert bus.cooldown_until_s == 1200
+    assert not valid_action_mask(state, scenario)[action_id("SHORT_TURN", 9, 0)]

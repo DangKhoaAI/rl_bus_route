@@ -20,6 +20,11 @@ class Phase(StrEnum):
     LAYOVER = "LAYOVER"
 
 
+class Pattern(StrEnum):
+    FULL = "FULL"
+    SHORT = "SHORT"
+
+
 class PassengerStatus(StrEnum):
     WAITING = "WAITING"
     ONBOARD = "ONBOARD"
@@ -89,6 +94,8 @@ class Scenario:
     traffic_tape: np.ndarray
     seed: int
     scenario_hash: str
+    enable_reassign: bool = False
+    enable_short_turn: bool = False
 
 
 @dataclass
@@ -121,6 +128,9 @@ class Vehicle:
     passengers: list[PassengerCohort] = field(default_factory=list)
     visit_id: int = 0
     cooldown_until_s: int = 0
+    pattern: Pattern = Pattern.FULL
+    turn_stop: int | None = None
+    pending_extra: bool = False
 
     @property
     def load(self) -> int:
@@ -161,7 +171,8 @@ class WorldState:
     event_log: list[dict[str, object]] = field(default_factory=list)
     headway_targets_s: dict[int, int] = field(default_factory=dict)
     headway_changed_at_s: dict[int, int] = field(default_factory=dict)
-    last_departure_s: dict[tuple[int, int], int] = field(default_factory=dict)
+    last_departure_s: dict[tuple[int, int, int], int] = field(default_factory=dict)
+    last_full_departure_s: dict[tuple[int, int, int], int] = field(default_factory=dict)
     terminal_settled: bool = False
 
     @property
@@ -258,9 +269,15 @@ def initial_state(scenario: Scenario) -> WorldState:
         cohorts=[],
         headway_targets_s={route.route_id: 900 for route in scenario.network.routes},
         headway_changed_at_s={route.route_id: -600 for route in scenario.network.routes},
-        last_departure_s={
-            (route.route_id, direction): -900
-            for route in scenario.network.routes
-            for direction in (1, -1)
-        },
+        last_departure_s=_initial_departure_clocks(scenario),
+        last_full_departure_s=_initial_departure_clocks(scenario),
     )
+
+
+def _initial_departure_clocks(scenario: Scenario) -> dict[tuple[int, int, int], int]:
+    clocks: dict[tuple[int, int, int], int] = {}
+    for route in scenario.network.routes:
+        clocks[route.route_id, 1, route.stops[0]] = -900
+        clocks[route.route_id, -1, route.stops[-1]] = -900
+        clocks[route.route_id, -1, route.stops[route.short_turn_stop]] = -900
+    return clocks

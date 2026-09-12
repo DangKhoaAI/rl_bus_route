@@ -7,7 +7,7 @@ from tests.fixtures import empty_scenario
 
 
 def test_reassign_requires_empty_terminal_donor_and_travels():
-    scenario = empty_scenario()
+    scenario = empty_scenario("M2")
     state = initial_state(scenario)
     bus = state.vehicles[0]
     choice = action_id("REASSIGN", 0, 1)
@@ -23,7 +23,7 @@ def test_reassign_requires_empty_terminal_donor_and_travels():
 
 
 def test_reassign_masks_loaded_moving_cooldown_and_missing_replacement():
-    scenario = empty_scenario()
+    scenario = empty_scenario("M2")
     state = initial_state(scenario)
     choice = action_id("REASSIGN", 0, 1)
     bus = state.vehicles[0]
@@ -38,7 +38,7 @@ def test_reassign_masks_loaded_moving_cooldown_and_missing_replacement():
 
 
 def test_seeded_m2_rollout_keeps_actions_valid():
-    scenario = empty_scenario()
+    scenario = empty_scenario("M2")
     env = BusDispatchEnv([scenario], scenario.config)
     env.reset(seed=11)
     for _ in range(10):

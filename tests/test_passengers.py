@@ -1,6 +1,7 @@
-from bus_rl.domain import PassengerStatus
+from bus_rl.domain import PassengerCohort, PassengerStatus, Pattern, initial_state
+from bus_rl.rewards.costs import integrate_tick_costs
 from bus_rl.sim.passengers import abandon_expired, alight_visit, board_visit
-from tests.fixtures import waiting_state
+from tests.fixtures import empty_scenario, short_state, waiting_state
 
 
 def test_capacity_denial_keeps_waiting_passengers():
@@ -28,3 +29,29 @@ def test_alighting_happens_only_at_destination_and_patience_is_checked_before_bo
     state.current_time_s = 2_700
     assert abandon_expired(state, 2_700, 30) == 1
     assert state.cohorts[0].status is PassengerStatus.ABANDONED
+
+
+def test_short_turn_does_not_strand_long_distance_passenger():
+    state = short_state()
+    event = board_visit(state, bus_id=0, route_id=0, direction=1, stop_index=0)
+    assert event.boarded_count == 0
+    assert event.first_denied_count == 0
+    assert state.waiting_count == 1
+    assert state.cohorts[0].route_id == 0
+    state.current_time_s = 900
+    assert integrate_tick_costs(state, 30).excessive_wait_pm > 0
+
+
+def test_short_turn_boards_inbound_after_turnaround():
+    scenario = empty_scenario("M3")
+    state = initial_state(scenario)
+    bus = state.vehicles[0]
+    bus.pattern = Pattern.SHORT
+    bus.turn_stop = 3
+    bus.node = scenario.network.routes[0].stops[3]
+    bus.direction = -1
+    state.cohorts.append(PassengerCohort(0, 0, 0, -1, 3, 1, 0, 1))
+    state.generated_total = 1
+    event = board_visit(state, bus.vehicle_id, 0, -1, 3)
+    assert event.boarded_count == 1
+    assert alight_visit(state, bus.vehicle_id, 1) == 1
