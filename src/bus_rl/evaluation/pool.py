@@ -50,6 +50,7 @@ def eval_pool_key(scenarios, run: RunConfig, forecaster=None) -> tuple:
         run.runtime.backend,
         bool(run.runtime.validate_observation),
         int(run.runtime.eval_batch_size),
+        bool(run.runtime.native_batch),
         run.control_hash,
         run.reward_hash,
         physical_config_hash(run.physical),
@@ -110,3 +111,12 @@ class EvalEnvPool:
         self.envs.clear()
         self.scenario_store = None
         self.closed = True
+
+
+def make_eval_pool(scenarios, run: RunConfig, forecaster=None):
+    """Build the pool for the configured evaluator (native batch vs Python)."""
+    if run.runtime.native_batch:
+        from bus_rl.env.native_batch import NativeBatchEvalPool
+
+        return NativeBatchEvalPool(scenarios, run, forecaster)
+    return EvalEnvPool(scenarios, run, forecaster)

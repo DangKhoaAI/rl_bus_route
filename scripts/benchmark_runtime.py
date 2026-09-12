@@ -32,11 +32,13 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 from bus_rl import domain
 from bus_rl.config import ControlConfig, load_run_config
 from bus_rl.data.scenario import generate_manifest
+from bus_rl.domain import StepCosts
 from bus_rl.env.factory import make_env_for_run
 from bus_rl.evaluation.pool import EvalEnvPool
-from bus_rl.evaluation.runner import evaluate_scenarios, make_controller, rollout
+from bus_rl.evaluation.runner import PPOController, evaluate_scenarios, make_controller, rollout
+from bus_rl.evaluation.summary import from_native_payload, summarize_inputs
 from bus_rl.provenance import file_hash, git_status, lock_hash
-from bus_rl.rewards.costs import RewardConfig
+from bus_rl.rewards.costs import RewardConfig, add_costs
 from bus_rl.runtime import apply_torch_threads
 from bus_rl.timing import TIMERS
 from bus_rl.training.checkpoint import load_metadata, load_model
@@ -539,6 +541,446 @@ def measure_ablation(repetitions: int, warmup: int, eval_days: int) -> dict:
     }
 
 
+def _batched_segments(pool: EvalEnvPool, controller, scenarios) -> dict:
+    """O1 breakdown: segment walls of the batched evaluator with TIMERS off.
+
+    Mirrors `evaluation/runner.py::_evaluate_batched` (same reset/step/predict
+    calls, done slots skipped, summaries captured before slot reuse).
+    """
+    n_days = len(scenarios)
+    batch_size = min(pool.batch_size, n_days)
+    seg = {"reset_s": 0.0, "mask_s": 0.0, "infer_s": 0.0, "step_s": 0.0, "summary_s": 0.0}
+    records: list[dict | None] = [None] * n_days
+    started = perf_counter()
+    offset = 0
+    while offset < n_days:
+        chunk = list(range(offset, min(offset + batch_size, n_days)))
+        slots: list[dict] = []
+        for slot_id, scenario_index in enumerate(chunk):
+            env = pool.envs[slot_id]
+            t0 = perf_counter()
+            observation, _ = env.reset(seed=0, options={"scenario_index": scenario_index})
+            seg["reset_s"] += perf_counter() - t0
+            slots.append(
+                {
+                    "env": env,
+                    "scenario_index": scenario_index,
+                    "observation": observation,
+                    "reward_sum": 0.0,
+                    "costs": StepCosts(),
+                    "done": False,
+                }
+            )
+        while True:
+            active = [slot for slot in slots if not slot["done"]]
+            if not active:
+                break
+            t0 = perf_counter()
+            masks = [slot["env"].action_masks() for slot in active]
+            seg["mask_s"] += perf_counter() - t0
+            t0 = perf_counter()
+            actions = controller.act_batch([slot["observation"] for slot in active], masks)
+            seg["infer_s"] += perf_counter() - t0
+            for slot, action in zip(active, actions, strict=True):
+                env = slot["env"]
+                t0 = perf_counter()
+                observation, reward, terminated, truncated, info = env.step(int(action))
+                seg["step_s"] += perf_counter() - t0
+                slot["observation"] = observation
+                slot["reward_sum"] += float(reward)
+                slot["costs"] = add_costs(slot["costs"], info["costs"])
+                if not (terminated or truncated):
+                    continue
+                slot["done"] = True
+                t0 = perf_counter()
+                metrics = summarize_inputs(
+                    env.summary_inputs(),
+                    env.scenario,
+                    slot["costs"],
+                    slot["reward_sum"],
+                    env.reward,
+                )
+                seg["summary_s"] += perf_counter() - t0
+                records[slot["scenario_index"]] = metrics
+        offset += len(chunk)
+    seg["wall_s"] = perf_counter() - started
+    if any(row is None for row in records):
+        raise RuntimeError("breakdown missed a scenario")
+    seg["days"] = n_days
+    seg["batch_size"] = batch_size
+    return seg
+
+
+def measure_o1_breakdown(repetitions: int, warmup: int, eval_days: int, batch_sizes) -> dict:
+    """Where the wall moved after O1 batching (TIMERS/profiler off)."""
+    assert TIMERS.enabled is False
+    run = _reference_run()
+    apply_torch_threads(run.algorithm.torch_threads)
+    scenarios = generate_manifest("validation", 100)[:eval_days]
+    load_env = make_env_for_run(scenarios[:1], run)
+    model, _ = load_model(REFERENCE, load_env, run.physical)
+    controller = PPOController(model)
+
+    results: dict[str, dict] = {}
+    pools: dict[int, EvalEnvPool] = {}
+    try:
+        for size in batch_sizes:
+            variant_run = replace(run, runtime=replace(run.runtime, eval_batch_size=size))
+            pool = EvalEnvPool(scenarios, variant_run)
+            pools[size] = pool
+            for _ in range(warmup):
+                _batched_segments(pool, controller, scenarios)
+        for _ in range(repetitions):
+            for size in batch_sizes:
+                rows = _batched_segments(pools[size], controller, scenarios)
+                rows["rss_current_kb"] = _rss_current_kb()
+                results.setdefault(str(size), {"rows": []})["rows"].append(rows)
+                print(
+                    f"[o1-breakdown] batch={size:2d} wall={rows['wall_s']:.3f}s "
+                    f"infer={rows['infer_s']:.3f}s step={rows['step_s']:.3f}s",
+                    flush=True,
+                )
+    finally:
+        for pool in pools.values():
+            pool.close()
+
+    summary = {}
+    for size, payload in results.items():
+        rows = payload["rows"]
+        summary[size] = {
+            key: statistics.median([row[key] for row in rows])
+            for key in ("wall_s", "reset_s", "mask_s", "infer_s", "step_s", "summary_s")
+        }
+        summary[size]["effective_batch"] = rows[0]["batch_size"]
+        summary[size]["inference_share"] = (
+            summary[size]["infer_s"] / summary[size]["wall_s"] if summary[size]["wall_s"] else 0.0
+        )
+        summary[size]["rss_median_kb"] = int(
+            statistics.median([row["rss_current_kb"] for row in rows])
+        )
+        summary[size]["raw"] = rows
+    return {
+        "protocol": {
+            "repetitions": repetitions,
+            "warmup": warmup,
+            "eval_days": eval_days,
+            "batch_sizes": list(batch_sizes),
+            "interleaved": True,
+            "timers": "disabled",
+            "profiler": "disabled",
+            "note": "segments use perf_counter; nested env.step/obs conversion is inside step_s",
+        },
+        "summary": summary,
+        "peak_rss_kb": _rss_peak_kb(),
+    }
+
+
+def _native_segments(pool, controller, scenarios) -> dict:
+    """O2 breakdown: native `step_batch` evaluator with TIMERS off.
+
+    Mirrors `evaluation/runner.py::_evaluate_batched_native`.
+    """
+    from bus_rl.env.native_bus_dispatch import _step_costs
+
+    n_days = len(scenarios)
+    batch_size = min(pool.batch_size, n_days)
+    seg = {"reset_s": 0.0, "mask_s": 0.0, "infer_s": 0.0, "step_s": 0.0, "summary_s": 0.0}
+    records: list[dict | None] = [None] * n_days
+    started = perf_counter()
+    offset = 0
+    while offset < n_days:
+        chunk = list(range(offset, min(offset + batch_size, n_days)))
+        slot_ids = list(range(len(chunk)))
+        t0 = perf_counter()
+        observation, masks = pool.reset(slot_ids, chunk)
+        seg["reset_s"] += perf_counter() - t0
+        slots = [
+            {
+                "slot": slot,
+                "scenario_index": scenario_index,
+                "observation": {key: value[slot] for key, value in observation.items()},
+                "reward_sum": 0.0,
+                "costs": StepCosts(),
+                "done": False,
+            }
+            for slot, scenario_index in zip(slot_ids, chunk, strict=True)
+        ]
+        while True:
+            active = [slot for slot in slots if not slot["done"]]
+            if not active:
+                break
+            active_slots = [slot["slot"] for slot in active]
+            t0 = perf_counter()
+            active_masks = [np.asarray(masks[slot["slot"]]) for slot in active]
+            seg["mask_s"] += perf_counter() - t0
+            t0 = perf_counter()
+            actions = controller.act_batch(
+                [slot["observation"] for slot in active], active_masks
+            )
+            seg["infer_s"] += perf_counter() - t0
+            t0 = perf_counter()
+            result = pool.step(active_slots, actions)
+            seg["step_s"] += perf_counter() - t0
+            step_rewards = np.asarray(result["reward"])
+            step_terminated = np.asarray(result["terminated"])
+            step_costs = np.asarray(result["costs"])
+            masks = np.asarray(result["mask"])
+            step_obs = result["obs"]
+            for position, slot_state in enumerate(active):
+                slot_state["observation"] = {
+                    key: value[position] for key, value in step_obs.items()
+                }
+                slot_state["reward_sum"] += float(step_rewards[position])
+                slot_state["costs"] = add_costs(
+                    slot_state["costs"], _step_costs(step_costs[position])
+                )
+                if not bool(step_terminated[position]):
+                    continue
+                slot_state["done"] = True
+                t0 = perf_counter()
+                summarize_inputs(
+                    from_native_payload(pool.kernel.summary_inputs(slot_state["slot"])),
+                    pool.applied[slot_state["scenario_index"]],
+                    slot_state["costs"],
+                    slot_state["reward_sum"],
+                    pool.run.reward,
+                )
+                seg["summary_s"] += perf_counter() - t0
+                records[slot_state["scenario_index"]] = {"done": True}
+        offset += len(chunk)
+    seg["wall_s"] = perf_counter() - started
+    if any(row is None for row in records):
+        raise RuntimeError("native breakdown missed a scenario")
+    seg["days"] = n_days
+    seg["batch_size"] = batch_size
+    return seg
+
+
+def _learn_segments(native_batch: bool, transitions: int, repetitions: int) -> dict:
+    run = rust_run()
+    apply_torch_threads(run.algorithm.torch_threads)
+    train_scenarios = generate_manifest("train", 16)
+
+    def _learn_once() -> tuple[dict, int]:
+        callback = _SegmentCallback()
+        if native_batch:
+            from bus_rl.env.native_batch import NativeBatchVecEnv
+
+            vec = NativeBatchVecEnv(train_scenarios, run, run.algorithm.seed)
+        else:
+            vec = DummyVecEnv(
+                [
+                    make_env(train_scenarios, run, run.algorithm.seed + index)
+                    for index in range(run.algorithm.n_envs)
+                ]
+            )
+        model = make_model(vec, run.algorithm.seed, run.algorithm)
+        started = perf_counter()
+        model.learn(total_timesteps=transitions, callback=callback)
+        wall = perf_counter() - started
+        actual = int(model.num_timesteps)
+        vec.close()
+        return {
+            "wall_s": wall,
+            "rollout_s": callback.rollout_s,
+            "update_s": callback.update_s,
+        }, actual
+
+    _learn_once()
+    rows = []
+    actuals = []
+    for _ in range(repetitions):
+        row, actual = _learn_once()
+        rows.append(row)
+        actuals.append(actual)
+    return {
+        "native_batch": native_batch,
+        "wall": _stats([row["wall_s"] for row in rows]),
+        "rollout_median_s": statistics.median([row["rollout_s"] for row in rows]),
+        "ppo_update_median_s": statistics.median([row["update_s"] for row in rows]),
+        "transitions_actual": actuals,
+        "raw": rows,
+    }
+
+
+def measure_o2_ablation(repetitions: int, warmup: int, eval_days: int) -> dict:
+    """O1 batched (Python step) vs O2 native batch, plus training VecEnv."""
+    assert TIMERS.enabled is False
+    run = _reference_run()
+    apply_torch_threads(run.algorithm.torch_threads)
+    scenarios = generate_manifest("validation", 100)[:eval_days]
+    load_env = make_env_for_run(scenarios[:1], run)
+    model, _ = load_model(REFERENCE, load_env, run.physical)
+    controller = PPOController(model)
+
+    from bus_rl.env.native_batch import NativeBatchEvalPool
+
+    variants = []
+    for size in (8, 16, 32):
+        variants.append(("o1-batch", size))
+        variants.append(("o2-native", size))
+
+    pools: dict[tuple, object] = {}
+    for kind, size in variants:
+        variant_run = replace(
+            run,
+            runtime=replace(
+                run.runtime,
+                eval_batch_size=size,
+                native_batch=(kind == "o2-native"),
+            ),
+        )
+        pools[(kind, size)] = (
+            NativeBatchEvalPool(scenarios, variant_run)
+            if kind == "o2-native"
+            else EvalEnvPool(scenarios, variant_run)
+        )
+    for key, pool in pools.items():
+        for _ in range(warmup):
+            if key[0] == "o2-native":
+                _native_segments(pool, controller, scenarios)
+            else:
+                _batched_segments(pool, controller, scenarios)
+
+    results: dict[str, dict] = {}
+    try:
+        for _ in range(repetitions):
+            for key, pool in pools.items():
+                name = f"{key[0]}-{key[1]}"
+                rows = (
+                    _native_segments(pool, controller, scenarios)
+                    if key[0] == "o2-native"
+                    else _batched_segments(pool, controller, scenarios)
+                )
+                rows["rss_current_kb"] = _rss_current_kb()
+                results.setdefault(name, {"rows": []})["rows"].append(rows)
+                print(
+                    f"[o2] {name:12s} wall={rows['wall_s']:.3f}s "
+                    f"infer={rows['infer_s']:.3f}s step={rows['step_s']:.3f}s "
+                    f"summ={rows['summary_s']:.3f}s",
+                    flush=True,
+                )
+    finally:
+        for pool in pools.values():
+            pool.close()
+
+    summary = {}
+    for name, payload in results.items():
+        rows = payload["rows"]
+        entry = {
+            field: statistics.median([row[field] for row in rows])
+            for field in ("wall_s", "reset_s", "mask_s", "infer_s", "step_s", "summary_s")
+        }
+        entry["effective_batch"] = rows[0]["batch_size"]
+        entry["rss_median_kb"] = int(statistics.median([row["rss_current_kb"] for row in rows]))
+        entry["raw"] = rows
+        summary[name] = entry
+
+    training = {
+        "dummy": _learn_segments(False, 12_288, repetitions),
+        "native": _learn_segments(True, 12_288, repetitions),
+    }
+    return {
+        "protocol": {
+            "repetitions": repetitions,
+            "warmup": warmup,
+            "eval_days": eval_days,
+            "eval_batch_sizes": [8, 16, 32],
+            "transitions": 12_288,
+            "timers": "disabled",
+            "profiler": "disabled",
+        },
+        "eval": summary,
+        "training": training,
+        "peak_rss_kb": _rss_peak_kb(),
+    }
+
+
+def measure_ppo_update_profile(repetitions: int) -> dict:
+    """Forward / backward / optimizer / clip split of one PPO update (explained).
+
+    Timer overhead is present, so this ranks sub-steps and is not a speed
+    number. One update is 1024 transitions (4 envs x n_steps=256, 4 epochs).
+    """
+    run = rust_run()
+    apply_torch_threads(run.algorithm.torch_threads)
+    train_scenarios = generate_manifest("train", 16)
+
+    def _profile_once(native_batch: bool) -> dict:
+        if native_batch:
+            from bus_rl.env.native_batch import NativeBatchVecEnv
+
+            vec = NativeBatchVecEnv(train_scenarios, run, run.algorithm.seed)
+        else:
+            vec = DummyVecEnv(
+                [
+                    make_env(train_scenarios, run, run.algorithm.seed + index)
+                    for index in range(run.algorithm.n_envs)
+                ]
+            )
+        model = make_model(vec, run.algorithm.seed, run.algorithm)
+        algorithm = run.algorithm
+        model.learn(total_timesteps=algorithm.n_steps * algorithm.n_envs)
+        stats = {"forward": 0.0, "backward": 0.0, "optimizer": 0.0, "clip": 0.0}
+        counts = {key: 0 for key in stats}
+        original_eval = model.policy.evaluate_actions
+        original_backward = torch.Tensor.backward
+        original_step = model.policy.optimizer.step
+        original_clip = torch.nn.utils.clip_grad_norm_
+
+        def timed(name, function):
+            def wrapper(*args, **kwargs):
+                started = perf_counter()
+                result = function(*args, **kwargs)
+                stats[name] += perf_counter() - started
+                counts[name] += 1
+                return result
+
+            return wrapper
+
+        model.policy.evaluate_actions = timed("forward", original_eval)
+        torch.Tensor.backward = timed("backward", original_backward)
+        model.policy.optimizer.step = timed("optimizer", original_step)
+        torch.nn.utils.clip_grad_norm_ = timed("clip", original_clip)
+        started = perf_counter()
+        model.train()
+        total = perf_counter() - started
+        model.policy.evaluate_actions = original_eval
+        torch.Tensor.backward = original_backward
+        model.policy.optimizer.step = original_step
+        torch.nn.utils.clip_grad_norm_ = original_clip
+        vec.close()
+        accounted = sum(stats.values())
+        return {
+            "total_s": total,
+            **stats,
+            "other_s": total - accounted,
+            "calls": counts,
+        }
+
+    _profile_once(False)
+    rows = {"dummy": [], "native": []}
+    for _ in range(repetitions):
+        rows["dummy"].append(_profile_once(False))
+        rows["native"].append(_profile_once(True))
+    summary = {}
+    for kind, payloads in rows.items():
+        summary[kind] = {
+            field: statistics.median([row[field] for row in payloads])
+            for field in ("total_s", "forward", "backward", "optimizer", "clip", "other_s")
+        }
+        summary[kind]["calls"] = payloads[0]["calls"]
+        summary[kind]["raw"] = payloads
+    return {
+        "role": "explanatory-only",
+        "not_a_speed_number": True,
+        "transitions_per_update": run.algorithm.n_steps * run.algorithm.n_envs,
+        "n_epochs": run.algorithm.n_epochs,
+        "batch_size": run.algorithm.batch_size,
+        "summary": summary,
+    }
+
+
 def _write(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True))
@@ -547,7 +989,18 @@ def _write(path: Path, payload: dict) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--mode", choices=("o0-unprofiled", "o0-profile", "o1-ablation"), required=True)
+    parser.add_argument(
+        "--mode",
+        choices=(
+            "o0-unprofiled",
+            "o0-profile",
+            "o1-ablation",
+            "o1-breakdown",
+            "o2-ablation",
+            "ppo-update-profile",
+        ),
+        required=True,
+    )
     parser.add_argument("--repetitions", type=int, default=2)
     parser.add_argument("--warmup", type=int, default=1)
     parser.add_argument("--transitions", type=int, default=12_288)
@@ -580,6 +1033,37 @@ def main() -> None:
         payload["provenance"]["flags"]["timers"] = True
         payload["provenance"]["flags"]["note"] = "profile ranking only; not a speed number"
         output = args.output or REPORT_DIR / "o0-profile.json"
+        _write(output, payload)
+        return
+    if args.mode == "o1-breakdown":
+        payload = {
+            "role": "o1-breakdown",
+            "provenance": collect_provenance(threads),
+            "breakdown": measure_o1_breakdown(
+                args.repetitions, args.warmup, args.eval_days, BATCH_SIZES
+            ),
+        }
+        output = args.output or REPORT_DIR / "o1-breakdown.json"
+        _write(output, payload)
+        return
+    if args.mode == "ppo-update-profile":
+        payload = {
+            "role": "ppo-update-profile",
+            "provenance": collect_provenance(threads),
+            "profile": measure_ppo_update_profile(args.repetitions),
+        }
+        payload["provenance"]["flags"]["timers"] = True
+        payload["provenance"]["flags"]["note"] = "explanatory; sub-step timers on"
+        output = args.output or REPORT_DIR / "ppo-update-profile.json"
+        _write(output, payload)
+        return
+    if args.mode == "o2-ablation":
+        payload = {
+            "role": "o2-ablation",
+            "provenance": collect_provenance(threads),
+            "ablation": measure_o2_ablation(args.repetitions, args.warmup, args.eval_days),
+        }
+        output = args.output or REPORT_DIR / "o2-ablation.json"
         _write(output, payload)
         return
     payload = {

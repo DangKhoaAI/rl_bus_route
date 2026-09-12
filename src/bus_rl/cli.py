@@ -24,6 +24,15 @@ def _run_config(args) -> object:
     torch_threads = getattr(args, "torch_threads", None)
     if torch_threads is not None:
         run = replace(run, algorithm=replace(run.algorithm, torch_threads=torch_threads))
+    runtime_updates: dict = {}
+    if getattr(args, "eval_batch_size", None) is not None:
+        runtime_updates["eval_batch_size"] = int(args.eval_batch_size)
+    if getattr(args, "reuse_eval_pool", False):
+        runtime_updates["reuse_eval_pool"] = True
+    if getattr(args, "native_batch", False):
+        runtime_updates["native_batch"] = True
+    if runtime_updates:
+        run = replace(run, runtime=replace(run.runtime, **runtime_updates))
     return run
 
 
@@ -249,6 +258,25 @@ def cmd_report(args) -> None:
     (output / "summary.json").write_text(summary.to_json(indent=2))
 
 
+def _add_runtime_flags(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--eval-batch-size",
+        type=int,
+        dest="eval_batch_size",
+        help="O1: evaluate this many scenarios per batched predict (default from config)",
+    )
+    parser.add_argument(
+        "--reuse-eval-pool",
+        action="store_true",
+        help="O1: reuse one bounded evaluator pool across validation calls",
+    )
+    parser.add_argument(
+        "--native-batch",
+        action="store_true",
+        help="O2: step eval/train envs through one native BatchKernel call (rust only)",
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="bus-rl")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -269,6 +297,7 @@ def build_parser() -> argparse.ArgumentParser:
     baseline.add_argument("--limit", type=int)
     baseline.add_argument("--backend", choices=("python", "rust"))
     baseline.add_argument("--torch-threads", type=int, dest="torch_threads")
+    _add_runtime_flags(baseline)
     baseline.set_defaults(func=cmd_baseline)
 
     profile = sub.add_parser("profile")
@@ -287,6 +316,7 @@ def build_parser() -> argparse.ArgumentParser:
     train.add_argument("--eval-limit", type=int, dest="eval_limit")
     train.add_argument("--backend", choices=("python", "rust"))
     train.add_argument("--torch-threads", type=int, dest="torch_threads")
+    _add_runtime_flags(train)
     train.set_defaults(func=cmd_train)
 
     diagnose = sub.add_parser("diagnose")
@@ -299,6 +329,7 @@ def build_parser() -> argparse.ArgumentParser:
     diagnose.add_argument("--eval-limit", type=int, dest="eval_limit", default=10)
     diagnose.add_argument("--backend", choices=("python", "rust"))
     diagnose.add_argument("--torch-threads", type=int, dest="torch_threads")
+    _add_runtime_flags(diagnose)
     diagnose.set_defaults(func=cmd_diagnose)
 
     evaluate = sub.add_parser("evaluate")
@@ -313,6 +344,7 @@ def build_parser() -> argparse.ArgumentParser:
     evaluate.add_argument("--limit", type=int)
     evaluate.add_argument("--backend", choices=("python", "rust"))
     evaluate.add_argument("--torch-threads", type=int, dest="torch_threads")
+    _add_runtime_flags(evaluate)
     evaluate.set_defaults(func=cmd_evaluate)
 
     report = sub.add_parser("report")

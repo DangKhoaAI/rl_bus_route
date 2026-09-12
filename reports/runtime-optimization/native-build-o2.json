@@ -1,0 +1,24 @@
+{
+  "build_command": "cargo build --release -p bus-sim-py",
+  "cargo": "cargo 1.97.1 (c980f4866 2026-06-30)",
+  "crate": "bus-sim-py",
+  "crate_version": "0.1.0",
+  "git": {
+    "dirty": true,
+    "sha": "11a20f84bd291f1e30315dd6bada951f94f829fd"
+  },
+  "import_ok": true,
+  "install_command": "python scripts/build_native.py",
+  "library": "src/bus_sim.so",
+  "library_bytes": 955448,
+  "library_sha256": "74b3a8fabbbabb5d4b167b92e56ac30af6f0957c180db78b6c501b21c50622ae",
+  "native_build_schema_version": 1,
+  "platform": "Linux-7.0.0-31-generic-x86_64-with-glibc2.39",
+  "profile": "release",
+  "python": "3.11.14",
+  "roles": {
+    "r1": "debug kernel bridge for golden-fixture parity",
+    "r3": "Gym wrapper is added in Python on top of this module"
+  },
+  "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)"
+}

@@ -1,11 +1,21 @@
 {
   "commands": [
     {"cmd": "python -m pytest tests/backend_parity/test_runtime_o1.py -n 0 --tb=short", "exit": 0, "note": "16 passed"},
-    {"cmd": "python -m pytest tests/backend_parity -q --tb=line", "exit": 0, "note": "118 passed, 1 skipped"},
+    {"cmd": "python -m pytest tests/backend_parity/test_runtime_o2.py -n 0 --tb=short", "exit": 0, "note": "12 passed"},
+    {"cmd": "python -m pytest tests/backend_parity -q --tb=line", "exit": 0, "note": "130 passed, 1 skipped"},
     {"cmd": "python scripts/benchmark_runtime.py --mode o0-unprofiled --repetitions 2 --transitions 12288 --eval-days 100 --output reports/runtime-optimization/o0-unprofiled-run1.json", "exit": 0},
     {"cmd": "python scripts/benchmark_runtime.py --mode o0-unprofiled --repetitions 2 --transitions 12288 --eval-days 100 --output reports/runtime-optimization/o0-unprofiled-run2.json", "exit": 0},
     {"cmd": "python scripts/benchmark_runtime.py --mode o0-profile --transitions 4096 --eval-days 10 --output reports/runtime-optimization/o0-profile.json", "exit": 0},
     {"cmd": "python scripts/benchmark_runtime.py --mode o1-ablation --repetitions 5 --warmup 1 --eval-days 100 --output reports/runtime-optimization/o1-ablation-run1.json", "exit": 0},
-    {"cmd": "python scripts/benchmark_runtime.py --mode o1-ablation --repetitions 5 --warmup 1 --eval-days 100 --output reports/runtime-optimization/o1-ablation-run2.json", "exit": 0}
+    {"cmd": "python scripts/benchmark_runtime.py --mode o1-ablation --repetitions 5 --warmup 1 --eval-days 100 --output reports/runtime-optimization/o1-ablation-run2.json", "exit": 0},
+    {"cmd": "python scripts/benchmark_runtime.py --mode o1-breakdown --repetitions 5 --warmup 1 --eval-days 100 --output reports/runtime-optimization/o1-breakdown-run1.json", "exit": 0},
+    {"cmd": "python scripts/benchmark_runtime.py --mode o1-breakdown --repetitions 5 --warmup 1 --eval-days 100 --output reports/runtime-optimization/o1-breakdown-run2.json", "exit": 0},
+    {"cmd": "python scripts/build_native.py --output reports/runtime-optimization/native-build-o2.json", "exit": 0, "note": "O2 BatchKernel kernel; frozen R4 record untouched"},
+    {"cmd": "python scripts/benchmark_runtime.py --mode o2-ablation --repetitions 5 --warmup 1 --eval-days 100 --output reports/runtime-optimization/o2-ablation-run1.json", "exit": 0},
+    {"cmd": "python scripts/benchmark_runtime.py --mode o2-ablation --repetitions 5 --warmup 1 --eval-days 100 --output reports/runtime-optimization/o2-ablation-run2.json", "exit": 0},
+    {"cmd": "python scripts/benchmark_runtime.py --mode ppo-update-profile --repetitions 3 --output reports/runtime-optimization/ppo-update-profile.json", "exit": 0},
+    {"cmd": "python -m bus_rl.cli train --config configs/experiments/core-threads2.toml --manifest data/generated/base/manifest.json --seed 11 --output runs/runtime-optimization/full/baseline --backend rust --torch-threads 2 --eval-limit 100", "exit": 0, "note": "full workflow baseline; 143.53 s wall, 446952 KB RSS"},
+    {"cmd": "python -m bus_rl.cli train --config configs/experiments/core-threads2.toml --manifest data/generated/base/manifest.json --seed 11 --output runs/runtime-optimization/full/o1 --backend rust --torch-threads 2 --eval-limit 100 --eval-batch-size 16 --reuse-eval-pool", "exit": 0, "note": "O1 full workflow; 87.79 s wall, 455272 KB RSS"},
+    {"cmd": "python -m bus_rl.cli train --config configs/experiments/core-threads2.toml --manifest data/generated/base/manifest.json --seed 11 --output runs/runtime-optimization/full/o2 --backend rust --torch-threads 2 --eval-limit 100 --native-batch --eval-batch-size 16 --reuse-eval-pool", "exit": 0, "note": "O2 full workflow; 77.61 s wall, 450304 KB RSS"}
   ]
 }

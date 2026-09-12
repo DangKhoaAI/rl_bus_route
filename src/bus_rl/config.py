@@ -56,6 +56,9 @@ class RuntimeConfig:
     # independent and is not changed here.
     eval_batch_size: int = 1
     reuse_eval_pool: bool = False
+    # O2 opt-in: step the eval pool and the training VecEnv through one native
+    # BatchKernel call per control step. Native backend only.
+    native_batch: bool = False
 
     def __post_init__(self) -> None:
         if self.backend not in {"python", "rust"}:
@@ -65,6 +68,12 @@ class RuntimeConfig:
             raise ValueError(f"runtime.eval_batch_size must be >= 1, got {self.eval_batch_size!r}")
         object.__setattr__(self, "eval_batch_size", batch_size)
         object.__setattr__(self, "reuse_eval_pool", bool(self.reuse_eval_pool))
+        object.__setattr__(self, "native_batch", bool(self.native_batch))
+        if self.native_batch and self.backend != "rust":
+            raise ValueError(
+                "runtime.native_batch requires runtime.backend='rust'; the Python oracle "
+                "stays on the scalar path"
+            )
 
 
 @dataclass(frozen=True)

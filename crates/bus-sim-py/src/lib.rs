@@ -5,6 +5,7 @@
 //! evaluator summary/trace surfaces used by `bus_rl.env.native_bus_dispatch`.
 //! The Gym wrapper itself lives in Python.
 
+use bus_sim_core::actions::ACTION_COUNT;
 use bus_sim_core::costs::{interval_cost, mean_waiting_minutes, RewardConfig};
 use bus_sim_core::domain::{Scenario, StepCosts, WorldState};
 use bus_sim_core::observation::{self, Observation};
@@ -156,6 +157,128 @@ fn obs_dict<'py>(py: Python<'py>, obs: Observation) -> PyResult<Bound<'py, PyDic
     Ok(dict)
 }
 
+/// Flattened observation batch: one contiguous buffer per field, N rows.
+struct ObsBatch {
+    stops: Vec<f32>,
+    arrival_history: Vec<f32>,
+    forecast: Vec<f32>,
+    vehicles: Vec<f32>,
+    routes: Vec<f32>,
+    stop_valid: Vec<f32>,
+    vehicle_valid: Vec<f32>,
+    route_valid: Vec<f32>,
+    context: Vec<f32>,
+}
+
+impl ObsBatch {
+    fn new(n: usize) -> Self {
+        Self {
+            stops: Vec::with_capacity(
+                n * observation::MAX_ROUTES
+                    * observation::MAX_DIRECTIONS
+                    * observation::MAX_STOPS
+                    * observation::STOP_CHANNELS,
+            ),
+            arrival_history: Vec::with_capacity(
+                n * observation::MAX_ROUTES
+                    * observation::MAX_DIRECTIONS
+                    * observation::MAX_STOPS
+                    * observation::HISTORY_LAGS,
+            ),
+            forecast: Vec::with_capacity(
+                n * observation::MAX_ROUTES * observation::MAX_DIRECTIONS * observation::MAX_STOPS,
+            ),
+            vehicles: Vec::with_capacity(n * observation::MAX_VEHICLES * observation::VEHICLE_FEATURES),
+            routes: Vec::with_capacity(n * observation::MAX_ROUTES * observation::ROUTE_FEATURES),
+            stop_valid: Vec::with_capacity(
+                n * observation::MAX_ROUTES * observation::MAX_DIRECTIONS * observation::MAX_STOPS,
+            ),
+            vehicle_valid: Vec::with_capacity(n * observation::MAX_VEHICLES),
+            route_valid: Vec::with_capacity(n * observation::MAX_ROUTES),
+            context: Vec::with_capacity(n * 3),
+        }
+    }
+
+    fn push(&mut self, obs: &Observation) {
+        self.stops.extend_from_slice(&obs.stops);
+        self.arrival_history.extend_from_slice(&obs.arrival_history);
+        self.forecast.extend_from_slice(&obs.forecast);
+        self.vehicles.extend_from_slice(&obs.vehicles);
+        self.routes.extend_from_slice(&obs.routes);
+        self.stop_valid.extend_from_slice(&obs.stop_valid);
+        self.vehicle_valid.extend_from_slice(&obs.vehicle_valid);
+        self.route_valid.extend_from_slice(&obs.route_valid);
+        self.context.extend_from_slice(&obs.context);
+    }
+}
+
+/// Reshape a flat batch into `(N, *single_env_shape)` observation tensors.
+fn obs_batch_dict<'py>(
+    py: Python<'py>,
+    batch: ObsBatch,
+    n: usize,
+) -> PyResult<Bound<'py, PyDict>> {
+    let dict = PyDict::new(py);
+    dict.set_item(
+        "stops",
+        PyArray1::from_vec(py, batch.stops).reshape([
+            n,
+            observation::MAX_ROUTES,
+            observation::MAX_DIRECTIONS,
+            observation::MAX_STOPS,
+            observation::STOP_CHANNELS,
+        ])?,
+    )?;
+    dict.set_item(
+        "arrival_history",
+        PyArray1::from_vec(py, batch.arrival_history).reshape([
+            n,
+            observation::MAX_ROUTES,
+            observation::MAX_DIRECTIONS,
+            observation::MAX_STOPS,
+            observation::HISTORY_LAGS,
+        ])?,
+    )?;
+    dict.set_item(
+        "forecast",
+        PyArray1::from_vec(py, batch.forecast).reshape([
+            n,
+            observation::MAX_ROUTES,
+            observation::MAX_DIRECTIONS,
+            observation::MAX_STOPS,
+        ])?,
+    )?;
+    dict.set_item(
+        "vehicles",
+        PyArray1::from_vec(py, batch.vehicles)
+            .reshape([n, observation::MAX_VEHICLES, observation::VEHICLE_FEATURES])?,
+    )?;
+    dict.set_item(
+        "routes",
+        PyArray1::from_vec(py, batch.routes)
+            .reshape([n, observation::MAX_ROUTES, observation::ROUTE_FEATURES])?,
+    )?;
+    dict.set_item(
+        "stop_valid",
+        PyArray1::from_vec(py, batch.stop_valid).reshape([
+            n,
+            observation::MAX_ROUTES,
+            observation::MAX_DIRECTIONS,
+            observation::MAX_STOPS,
+        ])?,
+    )?;
+    dict.set_item(
+        "vehicle_valid",
+        PyArray1::from_vec(py, batch.vehicle_valid).reshape([n, observation::MAX_VEHICLES])?,
+    )?;
+    dict.set_item(
+        "route_valid",
+        PyArray1::from_vec(py, batch.route_valid).reshape([n, observation::MAX_ROUTES])?,
+    )?;
+    dict.set_item("context", PyArray1::from_vec(py, batch.context).reshape([n, 3])?)?;
+    Ok(dict)
+}
+
 #[pyclass]
 struct Kernel {
     scenario: Arc<Scenario>,
@@ -172,6 +295,74 @@ struct Kernel {
 #[pyclass]
 struct ScenarioStore {
     scenarios: Vec<Arc<Scenario>>,
+}
+
+/// Episode-end inputs built from a state; shared by `Kernel` and `BatchKernel`.
+fn summary_inputs_dict<'py>(py: Python<'py>, state: &WorldState) -> PyResult<Bound<'py, PyDict>> {
+    let dict = state_dict(py, &full_snapshot(state))?;
+    let departures = PyList::empty(py);
+    for event in &state.departures {
+        let row = PyDict::new(py);
+        row.set_item("time_s", event.time_s)?;
+        row.set_item("route_id", event.route_id)?;
+        row.set_item("direction", event.direction)?;
+        row.set_item("bus_id", event.bus_id)?;
+        if event.pattern_extra {
+            row.set_item("pattern", event.pattern.name())?;
+        } else {
+            row.set_item("pattern", event.pattern.as_i64())?;
+        }
+        departures.append(row)?;
+    }
+    dict.set_item("departures", departures)?;
+    let kinds = PyList::empty(py);
+    for event in &state.accepted_actions {
+        kinds.append(event.kind)?;
+    }
+    dict.set_item("accepted_kinds", kinds)?;
+    Ok(dict)
+}
+
+/// Per-decision trace row; shared by `Kernel` and `BatchKernel`.
+fn trace_dict<'py>(
+    py: Python<'py>,
+    state: &WorldState,
+    route_count: usize,
+) -> PyResult<Bound<'py, PyDict>> {
+    let queues: Vec<i64> = (0..route_count)
+        .map(|route| {
+            state
+                .cohorts
+                .iter()
+                .filter(|cohort| cohort.route_id as usize == route)
+                .map(|cohort| cohort.count)
+                .sum()
+        })
+        .collect();
+    let buses = PyList::empty(py);
+    for vehicle in &state.vehicles {
+        let row = PyDict::new(py);
+        row.set_item("id", vehicle.vehicle_id)?;
+        row.set_item("phase", vehicle.phase.name())?;
+        row.set_item("route_id", vehicle.route_id)?;
+        row.set_item("pattern", vehicle.pattern.name())?;
+        row.set_item("load", vehicle.load)?;
+        buses.append(row)?;
+    }
+    let dict = PyDict::new(py);
+    dict.set_item("time_s", state.current_time_s)?;
+    dict.set_item("queues", queues)?;
+    dict.set_item(
+        "headway_targets",
+        PyArray1::from_slice(py, &state.headway_targets_s),
+    )?;
+    dict.set_item("buses", buses)?;
+    dict.set_item("waiting", state.waiting_count())?;
+    dict.set_item("onboard", state.onboard_count())?;
+    dict.set_item("generated", state.generated_count())?;
+    dict.set_item("abandoned", state.abandoned_count())?;
+    dict.set_item("completed", state.completed_count())?;
+    Ok(dict)
 }
 
 fn build_scenario(
@@ -401,68 +592,12 @@ impl Kernel {
     /// Episode-end inputs for the Python evaluator: counters, cohort table,
     /// departures and accepted action kinds. Built once at episode end.
     fn episode_summary_inputs<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
-        let state = self.require_state()?;
-        let dict = state_dict(py, &full_snapshot(state))?;
-        let departures = PyList::empty(py);
-        for event in &state.departures {
-            let row = PyDict::new(py);
-            row.set_item("time_s", event.time_s)?;
-            row.set_item("route_id", event.route_id)?;
-            row.set_item("direction", event.direction)?;
-            row.set_item("bus_id", event.bus_id)?;
-            if event.pattern_extra {
-                row.set_item("pattern", event.pattern.name())?;
-            } else {
-                row.set_item("pattern", event.pattern.as_i64())?;
-            }
-            departures.append(row)?;
-        }
-        dict.set_item("departures", departures)?;
-        let kinds = PyList::empty(py);
-        for event in &state.accepted_actions {
-            kinds.append(event.kind)?;
-        }
-        dict.set_item("accepted_kinds", kinds)?;
-        Ok(dict)
+        summary_inputs_dict(py, self.require_state()?)
     }
 
     /// Per-decision trace row for `evaluation/runner.py`.
     fn trace_snapshot<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
-        let state = self.require_state()?;
-        let queues: Vec<i64> = (0..self.scenario.config.route_count)
-            .map(|route| {
-                state
-                    .cohorts
-                    .iter()
-                    .filter(|cohort| cohort.route_id as usize == route)
-                    .map(|cohort| cohort.count)
-                    .sum()
-            })
-            .collect();
-        let buses = PyList::empty(py);
-        for vehicle in &state.vehicles {
-            let row = PyDict::new(py);
-            row.set_item("id", vehicle.vehicle_id)?;
-            row.set_item("phase", vehicle.phase.name())?;
-            row.set_item("route_id", vehicle.route_id)?;
-            row.set_item("pattern", vehicle.pattern.name())?;
-            row.set_item("load", vehicle.load)?;
-            buses.append(row)?;
-        }
-        let dict = PyDict::new(py);
-        dict.set_item("time_s", state.current_time_s)?;
-        dict.set_item("queues", queues)?;
-        dict.set_item(
-            "headway_targets",
-            PyArray1::from_slice(py, &state.headway_targets_s),
-        )?;
-        dict.set_item("buses", buses)?;
-        dict.set_item("waiting", state.waiting_count())?;
-        dict.set_item("onboard", state.onboard_count())?;
-        dict.set_item("generated", state.generated_count())?;
-        dict.set_item("abandoned", state.abandoned_count())?;
-        dict.set_item("completed", state.completed_count())?;
-        Ok(dict)
+        trace_dict(py, self.require_state()?, self.scenario.config.route_count)
     }
 
     /// Step one interval with per-tick snapshots and event deltas (test-only).
@@ -549,6 +684,305 @@ impl Kernel {
     }
 }
 
+/// Owns N episode states that share one packed `ScenarioStore`.
+///
+/// One `step_batch` call advances exactly one control interval per active slot
+/// and returns `(N, *single_env_shape)` arrays. Shapes, slot ids and every
+/// action/mask are validated before any mutation, so an invalid batch leaves
+/// every slot unchanged. An internal error mid-batch poisons the kernel until
+/// the affected slots are reset.
+#[pyclass]
+struct BatchKernel {
+    scenarios: Vec<Arc<Scenario>>,
+    slot_scenarios: Vec<Option<Arc<Scenario>>>,
+    states: Vec<Option<WorldState>>,
+    masks: Vec<Option<Vec<bool>>>,
+    reward: RewardConfig,
+    conservation_checks: bool,
+    mask_computations: u64,
+    poisoned: bool,
+}
+
+impl BatchKernel {
+    fn require_capacity(&self, slot: usize) -> PyResult<()> {
+        if slot >= self.states.len() {
+            return Err(PyValueError::new_err(format!(
+                "slot {slot} out of range for capacity {}",
+                self.states.len()
+            )));
+        }
+        Ok(())
+    }
+
+    fn require_active(&self, slot: usize) -> PyResult<()> {
+        self.require_capacity(slot)?;
+        if self.states[slot].is_none() || self.masks[slot].is_none() {
+            return Err(PyValueError::new_err(format!(
+                "slot {slot} has not been reset"
+            )));
+        }
+        Ok(())
+    }
+
+    fn validate_batch(&self, slots: &[usize], actions: &[usize]) -> PyResult<()> {
+        if self.poisoned {
+            return Err(PyValueError::new_err(
+                "BatchKernel is poisoned by an internal error; reset before stepping",
+            ));
+        }
+        if slots.len() != actions.len() {
+            return Err(PyValueError::new_err(format!(
+                "slot count {} != action count {}",
+                slots.len(),
+                actions.len()
+            )));
+        }
+        let mut seen = vec![false; self.states.len()];
+        for (&slot, &action) in slots.iter().zip(actions.iter()) {
+            self.require_active(slot)?;
+            if seen[slot] {
+                return Err(PyValueError::new_err(format!("duplicate slot {slot}")));
+            }
+            seen[slot] = true;
+            let mask = self.masks[slot].as_ref().expect("checked active");
+            if action >= ACTION_COUNT || !mask[action] {
+                return Err(PyValueError::new_err(format!(
+                    "invalid action index: {action} for slot {slot}"
+                )));
+            }
+        }
+        Ok(())
+    }
+
+    /// Advance one slot by one control interval. Callers validate first.
+    fn step_one(
+        &mut self,
+        slot: usize,
+        action: usize,
+    ) -> Result<(Observation, f64, bool, StepCosts, Vec<bool>), KernelError> {
+        let scenario = self.slot_scenarios[slot]
+            .clone()
+            .expect("active slot has a scenario");
+        let state = self.states[slot].as_mut().expect("active slot has a state");
+        let costs = engine::advance_interval(state, &scenario, action)?;
+        let reward = -interval_cost(&costs, &self.reward) / self.reward.n_ref;
+        let terminated = state.current_time_s >= scenario.config.horizon_s;
+        let next_mask = guards::valid_action_mask(state, &scenario);
+        let obs = observation::observe(state, &scenario);
+        Ok((obs, reward, terminated, costs, next_mask))
+    }
+}
+
+#[pymethods]
+impl BatchKernel {
+    /// Share one packed store across `capacity` independent episode slots.
+    #[staticmethod]
+    fn from_store(store: PyRef<'_, ScenarioStore>, capacity: usize) -> PyResult<Self> {
+        if capacity == 0 {
+            return Err(PyValueError::new_err("BatchKernel capacity must be >= 1"));
+        }
+        if store.scenarios.is_empty() {
+            return Err(PyValueError::new_err("ScenarioStore is empty"));
+        }
+        Ok(Self {
+            scenarios: store.scenarios.clone(),
+            slot_scenarios: (0..capacity).map(|_| None).collect(),
+            states: (0..capacity).map(|_| None).collect(),
+            masks: (0..capacity).map(|_| None).collect(),
+            reward: RewardConfig::default(),
+            conservation_checks: false,
+            mask_computations: 0,
+            poisoned: false,
+        })
+    }
+
+    fn capacity(&self) -> usize {
+        self.states.len()
+    }
+
+    fn set_conservation_checks(&mut self, enabled: bool) {
+        self.conservation_checks = enabled;
+        for state in self.states.iter_mut().flatten() {
+            state.conservation_checks = enabled;
+        }
+    }
+
+    #[getter]
+    fn poisoned(&self) -> bool {
+        self.poisoned
+    }
+
+    #[getter]
+    fn mask_computations(&self) -> u64 {
+        self.mask_computations
+    }
+
+    /// Reset the given slots to the given store scenario indices.
+    /// Returns `{slot_ids, obs (N,*shape), mask (N,221)}`.
+    fn reset_batch<'py>(
+        &mut self,
+        py: Python<'py>,
+        slots: Vec<usize>,
+        scenario_indices: Vec<usize>,
+    ) -> PyResult<Bound<'py, PyDict>> {
+        if slots.len() != scenario_indices.len() {
+            return Err(PyValueError::new_err(format!(
+                "slot count {} != scenario count {}",
+                slots.len(),
+                scenario_indices.len()
+            )));
+        }
+        if slots.is_empty() {
+            return Err(PyValueError::new_err("reset_batch requires at least one slot"));
+        }
+        let mut seen = vec![false; self.states.len()];
+        for (&slot, &index) in slots.iter().zip(scenario_indices.iter()) {
+            self.require_capacity(slot)?;
+            if seen[slot] {
+                return Err(PyValueError::new_err(format!("duplicate slot {slot}")));
+            }
+            seen[slot] = true;
+            if index >= self.scenarios.len() {
+                return Err(PyValueError::new_err(format!(
+                    "scenario index {index} out of range"
+                )));
+            }
+        }
+        // Build every state before touching a slot so a failure is atomic.
+        let mut prepared = Vec::with_capacity(slots.len());
+        for &index in scenario_indices.iter() {
+            let scenario = self.scenarios[index].clone();
+            let mut state = initial_state(&scenario).map_err(to_py)?;
+            state.conservation_checks = self.conservation_checks;
+            let mask = guards::valid_action_mask(&state, &scenario);
+            prepared.push((scenario, state, mask));
+        }
+        let n = slots.len();
+        let mut obs_batch = ObsBatch::new(n);
+        let mut mask_data = Vec::with_capacity(n * ACTION_COUNT);
+        for (slot, (scenario, state, mask)) in slots.iter().copied().zip(prepared.into_iter()) {
+            obs_batch.push(&observation::observe(&state, &scenario));
+            mask_data.extend_from_slice(&mask);
+            self.slot_scenarios[slot] = Some(scenario);
+            self.states[slot] = Some(state);
+            self.masks[slot] = Some(mask);
+            self.mask_computations += 1;
+        }
+        self.poisoned = false;
+        let dict = PyDict::new(py);
+        dict.set_item("slot_ids", PyArray1::from_vec(py, slots))?;
+        dict.set_item("obs", obs_batch_dict(py, obs_batch, n)?)?;
+        dict.set_item(
+            "mask",
+            PyArray1::from_vec(py, mask_data).reshape([n, ACTION_COUNT])?,
+        )?;
+        Ok(dict)
+    }
+
+    /// Masks for the given slots as `(N, 221)`; no mutation.
+    fn mask_batch<'py>(
+        &self,
+        py: Python<'py>,
+        slots: Vec<usize>,
+    ) -> PyResult<Bound<'py, PyArray2<bool>>> {
+        let n = slots.len();
+        let mut data = Vec::with_capacity(n * ACTION_COUNT);
+        for &slot in &slots {
+            self.require_active(slot)?;
+            data.extend_from_slice(self.masks[slot].as_ref().expect("checked active"));
+        }
+        PyArray1::from_vec(py, data).reshape([n, ACTION_COUNT])
+    }
+
+    /// Advance every active slot by one control interval.
+    /// Returns `{slot_ids, obs, mask, reward, terminated, truncated, costs}`.
+    fn step_batch<'py>(
+        &mut self,
+        py: Python<'py>,
+        slots: Vec<usize>,
+        actions: Vec<usize>,
+    ) -> PyResult<Bound<'py, PyDict>> {
+        self.validate_batch(&slots, &actions)?;
+        let n = slots.len();
+        let mut obs_batch = ObsBatch::new(n);
+        let mut mask_data = Vec::with_capacity(n * ACTION_COUNT);
+        let mut rewards = Vec::with_capacity(n);
+        let mut terminated = Vec::with_capacity(n);
+        let mut costs_data = Vec::with_capacity(n * 10);
+        for (position, &slot) in slots.iter().enumerate() {
+            match self.step_one(slot, actions[position]) {
+                Ok((obs, reward, term, costs, next_mask)) => {
+                    obs_batch.push(&obs);
+                    mask_data.extend_from_slice(&next_mask);
+                    rewards.push(reward);
+                    terminated.push(term);
+                    costs_data.extend_from_slice(&costs.as_array());
+                    self.masks[slot] = Some(next_mask);
+                    self.mask_computations += 1;
+                }
+                Err(error) => {
+                    self.poisoned = true;
+                    return Err(to_py(error));
+                }
+            }
+        }
+        let dict = PyDict::new(py);
+        dict.set_item("slot_ids", PyArray1::from_vec(py, slots))?;
+        dict.set_item("obs", obs_batch_dict(py, obs_batch, n)?)?;
+        dict.set_item(
+            "mask",
+            PyArray1::from_vec(py, mask_data).reshape([n, ACTION_COUNT])?,
+        )?;
+        dict.set_item("reward", PyArray1::from_vec(py, rewards))?;
+        dict.set_item("terminated", PyArray1::from_vec(py, terminated))?;
+        dict.set_item("truncated", PyArray1::from_vec(py, vec![false; n]))?;
+        dict.set_item(
+            "costs",
+            PyArray1::from_vec(py, costs_data).reshape([n, 10])?,
+        )?;
+        Ok(dict)
+    }
+
+    /// Current simulated time per slot (for Python-side forecasting).
+    fn current_time_s_batch<'py>(
+        &self,
+        py: Python<'py>,
+        slots: Vec<usize>,
+    ) -> PyResult<Bound<'py, PyArray1<i64>>> {
+        let mut times = Vec::with_capacity(slots.len());
+        for &slot in &slots {
+            self.require_active(slot)?;
+            times.push(self.states[slot].as_ref().expect("checked active").current_time_s);
+        }
+        Ok(PyArray1::from_vec(py, times))
+    }
+
+    /// Episode-end evaluator inputs, one dict per slot, in `slots` order.
+    fn summary_inputs_batch<'py>(
+        &self,
+        py: Python<'py>,
+        slots: Vec<usize>,
+    ) -> PyResult<Bound<'py, PyList>> {
+        let list = PyList::empty(py);
+        for &slot in &slots {
+            self.require_active(slot)?;
+            let state = self.states[slot].as_ref().expect("checked active");
+            list.append(summary_inputs_dict(py, state)?)?;
+        }
+        Ok(list)
+    }
+
+    fn trace_snapshot_slot<'py>(&self, py: Python<'py>, slot: usize) -> PyResult<Bound<'py, PyDict>> {
+        self.require_active(slot)?;
+        let scenario = self.slot_scenarios[slot].as_ref().expect("active slot scenario");
+        trace_dict(
+            py,
+            self.states[slot].as_ref().expect("checked active"),
+            scenario.config.route_count,
+        )
+    }
+}
+
 impl Kernel {
     fn require_state(&self) -> PyResult<&WorldState> {
         self.state
@@ -580,6 +1014,7 @@ fn cost_fields() -> Vec<&'static str> {
 fn bus_sim(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Kernel>()?;
     m.add_class::<ScenarioStore>()?;
+    m.add_class::<BatchKernel>()?;
     m.add_function(wrap_pyfunction!(cost_fields, m)?)?;
     Ok(())
 }

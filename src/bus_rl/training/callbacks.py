@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from stable_baselines3.common.callbacks import BaseCallback
 
-from bus_rl.evaluation.pool import EvalEnvPool
+from bus_rl.evaluation.pool import make_eval_pool
 from bus_rl.evaluation.runner import mean_cost
 
 
@@ -26,7 +26,7 @@ class BestValidationCallback(BaseCallback):
         self.completed_episodes = 0
         self.history: list[dict] = []
         self._next_eval = run.algorithm.eval_freq
-        self._pool: EvalEnvPool | None = None
+        self._pool = None
 
     def _subset(self):
         if self.eval_limit is None:
@@ -49,7 +49,7 @@ class BestValidationCallback(BaseCallback):
         pool = None
         if self.run.runtime.reuse_eval_pool:
             if self._pool is None:
-                self._pool = EvalEnvPool(subset, self.run, self.forecaster)
+                self._pool = make_eval_pool(subset, self.run, self.forecaster)
             else:
                 self._pool = self._pool.refresh(subset, self.run, self.forecaster)
             pool = self._pool

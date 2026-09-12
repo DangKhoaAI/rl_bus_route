@@ -1,6 +1,7 @@
 # Tối ưu runtime sau Rust: batching, caching và parallelism
 
-Ngày: **2026-09-12**. Trạng thái: **Đề xuất; O0–O5 chưa triển khai/nghiệm thu**.
+Ngày: **2026-09-12**. Trạng thái: **Đề xuất; O0–O2 đã triển khai/nghiệm thu (opt-in);
+O3 hoãn theo số đo; O4–O5 chưa**. Kết quả: [reports/runtime-optimization.md](../../reports/runtime-optimization.md).**
 
 Tài liệu kế thừa [rust_improve.md](rust_improve.md),
 [memory_optimize.md](memory_optimize.md) và
@@ -271,12 +272,13 @@ Artifacts mới dự kiến:
   từ report; giữ nguyên evidence Rust/memory cũ.
 
 Checklist ban đầu:
-- [ ] O0: baseline sau R4 + M1/M3 được khóa và đo lại.
-- [ ] O1: eval batching/pool reuse được kiểm chứng riêng.
-- [ ] O2: native batch sequential và ownership/VecEnv đạt.
-- [ ] O3: native parallel có quyết định dựa trên số đo.
+- [x] O0: baseline sau R4 + M1/M3 được khóa và đo lại.
+- [x] O1: eval batching/pool reuse được kiểm chứng riêng (opt-in).
+- [x] O2: native batch sequential và ownership/VecEnv đạt (opt-in).
+- [ ] O3: native parallel — hoãn; số đo O2 cho thấy native step không còn trội.
 - [ ] O4: cache/prefetch/concurrent seeds có quyết định riêng; được phép deferred.
-- [ ] O5: full workflow gates đạt, cấu hình/revision được đóng băng và hướng dẫn rollback về scalar đầy đủ.
+- [ ] O5: full workflow gates đạt (O1 1.64×, O2 1.85×) nhưng chưa chạy đủ protocol
+  nhiều repetition và chưa đổi default.
 
 ## 12. Nguồn triển khai cần đối chiếu
 

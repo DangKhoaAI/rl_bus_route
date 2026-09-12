@@ -115,12 +115,19 @@ def train_run(
     output.mkdir(parents=True, exist_ok=False)
     apply_torch_threads(run.algorithm.torch_threads)
     algorithm = run.algorithm
-    env = DummyVecEnv(
-        [
-            make_env(train_scenarios, run, algorithm.seed + index, forecaster)
-            for index in range(algorithm.n_envs)
-        ]
-    )
+    if run.runtime.native_batch:
+        from bus_rl.env.native_batch import NativeBatchVecEnv
+
+        env = NativeBatchVecEnv(
+            train_scenarios, run, algorithm.seed, forecaster=forecaster
+        )
+    else:
+        env = DummyVecEnv(
+            [
+                make_env(train_scenarios, run, algorithm.seed + index, forecaster)
+                for index in range(algorithm.n_envs)
+            ]
+        )
     model = make_model(env, algorithm.seed, algorithm)
     validation = BestValidationCallback(
         val_scenarios or train_scenarios[:1],

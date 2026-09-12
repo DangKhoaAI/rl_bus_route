@@ -50,6 +50,7 @@ def run_metadata(run: RunConfig, extra: dict | None = None) -> dict:
         "validate_observation": bool(run.runtime.validate_observation),
         "eval_batch_size": int(run.runtime.eval_batch_size),
         "reuse_eval_pool": bool(run.runtime.reuse_eval_pool),
+        "native_batch": bool(run.runtime.native_batch),
         "native_build": native_build_info() if run.runtime.backend == "rust" else None,
         # R0-R2 parity is accepted, so checkpoints may cross backends once the
         # contract hashes below match.

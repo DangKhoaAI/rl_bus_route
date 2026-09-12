@@ -143,6 +143,7 @@ def test_runtime_defaults_keep_scalar_and_training_hyperparameters():
     run = load_run_config(ROOT / "configs" / "experiments" / "core-threads2.toml", ROOT)
     assert run.runtime.eval_batch_size == 1
     assert run.runtime.reuse_eval_pool is False
+    assert run.runtime.native_batch is False
     assert run.runtime.backend == "python"
     assert run.algorithm.n_envs == 4
     assert run.algorithm.n_steps == 256
@@ -152,9 +153,12 @@ def test_runtime_defaults_keep_scalar_and_training_hyperparameters():
     assert run.algorithm.eval_freq == 12_288
     with pytest.raises(ValueError, match="eval_batch_size"):
         RuntimeConfig(eval_batch_size=0)
+    with pytest.raises(ValueError, match="native_batch"):
+        RuntimeConfig(backend="python", native_batch=True)
     import bus_sim
 
-    assert not hasattr(bus_sim, "BatchKernel")
+    # O2 is implemented but opt-in: the native kernel exists, defaults stay scalar.
+    assert hasattr(bus_sim, "BatchKernel")
 
 
 def test_batch_one_via_pool_matches_scalar(reference_bundle):

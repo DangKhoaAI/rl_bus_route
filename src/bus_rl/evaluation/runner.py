@@ -18,8 +18,8 @@ from bus_rl.config import ControlConfig, RunConfig
 from bus_rl.control.actions import ACTION_TABLE
 from bus_rl.domain import StepCosts
 from bus_rl.env.factory import make_env_for_run
-from bus_rl.evaluation.pool import EvalEnvPool
-from bus_rl.evaluation.summary import from_python_state, summarize_inputs
+from bus_rl.evaluation.pool import EvalEnvPool, make_eval_pool
+from bus_rl.evaluation.summary import from_native_payload, from_python_state, summarize_inputs
 from bus_rl.rewards.costs import RewardConfig, add_costs
 from bus_rl.runtime import apply_torch_threads
 from bus_rl.timing import TIMERS
@@ -315,6 +315,120 @@ def _evaluate_batched(
     return pd.DataFrame.from_records(records), traces
 
 
+def _native_trace_row(pool, slot: int, action_index: int) -> dict:
+    row = dict(pool.kernel.trace_snapshot(slot))
+    row["action"] = ACTION_TABLE[int(action_index)].kind
+    row["action_index"] = int(action_index)
+    return row
+
+
+def _evaluate_batched_native(
+    scenarios,
+    run: RunConfig,
+    method: str,
+    *,
+    model,
+    model_seed: int | None,
+    split: str,
+    forecaster,
+    trace_index: int | None,
+    trace_all: bool,
+    pool,
+) -> tuple[pd.DataFrame, dict[int, list[dict]]]:
+    """O2: one native `step_batch` per control step for all active slots."""
+    from bus_rl.env.native_bus_dispatch import _step_costs
+
+    del forecaster  # applied inside the pool's observation post-processing
+    controller = make_controller(method, model=model, seed=model_seed or 0)
+    n_days = len(scenarios)
+    records: list[dict | None] = [None] * n_days
+    traces: dict[int, list[dict]] = {}
+    batch_size = min(pool.batch_size, n_days)
+    offset = 0
+    while offset < n_days:
+        chunk = list(range(offset, min(offset + batch_size, n_days)))
+        slot_ids = list(range(len(chunk)))
+        observation, masks = pool.reset(slot_ids, chunk)
+        slots: list[dict] = []
+        for slot, scenario_index in zip(slot_ids, chunk, strict=True):
+            slots.append(
+                {
+                    "slot": slot,
+                    "scenario_index": scenario_index,
+                    "observation": {key: value[slot] for key, value in observation.items()},
+                    "reward_sum": 0.0,
+                    "costs": StepCosts(),
+                    "done": False,
+                    "rows": [],
+                    "started": perf_counter(),
+                    "trace": _want_trace(scenario_index, trace_index, trace_all),
+                }
+            )
+        while True:
+            active = [slot for slot in slots if not slot["done"]]
+            if not active:
+                break
+            active_slots = [slot["slot"] for slot in active]
+            with TIMERS.span("eval.action_mask"):
+                active_masks = [np.asarray(masks[slot["slot"]]) for slot in active]
+            with TIMERS.span("eval.infer"):
+                if isinstance(controller, PPOController):
+                    actions = controller.act_batch(
+                        [slot["observation"] for slot in active], active_masks
+                    )
+                else:
+                    actions = [
+                        int(controller.act(slot["observation"], mask))
+                        for slot, mask in zip(active, active_masks, strict=True)
+                    ]
+            result = pool.step(active_slots, actions)
+            step_obs = result["obs"]
+            step_rewards = np.asarray(result["reward"])
+            step_terminated = np.asarray(result["terminated"])
+            step_truncated = np.asarray(result["truncated"])
+            step_costs = np.asarray(result["costs"])
+            step_masks = np.asarray(result["mask"])
+            for position, slot_state in enumerate(active):
+                slot = slot_state["slot"]
+                slot_state["observation"] = {
+                    key: value[position] for key, value in step_obs.items()
+                }
+                slot_state["reward_sum"] += float(step_rewards[position])
+                slot_state["costs"] = add_costs(
+                    slot_state["costs"], _step_costs(step_costs[position])
+                )
+                masks[slot] = step_masks[position]
+                if slot_state["trace"]:
+                    slot_state["rows"].append(
+                        _native_trace_row(pool, slot, int(actions[position]))
+                    )
+                if not (bool(step_terminated[position]) or bool(step_truncated[position])):
+                    continue
+                slot_state["done"] = True
+                scenario_index = slot_state["scenario_index"]
+                with TIMERS.span("eval.summarize"):
+                    metrics = summarize_inputs(
+                        from_native_payload(pool.kernel.summary_inputs(slot)),
+                        pool.applied[scenario_index],
+                        slot_state["costs"],
+                        slot_state["reward_sum"],
+                        run.reward,
+                    )
+                metrics["wall_s"] = perf_counter() - slot_state["started"]
+                metrics["scenario_index"] = scenario_index
+                metrics["method"] = method
+                metrics["model_seed"] = model_seed
+                metrics["split"] = split
+                records[scenario_index] = metrics
+                if slot_state["rows"]:
+                    traces[scenario_index] = slot_state["rows"]
+        offset += len(chunk)
+    missing = [index for index, row in enumerate(records) if row is None]
+    if missing:
+        raise RuntimeError(f"evaluation missed scenario indices {missing}")
+    return pd.DataFrame.from_records(records), traces
+
+
 def evaluate_scenarios(
     scenarios,
     run: RunConfig,
@@ -335,7 +449,8 @@ def evaluate_scenarios(
         snapshot = _save_model_rng(model)
     try:
         batch_size = int(run.runtime.eval_batch_size)
-        use_batched = method in PPO_METHODS and (batch_size > 1 or pool is not None)
+        native = bool(run.runtime.native_batch) and method in PPO_METHODS
+        use_batched = method in PPO_METHODS and (batch_size > 1 or pool is not None or native)
         if not use_batched:
             return _evaluate_scalar(
                 scenarios,
@@ -348,10 +463,10 @@ def evaluate_scenarios(
                 trace_index=trace_index,
                 trace_all=trace_all,
             )
-        owned: EvalEnvPool | None = None
+        owned = None
         active = pool
         if active is None:
-            owned = EvalEnvPool(scenarios, run, forecaster=forecaster)
+            owned = make_eval_pool(scenarios, run, forecaster)
             active = owned
         elif active.closed:
             raise ValueError("eval pool has been released")
@@ -361,6 +476,19 @@ def evaluate_scenarios(
                 "config, forecast or contract; rebuild the pool (no silent reuse)"
             )
         try:
+            if native:
+                return _evaluate_batched_native(
+                    scenarios,
+                    run,
+                    method,
+                    model=model,
+                    model_seed=model_seed,
+                    split=split,
+                    forecaster=forecaster,
+                    trace_index=trace_index,
+                    trace_all=trace_all,
+                    pool=active,
+                )
             return _evaluate_batched(
                 scenarios,
                 run,

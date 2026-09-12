@@ -2,10 +2,12 @@
 """Build the native PyO3 kernel, install it as `bus_sim`, and record provenance.
 
 Usage:
-    python scripts/build_native.py [--release]
+    python scripts/build_native.py [--release] [--output PATH]
 
-Writes `reports/rust-migration/native-build.json` with toolchain versions, the
-git revision, the shared-object hash and import check used by R1+ evidence.
+Writes a provenance record (default `reports/rust-migration/native-build.json`)
+with toolchain versions, the git revision, the shared-object hash and import
+check used by R1+ evidence. Use `--output` for a new kernel revision so the
+frozen R4 record stays intact.
 """
 
 from __future__ import annotations
@@ -36,6 +38,12 @@ def _workspace_version() -> str:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--release", action="store_true", default=True)
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=REPORT,
+        help="provenance record to write (default: the frozen rust-migration record)",
+    )
     args = parser.parse_args()
     profile = "release" if args.release else "debug"
 
@@ -79,9 +87,11 @@ def main() -> None:
     }
     if not payload["import_ok"]:
         raise SystemExit("bus_sim.Kernel missing after build")
-    REPORT.parent.mkdir(parents=True, exist_ok=True)
-    REPORT.write_text(json.dumps(payload, indent=2, sort_keys=True))
-    print(f"[native] built {digest[:12]} and wrote {REPORT.relative_to(ROOT)}")
+    report = Path(args.output)
+    report = report if report.is_absolute() else ROOT / report
+    report.parent.mkdir(parents=True, exist_ok=True)
+    report.write_text(json.dumps(payload, indent=2, sort_keys=True))
+    print(f"[native] built {digest[:12]} and wrote {report}")
 
 
 if __name__ == "__main__":

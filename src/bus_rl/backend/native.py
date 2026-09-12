@@ -129,6 +129,14 @@ class NativeScenarioStore:
         kernel.set_conservation_checks(conservation)
         return kernel
 
+    def batch_kernel(self, capacity: int, *, conservation: bool = True):
+        """One native kernel owning ``capacity`` episode slots over this store."""
+        import bus_sim
+
+        kernel = bus_sim.BatchKernel.from_store(self._store, int(capacity))
+        kernel.set_conservation_checks(conservation)
+        return kernel
+
 
 _STORE_CACHE: dict[tuple, NativeScenarioStore] = {}
 _STORE_CACHE_LIMIT = 4
