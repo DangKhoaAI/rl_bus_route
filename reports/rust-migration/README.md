@@ -16,11 +16,17 @@ indexed by `reports/rust-migration.md`. Large traces/checkpoints stay in
 
 ## Fast local loop
 
-- Report-only edit: `python scripts/export_oracle.py build --skip-fixtures` (~1 s)
-  then `python scripts/export_oracle.py verify --hashes-only` (~1 s).
-- Fixture + reference check (no 1,200-scenario regeneration): `verify` (~14 s).
-- R0 acceptance / generator change: `verify --deep` (~35 s) or
-  `BUS_RL_DEEP=1 python -m pytest tests/backend_parity/test_manifest.py`.
+Default commands are the fast path; the full checks are opt-in flags.
+
+- Default report-only edit: `python scripts/export_oracle.py build` (~1 s) then
+  `python scripts/export_oracle.py verify --hashes-only` (~1 s).
+- Full fixture + reference check: `python scripts/export_oracle.py build --fixtures`
+  (~8 s) then `verify` (~13 s).
+- R0 acceptance / generator or physical-config change: `verify --deep` (~35 s)
+  or `BUS_RL_DEEP=1 python -m pytest tests/backend_parity/test_manifest.py`.
+- `pytest -q` runs with 2 torch threads and caches catalog scenarios per
+  session; the 1,200-scenario regeneration test is skipped unless
+  `BUS_RL_DEEP=1`.
 
 The expensive 1,200-scenario regeneration is opt-in so routine report/test loops
 stay fast.

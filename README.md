@@ -80,6 +80,21 @@ Requesting `--backend rust` without the extension fails loudly; Python is kept
 as an explicit fallback. Run metadata records the backend and native build hash.
 See `crates/README.md` and `reports/rust-migration.md`.
 
+### Fast development loop
+
+Defaults are the fast path; the full oracle checks are opt-in flags.
+
+```bash
+python scripts/export_oracle.py build            # manifest + summary (~1 s)
+python scripts/export_oracle.py verify --hashes-only  # hash check (~1 s)
+python -m pytest -q                              # 2 torch threads, cached scenarios
+```
+
+Run the slower checks only when needed: `build --fixtures` replays the 11
+golden fixtures (~8 s), `verify` adds fixture + reference parity (~13 s), and
+`verify --deep` (or `BUS_RL_DEEP=1 pytest tests/backend_parity/test_manifest.py`)
+regenerates the 1,200 scenario seeds (~35 s).
+
 ## What is in the observation
 
 Controllers see queues, ages, loads, past arrivals, headways, and fleet

@@ -114,12 +114,14 @@ class BusDispatchEnv(gym.Env):
             "completed": state.completed_count,
         }
 
-    def step(self, action_index):
+    def step(self, action_index, on_tick=None):
         with TIMERS.span("env.step"):
             if not self.action_masks()[action_index]:
                 raise ValueError(f"invalid action index: {action_index}")
             with TIMERS.span("env.advance_interval"):
-                costs = advance_interval(self.state, self.scenario, ACTION_TABLE[action_index])
+                costs = advance_interval(
+                    self.state, self.scenario, ACTION_TABLE[action_index], on_tick=on_tick
+                )
             terminated = self.state.current_time_s >= self.config.horizon_s
             observation = self._observation()
             with TIMERS.span("env.interval_cost"):

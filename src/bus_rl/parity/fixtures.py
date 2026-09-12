@@ -4,9 +4,9 @@ A fixture is a deterministic scenario + action trace + the Python oracle's
 per-boundary and per-tick outputs. The same replay function will later be
 pointed at the native backend, so the on-disk contract is backend-agnostic.
 
-Step records come from the public ``BusDispatchEnv`` API. Tick records come
-from a second pass that mirrors ``step`` while snapshotting each tick; the two
-passes are cross-checked so the mirror cannot silently drift.
+Step records and per-tick records come from the same public ``BusDispatchEnv``
+pass: ``step`` accepts an ``on_tick`` trace hook, so the fixture is recorded in
+a single run (no mirror pass to drift).
 """
 
 from __future__ import annotations
@@ -17,7 +17,6 @@ from pathlib import Path
 
 import numpy as np
 
-from bus_rl.control.actions import ACTION_TABLE
 from bus_rl.domain import StepCosts
 from bus_rl.env.bus_dispatch import BusDispatchEnv
 from bus_rl.parity.controllers import make_controller
@@ -30,9 +29,7 @@ from bus_rl.parity.snapshot import (
     numpy_state_snapshot,
 )
 from bus_rl.provenance import action_schema_hash, physical_config_hash
-from bus_rl.rewards.costs import add_costs, interval_cost, mean_waiting_minutes
-from bus_rl.sim.dispatcher import apply_action
-from bus_rl.sim.engine import advance_tick
+from bus_rl.rewards.costs import mean_waiting_minutes
 
 FIXTURE_SCHEMA_VERSION = 1
 MAX_STEPS = 200
@@ -79,49 +76,29 @@ def new_env(spec: dict) -> BusDispatchEnv:
     return _new_env(spec)
 
 
-def _step_with_tick_trace(env: BusDispatchEnv, action_index: int):
-    """Mirror ``BusDispatchEnv.step`` but snapshot the world after every tick."""
-    if not env.action_masks()[action_index]:
-        raise ValueError(f"invalid action index: {action_index}")
-    state, scenario = env.state, env.scenario
-    missions = apply_action(state, scenario, ACTION_TABLE[action_index])
-    result = StepCosts()
-    ticks: list[dict] = []
-    ticks_per_interval = scenario.config.control_interval_s // scenario.config.tick_s
-    for _ in range(ticks_per_interval):
-        event_cursor = len(state.event_log)
-        tick_costs = advance_tick(state, scenario)
-        result = add_costs(result, tick_costs)
-        ticks.append(
+def _tick_recorder():
+    """Return ``(rows, capture)``; ``capture`` snapshots the world after a tick."""
+    rows: list[dict] = []
+
+    def capture(state, tick_costs, event) -> None:
+        rows.append(
             {
                 "state": numpy_state_snapshot(state),
                 "costs": _costs_array(tick_costs),
-                "event": _event_row(state.event_log[event_cursor]),
+                "event": _event_row(event),
             }
         )
-    result.mission_changes += missions
-    terminated = state.current_time_s >= env.config.horizon_s
-    observation = env._observation()
-    reward = -interval_cost(result, env.reward) / env.reward.n_ref
-    return observation, reward, terminated, False, {"costs": result}, ticks
 
-
-def record_ticks(spec: dict, actions: list[int]) -> list[dict]:
-    """Replay ``actions`` on a fresh env, snapshotting every tick."""
-    env = _new_env(spec)
-    ticks: list[dict] = []
-    for action in actions:
-        *_, rows = _step_with_tick_trace(env, action)
-        ticks.extend(rows)
-    return ticks
+    return rows, capture
 
 
 def record(spec: dict, *, max_steps: int = MAX_STEPS) -> dict:
-    """Run the oracle (public API) and attach the tick-level replay."""
+    """Run the oracle public API once, capturing per-tick state via ``on_tick``."""
     env = _new_env(spec)
     controller = make_controller(spec.get("controller", "coverage"), spec.get("controller_seed", 0))
     observation = env._observation()
     mask = env.action_masks()
+    ticks, on_tick = _tick_recorder()
 
     steps: list[dict] = [
         _boundary(env, 0, observation, mask, 0.0, False, False, StepCosts(), {"ticks": []})
@@ -137,7 +114,7 @@ def record(spec: dict, *, max_steps: int = MAX_STEPS) -> dict:
         before_events = len(env.state.event_log)
         before_departures = len(env.state.departures)
         before_accepted = len(env.state.accepted_actions)
-        observation, reward, terminated, truncated, info = env.step(action)
+        observation, reward, terminated, truncated, info = env.step(action, on_tick=on_tick)
         actions.append(int(action))
         events = {
             "ticks": [_event_row(row) for row in env.state.event_log[before_events:]],
@@ -165,13 +142,6 @@ def record(spec: dict, *, max_steps: int = MAX_STEPS) -> dict:
         step_index += 1
         if terminated or truncated:
             break
-
-    ticks = record_ticks(spec, actions)
-    final_tick_state = ticks[-1]["state"]
-    if not np.array_equal(final_tick_state["counters"], steps[-1]["state"]["counters"]):
-        raise AssertionError("tick-trace replay drifted from BusDispatchEnv.step")
-    if not np.array_equal(final_tick_state["time_s"], steps[-1]["state"]["time_s"]):
-        raise AssertionError("tick-trace clock drifted from BusDispatchEnv.step")
 
     return {
         "spec": spec,
@@ -302,6 +272,7 @@ def replay_fixture(input_payload: dict) -> dict[str, np.ndarray]:
 def replay_explicit(spec: dict, actions: list[int]) -> dict[str, np.ndarray]:
     """Replay an explicit action list through the public env API."""
     env = _new_env(spec)
+    ticks, on_tick = _tick_recorder()
     steps = [
         _boundary(
             env,
@@ -317,7 +288,7 @@ def replay_explicit(spec: dict, actions: list[int]) -> dict[str, np.ndarray]:
     ]
     for index, action in enumerate(actions, start=1):
         before = len(env.state.event_log)
-        observation, reward, terminated, truncated, info = env.step(action)
+        observation, reward, terminated, truncated, info = env.step(action, on_tick=on_tick)
         events = {"ticks": [_event_row(row) for row in env.state.event_log[before:]]}
         steps.append(
             _boundary(
@@ -337,7 +308,7 @@ def replay_explicit(spec: dict, actions: list[int]) -> dict[str, np.ndarray]:
     record = {
         "obs_keys": list(steps[0]["obs"]),
         "steps": steps,
-        "ticks": record_ticks(spec, actions[: len(steps) - 1]),
+        "ticks": ticks,
         "departures": [],
         "accepted_actions": [],
     }

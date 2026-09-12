@@ -116,7 +116,8 @@ def evaluate_scenarios(
         run,
         forecaster=forecaster,
     )
-    apply_torch_threads(run.algorithm.torch_threads)
+    if model is not None:
+        apply_torch_threads(run.algorithm.torch_threads)
     controller = make_controller(method, model=model, seed=model_seed or 0)
     records = []
     traces: dict[int, list[dict]] = {}

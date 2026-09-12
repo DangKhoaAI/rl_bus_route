@@ -8,8 +8,6 @@ from dataclasses import asdict
 from hashlib import sha256
 from pathlib import Path
 
-import torch
-
 from bus_rl.control.actions import ACTION_TABLE
 from bus_rl.domain import SimConfig
 
@@ -67,6 +65,8 @@ def lock_hash(root: Path | None = None) -> str:
 
 
 def device_name() -> str:
+    import torch
+
     return "cuda" if torch.cuda.is_available() else "cpu"
 
 

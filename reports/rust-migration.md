@@ -23,12 +23,17 @@ The oracle manifest is `reports/rust-migration/oracle-manifest.json`
 (machine-checkable, self-hashed). Everything is regenerated with:
 
 ```text
-python scripts/export_oracle.py build                 # reference + fixtures + manifest
-python scripts/export_oracle.py build --skip-fixtures # manifest + summary only (~1 s)
-python scripts/export_oracle.py verify                # hashes + fixtures + reference (~14 s)
+python scripts/export_oracle.py build                 # manifest + summary (~1 s, fast default)
+python scripts/export_oracle.py build --fixtures      # + verify the 11 fixtures (~8 s)
+python scripts/export_oracle.py build --force         # (re)write fixtures from the oracle
+python scripts/export_oracle.py verify                # hashes + fixtures + reference (~13 s)
 python scripts/export_oracle.py verify --hashes-only  # manifest hashes only (~1 s)
 python scripts/export_oracle.py verify --deep         # + regenerate 1,200 scenario seeds (~35 s)
 ```
+
+Fixtures are recorded in a single ``BusDispatchEnv.step`` pass via the ``on_tick``
+trace hook (no mirror pass), and ``verify`` only regenerates the 1,200 scenario
+seeds with ``--deep``.
 
 Frozen reference:
 

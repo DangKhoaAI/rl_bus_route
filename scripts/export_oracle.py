@@ -2,14 +2,16 @@
 """R0 oracle tooling: freeze the Python reference and export golden fixtures.
 
 Usage:
-    python scripts/export_oracle.py build [--force] [--skip-fixtures]
+    python scripts/export_oracle.py build [--fixtures] [--force]
     python scripts/export_oracle.py verify [--deep] [--hashes-only]
 
-``build`` writes ``reports/rust-migration/oracle-manifest.json`` and exports the
-named fixtures under ``tests/backend_parity/fixtures``. ``verify`` re-derives
-every hash, replays every fixture, and re-checks the reference checkpoint.
-``--deep`` additionally regenerates the 1,200 scenario seeds (slow R0 check);
-``--hashes-only`` is the fast manifest-only check.
+``build`` writes ``reports/rust-migration/oracle-manifest.json`` and the fixture
+summary. By default it is fast (manifest only); ``--fixtures`` replays and
+``--force`` (re)writes the named fixtures under
+``tests/backend_parity/fixtures``. ``verify`` re-derives every hash, replays
+every fixture, and re-checks the reference checkpoint. ``--deep`` additionally
+regenerates the 1,200 scenario seeds (slow R0 check); ``--hashes-only`` is the
+fast manifest-only check.
 """
 
 from __future__ import annotations
@@ -180,10 +182,10 @@ def write_summary(matrix: dict) -> None:
 
 def cmd_build(args) -> None:
     build_reference(force=args.force)
-    if args.skip_fixtures:
-        print("[fixture] skipped (--skip-fixtures)")
-    else:
+    if args.fixtures or args.force:
         export_fixtures(force=args.force)
+    else:
+        print("[fixture] manifest+summary only (pass --fixtures to verify/export fixtures)")
     manifest = build_manifest(ROOT)
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     (REPORT_DIR / "oracle-manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True))
@@ -247,11 +249,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
     build = sub.add_parser("build")
-    build.add_argument("--force", action="store_true")
+    build.add_argument("--force", action="store_true", help="re-export fixtures")
     build.add_argument(
-        "--skip-fixtures",
+        "--fixtures",
         action="store_true",
-        help="rebuild manifest+summary only (report-only changes)",
+        help="verify/export the 11 golden fixtures (slower)",
     )
     build.set_defaults(func=cmd_build)
     verify = sub.add_parser("verify")

@@ -98,8 +98,14 @@ def advance_tick(state: WorldState, scenario: Scenario) -> StepCosts:
 
 
 def advance_interval(
-    state: WorldState, scenario: Scenario, action: Action | None = None
+    state: WorldState,
+    scenario: Scenario,
+    action: Action | None = None,
+    *,
+    on_tick=None,
 ) -> StepCosts:
+    """Run one control interval. ``on_tick(state, tick_costs, event)`` is an
+    optional offline-trace hook (fixture export); it never changes physics."""
     action = action or Action()
     from bus_rl.sim.dispatcher import apply_action
 
@@ -108,7 +114,10 @@ def advance_interval(
     result = StepCosts()
     with TIMERS.span("engine.ticks"):
         for _ in range(scenario.config.control_interval_s // scenario.config.tick_s):
+            event_cursor = len(state.event_log)
             tick_costs = advance_tick(state, scenario)
             result = add_costs(result, tick_costs)
+            if on_tick is not None:
+                on_tick(state, tick_costs, state.event_log[event_cursor])
     result.mission_changes += missions
     return result
