@@ -394,13 +394,13 @@ checkpoints under `runs/rust-migration/full-workflow/`.
 
 | Metric | Python | Rust | Ratio |
 |---|---:|---:|---:|
-| Learn + validation (`wall_time_s`) | 521.13 s | 142.97 s | **3.65x** |
-| Total wall incl. setup (`/usr/bin/time`) | 523.36 s | 145.29 s | **3.60x** |
-| Setup (reported separately) | 2.23 s | 2.32 s | — |
+| Learn + validation (`wall_time_s`) | 521.13 s | 146.95 s | **3.55x** |
+| Total wall incl. setup (`/usr/bin/time`) | 523.36 s | 149.30 s | **3.51x** |
+| Setup (reported separately) | 2.23 s | 2.35 s | — |
 | Transitions / episodes | 245,760 / 2,048 | 245,760 / 2,048 | — |
 | Evaluations x validation days | 20 x 100 | 20 x 100 | — |
 | Best validation cost | 13199.1325 | 13199.1325 | equal |
-| Peak RSS | 662 MB | 1236 MB | 1.87x |
+| Peak RSS | 662 MB | 905 MB | 1.37x |
 
 **Parity.** All 20 validation costs are bit-identical (max abs diff 0.0), and
 the trained artifacts are byte-identical: `policy.pth`,
@@ -415,18 +415,27 @@ are equal. This closes the R4.3 parity question.
 `--eval-limit 10` isolates the cost: Python 280.31 s, Rust 76.21 s. The extra 90
 validation days x 20 evaluations cost Python 240.8 s (46% of its total) and Rust
 66.8 s (47%), so evaluation, not simulation, is now the largest remaining Python
-cost. R4.3 is accepted: the full Rust workflow is **3.60x** faster and every
+cost. R4.3 is accepted: the full Rust workflow is **3.51x** faster and every
 preceding gate passes.
 
-**Memory.** Rust peak RSS is 1.87x Python's (1236 MB vs 662 MB). Measured
-components: the shared `ScenarioStore` packs immutable tapes for all 600
-scenarios (**246 MB**, ~409 KB/scenario: 205 MB train + 41 MB validation), plus
-native heap retention at the Python/PyO3 step boundary. This is not a leak: a
-1.44M-call reset/step/mask loop over 4 kernels held RSS flat, and
-`sys.getallocatedblocks()` stayed flat in the DummyVecEnv loop (no Python object
-growth). glibc arena trimming (`MALLOC_ARENA_MAX=2 MALLOC_TRIM_THRESHOLD_=131072`)
-recovers only ~2% at 61,440 steps (1030 -> 1011 MB). Peak is bounded and well
-within the 31 GB host.
+**Memory.** Rust peak RSS is 1.37x Python's (905 MB vs 662 MB). The first pass
+(the pre-fix numbers 1236 MB / 1.87x are kept in `full-workflow.json`) exposed a
+real wrapper bug, not an allocator property: `NativeBusDispatchEnv` eagerly
+built **one `Kernel` per scenario**, and each kernel allocates ~**243 KB** of
+per-episode scratch on its first episode and keeps it (bounded, reused later).
+With 500 train scenarios x 4 envs plus 100 validation scenarios that was ~500 MB
+of idle kernels; Python never pays it because it builds `WorldState` only for the
+active scenario. Measured directly: 500 kernels x one full episode = 118.8 MB
+(243.2 KB/kernel), a second pass over the same kernels = 0.0 MB, and a pure
+kernel loop that switches scenarios is flat (so the kernel itself is fine).
+
+**Fix.** Kernels are now created lazily in `reset()` for the selected scenario,
+so each env holds a single active kernel; the 4-env DummyVecEnv loop dropped
+from 232 MB to 0.5 MB of retained heap (430x) with no throughput loss
+(~4.0-4.3k vs ~3.4-4.0k steps/s, within noise). Peak RSS fell 1236 -> 905 MB and
+training stayed byte-identical. The remaining **+243 MB** over Python is the
+shared native `ScenarioStore` (immutable tapes for all 600 scenarios, measured
+at 245.6 MB / ~409 KB per scenario), which is the deliberate R4 optimization.
 
 ### Torch threads (chosen configuration)
 
@@ -486,7 +495,7 @@ absolute times are inflated but shares are informative) in
 Gate status: at the chosen 2 threads (same condition for both backends)
 simulation is 25.1x, isolated learn 4.17x (above the 4x stretch) and
 fixed-checkpoint eval 3.44x; all far above the 2x gate. The R4.3 full workflow
-is 3.60x with bit-identical training, so **R4 is accepted** and the native
+is 3.51x with bit-identical training, so **R4 is accepted** and the native
 revision `cf8579ef16b5` is frozen for RL. Optimization should now target PPO
 update and evaluation inference, not the simulation core; batched multi-scenario
 inference is the next candidate for eval.
@@ -540,13 +549,14 @@ Artifacts:
 ## 9. Limitations and next steps
 
 - R0–R4 are accepted. R4.2 light gates pass (simulation ~24.9x, isolated
-  learn ~3.9–4.17x) and R4.3 full workflow is 3.60x with bit-identical training
+  learn ~3.9–4.17x) and R4.3 full workflow is 3.51x with bit-identical training
   (section 7). The remaining opportunity is evaluation, which is ~46% of the
   Python full-seed wall; batched multi-scenario inference is the next candidate.
-- Rust peak RSS is 1.87x Python's (1236 MB vs 662 MB) for a full seed: ~246 MB
-  is the shared native `ScenarioStore` for 600 scenarios and the rest is native
-  heap retention at the step boundary (not a leak; see section 7). It is
-  documented rather than hidden and does not affect the speed gates.
+- Rust peak RSS is 1.37x Python's (905 MB vs 662 MB) for a full seed: +243 MB is
+  the shared native `ScenarioStore` for 600 scenarios (the deliberate R4
+  optimization). A first pass held an extra ~330 MB because the wrapper eagerly
+  built one kernel per scenario and each kernel keeps ~243 KB of episode scratch;
+  this was fixed by creating kernels lazily in `reset()` (section 7).
 - The manifest records `git.sha`/`git.dirty` for the repo HEAD at build time and
   the reference checkpoint's origin revision separately; the frozen oracle
   contract is the physical/action/observation hashes and the fixture hashes, not
@@ -570,7 +580,7 @@ Artifacts:
 - [x] R1: native domain/lifecycle/actions/ticks/costs at oracle parity.
 - [x] R2: observation/history and mask parity accepted.
 - [x] R3: wrapper/evaluator/forecast/backend/provenance accepted.
-- [x] R4: correctness, 2x simulation and learn gates, and 3.60x full workflow
+- [x] R4: correctness, 2x simulation and learn gates, and 3.51x full workflow
   (bit-identical training) accepted.
 - [x] Historical reports preserved; measured results are separated from projections.
 - [x] Frozen native revision `cf8579ef16b5` recorded; task L0.1 in the RL plan is unlocked.

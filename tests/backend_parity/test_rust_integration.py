@@ -172,10 +172,12 @@ def test_native_envs_share_one_scenario_store():
     ]
     assert envs[0]._scenario_store is envs[1]._scenario_store is envs[2]._scenario_store
     assert len(envs[0]._scenario_store) == 3
-    # Kernels are per env (independent episode state) but share the packed tapes.
-    assert envs[0]._kernels[0] is not envs[1]._kernels[0]
+    # Kernels are built lazily: one active kernel per env (independent episode
+    # state) while every env shares the packed tapes.
+    assert envs[0].kernel is None
     envs[0].reset(seed=0, options={"scenario_index": 0})
     envs[1].reset(seed=0, options={"scenario_index": 0})
+    assert envs[0].kernel is not envs[1].kernel
     envs[0].step(0)
     assert envs[0].kernel.current_time_s != envs[1].kernel.current_time_s
 

@@ -85,10 +85,11 @@ class NativeBusDispatchEnv(gym.Env):
             }
         )
         # Pack scenarios once per process and share immutable tapes across envs.
+        # Kernels are built lazily: a kernel retains ~240 KB of episode scratch
+        # after its first episode, so eagerly creating one per scenario would
+        # hold n_envs * n_scenarios * 240 KB (hundreds of MB) for no benefit.
+        # Only the active scenario needs a kernel at any time.
         self._scenario_store = scenario_store or shared_store(self.scenarios)
-        self._kernels = tuple(
-            self._scenario_store.kernel(index) for index in range(len(self.scenarios))
-        )
         self.kernel = None
         self.scenario = None
         self.validate = validate
@@ -121,7 +122,7 @@ class NativeBusDispatchEnv(gym.Env):
         )
         self._scenario_index = index
         self.scenario = self.scenarios[index]
-        self.kernel = self._kernels[index]
+        self.kernel = self._scenario_store.kernel(index)
         result = self.kernel.reset_contract()
         self._mask = np.asarray(result["mask"], dtype=bool)
         return self._observation(result["obs"]), {}

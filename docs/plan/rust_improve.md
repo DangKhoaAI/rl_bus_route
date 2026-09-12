@@ -261,16 +261,18 @@ workflow) remains open.
 **Evidence (2026-09-12, accepted):** one full L0-protocol seed per backend
 (`configs/experiments/core-threads2.toml`, seed 11, 4 envs, 2 torch threads,
 245,760 transitions, validation every 12,288 on 100 validation days) in
-`reports/rust-migration/full-workflow.json`. Python 521.13 s vs Rust 142.97 s
-learn+validation (**3.65x**); total wall incl. setup 523.36 s vs 145.29 s
-(**3.60x**, setup 2.2/2.3 s). All 20 validation costs are bit-identical
+`reports/rust-migration/full-workflow.json`. Python 521.13 s vs Rust 146.95 s
+learn+validation (**3.55x**); total wall incl. setup 523.36 s vs 149.30 s
+(**3.51x**, setup 2.2/2.4 s). All 20 validation costs are bit-identical
 (max abs diff 0.0) and `policy.pth`, `policy.optimizer.pth` and
 `pytorch_variables.pth` are byte-identical for both `best.zip` and `last.zip`.
 Validation dominates the workflow (46% of Python wall); rerunning with
-`--eval-limit 10` isolates that cost. Peak RSS 662 MB (Python) vs 1236 MB (Rust),
-explained in the report (~246 MB shared native `ScenarioStore` + heap
-retention). Native revision `cf8579ef16b5` is frozen for RL; if the L0 seed
-reuses these exact settings and artifacts, no rerun is needed.
+`--eval-limit 10` isolates that cost. A first pass used 1236 MB peak RSS because
+`NativeBusDispatchEnv` eagerly built one kernel per scenario (each retains
+~243 KB of episode scratch); creating kernels lazily in `reset()` dropped Rust
+to 905 MB (Python 662 MB) with bit-identical training, leaving +243 MB for the
+shared native `ScenarioStore`. Native revision `cf8579ef16b5` is frozen for RL;
+if the L0 seed reuses these exact settings and artifacts, no rerun is needed.
 
 ## 8. Final acceptance checklist
 
