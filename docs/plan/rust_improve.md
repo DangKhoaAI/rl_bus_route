@@ -87,10 +87,10 @@ transitions). Freeze the oracle before native implementation.
 
 ### R1.1 - Native build, domain, and scenario ownership
 
-- [ ] Create `crates/bus-sim/` and the chosen PyO3 packaging layout; document the release build/install procedure while retaining the existing Python CLI.
-- [ ] Implement enums, IDs, vehicles, cohort storage, cached loads, and incremental totals with checked bounds.
-- [ ] Pack immutable network/tapes/traffic/config once; define native ownership or a valid retained Python owner.
-- [ ] Implement reset and debug snapshots with deterministic vehicle/cohort ordering.
+- [x] Create `crates/bus-sim/` and the chosen PyO3 packaging layout; document the release build/install procedure while retaining the existing Python CLI.
+- [x] Implement enums, IDs, vehicles, cohort storage, cached loads, and incremental totals with checked bounds.
+- [x] Pack immutable network/tapes/traffic/config once; define native ownership or a valid retained Python owner.
+- [x] Implement reset and debug snapshots with deterministic vehicle/cohort ordering.
 
 **Verification:** native unit tests for reset, invalid dimensions/IDs, capacity bounds, ownership/lifetime, and initial snapshots against R0 fixtures.
 
@@ -98,9 +98,9 @@ transitions). Freeze the oracle before native implementation.
 
 ### R1.2 - Passenger and vehicle lifecycle
 
-- [ ] Implement arrivals, eligibility, partial boarding, lineage-preserving splits, alighting/completion, abandonment, and load/counter transitions.
-- [ ] Implement phase completion, travel duration/rounding, and terminal-idle behavior.
-- [ ] Retain finished records needed for metrics; remove them from active scans without losing historical information.
+- [x] Implement arrivals, eligibility, partial boarding, lineage-preserving splits, alighting/completion, abandonment, and load/counter transitions.
+- [x] Implement phase completion, travel duration/rounding, and terminal-idle behavior.
+- [x] Retain finished records needed for metrics; remove them from active scans without losing historical information.
 
 **Verification:** targeted native tests and differential fixtures for full/partial buses, repeated splits, expiration boundaries, same-tick transitions, and zero demand. Enable conservation in tests.
 
@@ -108,16 +108,26 @@ transitions). Freeze the oracle before native implementation.
 
 ### R1.3 - Actions, tick order, and costs
 
-- [ ] Implement NOOP, DISPATCH, RECALL, REASSIGN, SHORT_TURN, and SET_HEADWAY with unchanged mappings and guards.
-- [ ] Preserve action-before-interval and the complete tick order in Rust spec section 3.3.
-- [ ] Implement raw cost integration, weighted reward, mission changes, and one-time terminal unfinished settlement.
-- [ ] Derive ticks per interval from config; preserve reference semantics for supported configs.
+- [x] Implement NOOP, DISPATCH, RECALL, REASSIGN, SHORT_TURN, and SET_HEADWAY with unchanged mappings and guards.
+- [x] Preserve action-before-interval and the complete tick order in Rust spec section 3.3.
+- [x] Implement raw cost integration, weighted reward, mission changes, and one-time terminal unfinished settlement.
+- [x] Derive ticks per interval from config; preserve reference semantics for supported configs.
 
 **Verification:** replay every R0 action trace; compare per-tick events/state and every cost component; test invalid action rejection before mutation.
 
 **Acceptance:** all kernel fixtures pass with the specified tolerances, terminal cost is charged exactly once, and no physics/reward change is bundled into migration.
 
 **R1 gate:** R1.1-R1.3 accepted; kernel behavior is equivalent before observation optimization.
+
+**Evidence (2026-09-12, accepted):** crate layout `crates/bus-sim`
+(`bus_sim_core`) + `crates/bus-sim-py` (`bus_sim`); build via
+`python scripts/build_native.py`. All 11 R0 fixtures replay through the native
+kernel with zero divergences on state/counters/IDs/lineage, every cost
+component, per-tick state, departure/action events and terminal settlement;
+`cargo test -p bus-sim` (7 tests) and
+`python -m pytest tests/backend_parity/test_rust_kernel.py` (26 tests) pass.
+Details in [reports/rust-migration.md](../reports/rust-migration.md) and
+`reports/rust-migration/native-build.json`. Observation/mask parity remains R2.
 
 ## 5. R2: observations and masks
 
@@ -220,7 +230,7 @@ transitions). Freeze the oracle before native implementation.
 ## 8. Final acceptance checklist
 
 - [x] R0: immutable oracle, golden coverage, and unprofiled reference accepted.
-- [ ] R1: domain/lifecycle/actions/ticks/costs accepted.
+- [x] R1: domain/lifecycle/actions/ticks/costs accepted.
 - [ ] R2: observation/history and mask parity accepted.
 - [ ] R3: wrapper/evaluator/forecast/backend/provenance accepted.
 - [ ] R4: correctness, 2x simulation and learn gates, and faster full workflow accepted.

@@ -1,0 +1,17 @@
+[package]
+name = "bus-sim-py"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "PyO3 bindings exposing the native bus-sim kernel to Python"
+
+[lib]
+name = "bus_sim"
+crate-type = ["cdylib"]
+path = "src/lib.rs"
+
+[dependencies]
+bus-sim = { path = "../bus-sim" }
+ndarray = "0.17"
+numpy = "0.29"
+pyo3 = { version = "0.29", features = ["extension-module", "abi3-py311"] }

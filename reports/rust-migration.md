@@ -1,6 +1,6 @@
 # Rust migration report
 
-Status: **R0 accepted (Python oracle frozen). R1–R4 not started.**
+Status: **R0 and R1 accepted (Python oracle frozen; native kernel at parity). R2–R4 not started.**
 Date: 2026-09-12.
 Spec: [docs/spec/rust_improve.md](spec/rust_improve.md). Plan: [docs/plan/rust_improve.md](plan/rust_improve.md).
 
@@ -207,12 +207,65 @@ and nested timers enabled**. That number is diagnostic only and is explicitly
 not the production reference. The unprofiled numbers above are the R0.3
 reference that R4 will remeasure interleaved with the Rust backend.
 
-## 4. Evidence
+## 4. R1 — native kernel
+
+Layout (spec section 3.1): `crates/bus-sim/` (rlib `bus_sim_core`: domain,
+engine, passengers, vehicles, dispatcher, travel, guards, costs, snapshots) and
+`crates/bus-sim-py/` (cdylib `bus_sim`: thin PyO3 debug bridge). Build/install:
+`python scripts/build_native.py` (documented in `crates/README.md`); the Python
+CLI is unchanged.
+
+What was ported (field-for-field from the oracle):
+
+- Enums, IDs, `SimConfig`, network/fleet, cohort storage, cached `Vehicle.load`
+  and incremental totals (`i64` with conservation assertions). Immutable tapes
+  are copied once into the scenario; `reset` only rebuilds episode state and
+  never reads files or re-packs.
+- Passenger lifecycle: arrivals, eligibility, capacity/partial boarding with
+  lineage-preserving splits, single first-denial, alighting/completion,
+  abandonment boundary, and the waiting hot list vs finished archive.
+- Vehicle lifecycle: phase completion, travel rounding from the packed traffic
+  field, dwell/layover, short-turn turnpoint and terminal-idle behavior.
+- Actions and guards: the frozen 221-slot table and the donor/cooldown/floor
+  guards; invalid actions are rejected before any mutation.
+- Tick order: action before the interval, then per tick complete-phase ->
+  arrivals -> abandon -> terminal boarding -> dispatch -> integrate costs ->
+  decay timers -> advance clock -> conservation -> event log -> one-time
+  settlement. Ticks per interval come from config.
+- Costs/reward: every raw component, mission changes, one-time terminal
+  unfinished settlement and the weighted `-cost/n_ref` reward.
+
+### R1 parity result
+
+All 11 R0 golden fixtures were replayed through `bus_sim.Kernel` and compared
+to the oracle with the frozen tolerances. **Zero divergences** on:
+
+- state counters, vehicle arrays, full cohort table (kind/bus/lineage/status),
+  headway/dispatch clocks and `terminal_settled` at every boundary;
+- every per-tick vehicle/counter/event record and every per-tick cost;
+- every per-step cost component, reward and termination flag;
+- departure events and accepted mission/headway events (including the D3
+  `str` vs `int` pattern distinction).
+
+Tests: `cargo test -p bus-sim` (7 native unit tests: reset, invalid
+dimensions/IDs, capacity/conservation, config-driven ticks, rejected invalid
+action) and `python -m pytest tests/backend_parity/test_rust_kernel.py` (26
+tests: 11 fixtures x 2 surfaces plus guard/settlement/reset cases). Native build
+provenance (toolchain, revision, `.so` hash, import check) is in
+`reports/rust-migration/native-build.json`.
+
+Observation tensors and mask caching are **not** part of R1 and remain R2; the
+`action_mask` exposed here is the guard-derived mask used by the kernel.
+
+## 5. Evidence
 
 | Command | Exit | Artifacts |
 |---|---:|---|
 | `python scripts/export_oracle.py build` | 0 | manifest, 11 fixtures, summary |
 | `python scripts/export_oracle.py verify` | 0 | all hashes + 11 replays + reference 15471.25 |
+| `python scripts/build_native.py` | 0 | native build + `native-build.json` |
+| `cargo test -p bus-sim` | 0 | 7 native unit tests |
+| `python -m pytest tests/backend_parity/test_rust_kernel.py -q` | 0 | 26 kernel parity tests |
 | `python scripts/benchmark_python.py --repetitions 5 --transitions 12288` | 0 | `python-benchmark.json` |
 | `python -m pytest tests/backend_parity -q` | 0 | 32 passed |
 | `python -m pytest -q` | 0 | full existing suite + parity |
@@ -222,27 +275,30 @@ Artifacts:
 - `reports/rust-migration/oracle-manifest.json` — frozen inventory + contract.
 - `reports/rust-migration/fixtures-summary.json` — fixture hashes/coverage.
 - `reports/rust-migration/python-benchmark.json` — raw repetitions.
+- `reports/rust-migration/native-build.json` — native toolchain/revision/hash.
+- `crates/bus-sim/`, `crates/bus-sim-py/` — native kernel + PyO3 bridge.
 - `tests/backend_parity/fixtures/` — golden fixtures (committed).
 - `tests/backend_parity/reference/` — committed reference checkpoint.
 
-## 5. Limitations and next steps
+## 6. Limitations and next steps
 
-- R0 records the Python oracle; it does not accept any Rust task. R1 (native
-  build/domain/reset) is next and must consume these fixtures.
-- The manifest records `git_dirty=true` because R0 artifacts were added in the
-  same working tree; the revision field pins `1c34457`.
+- R0/R1 are accepted; observation/mask parity (R2) and integration (R3) remain.
+- The manifest records `git_dirty=true` because R0/R1 artifacts were added in
+  the same working tree; the revision field pins the pre-R1 commit `1c34457`.
 - The git-ignored `runs/` and `data/generated/` inventories are documented but
   optional for verification; the committed reference checkpoint and
   regeneration commands make R0 reproducible from a fresh checkout.
+- `src/bus_sim.so` and `target/` are git-ignored; rebuild with
+  `python scripts/build_native.py`. The R1 unit tests run without Python; the
+  parity tests skip when the extension is absent.
 - R4 must remeasure Python interleaved with Rust on one machine; the R0.3
   numbers are the Python baseline for the ≥2× simulation and isolated-learn
   gates.
 
-## 6. R0 checklist
+## 7. Stage checklist
 
-- [x] R0.1 immutable oracle, contract documented, discrepancies recorded.
-- [x] R0.2 named golden fixtures, differential harness, corrupted-fixture demo,
-      reusable fixed reference checkpoint.
-- [x] R0.3 unprofiled Python benchmark with raw repetitions and median/min/max.
-- [x] R0 gate accepted: oracle frozen before native implementation.
-- [ ] R1 native kernel.
+- [x] R0: immutable oracle, golden coverage, and unprofiled reference accepted.
+- [x] R1: native domain/lifecycle/actions/ticks/costs at oracle parity.
+- [ ] R2 observation/history and mask parity.
+- [ ] R3 integration.
+- [ ] R4 acceptance.
