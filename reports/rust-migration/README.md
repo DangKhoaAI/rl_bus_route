@@ -24,9 +24,9 @@ Default commands are the fast path; the full checks are opt-in flags.
   (~8 s) then `verify` (~13 s).
 - R0 acceptance / generator or physical-config change: `verify --deep` (~35 s)
   or `BUS_RL_DEEP=1 python -m pytest tests/backend_parity/test_manifest.py`.
-- `pytest -q` runs with 2 torch threads and caches catalog scenarios per
-  session; the 1,200-scenario regeneration test is skipped unless
-  `BUS_RL_DEEP=1`.
+- `pytest -q` runs 4 xdist workers by default (2 torch threads each, catalog
+  scenarios cached per worker) and skips the 1,200-scenario regeneration test
+  unless `BUS_RL_DEEP=1`; use `-n 0` for a serial run when debugging.
 
 The expensive 1,200-scenario regeneration is opt-in so routine report/test loops
 stay fast.

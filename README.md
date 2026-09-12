@@ -87,8 +87,12 @@ Defaults are the fast path; the full oracle checks are opt-in flags.
 ```bash
 python scripts/export_oracle.py build            # manifest + summary (~1 s)
 python scripts/export_oracle.py verify --hashes-only  # hash check (~1 s)
-python -m pytest -q                              # 2 torch threads, cached scenarios
+python -m pytest -q                              # parallel -n 4 (~15 s)
 ```
+
+`pytest` runs 4 xdist workers by default (2 torch threads each, catalog
+scenarios cached per worker); use `python -m pytest -q -n 0` for a serial run
+when debugging.
 
 Run the slower checks only when needed: `build --fixtures` replays the 11
 golden fixtures (~8 s), `verify` adds fixture + reference parity (~13 s), and

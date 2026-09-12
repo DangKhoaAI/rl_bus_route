@@ -19,7 +19,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0", "ruff>=0.6"]
+dev = [
+    "pytest>=8.0",
+    "pytest-xdist>=3.6",
+    "ruff>=0.6",
+]
 
 [project.scripts]
 bus-rl = "bus_rl.cli:main"
@@ -34,6 +38,9 @@ torch = { index = "pytorch-cpu" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Parallel by default: the suite is process-independent, and 4 workers is the
+# sweet spot on this machine (auto/24 pays more per-worker import overhead).
+addopts = "-n 4"
 
 [tool.ruff]
 line-length = 100
