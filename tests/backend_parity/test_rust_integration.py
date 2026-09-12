@@ -7,8 +7,6 @@ Skipped when the `bus_sim` extension has not been built
 from __future__ import annotations
 
 import json
-import subprocess
-import sys
 from dataclasses import replace
 from pathlib import Path
 
@@ -16,6 +14,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from bus_rl.cli import main as cli_main
 from bus_rl.config import ControlConfig, RuntimeConfig, load_run_config
 from bus_rl.data.scenario import generate_scenario
 from bus_rl.domain import SimConfig, StepCosts
@@ -354,11 +353,8 @@ def test_cross_backend_checkpoint_rules():
 
 def test_cli_backend_entrypoints(tmp_path):
     data = tmp_path / "data"
-    subprocess.run(
+    cli_main(
         [
-            sys.executable,
-            "-m",
-            "bus_rl.cli",
             "generate",
             "--config",
             str(ROOT / "configs/base.toml"),
@@ -366,16 +362,11 @@ def test_cli_backend_entrypoints(tmp_path):
             str(data),
             "--counts",
             "train=1,validation=1",
-        ],
-        check=True,
-        cwd=ROOT,
+        ]
     )
     train_out = tmp_path / "train-rust"
-    subprocess.run(
+    cli_main(
         [
-            sys.executable,
-            "-m",
-            "bus_rl.cli",
             "train",
             "--config",
             str(ROOT / "configs/pilot.toml"),
@@ -393,9 +384,7 @@ def test_cli_backend_entrypoints(tmp_path):
             "1",
             "--backend",
             "rust",
-        ],
-        check=True,
-        cwd=ROOT,
+        ]
     )
     metadata = json.loads((train_out / "metadata.json").read_text())
     assert metadata["backend"] == "rust"
@@ -405,11 +394,8 @@ def test_cli_backend_entrypoints(tmp_path):
     outputs = {}
     for backend in ("python", "rust"):
         out = tmp_path / f"eval-{backend}"
-        subprocess.run(
+        cli_main(
             [
-                sys.executable,
-                "-m",
-                "bus_rl.cli",
                 "evaluate",
                 "--config",
                 str(ROOT / "configs/eval.toml"),
@@ -423,9 +409,7 @@ def test_cli_backend_entrypoints(tmp_path):
                 str(out),
                 "--backend",
                 backend,
-            ],
-            check=True,
-            cwd=ROOT,
+            ]
         )
         outputs[backend] = pd.read_csv(out / "results.csv")
     np.testing.assert_allclose(

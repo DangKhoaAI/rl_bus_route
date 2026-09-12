@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from bus_rl.cli import main as cli_main
 from bus_rl.evaluation.plots import render_plots
 from bus_rl.evaluation.statistics import paired_bootstrap
 from bus_rl.provenance import require_fresh_output
@@ -39,17 +40,17 @@ def test_cli_smoke_writes_csv_and_rejects_existing_output(tmp_path):
         "--counts",
         "train=2,validation=1,test_id=1",
     ]
+    # One real subprocess checks the installed entry point; the rest run
+    # in-process so torch/sb3 are imported once.
     subprocess.run(command, check=True, cwd=ROOT)
     assert (data / "manifest.json").exists()
-    repeated = subprocess.run(command, cwd=ROOT, check=False, capture_output=True, text=True)
-    assert repeated.returncode != 0
+    with pytest.raises(SystemExit) as repeated:
+        cli_main(command[3:])
+    assert repeated.value.code != 0
 
     train_out = tmp_path / "train"
-    subprocess.run(
+    cli_main(
         [
-            sys.executable,
-            "-m",
-            "bus_rl.cli",
             "train",
             "--config",
             str(ROOT / "configs/pilot.toml"),
@@ -65,9 +66,7 @@ def test_cli_smoke_writes_csv_and_rejects_existing_output(tmp_path):
             "1",
             "--eval-limit",
             "1",
-        ],
-        check=True,
-        cwd=ROOT,
+        ]
     )
     assert (train_out / "best.zip").exists()
     assert (train_out / "metadata.json").exists()
@@ -76,11 +75,8 @@ def test_cli_smoke_writes_csv_and_rejects_existing_output(tmp_path):
     assert metadata["total_timesteps_actual"] >= 32
 
     eval_out = tmp_path / "eval"
-    subprocess.run(
+    cli_main(
         [
-            sys.executable,
-            "-m",
-            "bus_rl.cli",
             "evaluate",
             "--config",
             str(ROOT / "configs/eval.toml"),
@@ -93,9 +89,7 @@ def test_cli_smoke_writes_csv_and_rejects_existing_output(tmp_path):
             "--output",
             str(eval_out),
             "--trace",
-        ],
-        check=True,
-        cwd=ROOT,
+        ]
     )
     results = pd.read_csv(eval_out / "results.csv")
     assert not results.empty
@@ -103,11 +97,8 @@ def test_cli_smoke_writes_csv_and_rejects_existing_output(tmp_path):
     assert (eval_out / "events.jsonl").exists()
 
     baseline_out = tmp_path / "baselines"
-    subprocess.run(
+    cli_main(
         [
-            sys.executable,
-            "-m",
-            "bus_rl.cli",
             "baseline",
             "--config",
             str(ROOT / "configs/eval.toml"),
@@ -119,9 +110,7 @@ def test_cli_smoke_writes_csv_and_rejects_existing_output(tmp_path):
             "fixed,threshold,proportional",
             "--output",
             str(baseline_out),
-        ],
-        check=True,
-        cwd=ROOT,
+        ]
     )
     baseline = pd.read_csv(baseline_out / "results.csv")
     assert set(baseline["method"]) == {"fixed", "threshold", "proportional"}

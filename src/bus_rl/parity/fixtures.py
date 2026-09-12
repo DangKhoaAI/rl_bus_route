@@ -25,8 +25,10 @@ from bus_rl.parity.snapshot import (
     COHORT_FIELDS,
     COST_FIELDS,
     VEHICLE_FIELDS,
+    counter_array,
     mask_snapshot,
     numpy_state_snapshot,
+    vehicle_array,
 )
 from bus_rl.provenance import action_schema_hash, physical_config_hash
 from bus_rl.rewards.costs import mean_waiting_minutes
@@ -46,6 +48,15 @@ def _event_row(entry: dict) -> list[int]:
         int(entry["denied"]),
         int(entry["abandoned"]),
     ]
+
+
+def _tick_state(state) -> dict:
+    """Tick rows only need vehicles/counters/clock; `flatten` drops the rest."""
+    return {
+        "time_s": np.array(state.current_time_s, dtype=np.int64),
+        "counters": counter_array(state),
+        "vehicles": vehicle_array(state),
+    }
 
 
 def _boundary(env, step_index, obs, mask, reward, terminated, truncated, costs, events) -> dict:
@@ -83,7 +94,7 @@ def _tick_recorder():
     def capture(state, tick_costs, event) -> None:
         rows.append(
             {
-                "state": numpy_state_snapshot(state),
+                "state": _tick_state(state),
                 "costs": _costs_array(tick_costs),
                 "event": _event_row(event),
             }
