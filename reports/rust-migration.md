@@ -350,47 +350,70 @@ a 2048-transition MaskablePPO smoke on both backends (finite obs/reward/loss,
 checkpoint save/load) and fixed-checkpoint per-day parity over 10 validation
 days (per-day cost and full trace identical).
 
-R4.2 light pass, measured interleaved on one machine (24 CPUs, 16 torch threads,
-CPU-only) with profiler and TIMERS disabled, conservation off, 5 repetitions and
-1 warm-up per backend. "Simulation" is the **median of per-repetition totals**
-(sum over the 5 workloads), not a sum of per-workload medians. Raw times are in
+R4.2 light pass, measured interleaved on one machine (24 CPUs, **2 torch
+threads for both backends**, CPU-only) with profiler and TIMERS disabled,
+conservation off, 5 repetitions and 1 warm-up per backend. "Simulation" is the
+median of per-repetition totals (sum over the 5 workloads), not a sum of
+per-workload medians. Raw times are in
 `reports/rust-migration/speed-acceptance.json`.
 
 | Workload | Python median | Rust median | Speedup |
 |---|---:|---:|---:|
-| Simulation, 5 workloads / 600 decisions | 0.343 s | 0.0138 s | **24.90x** |
-| Isolated learn, 12,288 transitions | 30.01 s (409 t/s) | 7.61 s (1614 t/s) | **3.94x** |
-| Fixed-checkpoint eval, 10 days | 3.330 s | 1.378 s | **2.42x** |
+| Simulation, 5 workloads / 600 decisions | 0.357 s | 0.0142 s | **25.11x** |
+| Isolated learn, 12,288 transitions | 13.159 s (934 t/s) | 3.153 s (3897 t/s) | **4.17x** |
+| Fixed-checkpoint eval, 10 days | 1.418 s | 0.412 s | **3.44x** |
 
-- Per-workload simulation speedups range 17.6x (zero demand) to 27.0x (burst).
+- Per-workload simulation speedups range 17.4x (zero demand) to 26.6x (burst).
 - Isolated learn matches the core protocol (4 envs, n_steps 256, batch 256,
   n_epochs 4, seed 11, no periodic eval); setup cost is reported separately.
 - Fixed-checkpoint evaluation reproduces mean `total_cost` **15471.25** on both
   backends with identical per-day costs and traces.
-- Peak RSS **491 MB** is the peak of the process running **both** backends; it is
-  not a per-backend figure and cannot be used to compare memory use.
-- Learn timing is noisy across runs: a previous identical run measured Python
-  34.80 s / Rust 8.63 s (4.03x). The learn ratio therefore sits around
-  **3.9–4.0x**, comfortably above the 2x gate but not a guaranteed 4x.
+- Learn is now stable across repetitions (Python 13.11–13.31 s, Rust
+  3.13–3.16 s), so the 4.17x ratio is not noise.
+- Peak RSS **491 MB** (from the earlier 16-thread run) is the peak of the process
+  running **both** backends; it is not a per-backend figure.
 
-### Where the remaining time goes (Rust)
+### Torch threads (chosen configuration)
+
+`scripts/tune_runtime.py` -> `reports/rust-migration/runtime-tuning.json`,
+same-condition comparison, median isolated learn of 12,288 transitions
+(2 repetitions + 1 warm-up) and fixed-checkpoint eval of 10 days:
+
+| torch threads | Python learn | Rust learn | Python eval | Rust eval |
+|---:|---:|---:|---:|---:|
+| **2** | **13.15 s** | **3.15 s** | **1.51 s** | **0.41 s** |
+| 4 | 14.32 s | 3.19 s | 1.55 s | 0.44 s |
+| 16 (old default) | 28.55 s | 8.03 s | 3.67 s | 1.32 s |
+
+2 threads wins for both backends; the environment default of 16 was ~2.2x
+slower on Python learn and ~2.5x slower on Rust learn. `torch_threads` is now an
+`AlgorithmConfig` field, applied in train/diagnose/evaluate via
+`bus_rl.runtime.apply_torch_threads`, settable with `--torch-threads` or
+`configs/experiments/core-threads2.toml`, and recorded in metadata as
+`torch_threads` / `torch_threads_actual`.
+
+### Observation validation (opt-in)
+
+`runtime.validate_observation` defaults to True. When False the wrappers skip
+only `validate_observation`; forecast still runs in Python and simulator
+semantics are unchanged. End-to-end learn at 2 threads: Python 13.086 ->
+12.988 s (-0.7%), Rust 3.126 -> 2.974 s (-4.9%). Env-level step cost: Python
+0.0917 -> 0.0817 s, Rust 0.0032 -> 0.0021 s. Validation is cheap in absolute
+terms, so it stays on by default and off is only for measured experiments.
+
+### Where the remaining time goes (Rust, 16-thread profile)
 
 Short Rust profile (4096 transitions, 4 envs, 1024/rollout; TIMERS on, so
 absolute times are inflated but shares are informative) in
 `reports/rust-migration/profile-native.json`:
 
-- Learn is now **PPO-update bound**: rollout collect 0.44 s vs PPO update
-  0.60 s (~57% of learn).
+- Learn is **PPO-update bound**: rollout collect 0.44 s vs PPO update 0.60 s
+  (~57% of learn).
 - Inside a rollout, `env.step` is 0.37 s (84%); inference + buffer overhead is
   only 0.06 s. Within `env.step`, Python-side observation post-processing
-  (`np.asarray` + `validate_observation`'s `isfinite` scan) is 0.19 s, about
-  half of the env step.
+  (`np.asarray` + `validate_observation`) is 0.19 s, about half of the env step.
 - Eval is **inference bound**: over 10 days, `env.step` 0.135 s vs PPO inference
   1.07 s (82%); metric summarization 0.064 s.
-- **Torch threads** (same config, median learn wall): 1 thread 1.12 s, 2 threads
-  0.99 s, 4 threads 0.99 s, 8 threads 1.15 s, 16 threads 2.71 s. The default 16
-  threads is ~2.7x slower than 2–4 here; a lower thread count is recommended
-  before the full workflow.
 
 ### Optimizations applied in this pass
 
@@ -398,18 +421,20 @@ absolute times are inflated but shares are informative) in
   `Kernel.from_store` pack each scenario once per process and share immutable
   tapes via `Arc`; `src/bus_rl/backend/native.py` caches stores by
   `(scenario_hash, M-flags)`. 100 scenarios x 4 envs measure **40.6 MB shared**
-  vs **160 MB per-env copy** (~120 MB saved, ~4x), so 4x500 envs no longer
-  implies ~800 MB.
+  vs **160 MB per-env copy** (~120 MB saved, ~4x); the 500-scenario figure
+  (~800 MB -> ~200 MB) is an extrapolation, not a measurement.
 - **Wrapper mask reuse**: `reset_contract`/`step_contract` already return the
   next mask; `NativeBusDispatchEnv` keeps it and `action_masks()` serves a copy,
   dropping the extra native `action_mask()` FFI call per step (verified by
   `mask_computations` in the integration tests).
 
-Gate status: simulation ~24.9x (>=2x required) and isolated learn ~3.9–4.0x
-(>=2x required; the 4x stretch is borderline, not guaranteed). R4.3 (full
+Gate status: at the chosen 2 threads (same condition for both backends)
+simulation is 25.1x, isolated learn 4.17x (above the 4x stretch) and
+fixed-checkpoint eval 3.44x; all far above the 2x gate. R4.3 (full
 245,760-transition workflow on each backend) is **deferred**, so R4 is not marked
-accepted. Next measured steps: R4.3 plus a Rust training profile at a lower
-thread count.
+accepted. Optimization should now target PPO update and evaluation inference,
+not the simulation core; batched multi-scenario inference is the next candidate
+for eval.
 
 ## 8. Evidence
 
@@ -421,11 +446,12 @@ thread count.
 | `cargo test -p bus-sim` | 0 | 12 native unit tests |
 | `python -m pytest tests/backend_parity/test_rust_kernel.py -q` | 0 | 26 kernel parity tests |
 | `python -m pytest tests/backend_parity/test_rust_observation.py -q` | 0 | 15 observation/mask parity tests |
-| `python -m pytest tests/backend_parity/test_rust_integration.py -q` | 0 | 23 integration tests |
+| `python -m pytest tests/backend_parity/test_rust_integration.py -q` | 0 | 24 integration tests |
 | `python -m pytest tests/backend_parity/test_rust_acceptance.py -q` | 0 | 4 R4.1 smoke/parity tests |
 | `python scripts/benchmark_backends.py --repetitions 5 --transitions 12288` | 0 | `speed-acceptance.json` (light R4.2) |
 | `python scripts/profile_native_training.py` | 0 | `profile-native.json` (segments/threads/eval/memory) |
-| `python -m pytest -q` | 0 | 148 passed |
+| `python scripts/tune_runtime.py` | 0 | `runtime-tuning.json` (threads + validation) |
+| `python -m pytest -q` | 0 | 149 passed |
 | `python scripts/benchmark_python.py --repetitions 5 --transitions 12288` | 0 | `python-benchmark.json` |
 
 Artifacts:
@@ -436,6 +462,8 @@ Artifacts:
 - `reports/rust-migration/speed-acceptance.json` — interleaved light R4.2 raw times.
 - `reports/rust-migration/profile-native.json` — Rust training segments, torch
   thread sweep, eval segments and shared-store memory.
+- `reports/rust-migration/runtime-tuning.json` — same-condition thread matrix and
+  observation-validation cost for both backends.
 - `reports/rust-migration/native-build.json` — native toolchain/revision/hash.
 - `crates/bus-sim/`, `crates/bus-sim-py/` — native kernel + PyO3 bridge.
 - `crates/bus-sim/src/observation.rs` — incremental observation + ring.

@@ -58,6 +58,7 @@ class NativeBusDispatchEnv(gym.Env):
         reward=None,
         control=None,
         scenario_store=None,
+        validate=True,
     ):
         applied = tuple(scenarios)
         if control is not None:
@@ -90,6 +91,7 @@ class NativeBusDispatchEnv(gym.Env):
         )
         self.kernel = None
         self.scenario = None
+        self.validate = validate
         self._scenario_index: int | None = None
         self._mask: np.ndarray | None = None
 
@@ -108,7 +110,8 @@ class NativeBusDispatchEnv(gym.Env):
                     [observation["context"][0], observation["context"][1], 1.0], np.float32
                 )
             with TIMERS.span("env.validate_obs"):
-                validate_observation(observation)
+                if self.validate:
+                    validate_observation(observation)
         return observation
 
     def reset(self, *, seed=None, options=None):

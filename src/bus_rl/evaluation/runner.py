@@ -19,6 +19,7 @@ from bus_rl.domain import StepCosts
 from bus_rl.env.factory import make_env_for_run
 from bus_rl.evaluation.summary import from_python_state, summarize_inputs
 from bus_rl.rewards.costs import RewardConfig, add_costs
+from bus_rl.runtime import apply_torch_threads
 from bus_rl.timing import TIMERS
 
 
@@ -115,6 +116,7 @@ def evaluate_scenarios(
         run,
         forecaster=forecaster,
     )
+    apply_torch_threads(run.algorithm.torch_threads)
     controller = make_controller(method, model=model, seed=model_seed or 0)
     records = []
     traces: dict[int, list[dict]] = {}

@@ -34,6 +34,9 @@ class AlgorithmConfig:
     total_timesteps: int = 245_760
     eval_freq: int = 12_288
     device: str = "cpu"
+    # Torch CPU threads. Kept explicit so train/eval/bench use the same value;
+    # the default matches the historical environment default.
+    torch_threads: int = 16
 
 
 @dataclass(frozen=True)
@@ -45,6 +48,9 @@ class ForecastConfig:
 class RuntimeConfig:
     # "python" keeps the R0 oracle; "rust" selects the native kernel.
     backend: str = "python"
+    # Observation validation is a debug/parity aid; disabling it is opt-in and
+    # must never change simulator semantics. Forecast still runs in Python.
+    validate_observation: bool = True
 
     def __post_init__(self) -> None:
         if self.backend not in {"python", "rust"}:

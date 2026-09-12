@@ -13,6 +13,7 @@
     "n_epochs": 4,
     "n_steps": 256,
     "seed": 11,
+    "torch_threads": 16,
     "total_timesteps": 245760,
     "vf_coef": 0.5
   },
@@ -302,7 +303,7 @@
   ],
   "git": {
     "dirty": true,
-    "sha": "74e81170993d7a446d9e2cc1e8ce618b861fa832"
+    "sha": "ac119dd676f80a8c57d7bea1f3db2000f0aa43df"
   },
   "hashes": {
     "action_schema_hash": "ff62ae3cfa7478758a5370e575dbfc3c15729c0ea10a3ccbb2bd7a207cab761a",
@@ -367,7 +368,7 @@
     {
       "path": "reports/rust-migration.md",
       "required": true,
-      "sha256": "bc9c7e77afbebfe880ad8a6f5f21c657026730145a4bfc02d68397025bbeba79"
+      "sha256": "16d9e424ed30e209b8ad20271912f93e0904843bbe379f3df6d8ec856c6e50ca"
     }
   ],
   "reward_defaults": {
@@ -424,5 +425,5 @@
       "validation": 2001
     }
   },
-  "self_hash": "d154e5eee95c72c352198108cbaa15bf9c8119d23377145fff033ca725f63178"
+  "self_hash": "c26b6a7e491e824f6a030281fcf133b21c34d6e67172da5ba3184ec963e1804c"
 }

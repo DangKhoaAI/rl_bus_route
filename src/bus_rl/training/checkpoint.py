@@ -45,6 +45,9 @@ def run_metadata(run: RunConfig, extra: dict | None = None) -> dict:
         "torch": torch.__version__,
         "config_source": run.source,
         "backend": run.runtime.backend,
+        "torch_threads": int(run.algorithm.torch_threads),
+        "torch_threads_actual": int(torch.get_num_threads()),
+        "validate_observation": bool(run.runtime.validate_observation),
         "native_build": native_build_info() if run.runtime.backend == "rust" else None,
         # R0-R2 parity is accepted, so checkpoints may cross backends once the
         # contract hashes below match.

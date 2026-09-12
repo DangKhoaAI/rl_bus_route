@@ -8,6 +8,7 @@
 | `python-benchmark.json` | R0.3 unprofiled Python baseline (simulation/learn/eval). | `python scripts/benchmark_python.py` |
 | `speed-acceptance.json` | R4.2 interleaved Python-vs-Rust raw timings. | `python scripts/benchmark_backends.py` |
 | `profile-native.json` | R4 optimization profile: Rust training segments, torch-thread sweep, eval segments, shared-store memory. | `python scripts/profile_native_training.py` |
+| `runtime-tuning.json` | Same-condition torch-thread matrix and observation-validation cost for both backends. | `python scripts/tune_runtime.py` |
 
 This directory is excluded from the report hash inventory on purpose; it is
 indexed by `reports/rust-migration.md`. Large traces/checkpoints stay in

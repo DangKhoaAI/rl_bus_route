@@ -20,6 +20,7 @@ from bus_rl.config import ControlConfig, RuntimeConfig, load_run_config
 from bus_rl.data.scenario import generate_scenario
 from bus_rl.domain import SimConfig, StepCosts
 from bus_rl.env.bus_dispatch import BusDispatchEnv
+from bus_rl.env.factory import make_env_for_run
 from bus_rl.evaluation.runner import evaluate_scenarios
 from bus_rl.parity.fixtures import load_fixture
 from bus_rl.parity.scenarios import CATALOG, CONTROL_FLAGS, build_scenario
@@ -192,6 +193,23 @@ def test_action_masks_reuse_the_step_mask_without_recompute():
     for _ in range(5):
         env.action_masks()
     assert env.kernel.mask_computations == before + 1
+
+
+def test_disabling_validation_preserves_observations():
+    scenario = generate_scenario(2001)
+    run = replace(
+        load_run_config(ROOT / "configs" / "experiments" / "core.toml", ROOT),
+        control=ControlConfig(),
+        runtime=RuntimeConfig(backend="rust", validate_observation=False),
+    )
+    env = make_env_for_run([scenario], run)
+    observation, _ = env.reset(seed=0, options={"scenario_index": 0})
+    for key, value in observation.items():
+        assert np.isfinite(value).all(), key
+    oracle = BusDispatchEnv([scenario], scenario.config, control=ControlConfig())
+    reference, _ = oracle.reset(seed=0, options={"scenario_index": 0})
+    for key in observation:
+        np.testing.assert_allclose(observation[key], reference[key], rtol=1e-6, atol=1e-6)
 
 
 def test_dummy_vec_env_auto_reset():

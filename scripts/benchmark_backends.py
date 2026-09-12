@@ -40,6 +40,7 @@ from bus_rl.evaluation.runner import make_controller, rollout
 from bus_rl.parity.controllers import CoverageController
 from bus_rl.parity.scenarios import CATALOG, build_scenario, run_config
 from bus_rl.rewards.costs import RewardConfig
+from bus_rl.runtime import apply_torch_threads
 from bus_rl.timing import TIMERS
 from bus_rl.training.checkpoint import load_metadata, load_model
 from bus_rl.training.train import make_env, make_model
@@ -304,8 +305,13 @@ def main() -> None:
     parser.add_argument("--skip-simulation", action="store_true")
     parser.add_argument("--skip-learn", action="store_true")
     parser.add_argument("--skip-eval", action="store_true")
+    parser.add_argument("--torch-threads", type=int, dest="torch_threads")
     parser.add_argument("--output", type=Path, default=REPORT_DIR / "speed-acceptance.json")
     args = parser.parse_args()
+
+    core = load_run_config(ROOT / "configs" / "experiments" / "core.toml", ROOT)
+    threads = args.torch_threads if args.torch_threads is not None else core.algorithm.torch_threads
+    actual_threads = apply_torch_threads(threads)
 
     TIMERS.enabled = False
     TIMERS.reset()
@@ -325,6 +331,7 @@ def main() -> None:
             "timers": "disabled",
             "conservation_checks": "disabled",
             "cprofile_used": False,
+            "torch_threads": actual_threads,
             "full_workflow_245760": "deferred",
         },
         "machine": {

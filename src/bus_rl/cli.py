@@ -29,6 +29,9 @@ def _run_config(args) -> object:
     backend = getattr(args, "backend", None)
     if backend and backend != run.runtime.backend:
         run = replace(run, runtime=RuntimeConfig(backend=backend))
+    torch_threads = getattr(args, "torch_threads", None)
+    if torch_threads is not None:
+        run = replace(run, algorithm=replace(run.algorithm, torch_threads=torch_threads))
     return run
 
 
@@ -244,6 +247,7 @@ def build_parser() -> argparse.ArgumentParser:
     baseline.add_argument("--trace", action="store_true")
     baseline.add_argument("--limit", type=int)
     baseline.add_argument("--backend", choices=("python", "rust"))
+    baseline.add_argument("--torch-threads", type=int, dest="torch_threads")
     baseline.set_defaults(func=cmd_baseline)
 
     profile = sub.add_parser("profile")
@@ -261,6 +265,7 @@ def build_parser() -> argparse.ArgumentParser:
     train.add_argument("--n-envs", type=int, dest="n_envs")
     train.add_argument("--eval-limit", type=int, dest="eval_limit")
     train.add_argument("--backend", choices=("python", "rust"))
+    train.add_argument("--torch-threads", type=int, dest="torch_threads")
     train.set_defaults(func=cmd_train)
 
     diagnose = sub.add_parser("diagnose")
@@ -272,6 +277,7 @@ def build_parser() -> argparse.ArgumentParser:
     diagnose.add_argument("--n-envs", type=int, dest="n_envs")
     diagnose.add_argument("--eval-limit", type=int, dest="eval_limit", default=10)
     diagnose.add_argument("--backend", choices=("python", "rust"))
+    diagnose.add_argument("--torch-threads", type=int, dest="torch_threads")
     diagnose.set_defaults(func=cmd_diagnose)
 
     evaluate = sub.add_parser("evaluate")
@@ -285,6 +291,7 @@ def build_parser() -> argparse.ArgumentParser:
     evaluate.add_argument("--trace", action="store_true")
     evaluate.add_argument("--limit", type=int)
     evaluate.add_argument("--backend", choices=("python", "rust"))
+    evaluate.add_argument("--torch-threads", type=int, dest="torch_threads")
     evaluate.set_defaults(func=cmd_evaluate)
 
     report = sub.add_parser("report")

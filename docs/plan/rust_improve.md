@@ -230,13 +230,16 @@ selection, metadata and cross-backend checkpoint rules. Details in
 - [x] Measure simulation-only and isolated learn of at least 12,288 transitions; measure fixed-checkpoint eval separately.
 - [x] Report raw times, median/min/max, per-workload behavior, setup cost, and peak RSS. Investigate unstable measurements before deciding.
 
-**Evidence (light pass, 2026-09-12):** `reports/rust-migration/speed-acceptance.json`
-and `profile-native.json`. Median totals: simulation 0.343 s vs 0.0138 s
-(**24.90x**); isolated learn 12,288 transitions 30.01 s vs 7.61 s (**3.94x**,
-a prior identical run measured 4.03x, so the ratio is ~3.9–4.0x);
-fixed-checkpoint eval 10 days 3.330 s vs 1.378 s (2.42x), mean cost 15471.25 and
-per-day costs identical. Peak RSS 491 MB is the combined two-backend process.
-R4.3 (full workflow) remains open.
+**Evidence (light pass, 2026-09-12):** `reports/rust-migration/speed-acceptance.json`,
+`runtime-tuning.json` and `profile-native.json`. At the chosen 2 torch threads
+(same condition both backends) median totals: simulation 0.357 s vs 0.0142 s
+(**25.11x**); isolated learn 12,288 transitions 13.159 s vs 3.153 s (**4.17x**);
+fixed-checkpoint eval 10 days 1.418 s vs 0.412 s (3.44x), mean cost 15471.25 and
+per-day costs identical. Thread matrix: 2/4/16 threads gave Python learn 13.15 /
+14.32 / 28.55 s and Rust 3.15 / 3.19 / 8.03 s, so 2 wins for both. Observation
+validation is opt-in (`runtime.validate_observation`) and costs at most ~5%
+end-to-end. Peak RSS 491 MB is the combined two-backend process. R4.3 (full
+workflow) remains open.
 
 **Verification:** Recompute both speedup ratios from raw paired benchmark files; inspect workload-level results and verify all protocol settings against R0.3.
 

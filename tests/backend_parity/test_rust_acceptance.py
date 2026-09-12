@@ -76,6 +76,8 @@ def test_smoke_metadata_records_backend_and_native_build():
     assert metadata["backend"] == "rust"
     assert metadata["native_build"]["library_sha256"]
     assert metadata["backend_parity_verified"] is True
+    assert metadata["torch_threads"] == run.algorithm.torch_threads
+    assert metadata["validate_observation"] is True
 
 
 def _reference_run():

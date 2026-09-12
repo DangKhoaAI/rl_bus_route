@@ -22,6 +22,7 @@ def make_env_for_run(scenarios, run: RunConfig, forecaster=None):
             forecaster=forecaster,
             reward=run.reward,
             control=run.control,
+            validate=run.runtime.validate_observation,
         )
     if backend == "rust":
         require_native()
@@ -33,6 +34,7 @@ def make_env_for_run(scenarios, run: RunConfig, forecaster=None):
             forecaster=forecaster,
             reward=run.reward,
             control=run.control,
+            validate=run.runtime.validate_observation,
         )
     raise ValueError(f"unknown backend: {backend!r}")
 
