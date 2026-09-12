@@ -1,1 +1,1 @@
-"""Training entry points are expanded after the M1 smoke."""
+"""Masked PPO training, checkpoints and validation callbacks."""

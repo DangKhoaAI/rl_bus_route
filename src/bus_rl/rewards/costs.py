@@ -1,6 +1,23 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from bus_rl.domain import PassengerStatus, Phase, StepCosts, WorldState
+
+
+@dataclass(frozen=True)
+class RewardConfig:
+    waiting: float = 1.0
+    onboard: float = 0.25
+    crowding: float = 0.5
+    active: float = 0.5
+    deadhead: float = 0.5
+    fairness: float = 1.0
+    first_denied: float = 5.0
+    abandoned: float = 60.0
+    mission: float = 2.0
+    unfinished: float = 60.0
+    n_ref: float = 3_000.0
 
 
 def integrate_tick_costs(state: WorldState, duration_s: int) -> StepCosts:
@@ -43,16 +60,20 @@ def mean_waiting_minutes(state: WorldState, tick_s: int = 30) -> float | None:
     return total / state.generated_count
 
 
-def interval_cost(costs: StepCosts) -> float:
+DEFAULT_REWARD = RewardConfig()
+
+
+def interval_cost(costs: StepCosts, reward: RewardConfig | None = None) -> float:
+    reward = reward or DEFAULT_REWARD
     return (
-        costs.waiting_pm
-        + 0.25 * costs.onboard_pm
-        + 0.5 * costs.crowding_pm
-        + 0.5 * costs.active_bus_min
-        + 0.5 * costs.deadhead_bus_min
-        + costs.excessive_wait_pm
-        + 5 * costs.first_denied_count
-        + 60 * costs.abandoned_count
-        + 2 * costs.mission_changes
-        + 60 * costs.terminal_unfinished_count
+        reward.waiting * costs.waiting_pm
+        + reward.onboard * costs.onboard_pm
+        + reward.crowding * costs.crowding_pm
+        + reward.active * costs.active_bus_min
+        + reward.deadhead * costs.deadhead_bus_min
+        + reward.fairness * costs.excessive_wait_pm
+        + reward.first_denied * costs.first_denied_count
+        + reward.abandoned * costs.abandoned_count
+        + reward.mission * costs.mission_changes
+        + reward.unfinished * costs.terminal_unfinished_count
     )

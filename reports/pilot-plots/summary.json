@@ -1,0 +1,20 @@
+{
+  "total_cost_core":{
+    "fixed":16016.87375,
+    "ppo":18206.70375,
+    "proportional":16195.89625,
+    "threshold":16641.4425
+  },
+  "mean_wait":{
+    "fixed":7.408661488,
+    "ppo":6.7741655913,
+    "proportional":7.0547575079,
+    "threshold":7.2043826727
+  },
+  "abandoned_share":{
+    "fixed":0.0,
+    "ppo":0.0,
+    "proportional":0.0,
+    "threshold":0.0
+  }
+}

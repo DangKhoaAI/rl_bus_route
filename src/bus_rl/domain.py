@@ -169,6 +169,8 @@ class WorldState:
     generated_total: int = 0
     next_cohort_id: int = 0
     event_log: list[dict[str, object]] = field(default_factory=list)
+    departures: list[dict[str, object]] = field(default_factory=list)
+    accepted_actions: list[dict[str, object]] = field(default_factory=list)
     headway_targets_s: dict[int, int] = field(default_factory=dict)
     headway_changed_at_s: dict[int, int] = field(default_factory=dict)
     last_departure_s: dict[tuple[int, int, int], int] = field(default_factory=dict)

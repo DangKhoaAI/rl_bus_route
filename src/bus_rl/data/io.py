@@ -9,6 +9,7 @@ from pathlib import Path
 import numpy as np
 
 from bus_rl.domain import Network, Route, Scenario, SimConfig, VehicleSpec, scenario_digest
+from bus_rl.provenance import canonical_hash
 
 
 def _validate(scenario: Scenario) -> None:
@@ -72,3 +73,42 @@ def load_scenario(directory: Path) -> Scenario:
     scenario = Scenario(config, network, fleet, arrivals, traffic, metadata["seed"], digest)
     _validate(scenario)
     return scenario
+
+
+def save_manifest(
+    directory: Path, splits: dict[str, tuple[Scenario, ...]], config: SimConfig
+) -> Path:
+    directory.mkdir(parents=True, exist_ok=False)
+    entries: dict[str, list[dict[str, object]]] = {}
+    for split, scenarios in splits.items():
+        items = []
+        for index, scenario in enumerate(scenarios):
+            relative = f"{split}/{index:04d}"
+            save_scenario(scenario, directory / relative)
+            items.append({"seed": scenario.seed, "hash": scenario.scenario_hash, "path": relative})
+        entries[split] = items
+    payload = {
+        "schema_version": 2,
+        "physical_config": asdict(config),
+        "physical_config_hash": canonical_hash(asdict(config)),
+        "splits": entries,
+    }
+    path = directory / "manifest.json"
+    path.write_text(json.dumps(payload, sort_keys=True, indent=2))
+    return path
+
+
+def load_manifest(path: Path) -> dict:
+    payload = json.loads(Path(path).read_text())
+    if payload.get("schema_version") != 2:
+        raise ValueError("unsupported manifest schema")
+    return payload
+
+
+def load_split(manifest_path: Path, split: str) -> list[Scenario]:
+    manifest_path = Path(manifest_path)
+    payload = load_manifest(manifest_path)
+    if split not in payload["splits"]:
+        raise ValueError(f"split {split!r} is not in the manifest")
+    root = manifest_path.parent
+    return [load_scenario(root / item["path"]) for item in payload["splits"][split]]

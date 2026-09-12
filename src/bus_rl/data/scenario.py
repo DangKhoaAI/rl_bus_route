@@ -27,7 +27,55 @@ def _fleet(config: SimConfig, network_depot: int) -> tuple[VehicleSpec, ...]:
     return tuple(result)
 
 
-def generate_scenario(seed: int, config: SimConfig | None = None) -> Scenario:
+def _apply_burst(arrivals: np.ndarray, rng: np.random.Generator, config: SimConfig) -> np.ndarray:
+    """Cluster extra arrivals at one stop for 5–10 minutes (OOD burst)."""
+    out = np.array(arrivals, copy=True)
+    duration_s = int(rng.integers(5 * 60, 10 * 60 + 1))
+    start_s = int(rng.integers(30 * 60, 150 * 60))
+    start_tick = start_s // config.tick_s
+    end_tick = min((start_s + duration_s) // config.tick_s, config.demand_end_s // config.tick_s)
+    route_id = int(rng.integers(config.route_count))
+    direction = int(rng.choice((1, -1)))
+    direction_index = 0 if direction == 1 else 1
+    origin = (
+        int(rng.integers(0, config.stops_per_route - 1))
+        if direction == 1
+        else int(rng.integers(1, config.stops_per_route))
+    )
+    destinations = (
+        np.arange(origin + 1, config.stops_per_route) if direction == 1 else np.arange(0, origin)
+    )
+    for tick in range(start_tick, end_tick):
+        extra = int(rng.integers(8, 21))
+        destination = int(rng.choice(destinations))
+        out[tick, route_id, direction_index, origin, destination] += extra
+    out.setflags(write=False)
+    return out
+
+
+def _apply_traffic_shock(
+    traffic: np.ndarray, rng: np.random.Generator, config: SimConfig
+) -> np.ndarray:
+    """Multiply one route corridor by 1.5–2.0 for 30 minutes (OOD traffic)."""
+    out = np.array(traffic, copy=True)
+    route_id = int(rng.integers(config.route_count))
+    multiplier = float(rng.uniform(1.5, 2.0))
+    edges_per_route = config.stops_per_route - 1
+    start_edge = route_id * edges_per_route
+    buckets = 30 * 60 // config.traffic_bucket_s
+    start_bucket = int(rng.integers(0, max(1, out.shape[1] - buckets)))
+    out[start_edge : start_edge + edges_per_route, start_bucket : start_bucket + buckets] *= (
+        multiplier
+    )
+    out.setflags(write=False)
+    return out
+
+
+def generate_scenario(
+    seed: int, config: SimConfig | None = None, variant: str = "base"
+) -> Scenario:
+    if variant not in {"base", "burst", "traffic"}:
+        raise ValueError(f"unknown variant: {variant}")
     config = config or SimConfig()
     network = generate_base_network(config)
     rng = np.random.default_rng(seed)
@@ -75,8 +123,14 @@ def generate_scenario(seed: int, config: SimConfig | None = None) -> Scenario:
     traffic = np.clip(
         rng.lognormal(-0.5 * 0.15**2, 0.15, size=(edge_count, buckets)), 0.7, 2.5
     ).astype(np.float32)
-    traffic.setflags(write=False)
-    arrivals.setflags(write=False)
+    if variant == "burst":
+        arrivals = _apply_burst(arrivals, rng, config)
+    else:
+        arrivals.setflags(write=False)
+    if variant == "traffic":
+        traffic = _apply_traffic_shock(traffic, rng, config)
+    else:
+        traffic.setflags(write=False)
     fleet = _fleet(config, network.depot_node)
     return Scenario(
         config,
@@ -97,6 +151,22 @@ SPLIT_SEEDS = {
     "test_ood_traffic": 5001,
 }
 
+SPLIT_VARIANTS = {
+    "train": "base",
+    "validation": "base",
+    "test_id": "base",
+    "test_ood_burst": "burst",
+    "test_ood_traffic": "traffic",
+}
+
+DEFAULT_COUNTS = {
+    "train": 500,
+    "validation": 100,
+    "test_id": 200,
+    "test_ood_burst": 200,
+    "test_ood_traffic": 200,
+}
+
 
 def generate_manifest(
     split: str, count: int, config: SimConfig | None = None
@@ -110,4 +180,5 @@ def generate_manifest(
     seeds = [int(child.generate_state(1, dtype=np.uint64)[0]) for child in seed_sequence]
     if len(seeds) != len(set(seeds)):
         raise AssertionError("child seed collision")
-    return tuple(generate_scenario(seed, config) for seed in seeds)
+    variant = SPLIT_VARIANTS[split]
+    return tuple(generate_scenario(seed, config, variant=variant) for seed in seeds)

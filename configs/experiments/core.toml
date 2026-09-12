@@ -15,6 +15,6 @@ vf_coef = 0.5
 max_grad_norm = 0.5
 gae_lambda = 0.95
 clip_range = 0.2
-total_timesteps = 12288
+total_timesteps = 245760
 eval_freq = 12288
 device = "cpu"

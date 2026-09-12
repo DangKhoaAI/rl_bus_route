@@ -66,7 +66,18 @@ def apply_action(state: WorldState, scenario: Scenario, action: Action) -> int:
     elif action.kind == "SET_HEADWAY":
         state.headway_targets_s[action.route_id] = action.headway_s
         state.headway_changed_at_s[action.route_id] = state.current_time_s
+        state.accepted_actions.append(
+            {"time_s": state.current_time_s, "kind": action.kind, "route_id": action.route_id}
+        )
         return 0
+    state.accepted_actions.append(
+        {
+            "time_s": state.current_time_s,
+            "kind": action.kind,
+            "bus_id": action.bus_id,
+            "route_id": action.route_id,
+        }
+    )
     return 1
 
 
@@ -101,6 +112,15 @@ def dispatch_ready(state: WorldState, scenario: Scenario) -> None:
                 state.last_departure_s[key] = state.current_time_s
                 if bus.pattern is Pattern.FULL:
                     state.last_full_departure_s[key] = state.current_time_s
+                state.departures.append(
+                    {
+                        "time_s": state.current_time_s,
+                        "route_id": route.route_id,
+                        "direction": direction,
+                        "bus_id": bus.vehicle_id,
+                        "pattern": bus.pattern.value,
+                    }
+                )
                 continue
             last_full = state.last_full_departure_s.get(key, -900)
             if state.current_time_s - last_full < state.headway_targets_s[route.route_id]:
@@ -120,3 +140,12 @@ def dispatch_ready(state: WorldState, scenario: Scenario) -> None:
             begin_service_edge(state, scenario, bus.vehicle_id)
             state.last_departure_s[key] = state.current_time_s
             state.last_full_departure_s[key] = state.current_time_s
+            state.departures.append(
+                {
+                    "time_s": state.current_time_s,
+                    "route_id": route.route_id,
+                    "direction": direction,
+                    "bus_id": bus.vehicle_id,
+                    "pattern": bus.pattern.value,
+                }
+            )

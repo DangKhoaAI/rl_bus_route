@@ -23,7 +23,9 @@ def _age_s(state: WorldState, cohort, tick_s: int) -> float:
     return max(0.0, float(state.current_time_s - cohort.arrival_tick * tick_s))
 
 
-def observe(state: WorldState, scenario: Scenario) -> dict[str, np.ndarray]:
+def observe(
+    state: WorldState, scenario: Scenario, forecast: np.ndarray | None = None
+) -> dict[str, np.ndarray]:
     config = scenario.config
     stops = np.zeros((4, 2, 8, 7), np.float32)
     vehicles = np.zeros((16, 27), np.float32)
@@ -131,16 +133,22 @@ def observe(state: WorldState, scenario: Scenario) -> dict[str, np.ndarray]:
         row[SCALAR_OFFSET + 4] = vehicle.remaining_s / horizon
 
     time = state.current_time_s / config.horizon_s
+    enabled = 0.0 if forecast is None else 1.0
+    forecast_tensor = (
+        np.zeros((4, 2, 8), np.float32)
+        if forecast is None
+        else np.asarray(forecast, dtype=np.float32)
+    )
     observation = {
         "stops": stops,
         "arrival_history": history,
-        "forecast": np.zeros((4, 2, 8), np.float32),
+        "forecast": forecast_tensor,
         "vehicles": vehicles,
         "routes": routes,
         "stop_valid": stop_valid,
         "vehicle_valid": vehicle_valid,
         "route_valid": route_valid,
-        "context": np.array([time, 1 - time, 0], np.float32),
+        "context": np.array([time, 1 - time, enabled], np.float32),
     }
     validate_observation(observation)
     return observation
