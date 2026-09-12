@@ -395,13 +395,13 @@ checkpoints under `runs/rust-migration/full-workflow/`.
 
 | Metric | Python | Rust | Ratio |
 |---|---:|---:|---:|
-| Learn + validation (`wall_time_s`) | 595.35 s | 161.61 s | **3.68x** |
-| Total wall incl. setup (`/usr/bin/time`) | 597.99 s | 164.28 s | **3.64x** |
-| Setup (reported separately) | 2.64 s | 2.67 s | — |
+| Learn + validation (`wall_time_s`) | 595.35 s | 154.23 s | **3.86x** |
+| Total wall incl. setup (`/usr/bin/time`) | 597.99 s | 156.37 s | **3.82x** |
+| Setup (reported separately) | 2.64 s | 2.14 s | — |
 | Transitions / episodes | 245,760 / 2,048 | 245,760 / 2,048 | — |
 | Evaluations x validation days | 20 x 100 | 20 x 100 | — |
 | Best validation cost | 13199.1325 | 13199.1325 | equal |
-| Peak RSS | 479 MB | 508 MB | 1.06x |
+| Peak RSS | 479 MB | 445 MB | **0.93x** |
 
 **Parity.** All 20 validation costs are bit-identical (max abs diff 0.0), and
 the trained artifacts are byte-identical: `policy.pth`,
@@ -416,11 +416,11 @@ are equal. This closes the R4.3 parity question.
 `--eval-limit 10` isolates the cost: Python 280.31 s, Rust 76.21 s. The extra 90
 validation days x 20 evaluations cost Python 240.8 s (46% of its total) and Rust
 66.8 s (47%), so evaluation, not simulation, is now the largest remaining Python
-cost. R4.3 is accepted: the full Rust workflow is **3.64x** faster and every
-preceding gate passes.
+cost. R4.3 is accepted: the full Rust workflow is **3.82x** faster, uses **less
+memory than Python**, and every preceding gate passes.
 
-**Memory.** Rust peak RSS is now **1.06x** Python's (508 MB vs 479 MB). Three
-storage issues were found and fixed; each was verified byte-identical:
+**Memory.** Rust peak RSS is now **below** Python's: **445 MB vs 479 MB (0.93x)**.
+Four storage issues were found and fixed; each was verified byte-identical:
 
 1. **Eager kernels.** `NativeBusDispatchEnv` built one `Kernel` per scenario, and
    each kernel keeps ~243 KB of per-episode scratch after its first episode
@@ -441,11 +441,17 @@ storage issues were found and fixed; each was verified byte-identical:
    `int8`: the 600 scenarios fell **249 MB -> 67 MB** (tape 405 -> 101 KB each).
    `scenario_digest` normalizes to `int32` before hashing, so `scenario_hash` and
    every committed fixture are unchanged. Helpers validate the int8 range.
+4. **Rust-run scenario ownership.** A Rust run loaded all 600 scenarios (with the
+   dense tapes) into Python only to hand them to the native store. `load_split`
+   now supports metadata-only scenarios (`with_tapes=False`) and the CLI uses
+   them for Rust runs without forecast; `NativeScenarioStore` reads each
+   `tapes.npz` once, verifies `scenario_digest`, and keeps only the sparse
+   packing. Python never holds the 600 tapes in a Rust run.
 
-The remaining **+29 MB** over Python is the deliberate packed store; both
-backends share the now-small Python `Scenario` objects. Python never paid for
-issues 1-2 because it builds `WorldState` on demand; issue 3 helps both. Overall
-Rust peak RSS went **1236 MB -> 508 MB** across this work.
+Rust peak RSS is now **below** Python's (445 MB vs 479 MB, 0.93x): the store is
+30 MB and both backends share the small metadata. Python never paid for issues
+1-2 because it builds `WorldState` on demand; issues 3-4 help both or Rust only.
+Overall Rust peak RSS went **1236 MB -> 445 MB** across this work.
 
 ### Torch threads (chosen configuration)
 
@@ -511,8 +517,9 @@ absolute times are inflated but shares are informative) in
 Gate status: at the chosen 2 threads (same condition for both backends)
 simulation is 25.1x, isolated learn 4.17x (above the 4x stretch) and
 fixed-checkpoint eval 3.44x; all far above the 2x gate. The R4.3 full workflow
-is 3.64x with bit-identical training, so **R4 is accepted** and the native
-revision `aedc4faa4c43` is frozen for RL. Optimization should now target PPO
+is 3.82x with bit-identical training and **lower peak RSS than Python**, so
+**R4 is accepted** and the native revision `aedc4faa4c43` is frozen for RL.
+Optimization should now target PPO
 update and evaluation inference, not the simulation core; batched multi-scenario
 inference is the next candidate for eval.
 
@@ -565,15 +572,15 @@ Artifacts:
 ## 9. Limitations and next steps
 
 - R0–R4 are accepted. R4.2 light gates pass (simulation ~24.9x, isolated
-  learn ~3.9–4.17x) and R4.3 full workflow is 3.64x with bit-identical training
+  learn ~3.9–4.17x) and R4.3 full workflow is 3.82x with bit-identical training
   (section 7). The remaining opportunity is evaluation, which is ~46% of the
   Python full-seed wall; batched multi-scenario inference is the next candidate.
-- Rust peak RSS is 1.06x Python's (508 MB vs 479 MB) for a full seed. Three
-  storage bugs were found and fixed: eager per-scenario kernels (~243 KB each),
-  a dense ~405 KB arrival tape that is 98.5% zeros (now sparse), and int32 tapes
-  whose max value is 5 (now int8; 600 scenarios 249 -> 67 MB). Rust peak went
-  1236 -> 508 MB; the remaining +29 MB is the deliberate shared packed store.
-  See [docs/spec/memory_optimize.md](spec/memory_optimize.md) for follow-ups.
+- Rust peak RSS is now **0.93x** Python's (445 MB vs 479 MB) for a full seed —
+  below Python. Four storage bugs were found and fixed: eager per-scenario
+  kernels (~243 KB each), a dense ~405 KB arrival tape that is 98.5% zeros (now
+  sparse), int32 tapes whose max value is 5 (now int8), and a Rust run holding all
+  600 Python tapes (now metadata-only, store reads from disk). Rust peak went
+  1236 -> 445 MB. See [docs/spec/memory_optimize.md](spec/memory_optimize.md).
 - The manifest records `git.sha`/`git.dirty` for the repo HEAD at build time and
   the reference checkpoint's origin revision separately; the frozen oracle
   contract is the physical/action/observation hashes and the fixture hashes, not
@@ -597,7 +604,7 @@ Artifacts:
 - [x] R1: native domain/lifecycle/actions/ticks/costs at oracle parity.
 - [x] R2: observation/history and mask parity accepted.
 - [x] R3: wrapper/evaluator/forecast/backend/provenance accepted.
-- [x] R4: correctness, 2x simulation and learn gates, and 3.64x full workflow
-  (bit-identical training) accepted.
+- [x] R4: correctness, 2x simulation and learn gates, and 3.82x full workflow
+  (bit-identical training, lower RSS than Python) accepted.
 - [x] Historical reports preserved; measured results are separated from projections.
 - [x] Frozen native revision `aedc4faa4c43` recorded; task L0.1 in the RL plan is unlocked.

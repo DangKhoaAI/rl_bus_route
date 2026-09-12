@@ -261,20 +261,21 @@ workflow) remains open.
 **Evidence (2026-09-12, accepted):** one full L0-protocol seed per backend
 (`configs/experiments/core-threads2.toml`, seed 11, 4 envs, 2 torch threads,
 245,760 transitions, validation every 12,288 on 100 validation days) in
-`reports/rust-migration/full-workflow.json`. Python 595.35 s vs Rust 161.61 s
-learn+validation (**3.68x**); total wall incl. setup 597.99 s vs 164.28 s
-(**3.64x**, setup 2.6/2.7 s; same-session pair, the host drifts over the session
-so earlier pairs read 3.5-3.7x). All 20 validation costs are bit-identical
+`reports/rust-migration/full-workflow.json`. Python 595.35 s vs Rust 154.23 s
+learn+validation (**3.86x**); total wall incl. setup 597.99 s vs 156.37 s
+(**3.82x**, setup 2.6/2.1 s; same-session pair, the host drifts over the session
+so earlier pairs read 3.5-3.9x). All 20 validation costs are bit-identical
 (max abs diff 0.0) and `policy.pth`, `policy.optimizer.pth` and
 `pytorch_variables.pth` are byte-identical for both `best.zip` and `last.zip`.
 Validation dominates the workflow (46% of Python wall); rerunning with
-`--eval-limit 10` isolates that cost. Three storage bugs were found and fixed so
-Rust peak RSS is now 508 MB vs Python 479 MB (**1.06x**):
+`--eval-limit 10` isolates that cost. Four storage bugs were found and fixed so
+Rust peak RSS is now **445 MB vs Python 479 MB (0.93x, below Python)**:
 `NativeBusDispatchEnv` eagerly built one kernel per scenario (each retains
 ~243 KB of episode scratch; now lazy in `reset()`), the store kept a dense
 ~405 KB arrival tape that is 98.5% zeros (now sparse, store 245.6 -> 30.1 MB),
-and the tape was int32 with max value 5 (now int8; 600 scenarios 249 -> 67 MB).
-Rust peak went 1236 -> 508 MB. Native revision `aedc4faa4c43` is frozen for RL;
+the tape was int32 with max value 5 (now int8; 600 scenarios 249 -> 67 MB), and
+a Rust run held all 600 Python tapes (now metadata-only, store reads from disk).
+Rust peak went 1236 -> 445 MB. Native revision `aedc4faa4c43` is frozen for RL;
 if the L0 seed reuses these exact settings and artifacts, no rerun is needed.
 
 ## 8. Final acceptance checklist

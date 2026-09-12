@@ -42,6 +42,17 @@ def _maybe_forecaster(args, run, train_scenarios=None):
     return forecaster
 
 
+def _load_scenarios(args, run, split: str):
+    """Load a split for a run.
+
+    Rust runs skip the dense tapes: the native store owns them and reads each
+    scenario once from disk, so the run never holds all 600 tapes in Python.
+    Forecast needs the tapes, so it keeps the full scenarios.
+    """
+    meta_only = run.runtime.backend == "rust" and not run.forecast.enabled
+    return load_split(Path(args.manifest), split, with_tapes=not meta_only)
+
+
 def cmd_generate(args) -> None:
     run = _run_config(args)
     output = Path(args.output)
@@ -60,7 +71,7 @@ def cmd_baseline(args) -> None:
     output = Path(args.output)
     require_fresh_output(output)
     methods = [name.strip() for name in args.methods.split(",") if name.strip()]
-    scenarios = load_split(Path(args.manifest), args.split)
+    scenarios = _load_scenarios(args, run, args.split)
     if args.limit:
         scenarios = scenarios[: args.limit]
     frames = []
@@ -101,9 +112,9 @@ def cmd_train(args) -> None:
         seed=args.seed,
     )
     run = replace(run, algorithm=algorithm)
-    train_scenarios = load_split(Path(args.manifest), "train")
+    train_scenarios = _load_scenarios(args, run, "train")
     try:
-        val_scenarios = load_split(Path(args.manifest), "validation")
+        val_scenarios = _load_scenarios(args, run, "validation")
     except ValueError:
         val_scenarios = train_scenarios[:1]
     forecaster = _maybe_forecaster(args, run, train_scenarios)
@@ -130,9 +141,9 @@ def cmd_diagnose(args) -> None:
     )
     run = replace(run, algorithm=algorithm)
     started = perf_counter()
-    train_scenarios = load_split(Path(args.manifest), "train")
+    train_scenarios = _load_scenarios(args, run, "train")
     try:
-        val_scenarios = load_split(Path(args.manifest), "validation")
+        val_scenarios = _load_scenarios(args, run, "validation")
     except ValueError:
         val_scenarios = train_scenarios[:1]
     load_s = perf_counter() - started

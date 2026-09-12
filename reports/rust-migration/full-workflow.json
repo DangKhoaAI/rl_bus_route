@@ -1,29 +1,28 @@
 {
-  "generated_at": "2026-09-12T15:22:40+00:00",
+  "generated_at": "2026-09-12T15:29:54+00:00",
   "host": {
     "machine": "DangKhoa",
     "platform": "Linux-7.0.0-31-generic-x86_64-with-glibc2.39"
   },
   "memory": {
+    "fixes": [
+      "lazy kernel creation in NativeBusDispatchEnv.reset()",
+      "SparseArrivals (nonzero cells only, CSR by tick)",
+      "int8 arrival tapes with int32-normalized scenario_digest",
+      "Rust runs load metadata-only scenarios; the native store reads each tape once from disk"
+    ],
     "history": {
       "after_int8_tapes_kb": 507808,
       "after_lazy_kernels_and_sparse_store_kb": 690232,
+      "after_rust_only_ownership_kb": 445120,
       "original_rust_peak_rss_kb": 1235936
     },
     "peak_rss_kb": {
       "python": 478580,
-      "rust": 507808
+      "rust": 445120
     },
-    "peak_rss_ratio": 1.061,
-    "python_scenarios_600_kb": {
-      "after": 67072,
-      "before": 249376
-    },
-    "root_causes": [
-      "NativeBusDispatchEnv eagerly built one Kernel per scenario (~243 KB scratch each) -> lazy kernels.",
-      "Store kept the dense arrival tape (~405 KB/scenario, 98.5% zeros) -> SparseArrivals CSR by tick.",
-      "Arrival tape dtype was int32 with max value 5 -> int8 (both backends, digest normalized to keep scenario_hash)."
-    ],
+    "peak_rss_ratio": 0.93,
+    "rust_below_python": true,
     "scenario_tape_kb": {
       "after_int8": 101.2,
       "before_int32": 405.0
@@ -32,9 +31,10 @@
     "shared_store_per_scenario_kb": 50.2
   },
   "notes": [
+    "Rust peak RSS is now below Python (445 MB vs 479 MB, 0.93x): the shared 600 dense tapes are no longer held in Python for a Rust run.",
     "Byte-identical training across all memory work: 20-point validation curve, weights and optimizer match.",
-    "Same-session pair (Python then Rust); the host drifts over the session, so ratios are reported per same-session pair.",
-    "Arrival tape dtype change preserves scenario_hash because scenario_digest normalizes to int32 before hashing."
+    "Same-session pair (Python then Rust); the host drifts over the session.",
+    "scenario_hash is unchanged; verify reproduces all 11 fixtures."
   ],
   "protocol": {
     "batch_size": 256,
@@ -79,25 +79,25 @@
       "backend": "rust",
       "best_val_cost": 13199.1325,
       "checkpoints": {
-        "best": "8f7ba25ed24726af0c6dacc3172d2709bbd71a63eb6283a80e7a273746b49038",
-        "last": "f886068b50afe869a2f4fa707d50cf53299976bec6ceac50318ed348c37dbd6d"
+        "best": "5aeb6eab5f6da91438b57a75966a0f551ef6b5888e2872f02a2358584456397d",
+        "last": "2f1f8c57679a05d4d8794daec2121ff89461ef5e5d37cdf46f625521dea78c57"
       },
       "episodes_completed": 2048,
       "evaluations": 20,
       "last_val_cost": 13464.355,
       "native_library_sha256": "aedc4faa4c434fd1f9565f08586332da0560e09d6349eef7dfebf961eb75bab2",
-      "peak_rss_kb": 507808,
-      "setup_s": 2.67,
+      "peak_rss_kb": 445120,
+      "setup_s": 2.14,
       "total_timesteps": 245760,
-      "wall_time_s": 161.61270605499885,
-      "wall_total_s": 164.28
+      "wall_time_s": 154.23322812800325,
+      "wall_total_s": 156.37
     }
   },
   "speedup": {
-    "full_workflow_learn_plus_validation": 3.684,
-    "full_workflow_total_wall": 3.64
+    "full_workflow_learn_plus_validation": 3.86,
+    "full_workflow_total_wall": 3.824
   },
-  "stage": "R4.3 (final: lazy kernels + sparse store + int8 tapes)",
+  "stage": "R4.3 (final: lazy kernels + sparse store + int8 tapes + Rust-only ownership)",
   "training_parity": {
     "best_val_cost": 13199.1325,
     "int8_tape_vs_int32_also_identical": true,

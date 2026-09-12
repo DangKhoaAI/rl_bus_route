@@ -9,7 +9,7 @@ from pathlib import Path
 
 import numpy as np
 
-from bus_rl.domain import Scenario
+from bus_rl.domain import Scenario, scenario_digest
 
 NATIVE_MODULE = "bus_sim"
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -68,13 +68,36 @@ def scenario_payload(
     )
 
 
+def _scenario_tapes(scenario: Scenario) -> tuple[np.ndarray, np.ndarray]:
+    """Return `(arrivals int8, traffic float32)` for a scenario.
+
+    Metadata-only scenarios (Rust runs do not keep the 600 dense tapes in
+    Python) load their tapes from `scenario.path` once, at store construction.
+    """
+    if scenario.arrival_tape.size:
+        return (
+            np.ascontiguousarray(scenario.arrival_tape, dtype=np.int8),
+            np.ascontiguousarray(scenario.traffic_tape, dtype=np.float32),
+        )
+    if scenario.path is None:
+        raise ValueError("scenario has neither tapes nor a path")
+    with np.load(Path(scenario.path) / "tapes.npz", allow_pickle=False) as arrays:
+        arrivals = np.ascontiguousarray(arrays["arrivals"], dtype=np.int8)
+        traffic = np.ascontiguousarray(arrays["traffic"], dtype=np.float32)
+    digest = scenario_digest(
+        scenario.config, scenario.network, scenario.fleet, arrivals, traffic, scenario.seed
+    )
+    if digest != scenario.scenario_hash:
+        raise ValueError(f"scenario hash does not match persisted data: {scenario.path}")
+    return arrivals, traffic
+
+
 def build_kernel(scenario: Scenario, *, conservation: bool = True):
     """Pack a scenario into a native kernel. Tapes are copied once here."""
     require_native()
     import bus_sim
 
-    arrivals = np.ascontiguousarray(scenario.arrival_tape, dtype=np.int8)
-    traffic = np.ascontiguousarray(scenario.traffic_tape, dtype=np.float32)
+    arrivals, traffic = _scenario_tapes(scenario)
     kernel = bus_sim.Kernel(scenario_payload(scenario), arrivals, traffic)
     kernel.set_conservation_checks(conservation)
     return kernel
@@ -93,8 +116,7 @@ class NativeScenarioStore:
 
         self._store = bus_sim.ScenarioStore()
         for scenario in scenarios:
-            arrivals = np.ascontiguousarray(scenario.arrival_tape, dtype=np.int8)
-            traffic = np.ascontiguousarray(scenario.traffic_tape, dtype=np.float32)
+            arrivals, traffic = _scenario_tapes(scenario)
             self._store.add(scenario_payload(scenario), arrivals, traffic)
 
     def __len__(self) -> int:

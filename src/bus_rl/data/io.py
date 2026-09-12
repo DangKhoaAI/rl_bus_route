@@ -53,12 +53,9 @@ def save_scenario(scenario: Scenario, directory: Path) -> None:
     )
 
 
-def load_scenario(directory: Path) -> Scenario:
+def load_scenario(directory: Path, *, with_tapes: bool = True) -> Scenario:
+    directory = Path(directory)
     metadata = json.loads((directory / "scenario.json").read_text())
-    with np.load(directory / "tapes.npz", allow_pickle=False) as arrays:
-        arrivals, traffic = arrays["arrivals"], arrays["traffic"]
-    # Cast so scenarios saved with an older (int32) tape dtype load identically.
-    arrivals = np.ascontiguousarray(arrivals, dtype=np.int8)
     config = SimConfig(**metadata["config"])
     network_data = metadata["network"]
     network = Network(
@@ -67,6 +64,27 @@ def load_scenario(directory: Path) -> Scenario:
         tuple(network_data["edge_base_s"]),
     )
     fleet = tuple(VehicleSpec(**vehicle) for vehicle in metadata["fleet"])
+    if not with_tapes:
+        # Metadata-only scenario: the native store loads the tapes from `path`
+        # once, so a Rust run never holds all 600 dense tapes.
+        empty_arrivals = np.zeros((0,), dtype=np.int8)
+        empty_traffic = np.zeros((0,), dtype=np.float32)
+        empty_arrivals.setflags(write=False)
+        empty_traffic.setflags(write=False)
+        return Scenario(
+            config,
+            network,
+            fleet,
+            empty_arrivals,
+            empty_traffic,
+            metadata["seed"],
+            metadata["scenario_hash"],
+            path=directory,
+        )
+    with np.load(directory / "tapes.npz", allow_pickle=False) as arrays:
+        arrivals, traffic = arrays["arrivals"], arrays["traffic"]
+    # Cast so scenarios saved with an older (int32) tape dtype load identically.
+    arrivals = np.ascontiguousarray(arrivals, dtype=np.int8)
     digest = scenario_digest(config, network, fleet, arrivals, traffic, metadata["seed"])
     if digest != metadata["scenario_hash"]:
         raise ValueError("scenario hash does not match persisted data")
@@ -107,10 +125,13 @@ def load_manifest(path: Path) -> dict:
     return payload
 
 
-def load_split(manifest_path: Path, split: str) -> list[Scenario]:
+def load_split(manifest_path: Path, split: str, *, with_tapes: bool = True) -> list[Scenario]:
     manifest_path = Path(manifest_path)
     payload = load_manifest(manifest_path)
     if split not in payload["splits"]:
         raise ValueError(f"split {split!r} is not in the manifest")
     root = manifest_path.parent
-    return [load_scenario(root / item["path"]) for item in payload["splits"][split]]
+    return [
+        load_scenario(root / item["path"], with_tapes=with_tapes)
+        for item in payload["splits"][split]
+    ]

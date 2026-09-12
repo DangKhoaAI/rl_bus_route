@@ -7,6 +7,7 @@ from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
 from enum import IntEnum
 from hashlib import sha256
+from pathlib import Path
 
 import numpy as np
 
@@ -99,6 +100,9 @@ class Scenario:
     scenario_hash: str
     enable_reassign: bool = False
     enable_short_turn: bool = False
+    # Set for metadata-only scenarios (Rust runs release the dense tapes and the
+    # native store loads them from disk once).
+    path: Path | None = None
 
 
 @dataclass

@@ -1,6 +1,6 @@
 # Tối ưu bộ nhớ hậu R4
 
-Ngày cập nhật: **2026-09-12**. Trạng thái: **M1 đã làm; M2–M5 là kế hoạch**.
+Ngày cập nhật: **2026-09-12**. Trạng thái: **M1 và M3 đã làm; M2/M4/M5 là kế hoạch**.
 Liên quan: [rust_improve.md](rust_improve.md), [plan/rust_improve.md](../plan/rust_improve.md),
 [reports/rust-migration.md](../reports/rust-migration.md).
 
@@ -79,22 +79,9 @@ của Python nhanh hơn (hiện vẫn duyệt cả lưới 216 ô/tick như Rust
 **Ước tính:** cùng hướng với M1 nhưng chạm nhiều call site hơn; trung bình.
 Làm sau M1 và chỉ khi cần thêm ~37 MB.
 
-### M3 — Run Rust không giữ `Scenario` Python — KẾ HOẠCH
+### M3 — Run Rust không giữ `Scenario` Python — ĐÃ LÀM (tóm tắt ở mục 5)
 
-Đây là hướng duy nhất đưa **Rust thấp hơn Python**. Ý tưởng: run Rust không
-materialize toàn bộ 600 `Scenario` (244 MB) — store native là chủ sở hữu tape,
-evaluator lấy `config/network` từ metadata nhẹ hoặc từ
-`Kernel.episode_summary_inputs()`.
-
-Cách triển khai khả thi:
-- Thêm đường nạp "meta-only" (không tape) cho `train_scenarios`/`val_scenarios`.
-- `NativeBusDispatchEnv` nhận metadata + đường dẫn, còn
-  `NativeScenarioStore` đọc `tapes.npz` từng scenario một lúc pack rồi thả mảng
-  dày ngay (chỉ giữ bản sparse).
-- `evaluation/runner.py` lấy `config` từ nguồn native thay vì `env.scenario`.
-
-**Ước tính:** chạm contract R3 (evaluator/wrapper); rủi ro cao hơn. Chỉ đáng khi
-cần chạy nhiều seed song song. Sau M2, lợi ích chỉ còn ~58 MB nên xếp sau.
+Đây là hướng duy nhất đưa **Rust thấp hơn Python**, và đã đạt: xem mục 5.
 
 ### M4 — Bỏ bản sao store native — MỘT PHẦN
 
@@ -138,7 +125,25 @@ Mọi hạng mục phải thoả:
 Chi tiết số đo: `reports/rust-migration/full-workflow.json` và
 `full-workflow-memory.json`; mục R4.3 của `reports/rust-migration.md`.
 
-### M2–M5 — kế hoạch
+### M3 — Run Rust không giữ `Scenario` Python — ĐÃ LÀM
 
-Xem mục 3. M2 (thưa canonical) là bước tiếp theo nếu cần thêm bộ nhớ; M3
-(Rust-only ownership) là cách duy nhất để Rust thấp hơn Python; M4/M5 xếp sau.
+Rust run trước đây nạp cả 600 `Scenario` (kèm tape) vào Python chỉ để đưa cho
+store native. Đã thêm đường nạp metadata-only:
+- `load_split(..., with_tapes=False)` trả `Scenario` rỗng tape + `path` (chỉ đọc
+  `scenario.json`); `Scenario` có thêm field `path`.
+- `NativeScenarioStore` đọc `tapes.npz` từng scenario một lần, kiểm tra
+  `scenario_digest`, rồi chỉ giữ bản sparse; `_scenario_tapes` dùng chung cho
+  `build_kernel` và store.
+- CLI (`train`/`diagnose`/`baseline`) dùng đường metadata cho run Rust khi không
+  bật forecast; `evaluate` và forecast vẫn nạp đầy đủ.
+
+Kết quả full seed: Rust **445 MB** < Python **479 MB** (0.93×). Rust 508 → 445 MB;
+bit-identical (curve, weights, optimizer). Revision native không đổi
+(`aedc4faa4c43`, chỉ đổi phía Python).
+
+### M2, M4, M5 — kế hoạch
+
+- **M2** (thưa canonical) trùng effort M1 và chỉ còn ~50 MB phía Python (Rust
+  không được thêm) → để sau.
+- **M4** (bỏ store dedup 30 MB) mất tốc độ → không làm.
+- **M5** (lazy/mmap) ít lợi vì full seed chạm gần hết scenario → để sau.

@@ -182,6 +182,23 @@ def test_native_envs_share_one_scenario_store():
     assert envs[0].kernel.current_time_s != envs[1].kernel.current_time_s
 
 
+def test_metadata_only_scenarios_load_tapes_from_disk(tmp_path):
+    from bus_rl.backend.native import _scenario_tapes
+    from bus_rl.data.io import load_split, save_manifest
+
+    scenario = generate_scenario(2001)
+    manifest = save_manifest(tmp_path / "data", {"train": (scenario,)}, scenario.config)
+    full = load_split(manifest, "train")[0]
+    meta = load_split(manifest, "train", with_tapes=False)[0]
+    # Rust runs hold metadata only; the store loads the tape once from `path`.
+    assert meta.arrival_tape.size == 0 and meta.traffic_tape.size == 0
+    assert meta.path is not None
+    assert meta.scenario_hash == full.scenario_hash
+    arrivals, traffic = _scenario_tapes(meta)
+    np.testing.assert_array_equal(arrivals, full.arrival_tape)
+    np.testing.assert_array_equal(traffic, full.traffic_tape)
+
+
 def test_action_masks_reuse_the_step_mask_without_recompute():
     scenario = generate_scenario(2001)
     env = NativeBusDispatchEnv([scenario], scenario.config, control=ControlConfig())
