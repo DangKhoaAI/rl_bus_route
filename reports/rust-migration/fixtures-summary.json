@@ -1,0 +1,333 @@
+{
+  "coverage": {
+    "abandon_m3": {
+      "action_counts": {
+        "DISPATCH": 2,
+        "NOOP": 56,
+        "SET_HEADWAY": 60,
+        "SHORT_TURN": 2
+      },
+      "control": {
+        "enable_reassign": true,
+        "enable_short_turn": true
+      },
+      "departures": 135,
+      "families_seen": [
+        "DISPATCH",
+        "NOOP",
+        "SET_HEADWAY",
+        "SHORT_TURN"
+      ],
+      "steps": 120
+    },
+    "backlog_m3": {
+      "action_counts": {
+        "DISPATCH": 2,
+        "NOOP": 56,
+        "SET_HEADWAY": 60,
+        "SHORT_TURN": 2
+      },
+      "control": {
+        "enable_reassign": true,
+        "enable_short_turn": true
+      },
+      "departures": 135,
+      "families_seen": [
+        "DISPATCH",
+        "NOOP",
+        "SET_HEADWAY",
+        "SHORT_TURN"
+      ],
+      "steps": 120
+    },
+    "burst_m3": {
+      "action_counts": {
+        "DISPATCH": 2,
+        "NOOP": 56,
+        "SET_HEADWAY": 60,
+        "SHORT_TURN": 2
+      },
+      "control": {
+        "enable_reassign": true,
+        "enable_short_turn": true
+      },
+      "departures": 133,
+      "families_seen": [
+        "DISPATCH",
+        "NOOP",
+        "SET_HEADWAY",
+        "SHORT_TURN"
+      ],
+      "steps": 120
+    },
+    "capacity_m3": {
+      "action_counts": {
+        "DISPATCH": 2,
+        "NOOP": 56,
+        "SET_HEADWAY": 60,
+        "SHORT_TURN": 2
+      },
+      "control": {
+        "enable_reassign": true,
+        "enable_short_turn": true
+      },
+      "departures": 135,
+      "families_seen": [
+        "DISPATCH",
+        "NOOP",
+        "SET_HEADWAY",
+        "SHORT_TURN"
+      ],
+      "steps": 120
+    },
+    "normal_m1": {
+      "action_counts": {
+        "DISPATCH": 4,
+        "NOOP": 55,
+        "RECALL": 1,
+        "SET_HEADWAY": 60
+      },
+      "control": {
+        "enable_reassign": false,
+        "enable_short_turn": false
+      },
+      "departures": 131,
+      "families_seen": [
+        "DISPATCH",
+        "NOOP",
+        "RECALL",
+        "SET_HEADWAY"
+      ],
+      "steps": 120
+    },
+    "normal_m2": {
+      "action_counts": {
+        "DISPATCH": 3,
+        "NOOP": 56,
+        "REASSIGN": 1,
+        "SET_HEADWAY": 60
+      },
+      "control": {
+        "enable_reassign": true,
+        "enable_short_turn": false
+      },
+      "departures": 138,
+      "families_seen": [
+        "DISPATCH",
+        "NOOP",
+        "REASSIGN",
+        "SET_HEADWAY"
+      ],
+      "steps": 120
+    },
+    "normal_m3": {
+      "action_counts": {
+        "DISPATCH": 2,
+        "NOOP": 56,
+        "SET_HEADWAY": 60,
+        "SHORT_TURN": 2
+      },
+      "control": {
+        "enable_reassign": true,
+        "enable_short_turn": true
+      },
+      "departures": 135,
+      "families_seen": [
+        "DISPATCH",
+        "NOOP",
+        "SET_HEADWAY",
+        "SHORT_TURN"
+      ],
+      "steps": 120
+    },
+    "normal_m3_random": {
+      "action_counts": {
+        "NOOP": 53,
+        "REASSIGN": 1,
+        "RECALL": 1,
+        "SET_HEADWAY": 61,
+        "SHORT_TURN": 4
+      },
+      "control": {
+        "enable_reassign": true,
+        "enable_short_turn": true
+      },
+      "departures": 131,
+      "families_seen": [
+        "NOOP",
+        "REASSIGN",
+        "RECALL",
+        "SET_HEADWAY",
+        "SHORT_TURN"
+      ],
+      "steps": 120
+    },
+    "peak_m3": {
+      "action_counts": {
+        "DISPATCH": 2,
+        "NOOP": 56,
+        "SET_HEADWAY": 60,
+        "SHORT_TURN": 2
+      },
+      "control": {
+        "enable_reassign": true,
+        "enable_short_turn": true
+      },
+      "departures": 135,
+      "families_seen": [
+        "DISPATCH",
+        "NOOP",
+        "SET_HEADWAY",
+        "SHORT_TURN"
+      ],
+      "steps": 120
+    },
+    "traffic_m3": {
+      "action_counts": {
+        "DISPATCH": 2,
+        "NOOP": 56,
+        "SET_HEADWAY": 60,
+        "SHORT_TURN": 2
+      },
+      "control": {
+        "enable_reassign": true,
+        "enable_short_turn": true
+      },
+      "departures": 133,
+      "families_seen": [
+        "DISPATCH",
+        "NOOP",
+        "SET_HEADWAY",
+        "SHORT_TURN"
+      ],
+      "steps": 120
+    },
+    "zero_m3": {
+      "action_counts": {
+        "DISPATCH": 2,
+        "NOOP": 56,
+        "SET_HEADWAY": 60,
+        "SHORT_TURN": 2
+      },
+      "control": {
+        "enable_reassign": true,
+        "enable_short_turn": true
+      },
+      "departures": 135,
+      "families_seen": [
+        "DISPATCH",
+        "NOOP",
+        "SET_HEADWAY",
+        "SHORT_TURN"
+      ],
+      "steps": 120
+    }
+  },
+  "fixtures": {
+    "abandon_m3": {
+      "control": {
+        "enable_reassign": true,
+        "enable_short_turn": true
+      },
+      "expected_npz_bytes": 136980,
+      "num_steps": 120,
+      "scenario_hash": "c9629857b4de568e9d4a8411acc2a36cd090701f32bf5cdd439c7a734596d10b"
+    },
+    "backlog_m3": {
+      "control": {
+        "enable_reassign": true,
+        "enable_short_turn": true
+      },
+      "expected_npz_bytes": 174601,
+      "num_steps": 120,
+      "scenario_hash": "638003a2bad9ca77553d44c2d4d5aab80a67266843f60976a4d4974a12eec92f"
+    },
+    "burst_m3": {
+      "control": {
+        "enable_reassign": true,
+        "enable_short_turn": true
+      },
+      "expected_npz_bytes": 159561,
+      "num_steps": 120,
+      "scenario_hash": "4e469eca6a2a8d395a8150839fd2cc8957e1732f93c092ec2158a23a41d69883"
+    },
+    "capacity_m3": {
+      "control": {
+        "enable_reassign": true,
+        "enable_short_turn": true
+      },
+      "expected_npz_bytes": 154315,
+      "num_steps": 120,
+      "scenario_hash": "00a737ba92b9b1583ef20c2937d53b78b68a4136fe4df328ecc2d640d2d14899"
+    },
+    "normal_m1": {
+      "control": {
+        "enable_reassign": false,
+        "enable_short_turn": false
+      },
+      "expected_npz_bytes": 152535,
+      "num_steps": 120,
+      "scenario_hash": "4d82951a29e78842fac37f67f4a74ccd6ee9edafada415e03c4724f05b40a1da"
+    },
+    "normal_m2": {
+      "control": {
+        "enable_reassign": true,
+        "enable_short_turn": false
+      },
+      "expected_npz_bytes": 153426,
+      "num_steps": 120,
+      "scenario_hash": "4d82951a29e78842fac37f67f4a74ccd6ee9edafada415e03c4724f05b40a1da"
+    },
+    "normal_m3": {
+      "control": {
+        "enable_reassign": true,
+        "enable_short_turn": true
+      },
+      "expected_npz_bytes": 153121,
+      "num_steps": 120,
+      "scenario_hash": "4d82951a29e78842fac37f67f4a74ccd6ee9edafada415e03c4724f05b40a1da"
+    },
+    "normal_m3_random": {
+      "control": {
+        "enable_reassign": true,
+        "enable_short_turn": true
+      },
+      "expected_npz_bytes": 153388,
+      "num_steps": 120,
+      "scenario_hash": "4d82951a29e78842fac37f67f4a74ccd6ee9edafada415e03c4724f05b40a1da"
+    },
+    "peak_m3": {
+      "control": {
+        "enable_reassign": true,
+        "enable_short_turn": true
+      },
+      "expected_npz_bytes": 154495,
+      "num_steps": 120,
+      "scenario_hash": "701c0bf7016e74668436b8aad462b723e986bfff7099121ae9e61468fa1b0337"
+    },
+    "traffic_m3": {
+      "control": {
+        "enable_reassign": true,
+        "enable_short_turn": true
+      },
+      "expected_npz_bytes": 153054,
+      "num_steps": 120,
+      "scenario_hash": "53f50a04f3fc0cd43cf59ffe8b0b3172b10ec9daab4494331bd93979c6ab3dd7"
+    },
+    "zero_m3": {
+      "control": {
+        "enable_reassign": true,
+        "enable_short_turn": true
+      },
+      "expected_npz_bytes": 61526,
+      "num_steps": 120,
+      "scenario_hash": "c3ec70da81cbf0bad76789003a3d7634732acf3b36e395d43ecb0c626212e40a"
+    }
+  },
+  "tolerances": {
+    "cost_atol": 1e-09,
+    "cost_rtol": 1e-09,
+    "obs_atol": 1e-06,
+    "obs_rtol": 1e-06
+  }
+}

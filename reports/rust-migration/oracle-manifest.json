@@ -1,0 +1,538 @@
+{
+  "algorithm_defaults": {
+    "batch_size": 256,
+    "clip_range": 0.2,
+    "device": "cpu",
+    "ent_coef": 0.01,
+    "eval_freq": 12288,
+    "gae_lambda": 0.95,
+    "gamma": 1.0,
+    "learning_rate": 0.0003,
+    "max_grad_norm": 0.5,
+    "n_envs": 4,
+    "n_epochs": 4,
+    "n_steps": 256,
+    "seed": 11,
+    "total_timesteps": 245760,
+    "vf_coef": 0.5
+  },
+  "checkpoints": [
+    {
+      "bytes": 5491545,
+      "has_metadata": false,
+      "note": "git-ignored historical run; documented here, regenerable",
+      "path": "runs/core-11/best.zip",
+      "required": false,
+      "sha256": "51e9d396b12fa79be7be325c8e1c207e603195a3ae36646ba170180450ccb79a"
+    },
+    {
+      "action_schema_hash": "ff62ae3cfa7478758a5370e575dbfc3c15729c0ea10a3ccbb2bd7a207cab761a",
+      "best_val_cost": null,
+      "bytes": 5491533,
+      "config_source": "configs/experiments/core.toml",
+      "git_dirty": true,
+      "git_sha": "3a7de1d773d3b8ee29efe34dd27bf823ea219496",
+      "has_metadata": true,
+      "metadata_sha256": "dc9d5e208a4839584c61446b210b75e115fd6694938694154c5df9db0580d0ff",
+      "note": "git-ignored historical run; documented here, regenerable",
+      "obs_schema_hash": "fa07e9254e5f5474db32935332bea7a40ddbadf7c6538defdedbdc51322397e2",
+      "path": "runs/diagnose/last.zip",
+      "physical_config_hash": "fad7a03b35b999d33b672357b439a9bf34899e8bf814bbe98077446ef4a5d4b2",
+      "required": false,
+      "seed": null,
+      "sha256": "9f3aa22ffe3a8686afeb2e8ebab9214a48ddfdd6982c447433f7caa9d24a7603",
+      "total_timesteps_actual": 2048
+    },
+    {
+      "action_schema_hash": "ff62ae3cfa7478758a5370e575dbfc3c15729c0ea10a3ccbb2bd7a207cab761a",
+      "best_val_cost": null,
+      "bytes": 5491533,
+      "config_source": "configs/experiments/core.toml",
+      "git_dirty": true,
+      "git_sha": "4f04143367ac912fda507321589021467fc1d14f",
+      "has_metadata": true,
+      "metadata_sha256": "945ba048526a1478b559e6cf0c5ecf51f73a2999bbc570b474828dc6ef964d2a",
+      "note": "git-ignored historical run; documented here, regenerable",
+      "obs_schema_hash": "fa07e9254e5f5474db32935332bea7a40ddbadf7c6538defdedbdc51322397e2",
+      "path": "runs/diagnose-after/last.zip",
+      "physical_config_hash": "fad7a03b35b999d33b672357b439a9bf34899e8bf814bbe98077446ef4a5d4b2",
+      "required": false,
+      "seed": null,
+      "sha256": "98f99ebf151cdf6dde914df95ea780c25f4856e6a36f90e30ccd7a9f5906501e",
+      "total_timesteps_actual": 2048
+    },
+    {
+      "action_schema_hash": "ff62ae3cfa7478758a5370e575dbfc3c15729c0ea10a3ccbb2bd7a207cab761a",
+      "best_val_cost": 17796.6,
+      "bytes": 5491545,
+      "config_source": "configs/pilot.toml",
+      "git_dirty": true,
+      "git_sha": "cc65627146b751d9c0bc59c57039e362e8a7d4c8",
+      "has_metadata": true,
+      "metadata_sha256": "87f07a1f5b439f4619fc4cb17d03e06403961f10227b10aca40ab47879b0931b",
+      "note": "git-ignored historical run; documented here, regenerable",
+      "obs_schema_hash": "fa07e9254e5f5474db32935332bea7a40ddbadf7c6538defdedbdc51322397e2",
+      "path": "runs/pilot-11/best.zip",
+      "physical_config_hash": "fad7a03b35b999d33b672357b439a9bf34899e8bf814bbe98077446ef4a5d4b2",
+      "required": false,
+      "seed": 11,
+      "sha256": "bf17223babbd79762837f8bf60d3392c322a77d43aa4d92d228f7ef5d43e0de0",
+      "total_timesteps_actual": 12288
+    },
+    {
+      "action_schema_hash": "ff62ae3cfa7478758a5370e575dbfc3c15729c0ea10a3ccbb2bd7a207cab761a",
+      "best_val_cost": 17796.6,
+      "bytes": 5491568,
+      "config_source": "configs/pilot.toml",
+      "git_dirty": true,
+      "git_sha": "cc65627146b751d9c0bc59c57039e362e8a7d4c8",
+      "has_metadata": true,
+      "metadata_sha256": "87f07a1f5b439f4619fc4cb17d03e06403961f10227b10aca40ab47879b0931b",
+      "note": "git-ignored historical run; documented here, regenerable",
+      "obs_schema_hash": "fa07e9254e5f5474db32935332bea7a40ddbadf7c6538defdedbdc51322397e2",
+      "path": "runs/pilot-11/last.zip",
+      "physical_config_hash": "fad7a03b35b999d33b672357b439a9bf34899e8bf814bbe98077446ef4a5d4b2",
+      "required": false,
+      "seed": 11,
+      "sha256": "f745f3bba1c917b51a3e8680ec02c2f3a7b8900cb3644ac3204b43616871bc71",
+      "total_timesteps_actual": 12288
+    }
+  ],
+  "contract": {
+    "action": {
+      "discrete_size": 221,
+      "encoding": "NOOP; 64 DISPATCH b-major/r-minor; 64 REASSIGN; 64 SHORT_TURN; 16 RECALL; 12 SET_HEADWAY r-major/choice-minor",
+      "family_counts": {
+        "DISPATCH": 64,
+        "NOOP": 1,
+        "REASSIGN": 64,
+        "RECALL": 16,
+        "SET_HEADWAY": 12,
+        "SHORT_TURN": 64
+      },
+      "headway_choices_s": [
+        360,
+        600,
+        900
+      ],
+      "noop_index": 0,
+      "schema_hash": "ff62ae3cfa7478758a5370e575dbfc3c15729c0ea10a3ccbb2bd7a207cab761a"
+    },
+    "cost_components": [
+      "waiting_pm",
+      "onboard_pm",
+      "crowding_pm",
+      "active_bus_min",
+      "deadhead_bus_min",
+      "excessive_wait_pm",
+      "first_denied_count",
+      "abandoned_count",
+      "mission_changes",
+      "terminal_unfinished_count"
+    ],
+    "observation": {
+      "keys": {
+        "arrival_history": {
+          "dtype": "float32",
+          "note": "5 past control bins, bin 0 = [t-Delta, t), scaled /40",
+          "shape": [
+            4,
+            2,
+            8,
+            5
+          ]
+        },
+        "context": {
+          "dtype": "float32",
+          "note": "time/H, remaining/H, forecast enabled",
+          "shape": [
+            3
+          ]
+        },
+        "forecast": {
+          "dtype": "float32",
+          "note": "zeros when disabled",
+          "shape": [
+            4,
+            2,
+            8
+          ]
+        },
+        "route_valid": {
+          "dtype": "float32",
+          "shape": [
+            4
+          ]
+        },
+        "routes": {
+          "dtype": "float32",
+          "note": "headway target/1200, two full-departure gaps/1200, full/16, incoming/16, short/16, target cooldown/600, depot count/16",
+          "shape": [
+            4,
+            8
+          ]
+        },
+        "stop_valid": {
+          "dtype": "float32",
+          "shape": [
+            4,
+            2,
+            8
+          ]
+        },
+        "stops": {
+          "channels": [
+            "queue count/40",
+            "mean waiting age/2700s",
+            "max waiting age/2700s",
+            "count with age>=900s/40",
+            "count boarded in last control interval/40",
+            "count completed in last control interval/40",
+            "count arrived in last control interval/40"
+          ],
+          "dtype": "float32",
+          "shape": [
+            4,
+            2,
+            8,
+            7
+          ]
+        },
+        "vehicle_valid": {
+          "dtype": "float32",
+          "shape": [
+            16
+          ]
+        },
+        "vehicles": {
+          "dtype": "float32",
+          "note": "phase 0:6, route 6:11, pattern 11:13, direction 13:15, node 15:17, target 17:22, scalars 22:27",
+          "shape": [
+            16,
+            27
+          ]
+        }
+      },
+      "notes": {
+        "dtype": "all float32",
+        "padding": "entity padding is zero and masked by *_valid",
+        "scale": "count/load /40; time/age /horizon or 2700; headway /1200; cooldown /600"
+      },
+      "obs_version": 2,
+      "schema_hash": "fa07e9254e5f5474db32935332bea7a40ddbadf7c6538defdedbdc51322397e2"
+    },
+    "terminal": {
+      "conservation": "CONSERVATION_CHECKS is False in training and True under the pytest autouse fixture",
+      "horizon": "terminated=True, truncated=False when current_time_s >= horizon_s",
+      "iteration_order": "waiting cohorts in insertion order; vehicles sorted by vehicle_id; dispatch tie-break by lowest vehicle_id; boarding FIFO by (arrival_tick, cohort_id)",
+      "reset": "WorldState at t=0, no passengers, fleet from scenario",
+      "reward": "r_t = -interval_cost(costs_t, reward)/n_ref; terminal penalty inside costs",
+      "rng": "env.reset(seed=...) seeds gym np_random for scenario choice; options.scenario_index overrides; environment tapes are pre-generated, action-independent",
+      "settlement": "terminal_unfinished_count = waiting + onboard charged once at t=H"
+    }
+  },
+  "control_defaults": {
+    "enable_reassign": true,
+    "enable_short_turn": true
+  },
+  "discrepancies": [
+    {
+      "area": "tick ordering",
+      "description": "sim/engine.advance_interval applies the action before the first tick, so the decision precedes that tick's phase completion and arrivals. Base spec section 4.1 lists completion and arrivals before the action at the boundary.",
+      "id": "D1-action-before-tick-order",
+      "port_decision": "Follow the code (matches Rust spec section 3.3). Do not reorder.",
+      "reproducer": "advance_interval(state, scenario, DISPATCH) then inspect the first advance_tick: the new DEADHEAD vehicle exists before arrivals are appended."
+    },
+    {
+      "area": "boarding timing",
+      "description": "The engine boards every TERMINAL_IDLE bus on every tick, not at the dispatcher departure instant. Base spec section 4.1 says terminal boarding happens at departure; Rust spec section 3.3 says 'board terminal-idle', matching the code.",
+      "id": "D2-terminal-boarding-at-idle",
+      "port_decision": "Follow the code.",
+      "reproducer": "park an empty FULL bus at an origin terminal with waiting riders and call advance_tick once: load increases without a departure event."
+    },
+    {
+      "area": "evaluation metrics",
+      "description": "state.departures records pattern.name (str) for pending_extra departures and pattern.value (int) for scheduled full departures. evaluation/runner filters `event.get('pattern') != 'FULL'`, so only extra departures (dispatched/reassigned/short) enter the headway gap statistics; scheduled FULL departures are dropped.",
+      "id": "D3-departure-pattern-type",
+      "port_decision": "Reproduce the exact filter during R3 evaluator parity; raise as a metric revision separately.",
+      "reproducer": "run any controller: most departures have pattern=0 and are skipped by the filter, so mean_headway_s reflects a subset."
+    },
+    {
+      "area": "passenger timestamps",
+      "description": "sim/passengers computes boarding/completion/abandonment tick indices with the literal 30 instead of config.tick_s.",
+      "id": "D4-hardcoded-tick-seconds",
+      "port_decision": "Only tick_s=30 is supported; replicate the literal for parity.",
+      "reproducer": "construct SimConfig(tick_s=60); boarding_tick is current_time_s//30."
+    },
+    {
+      "area": "costs and observation",
+      "description": "Excessive-wait threshold 900s and comfort capacity 30 are literals in rewards/costs.integrate_tick_costs and env/observation.observe; SimConfig.comfort_capacity is unused.",
+      "id": "D5-hardcoded-time-and-comfort-thresholds",
+      "port_decision": "Replicate literals; keep config unused for parity.",
+      "reproducer": "set comfort_capacity=0; crowding cost is unchanged."
+    },
+    {
+      "area": "observation",
+      "description": "routes[:,7] is state.depot_count/16 (all DEPOT_IDLE) while base spec section 8.1 describes a cooldown-aware reserve-compatible count.",
+      "id": "D6-depot-feature-counts-all-idle",
+      "port_decision": "Follow the code.",
+      "reproducer": "dispatch a reserve bus: it leaves DEPOT_IDLE and the feature drops immediately even before the cooldown matters."
+    },
+    {
+      "area": "observation",
+      "description": "vehicles[:,26] equals vehicles[:,23] (both remaining_s/horizon); the documented 'nominal time-to-terminal' channel is not distinct.",
+      "id": "D7-duplicate-vehicle-scalars",
+      "port_decision": "Follow the code.",
+      "reproducer": "compare columns 23 and 26 over any rollout."
+    },
+    {
+      "area": "observation",
+      "description": "arrival_history uses lag=(t-1-arrival_s)//control_interval, so bin 0 holds arrivals in [t-Delta, t). This is consistent with the recent-arrivals window but is an undocumented -1 offset.",
+      "id": "D8-arrival-history-off-by-one",
+      "port_decision": "Replicate the formula exactly.",
+      "reproducer": "arrival at tick 0 appears in lag 0 at t=120 and lag 1 at t=240."
+    },
+    {
+      "area": "observation/forecast",
+      "description": "env/observation.observe accepts a forecast argument but ignores it; the env injects the forecast tensor and enables context[2] afterwards.",
+      "id": "D9-observe-forecast-parameter-unused",
+      "port_decision": "Port the env-level contract (reset/step), not the dead parameter.",
+      "reproducer": "call observe(state, scenario, forecast=ones) and inspect the output."
+    }
+  ],
+  "git": {
+    "dirty": true,
+    "sha": "1c34457abe78e488df92c240cce8a236dca36af7"
+  },
+  "hashes": {
+    "action_schema_hash": "ff62ae3cfa7478758a5370e575dbfc3c15729c0ea10a3ccbb2bd7a207cab761a",
+    "manifests": {
+      "data/generated/base/manifest.json": {
+        "required": false,
+        "sha256": "abecff223150f4fc004f62b30069436f7ea839d999ec5f1c955c1eb884744e61"
+      }
+    },
+    "observation_schema_hash": "fa07e9254e5f5474db32935332bea7a40ddbadf7c6538defdedbdc51322397e2"
+  },
+  "lock": {
+    "sha256": "ab9e23d3b3cf0dafac664a0ebaca4bc10d6bee43125597ee6f66b59308756004",
+    "uv_lock": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/uv.lock"
+  },
+  "manifest_schema_version": 1,
+  "physical_config": {
+    "capacity": 40,
+    "comfort_capacity": 30,
+    "control_interval_s": 120,
+    "demand_end_s": 10800,
+    "dwell_s": 30,
+    "fleet_size": 12,
+    "horizon_s": 14400,
+    "layover_s": 120,
+    "patience_s": 2700,
+    "route_count": 3,
+    "schema_version": 2,
+    "stops_per_route": 6,
+    "tick_s": 30,
+    "traffic_bucket_s": 300
+  },
+  "physical_config_hash": "fad7a03b35b999d33b672357b439a9bf34899e8bf814bbe98077446ef4a5d4b2",
+  "platform": {
+    "machine": "x86_64",
+    "release": "7.0.0-31-generic",
+    "system": "Linux"
+  },
+  "python": {
+    "implementation": "CPython",
+    "version": "3.11.14"
+  },
+  "reference_checkpoint": {
+    "checkpoint": "tests/backend_parity/reference/diagnose-after/last.zip",
+    "checkpoint_sha256": "98f99ebf151cdf6dde914df95ea780c25f4856e6a36f90e30ccd7a9f5906501e",
+    "config": "configs/experiments/core.toml",
+    "days": 10,
+    "git_dirty": true,
+    "git_sha": "4f04143367ac912fda507321589021467fc1d14f",
+    "historical_mean_total_cost": 15471.25,
+    "mean_total_cost": 15471.25,
+    "mean_total_cost_core": 15471.25,
+    "metadata_sha256": "945ba048526a1478b559e6cf0c5ecf51f73a2999bbc570b474828dc6ef964d2a",
+    "note": "historical reference is reusable because checkpoint/config/days are recoverable",
+    "scenario_source": "bus_rl.data.scenario.generate_manifest('validation', 100)[:10]",
+    "seed": null,
+    "source": "runs/diagnose-after",
+    "split": "validation",
+    "total_timesteps_actual": 2048
+  },
+  "reports": [
+    {
+      "path": "reports/forecast.md",
+      "required": true,
+      "sha256": "8a81e9ab6c16606bc59ccfc5827090ed9a3324a67fd98b25db715be1459444fe"
+    },
+    {
+      "path": "reports/pilot/combined.csv",
+      "required": true,
+      "sha256": "3dcba3ef0845e351fb0ebaea287163182217123b18b6cbfd86ec3c2aeb5b6057"
+    },
+    {
+      "path": "reports/pilot/events.jsonl",
+      "required": true,
+      "sha256": "7f44370c7c2caeb9c843639768aff16016b14b762a1f0a0c730f894a7ed66e61"
+    },
+    {
+      "path": "reports/pilot-plots/cost_bars.png",
+      "required": true,
+      "sha256": "332afef770a0ebbba1fbecd5d9f86dc656f6e4db4d361506c07183dc0801788a"
+    },
+    {
+      "path": "reports/pilot-plots/fleet_gantt.png",
+      "required": true,
+      "sha256": "41169cdeefea71c8b004555f12e918964af77bd843308700a2e0e0508ecbfa97"
+    },
+    {
+      "path": "reports/pilot-plots/headway.png",
+      "required": true,
+      "sha256": "66a8cb615904553b61a4ea3b7998d4d52453cbeb8b78ee8b58459bebfab68915"
+    },
+    {
+      "path": "reports/pilot-plots/learning_curves.png",
+      "required": true,
+      "sha256": "f705ea0ae836d3ec8ff9c6717a40673300082bcc69b2e666c23025d3b897de4d"
+    },
+    {
+      "path": "reports/pilot-plots/queue_heatmap.png",
+      "required": true,
+      "sha256": "93dc7a578444bca232c5c7e8353450c4765c6ece59c923f82634ba91f93b1abe"
+    },
+    {
+      "path": "reports/pilot-plots/summary.json",
+      "required": true,
+      "sha256": "5726ca7e6de3b3a31b173756c08f6d3564cf230d0fe4ec9631f72d5530916d7b"
+    },
+    {
+      "path": "reports/pilot-plots/waiting_cdf.png",
+      "required": true,
+      "sha256": "b61cc92fe723b01d7f9e5fbfddf2c2273eea099d4e257e8c48b5a39692186d0e"
+    },
+    {
+      "path": "reports/pilot.md",
+      "required": true,
+      "sha256": "e9fc6ac4ebb65b66519e1149327d769d39c2a56832ce79bd968d0d4061cc1509"
+    },
+    {
+      "path": "reports/rust-migration.md",
+      "required": true,
+      "sha256": "bc872f4dbde00d8f2d1db2488b904815a5ac919c76827d7c18267462c98503fa"
+    },
+    {
+      "path": "reports/training-diagnose/cprofile.txt",
+      "required": true,
+      "sha256": "7164e9264724ca092cd6179fe3666ca1e28c1544d63c81dee1fe56ee40e679c2"
+    },
+    {
+      "path": "reports/training-diagnose/diagnosis.json",
+      "required": true,
+      "sha256": "7bfc08ef20c21ccc268b7f34c42f9eade6e2ce2a19b45c63912968023de43c4d"
+    },
+    {
+      "path": "reports/training-diagnose/metadata.json",
+      "required": true,
+      "sha256": "dc9d5e208a4839584c61446b210b75e115fd6694938694154c5df9db0580d0ff"
+    },
+    {
+      "path": "reports/training-diagnose/train_events.jsonl",
+      "required": true,
+      "sha256": "7e49b0afa974d44f6becb6ff36ba9d5c8c1e00be417319e3c009086d4cb843b2"
+    },
+    {
+      "path": "reports/training-diagnose-after/cprofile.txt",
+      "required": true,
+      "sha256": "c490127a023dba9e7deec61eb262c097b8140bfae3297bd8772a9ac809383447"
+    },
+    {
+      "path": "reports/training-diagnose-after/diagnosis.json",
+      "required": true,
+      "sha256": "3f0228633ddc3fe6fd6d9c24c4508661b2d1d3b7e6362f38321f5de53e05c38f"
+    },
+    {
+      "path": "reports/training-diagnose-after/metadata.json",
+      "required": true,
+      "sha256": "945ba048526a1478b559e6cf0c5ecf51f73a2999bbc570b474828dc6ef964d2a"
+    },
+    {
+      "path": "reports/training-diagnose-after/train_events.jsonl",
+      "required": true,
+      "sha256": "1ae39a15254c4d1e9810ed1d18503ff3499fe2110e91d15365e4f7988890e913"
+    },
+    {
+      "path": "reports/training-diagnosis-after.md",
+      "required": true,
+      "sha256": "19d93b7611daa04efab591820d1114e7ca759b72cf45c3263e4895d1eb82aa46"
+    },
+    {
+      "path": "reports/training-diagnosis.json",
+      "required": true,
+      "sha256": "7bfc08ef20c21ccc268b7f34c42f9eade6e2ce2a19b45c63912968023de43c4d"
+    },
+    {
+      "path": "reports/training-diagnosis.md",
+      "required": true,
+      "sha256": "664c9fe29e71e85546e11811ac16be56835629f94970976e4f63b002415a3a3a"
+    }
+  ],
+  "reward_defaults": {
+    "abandoned": 60.0,
+    "active": 0.5,
+    "crowding": 0.5,
+    "deadhead": 0.5,
+    "fairness": 1.0,
+    "first_denied": 5.0,
+    "mission": 2.0,
+    "n_ref": 3000.0,
+    "onboard": 0.25,
+    "unfinished": 60.0,
+    "waiting": 1.0
+  },
+  "role": "python-oracle",
+  "runtime": {
+    "device": "cpu",
+    "numpy": "2.4.6",
+    "torch": "2.14.0+cpu",
+    "torch_threads": 16
+  },
+  "scenario_order": {
+    "committed_manifest": "data/generated/base/manifest.json",
+    "committed_manifest_sha256": "abecff223150f4fc004f62b30069436f7ea839d999ec5f1c955c1eb884744e61",
+    "generator": "bus_rl.data.scenario.generate_manifest (SeedSequence.spawn)",
+    "regenerable": true,
+    "split_counts": {
+      "test_id": 200,
+      "test_ood_burst": 200,
+      "test_ood_traffic": 200,
+      "train": 500,
+      "validation": 100
+    },
+    "split_seeds": {
+      "test_id": 3001,
+      "test_ood_burst": 4001,
+      "test_ood_traffic": 5001,
+      "train": 1001,
+      "validation": 2001
+    }
+  },
+  "seeds": {
+    "algorithm": [
+      11,
+      22,
+      33
+    ],
+    "split_generator": {
+      "test_id": 3001,
+      "test_ood_burst": 4001,
+      "test_ood_traffic": 5001,
+      "train": 1001,
+      "validation": 2001
+    }
+  },
+  "self_hash": "9fc77a21992795ee4b0f9f745b0fb0f7493e8efb29a7576547f898be1d0cf2a8"
+}

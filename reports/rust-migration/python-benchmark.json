@@ -1,0 +1,208 @@
+{
+  "benchmark_schema_version": 1,
+  "commands": {
+    "benchmark": "python scripts/benchmark_python.py --repetitions 5 --transitions 12288",
+    "build_fixtures": "python scripts/export_oracle.py build",
+    "verify": "python scripts/export_oracle.py verify"
+  },
+  "fixed_checkpoint_eval": {
+    "checkpoint": "tests/backend_parity/reference/diagnose-after/last.zip",
+    "days": 10,
+    "historical_mean_total_cost": 15471.25,
+    "max_s": 3.770935903998179,
+    "mean_s": 3.596102112800145,
+    "mean_total_cost": 15471.25,
+    "mean_total_cost_per_rep": [
+      15471.25,
+      15471.25,
+      15471.25,
+      15471.25,
+      15471.25
+    ],
+    "median_s": 3.5289891089996672,
+    "min_s": 3.4992611900015618,
+    "scenario_source": "generate_manifest('validation', 100)[:10]",
+    "wall_times_s": [
+      3.524214,
+      3.528989,
+      3.770936,
+      3.657111,
+      3.499261
+    ]
+  },
+  "isolated_learn": {
+    "batch_size": 256,
+    "max_s": 34.350268750000396,
+    "mean_s": 33.78425135579964,
+    "median_s": 34.046822151001834,
+    "min_s": 32.53560077699876,
+    "n_envs": 4,
+    "n_epochs": 4,
+    "n_steps": 256,
+    "periodic_eval": false,
+    "seed": 11,
+    "setup_median_s": 0.02422860399747151,
+    "transitions_actual": [
+      12288,
+      12288,
+      12288,
+      12288,
+      12288
+    ],
+    "transitions_per_s_median": 360.91474104400146,
+    "transitions_requested": 12288,
+    "wall_times_s": [
+      34.046822,
+      33.744606,
+      34.243959,
+      32.535601,
+      34.350269
+    ]
+  },
+  "machine": {
+    "cpu_count": 24,
+    "machine": "x86_64",
+    "numpy": "2.4.6",
+    "platform": "Linux-7.0.0-31-generic-x86_64-with-glibc2.39",
+    "python": "3.11.14",
+    "torch": "2.14.0+cpu",
+    "torch_threads": 16
+  },
+  "peak_rss_kb": 457084,
+  "protocol": {
+    "conservation_checks": "disabled",
+    "cprofile_used": false,
+    "note": "setup is reported separately from steady-state",
+    "profiler": "disabled",
+    "repetitions": 5,
+    "timers": "disabled",
+    "warmup": 1
+  },
+  "role": "python-after-reference",
+  "simulation": {
+    "aggregate": {
+      "decisions_total": 600,
+      "median_total_s": 0.41347575000327197
+    },
+    "workloads": {
+      "burst_m3": {
+        "decisions": 120,
+        "decisions_per_s_median": 1245.8673670721726,
+        "max_s": 0.09688193399779266,
+        "mean_s": 0.09621824339992599,
+        "median_s": 0.0963184390020615,
+        "min_s": 0.09530822599845123,
+        "scenario": {
+          "control": "M3",
+          "controller": "coverage",
+          "kind": "burst",
+          "seed": 4001,
+          "variant": "burst"
+        },
+        "ticks": 480,
+        "ticks_per_s_median": 4983.46946828869,
+        "wall_times_s": [
+          0.096318,
+          0.096458,
+          0.096882,
+          0.096125,
+          0.095308
+        ]
+      },
+      "normal_m3": {
+        "decisions": 120,
+        "decisions_per_s_median": 1333.6318149128513,
+        "max_s": 0.09079894400201738,
+        "mean_s": 0.09020540680066916,
+        "median_s": 0.08997985700261779,
+        "min_s": 0.08989992799979518,
+        "scenario": {
+          "control": "M3",
+          "controller": "coverage",
+          "kind": "base",
+          "seed": 2001
+        },
+        "ticks": 480,
+        "ticks_per_s_median": 5334.527259651405,
+        "wall_times_s": [
+          0.08998,
+          0.090407,
+          0.090799,
+          0.089942,
+          0.0899
+        ]
+      },
+      "peak_m3": {
+        "decisions": 120,
+        "decisions_per_s_median": 1313.2124095274328,
+        "max_s": 0.09156208000058541,
+        "mean_s": 0.09129059800034156,
+        "median_s": 0.09137897199980216,
+        "min_s": 0.09069198100041831,
+        "scenario": {
+          "control": "M3",
+          "controller": "coverage",
+          "kind": "peak",
+          "seed": 2001
+        },
+        "ticks": 480,
+        "ticks_per_s_median": 5252.849638109731,
+        "wall_times_s": [
+          0.090692,
+          0.091514,
+          0.091306,
+          0.091379,
+          0.091562
+        ]
+      },
+      "traffic_m3": {
+        "decisions": 120,
+        "decisions_per_s_median": 1315.785794686226,
+        "max_s": 0.09130087900120998,
+        "mean_s": 0.09096646039979532,
+        "median_s": 0.0912002549994213,
+        "min_s": 0.09048100400104886,
+        "scenario": {
+          "control": "M3",
+          "controller": "coverage",
+          "kind": "traffic",
+          "seed": 5001,
+          "variant": "traffic"
+        },
+        "ticks": 480,
+        "ticks_per_s_median": 5263.143178744904,
+        "wall_times_s": [
+          0.090481,
+          0.091301,
+          0.0912,
+          0.090584,
+          0.091266
+        ]
+      },
+      "zero_m3": {
+        "decisions": 120,
+        "decisions_per_s_median": 2690.6899236531813,
+        "max_s": 0.044953158001590054,
+        "mean_s": 0.044514460999198494,
+        "median_s": 0.04459822699936922,
+        "min_s": 0.044014643997797975,
+        "scenario": {
+          "control": "M3",
+          "controller": "coverage",
+          "kind": "empty",
+          "seed": 2001
+        },
+        "ticks": 480,
+        "ticks_per_s_median": 10762.759694612725,
+        "wall_times_s": [
+          0.04408,
+          0.044598,
+          0.044926,
+          0.044953,
+          0.044015
+        ]
+      }
+    }
+  },
+  "wall_total_s": 222.8413318060011
+}

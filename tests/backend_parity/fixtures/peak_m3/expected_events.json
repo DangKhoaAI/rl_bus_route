@@ -1,0 +1,1474 @@
+{
+  "accepted_actions": [
+    {
+      "bus_id": 0,
+      "kind": "SHORT_TURN",
+      "route_id": 0,
+      "step": 1,
+      "time_s": 0
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 0,
+      "step": 2,
+      "time_s": 120
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 1,
+      "step": 3,
+      "time_s": 240
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 2,
+      "step": 4,
+      "time_s": 360
+    },
+    {
+      "bus_id": 9,
+      "kind": "DISPATCH",
+      "route_id": 0,
+      "step": 5,
+      "time_s": 480
+    },
+    {
+      "bus_id": 10,
+      "kind": "SHORT_TURN",
+      "route_id": 0,
+      "step": 7,
+      "time_s": 720
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 0,
+      "step": 8,
+      "time_s": 840
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 1,
+      "step": 9,
+      "time_s": 960
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 2,
+      "step": 10,
+      "time_s": 1080
+    },
+    {
+      "bus_id": 11,
+      "kind": "DISPATCH",
+      "route_id": 0,
+      "step": 11,
+      "time_s": 1200
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 0,
+      "step": 13,
+      "time_s": 1440
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 1,
+      "step": 14,
+      "time_s": 1560
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 2,
+      "step": 15,
+      "time_s": 1680
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 0,
+      "step": 19,
+      "time_s": 2160
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 1,
+      "step": 20,
+      "time_s": 2280
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 2,
+      "step": 21,
+      "time_s": 2400
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 0,
+      "step": 25,
+      "time_s": 2880
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 1,
+      "step": 26,
+      "time_s": 3000
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 2,
+      "step": 27,
+      "time_s": 3120
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 0,
+      "step": 31,
+      "time_s": 3600
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 1,
+      "step": 32,
+      "time_s": 3720
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 2,
+      "step": 33,
+      "time_s": 3840
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 0,
+      "step": 37,
+      "time_s": 4320
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 1,
+      "step": 38,
+      "time_s": 4440
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 2,
+      "step": 39,
+      "time_s": 4560
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 0,
+      "step": 43,
+      "time_s": 5040
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 1,
+      "step": 44,
+      "time_s": 5160
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 2,
+      "step": 45,
+      "time_s": 5280
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 0,
+      "step": 49,
+      "time_s": 5760
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 1,
+      "step": 50,
+      "time_s": 5880
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 2,
+      "step": 51,
+      "time_s": 6000
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 0,
+      "step": 55,
+      "time_s": 6480
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 1,
+      "step": 56,
+      "time_s": 6600
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 2,
+      "step": 57,
+      "time_s": 6720
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 0,
+      "step": 61,
+      "time_s": 7200
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 1,
+      "step": 62,
+      "time_s": 7320
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 2,
+      "step": 63,
+      "time_s": 7440
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 0,
+      "step": 67,
+      "time_s": 7920
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 1,
+      "step": 68,
+      "time_s": 8040
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 2,
+      "step": 69,
+      "time_s": 8160
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 0,
+      "step": 73,
+      "time_s": 8640
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 1,
+      "step": 74,
+      "time_s": 8760
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 2,
+      "step": 75,
+      "time_s": 8880
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 0,
+      "step": 79,
+      "time_s": 9360
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 1,
+      "step": 80,
+      "time_s": 9480
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 2,
+      "step": 81,
+      "time_s": 9600
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 0,
+      "step": 85,
+      "time_s": 10080
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 1,
+      "step": 86,
+      "time_s": 10200
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 2,
+      "step": 87,
+      "time_s": 10320
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 0,
+      "step": 91,
+      "time_s": 10800
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 1,
+      "step": 92,
+      "time_s": 10920
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 2,
+      "step": 93,
+      "time_s": 11040
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 0,
+      "step": 97,
+      "time_s": 11520
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 1,
+      "step": 98,
+      "time_s": 11640
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 2,
+      "step": 99,
+      "time_s": 11760
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 0,
+      "step": 103,
+      "time_s": 12240
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 1,
+      "step": 104,
+      "time_s": 12360
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 2,
+      "step": 105,
+      "time_s": 12480
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 0,
+      "step": 109,
+      "time_s": 12960
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 1,
+      "step": 110,
+      "time_s": 13080
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 2,
+      "step": 111,
+      "time_s": 13200
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 0,
+      "step": 115,
+      "time_s": 13680
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 1,
+      "step": 116,
+      "time_s": 13800
+    },
+    {
+      "kind": "SET_HEADWAY",
+      "route_id": 2,
+      "step": 117,
+      "time_s": 13920
+    }
+  ],
+  "departures": [
+    {
+      "bus_id": 0,
+      "direction": 1,
+      "pattern": "SHORT",
+      "route_id": 0,
+      "step": 1,
+      "time_s": 0
+    },
+    {
+      "bus_id": 2,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 1,
+      "time_s": 0
+    },
+    {
+      "bus_id": 3,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 1,
+      "time_s": 0
+    },
+    {
+      "bus_id": 5,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 1,
+      "time_s": 0
+    },
+    {
+      "bus_id": 6,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 1,
+      "time_s": 0
+    },
+    {
+      "bus_id": 8,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 1,
+      "time_s": 0
+    },
+    {
+      "bus_id": 1,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 2,
+      "time_s": 120
+    },
+    {
+      "bus_id": 4,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 4,
+      "time_s": 360
+    },
+    {
+      "bus_id": 7,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 4,
+      "time_s": 360
+    },
+    {
+      "bus_id": 0,
+      "direction": -1,
+      "pattern": "SHORT",
+      "route_id": 0,
+      "step": 7,
+      "time_s": 750
+    },
+    {
+      "bus_id": 9,
+      "direction": 1,
+      "pattern": "FULL",
+      "route_id": 0,
+      "step": 8,
+      "time_s": 840
+    },
+    {
+      "bus_id": 10,
+      "direction": 1,
+      "pattern": "SHORT",
+      "route_id": 0,
+      "step": 10,
+      "time_s": 1080
+    },
+    {
+      "bus_id": 8,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 10,
+      "time_s": 1140
+    },
+    {
+      "bus_id": 6,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 10,
+      "time_s": 1170
+    },
+    {
+      "bus_id": 3,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 11,
+      "time_s": 1200
+    },
+    {
+      "bus_id": 5,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 11,
+      "time_s": 1230
+    },
+    {
+      "bus_id": 1,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 12,
+      "time_s": 1380
+    },
+    {
+      "bus_id": 2,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 13,
+      "time_s": 1440
+    },
+    {
+      "bus_id": 11,
+      "direction": 1,
+      "pattern": "FULL",
+      "route_id": 0,
+      "step": 14,
+      "time_s": 1560
+    },
+    {
+      "bus_id": 4,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 14,
+      "time_s": 1650
+    },
+    {
+      "bus_id": 7,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 15,
+      "time_s": 1680
+    },
+    {
+      "bus_id": 10,
+      "direction": -1,
+      "pattern": "SHORT",
+      "route_id": 0,
+      "step": 16,
+      "time_s": 1830
+    },
+    {
+      "bus_id": 0,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 17,
+      "time_s": 1920
+    },
+    {
+      "bus_id": 9,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 18,
+      "time_s": 2040
+    },
+    {
+      "bus_id": 8,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 20,
+      "time_s": 2310
+    },
+    {
+      "bus_id": 6,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 20,
+      "time_s": 2340
+    },
+    {
+      "bus_id": 5,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 21,
+      "time_s": 2430
+    },
+    {
+      "bus_id": 3,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 21,
+      "time_s": 2460
+    },
+    {
+      "bus_id": 1,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 23,
+      "time_s": 2640
+    },
+    {
+      "bus_id": 2,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 23,
+      "time_s": 2700
+    },
+    {
+      "bus_id": 7,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 25,
+      "time_s": 2940
+    },
+    {
+      "bus_id": 10,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 26,
+      "time_s": 3000
+    },
+    {
+      "bus_id": 4,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 26,
+      "time_s": 3000
+    },
+    {
+      "bus_id": 11,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 26,
+      "time_s": 3060
+    },
+    {
+      "bus_id": 9,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 29,
+      "time_s": 3360
+    },
+    {
+      "bus_id": 0,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 29,
+      "time_s": 3420
+    },
+    {
+      "bus_id": 6,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 30,
+      "time_s": 3480
+    },
+    {
+      "bus_id": 8,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 30,
+      "time_s": 3510
+    },
+    {
+      "bus_id": 3,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 31,
+      "time_s": 3630
+    },
+    {
+      "bus_id": 5,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 31,
+      "time_s": 3660
+    },
+    {
+      "bus_id": 2,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 34,
+      "time_s": 3960
+    },
+    {
+      "bus_id": 1,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 34,
+      "time_s": 4020
+    },
+    {
+      "bus_id": 7,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 36,
+      "time_s": 4200
+    },
+    {
+      "bus_id": 4,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 36,
+      "time_s": 4230
+    },
+    {
+      "bus_id": 11,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 37,
+      "time_s": 4320
+    },
+    {
+      "bus_id": 10,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 37,
+      "time_s": 4380
+    },
+    {
+      "bus_id": 6,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 39,
+      "time_s": 4650
+    },
+    {
+      "bus_id": 8,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 39,
+      "time_s": 4650
+    },
+    {
+      "bus_id": 0,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 40,
+      "time_s": 4680
+    },
+    {
+      "bus_id": 9,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 40,
+      "time_s": 4740
+    },
+    {
+      "bus_id": 5,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 41,
+      "time_s": 4800
+    },
+    {
+      "bus_id": 3,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 42,
+      "time_s": 4920
+    },
+    {
+      "bus_id": 1,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 45,
+      "time_s": 5280
+    },
+    {
+      "bus_id": 2,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 45,
+      "time_s": 5340
+    },
+    {
+      "bus_id": 7,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 45,
+      "time_s": 5370
+    },
+    {
+      "bus_id": 4,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 47,
+      "time_s": 5520
+    },
+    {
+      "bus_id": 10,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 49,
+      "time_s": 5760
+    },
+    {
+      "bus_id": 11,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 49,
+      "time_s": 5760
+    },
+    {
+      "bus_id": 6,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 50,
+      "time_s": 5880
+    },
+    {
+      "bus_id": 5,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 50,
+      "time_s": 5940
+    },
+    {
+      "bus_id": 8,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 50,
+      "time_s": 5970
+    },
+    {
+      "bus_id": 9,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 52,
+      "time_s": 6120
+    },
+    {
+      "bus_id": 0,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 52,
+      "time_s": 6120
+    },
+    {
+      "bus_id": 3,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 53,
+      "time_s": 6270
+    },
+    {
+      "bus_id": 7,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 55,
+      "time_s": 6540
+    },
+    {
+      "bus_id": 2,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 57,
+      "time_s": 6720
+    },
+    {
+      "bus_id": 1,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 57,
+      "time_s": 6720
+    },
+    {
+      "bus_id": 4,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 58,
+      "time_s": 6870
+    },
+    {
+      "bus_id": 6,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 59,
+      "time_s": 6960
+    },
+    {
+      "bus_id": 11,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 61,
+      "time_s": 7200
+    },
+    {
+      "bus_id": 10,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 61,
+      "time_s": 7200
+    },
+    {
+      "bus_id": 8,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 61,
+      "time_s": 7290
+    },
+    {
+      "bus_id": 5,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 62,
+      "time_s": 7320
+    },
+    {
+      "bus_id": 3,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 63,
+      "time_s": 7470
+    },
+    {
+      "bus_id": 0,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 64,
+      "time_s": 7560
+    },
+    {
+      "bus_id": 9,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 64,
+      "time_s": 7560
+    },
+    {
+      "bus_id": 7,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 65,
+      "time_s": 7770
+    },
+    {
+      "bus_id": 4,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 68,
+      "time_s": 8070
+    },
+    {
+      "bus_id": 1,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 69,
+      "time_s": 8160
+    },
+    {
+      "bus_id": 2,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 69,
+      "time_s": 8160
+    },
+    {
+      "bus_id": 6,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 69,
+      "time_s": 8160
+    },
+    {
+      "bus_id": 8,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 71,
+      "time_s": 8430
+    },
+    {
+      "bus_id": 10,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 73,
+      "time_s": 8640
+    },
+    {
+      "bus_id": 11,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 73,
+      "time_s": 8640
+    },
+    {
+      "bus_id": 3,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 73,
+      "time_s": 8640
+    },
+    {
+      "bus_id": 5,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 73,
+      "time_s": 8670
+    },
+    {
+      "bus_id": 7,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 75,
+      "time_s": 8910
+    },
+    {
+      "bus_id": 9,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 76,
+      "time_s": 9000
+    },
+    {
+      "bus_id": 0,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 76,
+      "time_s": 9000
+    },
+    {
+      "bus_id": 4,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 79,
+      "time_s": 9360
+    },
+    {
+      "bus_id": 6,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 79,
+      "time_s": 9420
+    },
+    {
+      "bus_id": 2,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 81,
+      "time_s": 9600
+    },
+    {
+      "bus_id": 1,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 81,
+      "time_s": 9600
+    },
+    {
+      "bus_id": 8,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 82,
+      "time_s": 9750
+    },
+    {
+      "bus_id": 3,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 83,
+      "time_s": 9930
+    },
+    {
+      "bus_id": 5,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 84,
+      "time_s": 9960
+    },
+    {
+      "bus_id": 11,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 85,
+      "time_s": 10080
+    },
+    {
+      "bus_id": 10,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 85,
+      "time_s": 10080
+    },
+    {
+      "bus_id": 7,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 86,
+      "time_s": 10230
+    },
+    {
+      "bus_id": 0,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 88,
+      "time_s": 10440
+    },
+    {
+      "bus_id": 9,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 88,
+      "time_s": 10440
+    },
+    {
+      "bus_id": 4,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 88,
+      "time_s": 10530
+    },
+    {
+      "bus_id": 6,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 90,
+      "time_s": 10680
+    },
+    {
+      "bus_id": 8,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 91,
+      "time_s": 10860
+    },
+    {
+      "bus_id": 1,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 93,
+      "time_s": 11040
+    },
+    {
+      "bus_id": 2,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 93,
+      "time_s": 11040
+    },
+    {
+      "bus_id": 5,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 94,
+      "time_s": 11160
+    },
+    {
+      "bus_id": 3,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 94,
+      "time_s": 11160
+    },
+    {
+      "bus_id": 7,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 96,
+      "time_s": 11460
+    },
+    {
+      "bus_id": 9,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 97,
+      "time_s": 11520
+    },
+    {
+      "bus_id": 11,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 97,
+      "time_s": 11520
+    },
+    {
+      "bus_id": 4,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 98,
+      "time_s": 11640
+    },
+    {
+      "bus_id": 10,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 100,
+      "time_s": 11880
+    },
+    {
+      "bus_id": 0,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 100,
+      "time_s": 11880
+    },
+    {
+      "bus_id": 6,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 100,
+      "time_s": 11910
+    },
+    {
+      "bus_id": 8,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 102,
+      "time_s": 12150
+    },
+    {
+      "bus_id": 3,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 103,
+      "time_s": 12330
+    },
+    {
+      "bus_id": 5,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 104,
+      "time_s": 12420
+    },
+    {
+      "bus_id": 2,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 105,
+      "time_s": 12480
+    },
+    {
+      "bus_id": 1,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 105,
+      "time_s": 12480
+    },
+    {
+      "bus_id": 7,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 106,
+      "time_s": 12690
+    },
+    {
+      "bus_id": 4,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 108,
+      "time_s": 12930
+    },
+    {
+      "bus_id": 11,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 109,
+      "time_s": 12960
+    },
+    {
+      "bus_id": 9,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 109,
+      "time_s": 12960
+    },
+    {
+      "bus_id": 6,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 111,
+      "time_s": 13230
+    },
+    {
+      "bus_id": 0,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 112,
+      "time_s": 13320
+    },
+    {
+      "bus_id": 10,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 112,
+      "time_s": 13320
+    },
+    {
+      "bus_id": 8,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 113,
+      "time_s": 13470
+    },
+    {
+      "bus_id": 3,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 113,
+      "time_s": 13530
+    },
+    {
+      "bus_id": 5,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 115,
+      "time_s": 13710
+    },
+    {
+      "bus_id": 7,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 116,
+      "time_s": 13830
+    },
+    {
+      "bus_id": 1,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 117,
+      "time_s": 13920
+    },
+    {
+      "bus_id": 2,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 0,
+      "step": 117,
+      "time_s": 13920
+    },
+    {
+      "bus_id": 4,
+      "direction": -1,
+      "pattern": 0,
+      "route_id": 1,
+      "step": 118,
+      "time_s": 14130
+    },
+    {
+      "bus_id": 6,
+      "direction": 1,
+      "pattern": 0,
+      "route_id": 2,
+      "step": 120,
+      "time_s": 14340
+    }
+  ]
+}

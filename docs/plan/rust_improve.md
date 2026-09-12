@@ -35,10 +35,10 @@ Each task starts unchecked. Mark it complete only after its acceptance criteria 
 
 ### R0.1 - Inventory and freeze the reference
 
-- [ ] Record the Python after revision, dirty state, dependency lock, config hashes, manifests, scenario order, seeds, and machine/thread settings.
-- [ ] Inventory available checkpoints and reports without overwriting historical artifacts.
-- [ ] Document action IDs, observation keys/shapes/dtypes/scales, cost components, terminal behavior, RNG selection, and deterministic iteration order.
-- [ ] Record any source/base-spec discrepancy, especially time thresholds, rounding, boarded-channel semantics, and terminal settlement.
+- [x] Record the Python after revision, dirty state, dependency lock, config hashes, manifests, scenario order, seeds, and machine/thread settings.
+- [x] Inventory available checkpoints and reports without overwriting historical artifacts.
+- [x] Document action IDs, observation keys/shapes/dtypes/scales, cost components, terminal behavior, RNG selection, and deterministic iteration order.
+- [x] Record any source/base-spec discrepancy, especially time thresholds, rounding, boarded-channel semantics, and terminal settlement.
 
 **Implementation surface:** `domain.py`, `env/`, `sim/`, `control/`, `rewards/`, `training/checkpoint.py`; proposed `reports/rust-migration/oracle-manifest.json`.
 
@@ -48,11 +48,11 @@ Each task starts unchecked. Mark it complete only after its acceptance criteria 
 
 ### R0.2 - Build golden fixtures and a differential harness
 
-- [ ] Export per-tick state/counters/events and per-control-step action, observation, mask, reward, and cost components.
-- [ ] Store input tapes, action traces, scenario/config hashes, and expected outputs separately from native outputs.
-- [ ] Cover zero, normal, peak, burst, and traffic cases; multiple seeds; M1/M2/M3; every action family; invalid actions; partial boarding/splits; capacity; abandonment; donor/cooldown guards; short turns; and terminal settlement.
-- [ ] Add fixtures for history boundaries, immediate completion after boarding, repeated splits, and finished passengers remaining in recent arrival history.
-- [ ] Select a fixed checkpoint for paired evaluation. Reuse the historical 15471.25 reference only if its exact checkpoint/config/days are recoverable; otherwise create and label a new Python reference.
+- [x] Export per-tick state/counters/events and per-control-step action, observation, mask, reward, and cost components.
+- [x] Store input tapes, action traces, scenario/config hashes, and expected outputs separately from native outputs.
+- [x] Cover zero, normal, peak, burst, and traffic cases; multiple seeds; M1/M2/M3; every action family; invalid actions; partial boarding/splits; capacity; abandonment; donor/cooldown guards; short turns; and terminal settlement.
+- [x] Add fixtures for history boundaries, immediate completion after boarding, repeated splits, and finished passengers remaining in recent arrival history.
+- [x] Select a fixed checkpoint for paired evaluation. Reuse the historical 15471.25 reference only if its exact checkpoint/config/days are recoverable; otherwise create and label a new Python reference.
 
 **Implementation surface:** proposed `tests/backend_parity/`, fixture exporter under `scripts/`, raw `runs/rust-migration/oracle/`.
 
@@ -62,10 +62,10 @@ Each task starts unchecked. Mark it complete only after its acceptance criteria 
 
 ### R0.3 - Establish an unprofiled Python benchmark
 
-- [ ] Build a benchmark entry point for fixed-action simulation, isolated learn, and fixed-checkpoint evaluation.
-- [ ] Disable cProfile and TIMERS, use matching trace/conservation settings, and separate setup from steady-state execution.
-- [ ] Warm up separately; collect at least five repetitions, raw wall times, actual transitions, thread settings, and peak RSS.
-- [ ] Use at least 12,288 transitions for isolated learn with the core hyperparameters, periodic evaluation disabled, and a reproducible initial model.
+- [x] Build a benchmark entry point for fixed-action simulation, isolated learn, and fixed-checkpoint evaluation.
+- [x] Disable cProfile and TIMERS, use matching trace/conservation settings, and separate setup from steady-state execution.
+- [x] Warm up separately; collect at least five repetitions, raw wall times, actual transitions, thread settings, and peak RSS.
+- [x] Use at least 12,288 transitions for isolated learn with the core hyperparameters, periodic evaluation disabled, and a reproducible initial model.
 
 **Outputs:** proposed `reports/rust-migration/python-benchmark.json` and exact reproduction commands in the report.
 
@@ -74,6 +74,14 @@ Each task starts unchecked. Mark it complete only after its acceptance criteria 
 **Acceptance:** raw repetitions and median/min/max are available; no comparison uses the profiled 266 decisions/s as the production reference. R4 will remeasure Python interleaved with Rust on the same machine.
 
 **R0 gate:** R0.1-R0.3 accepted. Freeze the oracle before native implementation.
+
+**Evidence (2026-09-12, accepted):** revision `1c34457`; commands and raw
+results in [reports/rust-migration.md](../reports/rust-migration.md) and
+`reports/rust-migration/`. `python scripts/export_oracle.py verify` reproduces
+11 golden fixtures and the fixed-checkpoint mean `15471.25`;
+`python scripts/benchmark_python.py` records the unprofiled reference
+(simulation total 0.4135 s / 600 decisions; isolated learn 34.05 s / 12,288
+transitions). Freeze the oracle before native implementation.
 
 ## 4. R1: implement the native kernel
 
@@ -211,7 +219,7 @@ Each task starts unchecked. Mark it complete only after its acceptance criteria 
 
 ## 8. Final acceptance checklist
 
-- [ ] R0: immutable oracle, golden coverage, and unprofiled reference accepted.
+- [x] R0: immutable oracle, golden coverage, and unprofiled reference accepted.
 - [ ] R1: domain/lifecycle/actions/ticks/costs accepted.
 - [ ] R2: observation/history and mask parity accepted.
 - [ ] R3: wrapper/evaluator/forecast/backend/provenance accepted.

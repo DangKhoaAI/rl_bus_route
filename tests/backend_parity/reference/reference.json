@@ -1,0 +1,18 @@
+{
+  "checkpoint": "tests/backend_parity/reference/diagnose-after/last.zip",
+  "checkpoint_sha256": "98f99ebf151cdf6dde914df95ea780c25f4856e6a36f90e30ccd7a9f5906501e",
+  "config": "configs/experiments/core.toml",
+  "days": 10,
+  "git_dirty": true,
+  "git_sha": "4f04143367ac912fda507321589021467fc1d14f",
+  "historical_mean_total_cost": 15471.25,
+  "mean_total_cost": 15471.25,
+  "mean_total_cost_core": 15471.25,
+  "metadata_sha256": "945ba048526a1478b559e6cf0c5ecf51f73a2999bbc570b474828dc6ef964d2a",
+  "note": "historical reference is reusable because checkpoint/config/days are recoverable",
+  "scenario_source": "bus_rl.data.scenario.generate_manifest('validation', 100)[:10]",
+  "seed": null,
+  "source": "runs/diagnose-after",
+  "split": "validation",
+  "total_timesteps_actual": 2048
+}
