@@ -547,8 +547,10 @@ Artifacts:
   is the shared native `ScenarioStore` for 600 scenarios and the rest is native
   heap retention at the step boundary (not a leak; see section 7). It is
   documented rather than hidden and does not affect the speed gates.
-- The manifest records `git_dirty=true` because R0–R3 artifacts were added in
-  the same working tree; the revision field pins the pre-R1 commit `1c34457`.
+- The manifest records `git.sha`/`git.dirty` for the repo HEAD at build time and
+  the reference checkpoint's origin revision separately; the frozen oracle
+  contract is the physical/action/observation hashes and the fixture hashes, not
+  the git revision. The reference checkpoint was created at `4f041433`.
   The full-workflow metadata also records `git_dirty=true`; the only uncommitted
   file at run time was the regenerated `native-build.json` (same library hash).
 - The git-ignored `runs/` and `data/generated/` inventories are documented but
