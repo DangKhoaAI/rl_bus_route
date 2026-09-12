@@ -22,7 +22,7 @@ Không gọi cùng policy chạy nhanh hơn là policy thông minh hơn. Không 
 
 ## 2. Điểm xuất phát có bằng chứng
 
-- `reports/training-diagnosis-after.md`: learn 2048 transitions 7.69 s, khoảng 266 decisions/s; learn có cProfile. Khoảng 15 phút/full seed là ngoại suy, không là runtime production đã xác nhận.
+- `reports/training-diagnosis-v1.1-python-improve.md`: learn 2048 transitions 7.69 s, khoảng 266 decisions/s; learn có cProfile. Khoảng 15 phút/full seed là ngoại suy, không là runtime production đã xác nhận.
 - `reports/pilot.md`: PPO 12,288 transitions có mean core cost khoảng 18,207 so fixed 16,017 trên 100 validation days; wait thấp hơn nhưng unfinished cao hơn. Chưa phải kết quả full training và chưa chứng minh PPO thắng heuristics.
 - Mean cost 15,471.25 trong trial diagnose chỉ là regression mốc cũ, không phải mục tiêu chất lượng RL. Không so trực tiếp với pilot vì khác checkpoint/budget/bộ ngày.
 - `reports/forecast.md`: đã có diagnostic forecast, không đồng nghĩa đã chứng minh forecast cải thiện policy.
@@ -166,6 +166,6 @@ Manifest experiment ghi backend/build, data/config/obs/action/physical/reward ha
 ## 9. Nguồn và điểm bắt đầu triển khai
 
 - [Rust migration spec](rust_improve.md), [spec nền](spec_v1.0.md), [plan T9–T11](../plan/plan_v1.0.md).
-- [Pilot report](../../reports/pilot.md), [Python after](../../reports/training-diagnosis-after.md), [forecast diagnostic](../../reports/forecast.md).
+- [Pilot report](../../reports/pilot.md), [Python after](../../reports/training-diagnosis-v1.1-python-improve.md), [forecast diagnostic](../../reports/forecast.md).
 - Code: `src/bus_rl/training/{train,callbacks,diagnose}.py`, `models/features.py`, `rewards/costs.py`, `evaluation/{runner,statistics}.py`, `configs/experiments/`.
 - [SB3 RL Tips](https://stable-baselines3.readthedocs.io/en/master/guide/rl_tips.html): đánh giá môi trường riêng, nhiều runs và tuning có kiểm soát. Các candidates trong tài liệu này là đề xuất cho project, không phải kết quả đã xác nhận từ tài liệu SB3.

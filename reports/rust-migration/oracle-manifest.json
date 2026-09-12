@@ -302,7 +302,7 @@
   ],
   "git": {
     "dirty": true,
-    "sha": "49d3c23eb14bf65815c455a17d99215dfbf95c82"
+    "sha": "267a36ae15ed24fd56623b9c36e1ebfe2de3824f"
   },
   "hashes": {
     "action_schema_hash": "ff62ae3cfa7478758a5370e575dbfc3c15729c0ea10a3ccbb2bd7a207cab761a",
@@ -365,119 +365,9 @@
   },
   "reports": [
     {
-      "path": "reports/forecast.md",
-      "required": true,
-      "sha256": "8a81e9ab6c16606bc59ccfc5827090ed9a3324a67fd98b25db715be1459444fe"
-    },
-    {
-      "path": "reports/pilot/combined.csv",
-      "required": true,
-      "sha256": "3dcba3ef0845e351fb0ebaea287163182217123b18b6cbfd86ec3c2aeb5b6057"
-    },
-    {
-      "path": "reports/pilot/events.jsonl",
-      "required": true,
-      "sha256": "7f44370c7c2caeb9c843639768aff16016b14b762a1f0a0c730f894a7ed66e61"
-    },
-    {
-      "path": "reports/pilot-plots/cost_bars.png",
-      "required": true,
-      "sha256": "332afef770a0ebbba1fbecd5d9f86dc656f6e4db4d361506c07183dc0801788a"
-    },
-    {
-      "path": "reports/pilot-plots/fleet_gantt.png",
-      "required": true,
-      "sha256": "41169cdeefea71c8b004555f12e918964af77bd843308700a2e0e0508ecbfa97"
-    },
-    {
-      "path": "reports/pilot-plots/headway.png",
-      "required": true,
-      "sha256": "66a8cb615904553b61a4ea3b7998d4d52453cbeb8b78ee8b58459bebfab68915"
-    },
-    {
-      "path": "reports/pilot-plots/learning_curves.png",
-      "required": true,
-      "sha256": "f705ea0ae836d3ec8ff9c6717a40673300082bcc69b2e666c23025d3b897de4d"
-    },
-    {
-      "path": "reports/pilot-plots/queue_heatmap.png",
-      "required": true,
-      "sha256": "93dc7a578444bca232c5c7e8353450c4765c6ece59c923f82634ba91f93b1abe"
-    },
-    {
-      "path": "reports/pilot-plots/summary.json",
-      "required": true,
-      "sha256": "5726ca7e6de3b3a31b173756c08f6d3564cf230d0fe4ec9631f72d5530916d7b"
-    },
-    {
-      "path": "reports/pilot-plots/waiting_cdf.png",
-      "required": true,
-      "sha256": "b61cc92fe723b01d7f9e5fbfddf2c2273eea099d4e257e8c48b5a39692186d0e"
-    },
-    {
-      "path": "reports/pilot.md",
-      "required": true,
-      "sha256": "e9fc6ac4ebb65b66519e1149327d769d39c2a56832ce79bd968d0d4061cc1509"
-    },
-    {
       "path": "reports/rust-migration.md",
       "required": true,
-      "sha256": "5986e117fa003f4cfcc904efd08820fa89a440520bf7e647338da4375abd4d27"
-    },
-    {
-      "path": "reports/training-diagnose/cprofile.txt",
-      "required": true,
-      "sha256": "7164e9264724ca092cd6179fe3666ca1e28c1544d63c81dee1fe56ee40e679c2"
-    },
-    {
-      "path": "reports/training-diagnose/diagnosis.json",
-      "required": true,
-      "sha256": "7bfc08ef20c21ccc268b7f34c42f9eade6e2ce2a19b45c63912968023de43c4d"
-    },
-    {
-      "path": "reports/training-diagnose/metadata.json",
-      "required": true,
-      "sha256": "dc9d5e208a4839584c61446b210b75e115fd6694938694154c5df9db0580d0ff"
-    },
-    {
-      "path": "reports/training-diagnose/train_events.jsonl",
-      "required": true,
-      "sha256": "7e49b0afa974d44f6becb6ff36ba9d5c8c1e00be417319e3c009086d4cb843b2"
-    },
-    {
-      "path": "reports/training-diagnose-after/cprofile.txt",
-      "required": true,
-      "sha256": "c490127a023dba9e7deec61eb262c097b8140bfae3297bd8772a9ac809383447"
-    },
-    {
-      "path": "reports/training-diagnose-after/diagnosis.json",
-      "required": true,
-      "sha256": "3f0228633ddc3fe6fd6d9c24c4508661b2d1d3b7e6362f38321f5de53e05c38f"
-    },
-    {
-      "path": "reports/training-diagnose-after/metadata.json",
-      "required": true,
-      "sha256": "945ba048526a1478b559e6cf0c5ecf51f73a2999bbc570b474828dc6ef964d2a"
-    },
-    {
-      "path": "reports/training-diagnose-after/train_events.jsonl",
-      "required": true,
-      "sha256": "1ae39a15254c4d1e9810ed1d18503ff3499fe2110e91d15365e4f7988890e913"
-    },
-    {
-      "path": "reports/training-diagnosis-after.md",
-      "required": true,
-      "sha256": "19d93b7611daa04efab591820d1114e7ca759b72cf45c3263e4895d1eb82aa46"
-    },
-    {
-      "path": "reports/training-diagnosis.json",
-      "required": true,
-      "sha256": "7bfc08ef20c21ccc268b7f34c42f9eade6e2ce2a19b45c63912968023de43c4d"
-    },
-    {
-      "path": "reports/training-diagnosis.md",
-      "required": true,
-      "sha256": "664c9fe29e71e85546e11811ac16be56835629f94970976e4f63b002415a3a3a"
+      "sha256": "f37a36037bb50a6e411683031fcd299c970c80ae40cf535e6329aae04e314f45"
     }
   ],
   "reward_defaults": {
@@ -534,5 +424,5 @@
       "validation": 2001
     }
   },
-  "self_hash": "3e1bda31c71f9183e2c357fc1d5b893b6e1601267778224c9cd752619a18e5db"
+  "self_hash": "05a5961ddd416cf0c1f7685a0a6b52edf14c49a2ed79f53be492bd666ba8ebfc"
 }

@@ -203,7 +203,7 @@ Peak RSS during the whole benchmark: **457 MB**.
 
 ### Note on the old 266 decisions/s figure
 
-`reports/training-diagnosis-after.md` measured 266 decisions/s **with cProfile
+`reports/training-diagnosis-v1.1-python-improve.md` measured 266 decisions/s **with cProfile
 and nested timers enabled**. That number is diagnostic only and is explicitly
 not the production reference. The unprofiled numbers above are the R0.3
 reference that R4 will remeasure interleaved with the Rust backend.

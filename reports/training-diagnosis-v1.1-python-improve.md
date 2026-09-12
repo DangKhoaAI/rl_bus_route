@@ -1,4 +1,4 @@
-# Training diagnosis after hot-path optimizations
+# Training diagnosis v1.1 (Python hot-path improvements)
 
 Same command and seed as the baseline trial (2048 transitions, 10-day eval,
 `n_envs=4`, `n_steps=256`). Eval mean cost is unchanged: **15471.25**.
@@ -7,8 +7,8 @@ Same command and seed as the baseline trial (2048 transitions, 10-day eval,
 
 | Role | Path |
 |---|---|
-| **Old (before)** | `reports/training-diagnose/` and `reports/training-diagnosis.md` |
-| **New (after)** | `reports/training-diagnose-after/` and this file |
+| **Old (before)** | `reports/training-diagnosis/evidence/v1.0/` and `reports/training-diagnosis-v1.0.md` |
+| **New (after)** | `reports/training-diagnosis/evidence/v1.1-python-improve/` and this file |
 | Raw rerun dirs | `runs/diagnose/` (old), `runs/diagnose-after/` (new, gitignored) |
 
 ## Wall clock

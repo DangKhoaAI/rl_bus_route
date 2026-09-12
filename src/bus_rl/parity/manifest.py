@@ -262,17 +262,20 @@ def inventory_checkpoints(root: Path) -> list[dict]:
     return rows
 
 
+# Only the migration contract narrative is hash-frozen. Analysis reports,
+# figures and benchmark outputs live under `reports/` for readers but must not
+# churn the oracle manifest when they are regenerated.
+CONTRACT_REPORTS = ("reports/rust-migration.md",)
+
+
 def inventory_reports(root: Path) -> list[dict]:
     rows = []
-    for path in sorted((root / "reports").rglob("*")):
-        if not path.is_file():
-            continue
-        relative = path.relative_to(root)
-        # Do not hash the migration report directory into itself; those outputs
-        # are indexed by the report and the benchmark JSON instead.
-        if relative.parts[:2] == ("reports", "rust-migration"):
-            continue
-        rows.append({"path": str(relative), "sha256": file_hash(path), "required": True})
+    for relative in CONTRACT_REPORTS:
+        path = root / relative
+        if path.exists():
+            rows.append({"path": relative, "sha256": file_hash(path), "required": True})
+        else:
+            rows.append({"path": relative, "sha256": None, "required": True})
     return rows
 
 

@@ -56,7 +56,7 @@ PPO has **not** beaten the heuristics after 12,288 transitions. Waiting is sligh
 
 Event trace of validation day 0 includes a `DISPATCH` (reserve). Threshold used reassign and short-turn on the 100-day average; the pilot policy used reassign rarely and no short-turn.
 
-Plots: `reports/pilot-plots/`.
+Plots: `reports/pilot/plots/`.
 
 ## Lineage
 

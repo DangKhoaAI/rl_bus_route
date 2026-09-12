@@ -1,4 +1,4 @@
-# Training time diagnosis
+# Training time diagnosis (v1.0, Python baseline)
 
 Trial: `uv run bus-rl diagnose --config configs/experiments/core.toml --manifest data/generated/base/manifest.json --timesteps 2048 --eval-limit 10 --output runs/diagnose`
 
@@ -6,13 +6,13 @@ Same PPO hyperparams as a full seed (`n_envs=4`, `n_steps=256`, `n_epochs=4`, `b
 
 Eval data (committed), **before** optimizations — leave this folder unchanged:
 
-- `reports/training-diagnosis.md` — this summary (baseline)
-- `reports/training-diagnose/` — `diagnosis.json`, `train_events.jsonl`, `cprofile.txt`, `metadata.json`
+- `reports/training-diagnosis-v1.0.md` — this summary (baseline)
+- `reports/training-diagnosis/evidence/v1.0/` — `diagnosis.json`, `train_events.jsonl`, `cprofile.txt`, `metadata.json`
 
 **After** optimizations (compare against the files above):
 
-- `reports/training-diagnosis-after.md`
-- `reports/training-diagnose-after/`
+- `reports/training-diagnosis-v1.1-python-improve.md`
+- `reports/training-diagnosis/evidence/v1.1-python-improve/`
 
 Raw rerun artifacts (gitignored): `runs/diagnose/` (old), `runs/diagnose-after/` (new).
 
