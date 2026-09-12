@@ -16,8 +16,14 @@ def _fleet(config: SimConfig, network_depot: int) -> tuple[VehicleSpec, ...]:
     result: list[VehicleSpec] = []
     for vehicle_id in range(config.fleet_size):
         route_id = vehicle_id // 3 if vehicle_id < min(assigned, config.route_count * 3) else None
-        node = route_id * config.stops_per_route if route_id is not None else network_depot
-        result.append(VehicleSpec(vehicle_id, route_id, node, 1))
+        if route_id is None:
+            result.append(VehicleSpec(vehicle_id, None, network_depot, 1))
+        else:
+            slot = vehicle_id % 3
+            node = route_id * config.stops_per_route + (
+                config.stops_per_route - 1 if slot == 2 else 0
+            )
+            result.append(VehicleSpec(vehicle_id, route_id, node, -1 if slot == 2 else 1))
     return tuple(result)
 
 

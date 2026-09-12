@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from bus_rl.domain import Action, PassengerCohort, Scenario, StepCosts, WorldState
+from bus_rl.rewards.costs import add_costs, integrate_tick_costs
 from bus_rl.sim.passengers import abandon_expired, board_visit
 from bus_rl.sim.vehicles import complete_expired_phase
 
@@ -50,14 +51,18 @@ def advance_tick(state: WorldState, scenario: Scenario) -> StepCosts:
     # Step 2: exogenous arrivals, then abandonment before any boarding at this boundary.
     _add_arrivals(state, scenario)
     abandoned = abandon_expired(state, config.patience_s, config.tick_s)
-    # Terminal visits may board, but the autonomous terminal dispatcher starts in Task 3.
+    # Board first, then let the autonomous terminal dispatcher choose a departure.
     for bus in state.vehicles.values():
         if bus.phase.name == "TERMINAL_IDLE" and bus.route_id is not None:
             stop_index = scenario.network.routes[bus.route_id].stops.index(bus.node)
             event = board_visit(state, bus.vehicle_id, bus.route_id, bus.direction, stop_index)
             boarded += event.boarded_count
             denied += event.first_denied_count
+    from bus_rl.sim.dispatcher import dispatch_ready
+
+    dispatch_ready(state, scenario)
     # Step 5: advance timers over [t, t + tick).
+    costs = integrate_tick_costs(state, config.tick_s)
     for bus in state.vehicles.values():
         if bus.remaining_s > 0:
             bus.remaining_s = max(0, bus.remaining_s - config.tick_s)
@@ -71,18 +76,24 @@ def advance_tick(state: WorldState, scenario: Scenario) -> StepCosts:
             "abandoned": abandoned,
         }
     )
-    return StepCosts(first_denied_count=denied, abandoned_count=abandoned)
+    costs.first_denied_count = denied
+    costs.abandoned_count = abandoned
+    if state.current_time_s == config.horizon_s and not state.terminal_settled:
+        costs.terminal_unfinished_count = state.waiting_count + state.onboard_count
+        state.terminal_settled = True
+    return costs
 
 
 def advance_interval(
     state: WorldState, scenario: Scenario, action: Action | None = None
 ) -> StepCosts:
     action = action or Action()
-    if action.kind != "NOOP":
-        raise ValueError("Task 2 only supports NOOP; operational actions arrive in Task 3")
+    from bus_rl.sim.dispatcher import apply_action
+
+    missions = apply_action(state, scenario, action)
     result = StepCosts()
     for _ in range(scenario.config.control_interval_s // scenario.config.tick_s):
         tick_costs = advance_tick(state, scenario)
-        result.first_denied_count += tick_costs.first_denied_count
-        result.abandoned_count += tick_costs.abandoned_count
+        result = add_costs(result, tick_costs)
+    result.mission_changes += missions
     return result

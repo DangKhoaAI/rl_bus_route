@@ -23,6 +23,13 @@ def begin_service_edge(state: WorldState, scenario: Scenario, bus_id: int) -> No
 
 def complete_expired_phase(state: WorldState, scenario: Scenario, bus: Vehicle) -> tuple[int, int]:
     """Complete one phase event, returning boarded and first-denied counters."""
+    if bus.phase is Phase.DEADHEAD:
+        assert bus.next_node is not None
+        bus.node, bus.next_node = bus.next_node, None
+        bus.phase = (
+            Phase.DEPOT_IDLE if bus.node == scenario.network.depot_node else Phase.TERMINAL_IDLE
+        )
+        return 0, 0
     if bus.phase is Phase.SERVICE_MOVING:
         assert bus.next_node is not None and bus.route_id is not None
         bus.node = bus.next_node

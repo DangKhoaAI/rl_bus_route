@@ -120,6 +120,7 @@ class Vehicle:
     next_node: int | None = None
     passengers: list[PassengerCohort] = field(default_factory=list)
     visit_id: int = 0
+    cooldown_until_s: int = 0
 
     @property
     def load(self) -> int:
@@ -131,14 +132,23 @@ class Vehicle:
 @dataclass(frozen=True)
 class Action:
     kind: str = "NOOP"
+    bus_id: int | None = None
+    route_id: int | None = None
+    headway_s: int | None = None
 
 
 @dataclass
 class StepCosts:
-    """Raw interval counters; reward accounting is introduced in Task 4."""
-
+    waiting_pm: float = 0.0
+    onboard_pm: float = 0.0
+    crowding_pm: float = 0.0
+    active_bus_min: float = 0.0
+    deadhead_bus_min: float = 0.0
+    excessive_wait_pm: float = 0.0
     first_denied_count: int = 0
     abandoned_count: int = 0
+    mission_changes: int = 0
+    terminal_unfinished_count: int = 0
 
 
 @dataclass
@@ -149,6 +159,10 @@ class WorldState:
     generated_total: int = 0
     next_cohort_id: int = 0
     event_log: list[dict[str, object]] = field(default_factory=list)
+    headway_targets_s: dict[int, int] = field(default_factory=dict)
+    headway_changed_at_s: dict[int, int] = field(default_factory=dict)
+    last_departure_s: dict[tuple[int, int], int] = field(default_factory=dict)
+    terminal_settled: bool = False
 
     @property
     def generated_count(self) -> int:
@@ -238,4 +252,15 @@ def initial_state(scenario: Scenario) -> WorldState:
             direction=spec.direction,
             phase=phase,
         )
-    return WorldState(current_time_s=0, vehicles=vehicles, cohorts=[])
+    return WorldState(
+        current_time_s=0,
+        vehicles=vehicles,
+        cohorts=[],
+        headway_targets_s={route.route_id: 900 for route in scenario.network.routes},
+        headway_changed_at_s={route.route_id: -600 for route in scenario.network.routes},
+        last_departure_s={
+            (route.route_id, direction): -900
+            for route in scenario.network.routes
+            for direction in (1, -1)
+        },
+    )

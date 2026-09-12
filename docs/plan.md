@@ -16,7 +16,9 @@ Thay thế plan v0.1 tại commit `a806bb6`; không còn task candidate selectio
 
 - **T1 hoàn thành:** domain/scenario/JSON+NPZ IO, hashing, deterministic manifest seeds và test data đã có.
 - **T2 hoàn thành:** passenger lifecycle, frozen travel, dwell/layover và fixed-tick NOOP engine đã có.
-- Kiểm tra T1–T2: `10 passed`, `ruff check .`, format check `src tests` (2026-09-12).
+- **T3 hoàn thành:** static 221-slot action schema, valid-action mask, reserve dispatch, guarded recall, headway target và autonomous terminal dispatch M1 đã có.
+- **T4 hoàn thành:** raw passenger/vehicle interval costs, event penalties và terminal-unfinished settlement đã có.
+- Kiểm tra T1–T4: `15 passed`, `ruff check .`, format check `src tests` (2026-09-12).
 - PyTorch CPU-only đã được khóa trong `uv.lock`; cần chạy lại `uv sync --extra dev` để hoàn tất wheel trong môi trường mới trước Task 5.
 
 ## Global Constraints
