@@ -1,0 +1,443 @@
+{
+  "setup_s": 0.533601371000259,
+  "learn_s": 21.707541697000124,
+  "torch_threads": 16,
+  "eval_s": 8.632128224999178,
+  "eval_days": 10,
+  "eval_mean_cost": 15471.25,
+  "timesteps": 2048,
+  "n_envs": 4,
+  "n_steps": 256,
+  "n_epochs": 4,
+  "decisions_per_s": 94.34509114788541,
+  "events": [
+    {
+      "event": "learn_start",
+      "seconds": 0.0,
+      "timesteps": 0
+    },
+    {
+      "event": "rollout_collect",
+      "seconds": 10.598820051996881,
+      "timesteps": 1024,
+      "env": [
+        {
+          "name": "env.step",
+          "seconds": 10.033394822035916,
+          "calls": 1024,
+          "us_per_call": 9798.23713089445
+        },
+        {
+          "name": "env.advance_interval",
+          "seconds": 9.052927222943254,
+          "calls": 1024,
+          "us_per_call": 8840.749241155521
+        },
+        {
+          "name": "engine.ticks",
+          "seconds": 8.890111812041141,
+          "calls": 1024,
+          "us_per_call": 8681.749816446427
+        },
+        {
+          "name": "engine.complete_phase",
+          "seconds": 2.6582458660268458,
+          "calls": 4096,
+          "us_per_call": 648.9858071354604
+        },
+        {
+          "name": "engine.board",
+          "seconds": 2.270846624091064,
+          "calls": 4096,
+          "us_per_call": 554.4059140847323
+        },
+        {
+          "name": "engine.tick_costs",
+          "seconds": 1.5630388469580794,
+          "calls": 4096,
+          "us_per_call": 381.60128099562485
+        },
+        {
+          "name": "engine.abandon",
+          "seconds": 1.120015380129189,
+          "calls": 4096,
+          "us_per_call": 273.4412549143528
+        },
+        {
+          "name": "engine.conservation",
+          "seconds": 0.8493661601169151,
+          "calls": 4096,
+          "us_per_call": 207.36478518479373
+        },
+        {
+          "name": "env.observe",
+          "seconds": 0.7201569179087528,
+          "calls": 1032,
+          "us_per_call": 697.8264708418147
+        },
+        {
+          "name": "env.action_masks",
+          "seconds": 0.4043930919833656,
+          "calls": 2048,
+          "us_per_call": 197.45756444500273
+        },
+        {
+          "name": "engine.arrivals",
+          "seconds": 0.1534022860978439,
+          "calls": 4096,
+          "us_per_call": 37.45173000435642
+        },
+        {
+          "name": "engine.apply_action",
+          "seconds": 0.15037580900389003,
+          "calls": 1024,
+          "us_per_call": 146.85137598036135
+        }
+      ]
+    },
+    {
+      "event": "ppo_update",
+      "seconds": 0.13043915500020375,
+      "timesteps": 1024
+    },
+    {
+      "event": "rollout_collect",
+      "seconds": 10.8227796650026,
+      "timesteps": 2048,
+      "env": [
+        {
+          "name": "env.step",
+          "seconds": 10.281252210013918,
+          "calls": 1024,
+          "us_per_call": 10040.285361341717
+        },
+        {
+          "name": "env.advance_interval",
+          "seconds": 9.28819825201208,
+          "calls": 1024,
+          "us_per_call": 9070.506105480546
+        },
+        {
+          "name": "engine.ticks",
+          "seconds": 9.127809737998177,
+          "calls": 1024,
+          "us_per_call": 8913.876697263844
+        },
+        {
+          "name": "engine.complete_phase",
+          "seconds": 2.7254846369723964,
+          "calls": 4096,
+          "us_per_call": 665.401522698339
+        },
+        {
+          "name": "engine.board",
+          "seconds": 2.3583722149596724,
+          "calls": 4096,
+          "us_per_call": 575.7744665428888
+        },
+        {
+          "name": "engine.tick_costs",
+          "seconds": 1.6049443069459812,
+          "calls": 4096,
+          "us_per_call": 391.8321061879837
+        },
+        {
+          "name": "engine.abandon",
+          "seconds": 1.1437131092206982,
+          "calls": 4096,
+          "us_per_call": 279.22683330583453
+        },
+        {
+          "name": "engine.conservation",
+          "seconds": 0.8657321037644579,
+          "calls": 4096,
+          "us_per_call": 211.3603768956196
+        },
+        {
+          "name": "env.observe",
+          "seconds": 0.7306759889761452,
+          "calls": 1032,
+          "us_per_call": 708.0193691629314
+        },
+        {
+          "name": "env.action_masks",
+          "seconds": 0.40519925499756937,
+          "calls": 2048,
+          "us_per_call": 197.85119872928192
+        },
+        {
+          "name": "engine.arrivals",
+          "seconds": 0.15452759705658536,
+          "calls": 4096,
+          "us_per_call": 37.72646412514291
+        },
+        {
+          "name": "engine.apply_action",
+          "seconds": 0.14825404294242617,
+          "calls": 1024,
+          "us_per_call": 144.77933881096305
+        }
+      ]
+    },
+    {
+      "event": "ppo_update",
+      "seconds": 0.15250589000061154,
+      "timesteps": 2048
+    },
+    {
+      "event": "learn_total",
+      "seconds": 21.705897702002403,
+      "timesteps": 2048
+    }
+  ],
+  "learn_functions": {
+    "rollout_collect": 21.42159971699948,
+    "ppo_update": 0.2829450450008153
+  },
+  "eval_functions": [
+    {
+      "name": "env.step",
+      "seconds": 7.382884020989877,
+      "calls": 1200,
+      "us_per_call": 6152.403350824898
+    },
+    {
+      "name": "env.advance_interval",
+      "seconds": 6.638808668987622,
+      "calls": 1200,
+      "us_per_call": 5532.340557489685
+    },
+    {
+      "name": "engine.ticks",
+      "seconds": 6.623441807038034,
+      "calls": 1200,
+      "us_per_call": 5519.5348391983625
+    },
+    {
+      "name": "engine.board",
+      "seconds": 3.1519365129206562,
+      "calls": 4800,
+      "us_per_call": 656.6534401918034
+    },
+    {
+      "name": "engine.complete_phase",
+      "seconds": 1.1934753668647318,
+      "calls": 4800,
+      "us_per_call": 248.64070143015246
+    },
+    {
+      "name": "engine.tick_costs",
+      "seconds": 0.7807110181674943,
+      "calls": 4800,
+      "us_per_call": 162.64812878489465
+    },
+    {
+      "name": "engine.abandon",
+      "seconds": 0.7417988109664293,
+      "calls": 4800,
+      "us_per_call": 154.54141895133944
+    },
+    {
+      "name": "env.observe",
+      "seconds": 0.5900353279139381,
+      "calls": 1210,
+      "us_per_call": 487.63250240821327
+    },
+    {
+      "name": "engine.conservation",
+      "seconds": 0.47077613083820324,
+      "calls": 4800,
+      "us_per_call": 98.07836059129235
+    },
+    {
+      "name": "env.action_masks",
+      "seconds": 0.23780429686667048,
+      "calls": 2400,
+      "us_per_call": 99.08512369444604
+    },
+    {
+      "name": "engine.arrivals",
+      "seconds": 0.13259672486310592,
+      "calls": 4800,
+      "us_per_call": 27.624317679813736
+    },
+    {
+      "name": "engine.dispatch_ready",
+      "seconds": 0.0640000839739514,
+      "calls": 4800,
+      "us_per_call": 13.333350827906543
+    },
+    {
+      "name": "env.validate_obs",
+      "seconds": 0.017992924887948902,
+      "calls": 1210,
+      "us_per_call": 14.87018585780901
+    },
+    {
+      "name": "eval.summarize",
+      "seconds": 0.012256109999725595,
+      "calls": 10,
+      "us_per_call": 1225.6109999725595
+    },
+    {
+      "name": "engine.apply_action",
+      "seconds": 0.006835794050857658,
+      "calls": 1200,
+      "us_per_call": 5.696495042381382
+    },
+    {
+      "name": "env.interval_cost",
+      "seconds": 0.001822972066293005,
+      "calls": 1200,
+      "us_per_call": 1.519143388577504
+    }
+  ],
+  "cprofile_top": [
+    {
+      "ncalls": "45368199",
+      "tottime": 7.543,
+      "percall": 0.0,
+      "cumtime": 7.543,
+      "function": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/domain.py:185(<genexpr>)"
+    },
+    {
+      "ncalls": "1228745/1130441",
+      "tottime": 2.451,
+      "percall": 0.0,
+      "cumtime": 13.049,
+      "function": "{built-in method builtins.sum}"
+    },
+    {
+      "ncalls": "48201",
+      "tottime": 1.323,
+      "percall": 0.0,
+      "cumtime": 1.97,
+      "function": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/sim/passengers.py:64(<genexpr>)"
+    },
+    {
+      "ncalls": "2068",
+      "tottime": 1.234,
+      "percall": 0.001,
+      "cumtime": 1.445,
+      "function": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/env/observation.py:26(observe)"
+    },
+    {
+      "ncalls": "7539766",
+      "tottime": 1.095,
+      "percall": 0.0,
+      "cumtime": 1.45,
+      "function": "/home/khoa/.local/share/uv/python/cpython-3.11.14-linux-x86_64-gnu/lib/python3.11/enum.py:193(__get__)"
+    },
+    {
+      "ncalls": "12843",
+      "tottime": 0.975,
+      "percall": 0.0,
+      "cumtime": 2.389,
+      "function": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/rewards/costs.py:31(<genexpr>)"
+    },
+    {
+      "ncalls": "21968",
+      "tottime": 0.77,
+      "percall": 0.0,
+      "cumtime": 0.77,
+      "function": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/sim/passengers.py:81(<listcomp>)"
+    },
+    {
+      "ncalls": "6742868",
+      "tottime": 0.646,
+      "percall": 0.0,
+      "cumtime": 0.646,
+      "function": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/sim/passengers.py:17(_eligible)"
+    },
+    {
+      "ncalls": "5227",
+      "tottime": 0.577,
+      "percall": 0.0,
+      "cumtime": 1.022,
+      "function": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/control/guards.py:57(valid_action_mask)"
+    },
+    {
+      "ncalls": "8192",
+      "tottime": 0.524,
+      "percall": 0.0,
+      "cumtime": 2.251,
+      "function": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/sim/passengers.py:99(abandon_expired)"
+    },
+    {
+      "ncalls": "4138997",
+      "tottime": 0.5,
+      "percall": 0.0,
+      "cumtime": 0.5,
+      "function": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/domain.py:137(<genexpr>)"
+    },
+    {
+      "ncalls": "7441462",
+      "tottime": 0.346,
+      "percall": 0.0,
+      "cumtime": 0.346,
+      "function": "/home/khoa/.local/share/uv/python/cpython-3.11.14-linux-x86_64-gnu/lib/python3.11/enum.py:1257(value)"
+    },
+    {
+      "ncalls": "8192",
+      "tottime": 0.284,
+      "percall": 0.0,
+      "cumtime": 0.295,
+      "function": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/sim/engine.py:12(_add_arrivals)"
+    },
+    {
+      "ncalls": "967111",
+      "tottime": 0.256,
+      "percall": 0.0,
+      "cumtime": 1.109,
+      "function": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/domain.py:135(load)"
+    },
+    {
+      "ncalls": "8192",
+      "tottime": 0.188,
+      "percall": 0.0,
+      "cumtime": 17.955,
+      "function": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/sim/engine.py:41(advance_tick)"
+    },
+    {
+      "ncalls": "3272",
+      "tottime": 0.183,
+      "percall": 0.0,
+      "cumtime": 0.183,
+      "function": "{built-in method torch._C._nn.linear}"
+    },
+    {
+      "ncalls": "21968",
+      "tottime": 0.134,
+      "percall": 0.0,
+      "cumtime": 7.543,
+      "function": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/sim/passengers.py:54(board_visit)"
+    },
+    {
+      "ncalls": "634504",
+      "tottime": 0.128,
+      "percall": 0.0,
+      "cumtime": 0.79,
+      "function": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/domain.py:215(<genexpr>)"
+    },
+    {
+      "ncalls": "8192",
+      "tottime": 0.113,
+      "percall": 0.0,
+      "cumtime": 0.236,
+      "function": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/sim/dispatcher.py:92(dispatch_ready)"
+    },
+    {
+      "ncalls": "48808",
+      "tottime": 0.094,
+      "percall": 0.0,
+      "cumtime": 10.17,
+      "function": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/domain.py:207(assert_conservation)"
+    }
+  ],
+  "projected": {
+    "full_timesteps": 245760,
+    "train_only_s": 2604.905003640015,
+    "val_callbacks_s": 172.64256449998356,
+    "note": "train_only scales linearly; val_callbacks assumes 10-day eval every 12,288 steps"
+  }
+}

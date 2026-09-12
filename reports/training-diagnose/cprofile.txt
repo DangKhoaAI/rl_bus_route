@@ -1,0 +1,38 @@
+         80592848 function calls (80403701 primitive calls) in 21.669 seconds
+
+   Ordered by: internal time
+   List reduced from 627 to 30 due to restriction <30>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+ 45368199    7.543    0.000    7.543    0.000 /home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/domain.py:185(<genexpr>)
+1228745/1130441    2.451    0.000   13.049    0.000 {built-in method builtins.sum}
+    48201    1.323    0.000    1.970    0.000 /home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/sim/passengers.py:64(<genexpr>)
+     2068    1.234    0.001    1.445    0.001 /home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/env/observation.py:26(observe)
+  7539766    1.095    0.000    1.450    0.000 /home/khoa/.local/share/uv/python/cpython-3.11.14-linux-x86_64-gnu/lib/python3.11/enum.py:193(__get__)
+    12843    0.975    0.000    2.389    0.000 /home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/rewards/costs.py:31(<genexpr>)
+    21968    0.770    0.000    0.770    0.000 /home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/sim/passengers.py:81(<listcomp>)
+  6742868    0.646    0.000    0.646    0.000 /home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/sim/passengers.py:17(_eligible)
+     5227    0.577    0.000    1.022    0.000 /home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/control/guards.py:57(valid_action_mask)
+     8192    0.524    0.000    2.251    0.000 /home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/sim/passengers.py:99(abandon_expired)
+  4138997    0.500    0.000    0.500    0.000 /home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/domain.py:137(<genexpr>)
+  7441462    0.346    0.000    0.346    0.000 /home/khoa/.local/share/uv/python/cpython-3.11.14-linux-x86_64-gnu/lib/python3.11/enum.py:1257(value)
+     8192    0.284    0.000    0.295    0.000 /home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/sim/engine.py:12(_add_arrivals)
+   967111    0.256    0.000    1.109    0.000 /home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/domain.py:135(load)
+     8192    0.188    0.000   17.955    0.002 /home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/sim/engine.py:41(advance_tick)
+     3272    0.183    0.000    0.183    0.000 {built-in method torch._C._nn.linear}
+    21968    0.134    0.000    7.543    0.000 /home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/sim/passengers.py:54(board_visit)
+   634504    0.128    0.000    0.790    0.000 /home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/domain.py:215(<genexpr>)
+     8192    0.113    0.000    0.236    0.000 /home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/sim/dispatcher.py:92(dispatch_ready)
+    48808    0.094    0.000   10.170    0.000 /home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/domain.py:207(assert_conservation)
+       32    0.076    0.002    0.076    0.002 {method 'run_backward' of 'torch._C._EngineBase' objects}
+  1382555    0.073    0.000    0.073    0.000 {method 'get' of 'dict' objects}
+   211648    0.070    0.000    9.650    0.000 /home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/domain.py:184(_count)
+   151632    0.063    0.000    0.078    0.000 /home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/timing.py:20(span)
+    59886    0.057    0.000    0.871    0.000 {built-in method builtins.any}
+   184040    0.056    0.000    0.184    0.000 /home/khoa/KHOA/FPTStudy/Semester8/REL/Project/src/bus_rl/control/guards.py:25(_donor_guard)
+     1632    0.054    0.000    0.054    0.000 {method 'logsumexp' of 'torch._C.TensorBase' objects}
+65875/1025    0.051    0.000    0.110    0.000 /home/khoa/.local/share/uv/python/cpython-3.11.14-linux-x86_64-gnu/lib/python3.11/copy.py:128(deepcopy)
+   395059    0.050    0.000    0.050    0.000 {built-in method builtins.max}
+   232703    0.048    0.000    0.048    0.000 <string>:2(__eq__)
+
+
