@@ -5,31 +5,34 @@ from __future__ import annotations
 import json
 from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
-from enum import StrEnum
+from enum import IntEnum
 from hashlib import sha256
 
 import numpy as np
 
 
-class Phase(StrEnum):
-    DEPOT_IDLE = "DEPOT_IDLE"
-    DEADHEAD = "DEADHEAD"
-    TERMINAL_IDLE = "TERMINAL_IDLE"
-    SERVICE_MOVING = "SERVICE_MOVING"
-    SERVICE_DWELL = "SERVICE_DWELL"
-    LAYOVER = "LAYOVER"
+class Phase(IntEnum):
+    DEPOT_IDLE = 0
+    DEADHEAD = 1
+    TERMINAL_IDLE = 2
+    SERVICE_MOVING = 3
+    SERVICE_DWELL = 4
+    LAYOVER = 5
 
 
-class Pattern(StrEnum):
-    FULL = "FULL"
-    SHORT = "SHORT"
+class Pattern(IntEnum):
+    FULL = 0
+    SHORT = 1
 
 
-class PassengerStatus(StrEnum):
-    WAITING = "WAITING"
-    ONBOARD = "ONBOARD"
-    COMPLETED = "COMPLETED"
-    ABANDONED = "ABANDONED"
+class PassengerStatus(IntEnum):
+    WAITING = 0
+    ONBOARD = 1
+    COMPLETED = 2
+    ABANDONED = 3
+
+
+CONSERVATION_CHECKS = False
 
 
 @dataclass(frozen=True)
@@ -131,12 +134,7 @@ class Vehicle:
     pattern: Pattern = Pattern.FULL
     turn_stop: int | None = None
     pending_extra: bool = False
-
-    @property
-    def load(self) -> int:
-        return sum(
-            cohort.count for cohort in self.passengers if cohort.status is PassengerStatus.ONBOARD
-        )
+    load: int = 0
 
 
 @dataclass(frozen=True)
@@ -166,7 +164,12 @@ class WorldState:
     current_time_s: int
     vehicles: dict[int, Vehicle]
     cohorts: list[PassengerCohort]
+    finished: list[PassengerCohort] = field(default_factory=list)
     generated_total: int = 0
+    waiting_total: int = 0
+    onboard_total: int = 0
+    completed_total: int = 0
+    abandoned_total: int = 0
     next_cohort_id: int = 0
     event_log: list[dict[str, object]] = field(default_factory=list)
     departures: list[dict[str, object]] = field(default_factory=list)
@@ -181,39 +184,64 @@ class WorldState:
     def generated_count(self) -> int:
         return self.generated_total
 
-    def _count(self, status: PassengerStatus) -> int:
-        return sum(c.count for c in self.cohorts if c.status is status)
-
     @property
     def waiting_count(self) -> int:
-        return self._count(PassengerStatus.WAITING)
+        return self.waiting_total
 
     @property
     def onboard_count(self) -> int:
-        return self._count(PassengerStatus.ONBOARD)
+        return self.onboard_total
 
     @property
     def completed_count(self) -> int:
-        return self._count(PassengerStatus.COMPLETED)
+        return self.completed_total
 
     @property
     def abandoned_count(self) -> int:
-        return self._count(PassengerStatus.ABANDONED)
+        return self.abandoned_total
 
     @property
     def depot_count(self) -> int:
         return sum(v.phase is Phase.DEPOT_IDLE for v in self.vehicles.values())
 
+    def add_waiting(self, cohort: PassengerCohort) -> None:
+        self.cohorts.append(cohort)
+        self.waiting_total += cohort.count
+        self.generated_total += cohort.count
+        if cohort.cohort_id >= self.next_cohort_id:
+            self.next_cohort_id = cohort.cohort_id + 1
+
+    def iter_cohorts(self):
+        yield from self.cohorts
+        for bus in self.vehicles.values():
+            yield from bus.passengers
+        yield from self.finished
+
     def assert_conservation(self) -> None:
         passengers = (
-            self.waiting_count + self.onboard_count + self.completed_count + self.abandoned_count
+            self.waiting_total + self.onboard_total + self.completed_total + self.abandoned_total
         )
-        if passengers != self.generated_count:
+        if passengers != self.generated_total:
             raise AssertionError(
-                f"passenger conservation failed: {self.generated_count} != {passengers}"
+                f"passenger conservation failed: {self.generated_total} != {passengers}"
             )
-        if any(v.load > v.capacity for v in self.vehicles.values()):
+        if any(bus.load > bus.capacity for bus in self.vehicles.values()):
             raise AssertionError("vehicle capacity exceeded")
+        if not CONSERVATION_CHECKS:
+            return
+        if sum(cohort.count for cohort in self.cohorts) != self.waiting_total:
+            raise AssertionError("waiting counter drifted from the hot list")
+        onboard = sum(bus.load for bus in self.vehicles.values())
+        if onboard != self.onboard_total:
+            raise AssertionError("onboard counter drifted from cached vehicle loads")
+        done = sum(cohort.count for cohort in self.finished)
+        if done != self.completed_total + self.abandoned_total:
+            raise AssertionError("finished counter drifted from the archive list")
+
+
+def maybe_check_conservation(state: WorldState) -> None:
+    if CONSERVATION_CHECKS:
+        state.assert_conservation()
 
 
 def generate_base_network(config: SimConfig) -> Network:

@@ -2,7 +2,15 @@
 
 from __future__ import annotations
 
-from bus_rl.domain import Action, PassengerCohort, Scenario, StepCosts, WorldState
+from bus_rl.domain import (
+    Action,
+    PassengerCohort,
+    Phase,
+    Scenario,
+    StepCosts,
+    WorldState,
+    maybe_check_conservation,
+)
 from bus_rl.rewards.costs import add_costs, integrate_tick_costs
 from bus_rl.sim.passengers import abandon_expired, board_visit
 from bus_rl.sim.vehicles import complete_expired_phase
@@ -36,6 +44,7 @@ def _add_arrivals(state: WorldState, scenario: Scenario) -> None:
                     )
                     state.next_cohort_id += 1
                     state.generated_total += count
+                    state.waiting_total += count
 
 
 def advance_tick(state: WorldState, scenario: Scenario) -> StepCosts:
@@ -55,7 +64,7 @@ def advance_tick(state: WorldState, scenario: Scenario) -> StepCosts:
         abandoned = abandon_expired(state, config.patience_s, config.tick_s)
     with TIMERS.span("engine.board"):
         for bus in state.vehicles.values():
-            if bus.phase.name == "TERMINAL_IDLE" and bus.route_id is not None:
+            if bus.phase is Phase.TERMINAL_IDLE and bus.route_id is not None:
                 stop_index = scenario.network.routes[bus.route_id].stops.index(bus.node)
                 event = board_visit(state, bus.vehicle_id, bus.route_id, bus.direction, stop_index)
                 boarded += event.boarded_count
@@ -71,7 +80,7 @@ def advance_tick(state: WorldState, scenario: Scenario) -> StepCosts:
             bus.remaining_s = max(0, bus.remaining_s - config.tick_s)
     state.current_time_s += config.tick_s
     with TIMERS.span("engine.conservation"):
-        state.assert_conservation()
+        maybe_check_conservation(state)
     state.event_log.append(
         {
             "time_s": state.current_time_s,

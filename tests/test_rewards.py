@@ -61,9 +61,8 @@ def test_horizon_settles_unfinished_and_skips_already_abandoned():
     config = SimConfig(horizon_s=120, demand_end_s=0)
     scenario = generate_scenario(5, config)
     state = initial_state(scenario)
-    state.cohorts.append(PassengerCohort(0, 0, 0, 1, 0, 5, 0, 4))
-    state.cohorts.append(PassengerCohort(1, 1, 0, 1, 0, 5, -90, 2))
-    state.generated_total = 6
+    state.add_waiting(PassengerCohort(0, 0, 0, 1, 0, 5, 0, 4))
+    state.add_waiting(PassengerCohort(1, 1, 0, 1, 0, 5, -90, 2))
     for bus in state.vehicles.values():
         bus.phase = Phase.DEPOT_IDLE
         bus.route_id = None

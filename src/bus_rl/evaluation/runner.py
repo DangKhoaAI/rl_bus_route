@@ -78,7 +78,7 @@ def summarize_episode(
     route_waits: dict[int, list[float]] = defaultdict(list)
     excessive = 0
     unique_denied = 0
-    for cohort in state.cohorts:
+    for cohort in state.iter_cohorts():
         wait, censored = _wait_minutes(cohort, state, tick_s)
         waits.extend([wait] * cohort.count)
         censored_flags.extend([censored] * cohort.count)
@@ -158,19 +158,13 @@ def _trace_row(env, action_kind: str) -> dict:
     state = env.state
     queues = []
     for route in range(env.config.route_count):
-        queues.append(
-            sum(
-                cohort.count
-                for cohort in state.cohorts
-                if cohort.route_id == route and cohort.status is PassengerStatus.WAITING
-            )
-        )
+        queues.append(sum(cohort.count for cohort in state.cohorts if cohort.route_id == route))
     buses = [
         {
             "id": bus.vehicle_id,
-            "phase": bus.phase.value,
+            "phase": bus.phase.name,
             "route_id": bus.route_id,
-            "pattern": bus.pattern.value,
+            "pattern": bus.pattern.name,
             "load": bus.load,
         }
         for bus in state.vehicles.values()

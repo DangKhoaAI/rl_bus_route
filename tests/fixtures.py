@@ -40,9 +40,7 @@ def empty_scenario(stage: str = "M1"):
 
 def waiting_state(n: int, destination: int = 5, stage: str = "M1"):
     state = initial_state(empty_scenario(stage))
-    state.cohorts.append(PassengerCohort(0, 0, 0, 1, 0, destination, 0, n))
-    state.next_cohort_id = 1
-    state.generated_total = n
+    state.add_waiting(PassengerCohort(0, 0, 0, 1, 0, destination, 0, n))
     return state
 
 

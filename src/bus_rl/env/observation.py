@@ -4,7 +4,6 @@ import numpy as np
 
 from bus_rl.domain import PassengerStatus, Pattern, Phase, Scenario, WorldState
 
-PHASES = tuple(Phase)
 ROUTE_OFFSET = 6  # depot at 6, routes 0..3 at 7..10
 PATTERN_OFFSET = 11
 DIRECTION_OFFSET = 13
@@ -39,7 +38,7 @@ def observe(
     age_count = np.zeros((4, 2, 8), np.float64)
     last_start = state.current_time_s - config.control_interval_s
 
-    for cohort in state.cohorts:
+    for cohort in state.iter_cohorts():
         direction = 0 if cohort.direction == 1 else 1
         origin = cohort.origin_index
         if cohort.status is PassengerStatus.WAITING:
@@ -112,7 +111,7 @@ def observe(
     for vehicle in state.vehicles.values():
         vehicle_valid[vehicle.vehicle_id] = 1
         row = vehicles[vehicle.vehicle_id]
-        row[PHASES.index(vehicle.phase)] = 1
+        row[int(vehicle.phase)] = 1
         if vehicle.route_id is None:
             row[ROUTE_OFFSET] = 1
             row[TARGET_OFFSET] = 1

@@ -29,9 +29,9 @@ def integrate_tick_costs(state: WorldState, duration_s: int) -> StepCosts:
     deadhead = sum(bus.phase is Phase.DEADHEAD for bus in state.vehicles.values()) * minutes
     excessive = (
         sum(
-            c.count
-            for c in state.cohorts
-            if c.status.value == "WAITING" and state.current_time_s - c.arrival_tick * 30 >= 900
+            cohort.count
+            for cohort in state.cohorts
+            if state.current_time_s - cohort.arrival_tick * 30 >= 900
         )
         * minutes
     )
@@ -49,7 +49,7 @@ def mean_waiting_minutes(state: WorldState, tick_s: int = 30) -> float | None:
     if state.generated_count == 0:
         return None
     total = 0.0
-    for cohort in state.cohorts:
+    for cohort in state.iter_cohorts():
         if cohort.status is PassengerStatus.COMPLETED and cohort.boarding_tick is not None:
             end_s = cohort.boarding_tick * tick_s
         elif cohort.status is PassengerStatus.ABANDONED and cohort.abandonment_tick is not None:

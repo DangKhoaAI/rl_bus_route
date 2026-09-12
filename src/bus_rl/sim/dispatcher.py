@@ -118,7 +118,7 @@ def dispatch_ready(state: WorldState, scenario: Scenario) -> None:
                         "route_id": route.route_id,
                         "direction": direction,
                         "bus_id": bus.vehicle_id,
-                        "pattern": bus.pattern.value,
+                        "pattern": bus.pattern.name,
                     }
                 )
                 continue

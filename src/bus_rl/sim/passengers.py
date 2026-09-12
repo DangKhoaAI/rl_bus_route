@@ -4,7 +4,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from bus_rl.domain import PassengerCohort, PassengerStatus, Pattern, Vehicle, WorldState
+from bus_rl.domain import (
+    PassengerCohort,
+    PassengerStatus,
+    Pattern,
+    Vehicle,
+    WorldState,
+    maybe_check_conservation,
+)
 
 
 @dataclass(frozen=True)
@@ -47,8 +54,11 @@ def _split_for_boarding(
     )
     state.next_cohort_id += 1
     cohort.count -= count
-    state.cohorts.append(boarded)
-    state.vehicles[bus_id].passengers.append(boarded)
+    state.waiting_total -= count
+    state.onboard_total += count
+    bus = state.vehicles[bus_id]
+    bus.passengers.append(boarded)
+    bus.load += count
 
 
 def board_visit(
@@ -79,32 +89,43 @@ def board_visit(
             cohort.first_denied = True
             denied += cohort.count
     state.cohorts[:] = [c for c in state.cohorts if c.count > 0]
-    state.assert_conservation()
+    maybe_check_conservation(state)
     return PassengerEvents(boarded_count=boarded, first_denied_count=denied)
 
 
 def alight_visit(state: WorldState, bus_id: int, stop_index: int) -> int:
     bus = state.vehicles[bus_id]
     alighted = 0
+    remaining: list[PassengerCohort] = []
     for cohort in bus.passengers:
         if cohort.destination_index == stop_index and cohort.status is PassengerStatus.ONBOARD:
             cohort.status = PassengerStatus.COMPLETED
             cohort.completion_tick = state.current_time_s // 30
             alighted += cohort.count
-    bus.passengers[:] = [c for c in bus.passengers if c.status is PassengerStatus.ONBOARD]
-    state.assert_conservation()
+            bus.load -= cohort.count
+            state.onboard_total -= cohort.count
+            state.completed_total += cohort.count
+            state.finished.append(cohort)
+        else:
+            remaining.append(cohort)
+    bus.passengers = remaining
+    maybe_check_conservation(state)
     return alighted
 
 
 def abandon_expired(state: WorldState, patience_s: int, tick_s: int) -> int:
     abandoned = 0
+    remaining: list[PassengerCohort] = []
     for cohort in state.cohorts:
-        if (
-            cohort.status is PassengerStatus.WAITING
-            and state.current_time_s - cohort.arrival_tick * tick_s >= patience_s
-        ):
+        if state.current_time_s - cohort.arrival_tick * tick_s >= patience_s:
             cohort.status = PassengerStatus.ABANDONED
             cohort.abandonment_tick = state.current_time_s // tick_s
             abandoned += cohort.count
-    state.assert_conservation()
+            state.waiting_total -= cohort.count
+            state.abandoned_total += cohort.count
+            state.finished.append(cohort)
+        else:
+            remaining.append(cohort)
+    state.cohorts = remaining
+    maybe_check_conservation(state)
     return abandoned
