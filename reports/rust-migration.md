@@ -388,19 +388,20 @@ One full L0-protocol seed per backend with identical schedules:
 `configs/experiments/core-threads2.toml` (4 envs, n_steps 256, batch 256,
 _epochs 4, seed 11, **2 torch threads**), budget **245,760 transitions**,
 validation every **12,288** transitions (20 evaluations) on **100 validation
-days**. Python ran first so Rust was measured on the warmer machine. Raw
-evidence: `reports/rust-migration/full-workflow.json`, with logs and
+days**. Python ran first so Rust was measured on the warmer machine; the host
+slowed ~16% over the session (an earlier Python seed took 523 s), so this table
+is the same-session pair and the earlier pair measured 3.60x. Raw evidence: `reports/rust-migration/full-workflow.json`, with logs and
 checkpoints under `runs/rust-migration/full-workflow/`.
 
 | Metric | Python | Rust | Ratio |
 |---|---:|---:|---:|
-| Learn + validation (`wall_time_s`) | 521.13 s | 146.95 s | **3.55x** |
-| Total wall incl. setup (`/usr/bin/time`) | 523.36 s | 149.30 s | **3.51x** |
-| Setup (reported separately) | 2.23 s | 2.35 s | — |
+| Learn + validation (`wall_time_s`) | 603.27 s | 161.19 s | **3.74x** |
+| Total wall incl. setup (`/usr/bin/time`) | 605.94 s | 163.64 s | **3.70x** |
+| Setup (reported separately) | 2.67 s | 2.45 s | — |
 | Transitions / episodes | 245,760 / 2,048 | 245,760 / 2,048 | — |
 | Evaluations x validation days | 20 x 100 | 20 x 100 | — |
 | Best validation cost | 13199.1325 | 13199.1325 | equal |
-| Peak RSS | 662 MB | 905 MB | 1.37x |
+| Peak RSS | 662 MB | 690 MB | 1.04x |
 
 **Parity.** All 20 validation costs are bit-identical (max abs diff 0.0), and
 the trained artifacts are byte-identical: `policy.pth`,
@@ -415,27 +416,32 @@ are equal. This closes the R4.3 parity question.
 `--eval-limit 10` isolates the cost: Python 280.31 s, Rust 76.21 s. The extra 90
 validation days x 20 evaluations cost Python 240.8 s (46% of its total) and Rust
 66.8 s (47%), so evaluation, not simulation, is now the largest remaining Python
-cost. R4.3 is accepted: the full Rust workflow is **3.51x** faster and every
+cost. R4.3 is accepted: the full Rust workflow is **3.70x** faster and every
 preceding gate passes.
 
-**Memory.** Rust peak RSS is 1.37x Python's (905 MB vs 662 MB). The first pass
-(the pre-fix numbers 1236 MB / 1.87x are kept in `full-workflow.json`) exposed a
-real wrapper bug, not an allocator property: `NativeBusDispatchEnv` eagerly
-built **one `Kernel` per scenario**, and each kernel allocates ~**243 KB** of
-per-episode scratch on its first episode and keeps it (bounded, reused later).
-With 500 train scenarios x 4 envs plus 100 validation scenarios that was ~500 MB
-of idle kernels; Python never pays it because it builds `WorldState` only for the
-active scenario. Measured directly: 500 kernels x one full episode = 118.8 MB
-(243.2 KB/kernel), a second pass over the same kernels = 0.0 MB, and a pure
-kernel loop that switches scenarios is flat (so the kernel itself is fine).
+**Memory.** Rust peak RSS is now **1.04x** Python's (690 MB vs 662 MB). The
+first pass peaked at 1236 MB (1.87x) and exposed two real storage bugs, not an
+allocator property:
 
-**Fix.** Kernels are now created lazily in `reset()` for the selected scenario,
-so each env holds a single active kernel; the 4-env DummyVecEnv loop dropped
-from 232 MB to 0.5 MB of retained heap (430x) with no throughput loss
-(~4.0-4.3k vs ~3.4-4.0k steps/s, within noise). Peak RSS fell 1236 -> 905 MB and
-training stayed byte-identical. The remaining **+243 MB** over Python is the
-shared native `ScenarioStore` (immutable tapes for all 600 scenarios, measured
-at 245.6 MB / ~409 KB per scenario), which is the deliberate R4 optimization.
+1. **Eager kernels.** `NativeBusDispatchEnv` built one `Kernel` per scenario, and
+   each kernel keeps ~243 KB of per-episode scratch after its first episode
+   (bounded, reused later). With 500 train scenarios x 4 envs + 100 validation
+   scenarios that was ~500 MB of idle kernels. Fixed by creating the kernel
+   lazily in `reset()`: the 4-env DummyVecEnv retained heap dropped from 232 MB
+   to 0.5 MB (430x) with no throughput loss.
+2. **Dense arrival tapes.** The shared store kept the oracle arrival tape
+   `(480, 3, 2, 6, 6) int32` = **405 KB/scenario**, but it is **98.5% zeros**
+   (1,509 nonzero of 103,680; measured). Native `SparseArrivals` now stores only
+   nonzero cells in a CSR-by-tick layout that preserves the exact scan order
+   `add_arrivals` uses, so the store for all 600 scenarios fell **245.6 MB ->
+   28.8 MB** (~48 KB/scenario). An interleaved A/B of the two `.so` files at
+   61,440 steps / 100-day evals measured sparse 40.0/38.5 s vs dense 40.0/39.1 s,
+   so sparse is not slower.
+
+The remaining **+28 MB** over Python is the deliberate packed store; both
+backends still hold the 244 MB of Python `Scenario` tapes. Python never pays for
+either issue because it builds `WorldState` on demand and keeps each tape once.
+Both fixes were verified byte-identical (20-point curve, weights, optimizer).
 
 ### Torch threads (chosen configuration)
 
@@ -484,9 +490,13 @@ absolute times are inflated but shares are informative) in
 - **Shared native scenario store**: `crates/bus-sim-py` `ScenarioStore` +
   `Kernel.from_store` pack each scenario once per process and share immutable
   tapes via `Arc`; `src/bus_rl/backend/native.py` caches stores by
-  `(scenario_hash, M-flags)`. 100 scenarios x 4 envs measure **40.6 MB shared**
-  vs **160 MB per-env copy** (~120 MB saved, ~4x); the 500-scenario figure
-  (~800 MB -> ~200 MB) is an extrapolation, not a measurement.
+  `(scenario_hash, M-flags)`. The arrival tape is stored sparse
+  (`SparseArrivals`, nonzero cells only in CSR-by-tick order) because the dense
+  oracle tape is 98.5% zeros: the store for **all 600 scenarios measures
+  28.8 MB (~48 KB/scenario)**, down from 245.6 MB with the dense tape.
+- **Lazy kernels**: kernels are built in `reset()` for the selected scenario
+  rather than one per scenario up front, because each kernel keeps ~243 KB of
+  episode scratch; see the R4.3 memory note above.
 - **Wrapper mask reuse**: `reset_contract`/`step_contract` already return the
   next mask; `NativeBusDispatchEnv` keeps it and `action_masks()` serves a copy,
   dropping the extra native `action_mask()` FFI call per step (verified by
@@ -495,8 +505,8 @@ absolute times are inflated but shares are informative) in
 Gate status: at the chosen 2 threads (same condition for both backends)
 simulation is 25.1x, isolated learn 4.17x (above the 4x stretch) and
 fixed-checkpoint eval 3.44x; all far above the 2x gate. The R4.3 full workflow
-is 3.51x with bit-identical training, so **R4 is accepted** and the native
-revision `cf8579ef16b5` is frozen for RL. Optimization should now target PPO
+is 3.70x with bit-identical training, so **R4 is accepted** and the native
+revision `a0cf649a4b64` is frozen for RL. Optimization should now target PPO
 update and evaluation inference, not the simulation core; batched multi-scenario
 inference is the next candidate for eval.
 
@@ -549,14 +559,13 @@ Artifacts:
 ## 9. Limitations and next steps
 
 - R0–R4 are accepted. R4.2 light gates pass (simulation ~24.9x, isolated
-  learn ~3.9–4.17x) and R4.3 full workflow is 3.51x with bit-identical training
+  learn ~3.9–4.17x) and R4.3 full workflow is 3.70x with bit-identical training
   (section 7). The remaining opportunity is evaluation, which is ~46% of the
   Python full-seed wall; batched multi-scenario inference is the next candidate.
-- Rust peak RSS is 1.37x Python's (905 MB vs 662 MB) for a full seed: +243 MB is
-  the shared native `ScenarioStore` for 600 scenarios (the deliberate R4
-  optimization). A first pass held an extra ~330 MB because the wrapper eagerly
-  built one kernel per scenario and each kernel keeps ~243 KB of episode scratch;
-  this was fixed by creating kernels lazily in `reset()` (section 7).
+- Rust peak RSS is 1.04x Python's (690 MB vs 662 MB) for a full seed. Two storage
+  bugs were found and fixed: eager per-scenario kernels (~243 KB each) and a
+  dense ~405 KB arrival tape that is 98.5% zeros (now sparse, store 245.6 ->
+  28.8 MB). The remaining +28 MB is the deliberate shared packed store.
 - The manifest records `git.sha`/`git.dirty` for the repo HEAD at build time and
   the reference checkpoint's origin revision separately; the frozen oracle
   contract is the physical/action/observation hashes and the fixture hashes, not
@@ -580,7 +589,7 @@ Artifacts:
 - [x] R1: native domain/lifecycle/actions/ticks/costs at oracle parity.
 - [x] R2: observation/history and mask parity accepted.
 - [x] R3: wrapper/evaluator/forecast/backend/provenance accepted.
-- [x] R4: correctness, 2x simulation and learn gates, and 3.51x full workflow
+- [x] R4: correctness, 2x simulation and learn gates, and 3.70x full workflow
   (bit-identical training) accepted.
 - [x] Historical reports preserved; measured results are separated from projections.
-- [x] Frozen native revision `cf8579ef16b5` recorded; task L0.1 in the RL plan is unlocked.
+- [x] Frozen native revision `a0cf649a4b64` recorded; task L0.1 in the RL plan is unlocked.

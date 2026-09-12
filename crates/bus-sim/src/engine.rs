@@ -22,38 +22,27 @@ fn add_arrivals(state: &mut WorldState, scenario: &Scenario) {
         return;
     }
     let tick = state.current_time_s / config.tick_s;
-    for route in 0..config.route_count {
-        for d_index in 0..2usize {
-            let direction = if d_index == 0 { 1 } else { -1 };
-            for origin in 0..config.stops_per_route {
-                for destination in 0..config.stops_per_route {
-                    let count =
-                        scenario.arrival(tick as usize, route, d_index, origin, destination) as i64;
-                    if count == 0 {
-                        continue;
-                    }
-                    let cohort_id = state.next_cohort_id;
-                    state.cohorts.push(PassengerCohort {
-                        cohort_id,
-                        lineage_id: cohort_id,
-                        route_id: route as u32,
-                        direction,
-                        origin_index: origin as u32,
-                        destination_index: destination as u32,
-                        arrival_tick: tick,
-                        count,
-                        status: PassengerStatus::Waiting,
-                        first_denied: false,
-                        boarding_tick: None,
-                        completion_tick: None,
-                        abandonment_tick: None,
-                    });
-                    state.next_cohort_id += 1;
-                    state.generated_total += count;
-                    state.waiting_total += count;
-                }
-            }
-        }
+    for entry in scenario.arrivals.at_tick(tick as usize) {
+        let direction = if entry.direction == 0 { 1 } else { -1 };
+        let cohort_id = state.next_cohort_id;
+        state.cohorts.push(PassengerCohort {
+            cohort_id,
+            lineage_id: cohort_id,
+            route_id: entry.route,
+            direction,
+            origin_index: entry.origin,
+            destination_index: entry.destination,
+            arrival_tick: tick,
+            count: entry.count,
+            status: PassengerStatus::Waiting,
+            first_denied: false,
+            boarding_tick: None,
+            completion_tick: None,
+            abandonment_tick: None,
+        });
+        state.next_cohort_id += 1;
+        state.generated_total += entry.count;
+        state.waiting_total += entry.count;
     }
 }
 

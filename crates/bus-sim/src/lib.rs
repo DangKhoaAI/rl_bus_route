@@ -64,8 +64,7 @@ pub fn scenario_from_json(
         config: payload.config,
         network: payload.network,
         fleet: payload.fleet,
-        arrival_tape,
-        arrival_dims,
+        arrivals: domain::SparseArrivals::from_dense(&arrival_tape, arrival_dims),
         traffic_tape,
         traffic_dims,
         enable_reassign: payload.enable_reassign,
@@ -129,8 +128,10 @@ mod tests {
             config,
             network,
             fleet,
-            arrival_tape: vec![0; 16 * 1 * 2 * 2 * 2],
-            arrival_dims: [16, 1, 2, 2, 2],
+            arrivals: domain::SparseArrivals::from_dense(
+                &vec![0i32; 16 * 2 * 2 * 2],
+                [16, 1, 2, 2, 2],
+            ),
             traffic_tape: vec![1.0; 3],
             traffic_dims: [1, 3],
             enable_reassign: true,
@@ -155,7 +156,8 @@ mod tests {
     #[test]
     fn invalid_dimensions_are_rejected() {
         let mut scenario = tiny_scenario();
-        scenario.arrival_dims = [15, 1, 2, 2, 2];
+        scenario.arrivals =
+            domain::SparseArrivals::from_dense(&vec![0i32; 15 * 2 * 2 * 2], [15, 1, 2, 2, 2]);
         assert!(scenario.validate().is_err());
     }
 
@@ -203,7 +205,9 @@ mod tests {
     fn partial_boarding_respects_capacity_and_conserves_mass() {
         let mut scenario = tiny_scenario();
         // 50 arrivals at tick 0, origin 0, destination 1 of route 0.
-        scenario.arrival_tape[1] = 50;
+        let mut dense = vec![0i32; 16 * 2 * 2 * 2];
+        dense[1] = 50;
+        scenario.arrivals = domain::SparseArrivals::from_dense(&dense, [16, 1, 2, 2, 2]);
         let mut state = initial_state(&scenario).unwrap();
         state.conservation_checks = true;
         engine::advance_interval(&mut state, &scenario, 0).unwrap();
@@ -212,7 +216,7 @@ mod tests {
         assert!(state.vehicles[0].load <= state.vehicles[0].capacity);
         state.assert_conservation().unwrap();
         // The first visit denies the overflow exactly once.
-        assert_eq!(state.cohorts[0].first_denied, true);
+        assert!(state.cohorts[0].first_denied);
         assert_eq!(state.cohorts[0].count, 45);
     }
 
@@ -221,8 +225,8 @@ mod tests {
         let mut scenario = tiny_scenario();
         scenario.config.control_interval_s = 240;
         scenario.config.horizon_s = 960;
-        scenario.arrival_dims = [32, 1, 2, 2, 2];
-        scenario.arrival_tape = vec![0; 32 * 1 * 2 * 2 * 2];
+        scenario.arrivals =
+            domain::SparseArrivals::from_dense(&vec![0i32; 32 * 2 * 2 * 2], [32, 1, 2, 2, 2]);
         let mut state = initial_state(&scenario).unwrap();
         engine::advance_interval(&mut state, &scenario, 0).unwrap();
         assert_eq!(state.current_time_s, 240);

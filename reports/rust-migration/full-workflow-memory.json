@@ -1,20 +1,24 @@
 {
-  "deltas_kb": {
-    "four_shared_kernels": 4,
-    "native_store_total_600": 245628,
-    "native_store_train_500": 204732,
-    "native_store_validation_100": 40896,
-    "per_scenario_native_kb": 409.4,
-    "python_scenarios": 270224
+  "arrival_tape": {
+    "cells": 103680,
+    "dtype": "int32",
+    "kb_per_scenario": 405.0,
+    "nonzero": 1509,
+    "nonzero_pct": 1.46,
+    "shape": [
+      480,
+      3,
+      2,
+      6,
+      6
+    ]
   },
   "manifest": "data/generated/base/manifest.json",
-  "rss_kb": {
-    "after_4_kernels": 530840,
-    "after_python_load": 285208,
-    "after_shared_store_train": 489940,
-    "after_shared_store_validation": 530836,
-    "baseline": 14984
-  },
+  "python_scenarios_600_kb": 249376,
+  "store_after_sparse_kb": 28816,
+  "store_after_sparse_per_scenario_kb": 48.0,
+  "store_before_sparse_kb": 245628,
+  "store_before_sparse_per_scenario_kb": 409.4,
   "train_scenarios": 500,
   "validation_scenarios": 100
 }

@@ -367,12 +367,81 @@ impl WorldState {
 
 /// Immutable, packed scenario. Tapes are copied once at construction; `reset`
 /// only rebuilds episode state and never reads files or re-packs.
+/// One nonzero arrival-tape cell, kept in oracle scan order
+/// (tick, route, d, origin, dest).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ArrivalEntry {
+    pub route: u32,
+    pub direction: u8,
+    pub origin: u32,
+    pub destination: u32,
+    pub count: i64,
+}
+
+/// Sparse arrival tape: only nonzero cells are stored, grouped by tick.
+///
+/// The dense oracle tape `(ticks, routes, 2, stops, stops)` is ~98% zeros
+/// (about 1.5k nonzero of 103,680 cells for the default config). Keeping it
+/// dense in every packed scenario costs ~405 KB each; the sparse form is a few
+/// tens of KB and preserves the exact iteration order `add_arrivals` relies on.
+#[derive(Clone, Debug)]
+pub struct SparseArrivals {
+    pub dims: [usize; 5],
+    pub offsets: Vec<u32>,
+    pub entries: Vec<ArrivalEntry>,
+}
+
+impl SparseArrivals {
+    /// Scan a dense tape once, in oracle order, keeping nonzero cells.
+    pub fn from_dense(tape: &[i32], dims: [usize; 5]) -> Self {
+        let [ticks, routes, dirs, stops, stops2] = dims;
+        let mut offsets = vec![0u32; ticks + 1];
+        let mut entries = Vec::new();
+        for tick in 0..ticks {
+            for route in 0..routes {
+                for d in 0..dirs {
+                    for origin in 0..stops {
+                        for dest in 0..stops2 {
+                            let index = (((tick * routes + route) * dirs + d) * stops + origin)
+                                * stops2
+                                + dest;
+                            let count = tape[index];
+                            if count != 0 {
+                                entries.push(ArrivalEntry {
+                                    route: route as u32,
+                                    direction: d as u8,
+                                    origin: origin as u32,
+                                    destination: dest as u32,
+                                    count: count as i64,
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            offsets[tick + 1] = entries.len() as u32;
+        }
+        Self {
+            dims,
+            offsets,
+            entries,
+        }
+    }
+
+    /// Nonzero entries for `tick`, in the oracle scan order.
+    pub fn at_tick(&self, tick: usize) -> &[ArrivalEntry] {
+        if tick + 1 >= self.offsets.len() {
+            return &[];
+        }
+        &self.entries[self.offsets[tick] as usize..self.offsets[tick + 1] as usize]
+    }
+}
+
 pub struct Scenario {
     pub config: SimConfig,
     pub network: Network,
     pub fleet: Vec<VehicleSpec>,
-    pub arrival_tape: Vec<i32>,
-    pub arrival_dims: [usize; 5],
+    pub arrivals: SparseArrivals,
     pub traffic_tape: Vec<f32>,
     pub traffic_dims: [usize; 2],
     pub enable_reassign: bool,
@@ -380,13 +449,6 @@ pub struct Scenario {
 }
 
 impl Scenario {
-    pub fn arrival(&self, tick: usize, route: usize, d: usize, origin: usize, dest: usize) -> i32 {
-        let [ticks, routes, dirs, stops, stops2] = self.arrival_dims;
-        debug_assert!(tick < ticks && route < routes && d < dirs);
-        let index = (((tick * routes + route) * dirs + d) * stops + origin) * stops2 + dest;
-        self.arrival_tape[index]
-    }
-
     pub fn traffic(&self, edge: usize, bucket: usize) -> f32 {
         let [_edges, buckets] = self.traffic_dims;
         debug_assert!(bucket < buckets);
@@ -412,7 +474,7 @@ impl Scenario {
             }
         }
         let ticks = (self.config.horizon_s / self.config.tick_s) as usize;
-        if self.arrival_dims
+        if self.arrivals.dims
             != [
                 ticks,
                 self.config.route_count,

@@ -261,18 +261,20 @@ workflow) remains open.
 **Evidence (2026-09-12, accepted):** one full L0-protocol seed per backend
 (`configs/experiments/core-threads2.toml`, seed 11, 4 envs, 2 torch threads,
 245,760 transitions, validation every 12,288 on 100 validation days) in
-`reports/rust-migration/full-workflow.json`. Python 521.13 s vs Rust 146.95 s
-learn+validation (**3.55x**); total wall incl. setup 523.36 s vs 149.30 s
-(**3.51x**, setup 2.2/2.4 s). All 20 validation costs are bit-identical
-(max abs diff 0.0) and `policy.pth`, `policy.optimizer.pth` and
+`reports/rust-migration/full-workflow.json`. Python 603.27 s vs Rust 161.19 s
+learn+validation (**3.74x**); total wall incl. setup 605.94 s vs 163.64 s
+(**3.70x**, setup 2.7/2.5 s; same-session pair, the host slowed during the
+session and the earlier pair measured 3.60x). All 20 validation costs are
+bit-identical (max abs diff 0.0) and `policy.pth`, `policy.optimizer.pth` and
 `pytorch_variables.pth` are byte-identical for both `best.zip` and `last.zip`.
 Validation dominates the workflow (46% of Python wall); rerunning with
-`--eval-limit 10` isolates that cost. A first pass used 1236 MB peak RSS because
-`NativeBusDispatchEnv` eagerly built one kernel per scenario (each retains
-~243 KB of episode scratch); creating kernels lazily in `reset()` dropped Rust
-to 905 MB (Python 662 MB) with bit-identical training, leaving +243 MB for the
-shared native `ScenarioStore`. Native revision `cf8579ef16b5` is frozen for RL;
-if the L0 seed reuses these exact settings and artifacts, no rerun is needed.
+`--eval-limit 10` isolates that cost. Two storage bugs were found and fixed so
+Rust peak RSS is now 690 MB vs Python 662 MB (**1.04x**): `NativeBusDispatchEnv`
+eagerly built one kernel per scenario (each retains ~243 KB of episode scratch;
+now lazy in `reset()`), and the store kept a dense ~405 KB arrival tape that is
+98.5% zeros (now sparse, store 245.6 -> 28.8 MB). Native revision
+`a0cf649a4b64` is frozen for RL; if the L0 seed reuses these exact settings and
+artifacts, no rerun is needed.
 
 ## 8. Final acceptance checklist
 
@@ -282,6 +284,6 @@ if the L0 seed reuses these exact settings and artifacts, no rerun is needed.
 - [x] R3: wrapper/evaluator/forecast/backend/provenance accepted.
 - [x] R4: correctness, 2x simulation and learn gates, and faster full workflow accepted.
 - [x] Historical reports preserved; new report distinguishes measured results from projections.
-- [x] Handoff records the frozen backend revision (`cf8579ef16b5`) and unlocks task L0.1 in the [RL plan](improve_RL.md).
+- [x] Handoff records the frozen backend revision (`a0cf649a4b64`) and unlocks task L0.1 in the [RL plan](improve_RL.md).
 
 All items pass; this document now records an accepted Rust backend.

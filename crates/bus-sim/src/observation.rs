@@ -353,8 +353,10 @@ mod tests {
                     direction: 1,
                 })
                 .collect(),
-            arrival_tape: vec![0; 16 * 1 * 2 * 2 * 2],
-            arrival_dims: [16, 1, 2, 2, 2],
+            arrivals: crate::domain::SparseArrivals::from_dense(
+                &vec![0i32; 16 * 2 * 2 * 2],
+                [16, 1, 2, 2, 2],
+            ),
             traffic_tape: vec![1.0; 3],
             traffic_dims: [1, 3],
             enable_reassign: true,
@@ -384,7 +386,9 @@ mod tests {
     #[test]
     fn waiting_cohort_fills_queue_and_age_channels() {
         let mut scenario = scenario();
-        scenario.arrival_tape[1] = 20; // tick 0, route 0, dir 0, origin 0, dest 1
+        let mut dense = vec![0i32; 16 * 2 * 2 * 2];
+        dense[1] = 20; // tick 0, route 0, dir 0, origin 0, dest 1
+        scenario.arrivals = crate::domain::SparseArrivals::from_dense(&dense, [16, 1, 2, 2, 2]);
         let mut state = initial_state(&scenario).unwrap();
         state.conservation_checks = true;
         // Advance one interval so the cohort has aged one control interval.
@@ -462,8 +466,12 @@ mod tests {
         let mut first = scenario();
         let mut second = scenario();
         // Differ only at tick 5 (t = 150 s), past the first control interval.
-        first.arrival_tape[5 * 8 + 1] = 7;
-        second.arrival_tape[5 * 8 + 1] = 3;
+        let mut dense_a = vec![0i32; 16 * 2 * 2 * 2];
+        dense_a[5 * 8 + 1] = 7;
+        let mut dense_b = vec![0i32; 16 * 2 * 2 * 2];
+        dense_b[5 * 8 + 1] = 3;
+        first.arrivals = crate::domain::SparseArrivals::from_dense(&dense_a, [16, 1, 2, 2, 2]);
+        second.arrivals = crate::domain::SparseArrivals::from_dense(&dense_b, [16, 1, 2, 2, 2]);
         let mut state_a = initial_state(&first).unwrap();
         let mut state_b = initial_state(&second).unwrap();
         crate::engine::advance_interval(&mut state_a, &first, 0).unwrap();
