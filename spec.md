@@ -1,423 +1,432 @@
-# Spec: RL cho thiết kế mạng tuyến bus cố định
+# Spec v0.2: Dynamic Bus Fleet Reallocation and Frequency Control
 
-Phiên bản: **0.1 — thiết kế ban đầu, 2026-09-12**.
+Ngày: **2026-09-12**. Trạng thái: đặc tả dự kiến; chưa implement hoặc train.
 
-Phạm vi do người dùng chọn: **thiết kế tuyến bus cố định**. Các mặc định dưới đây là quyết định thiết kế để bắt đầu triển khai, chưa được xác nhận bằng thực nghiệm. Trạng thái hiện tại: tài liệu; chưa có implementation hoặc model được train.
+Định nghĩa mới của người dùng thay thế hoàn toàn mục tiêu chọn K tuyến từ candidate pool. Bản cũ nằm trong commit `a806bb6`. Xem [research](docs/research.md) và [plan](plan.md).
 
-Đọc cùng [research](docs/research.md) và [implementation plan](plan.md).
+## 1. Mục tiêu
 
-## 1. Mục tiêu và phạm vi
+Trên một mạng tuyến bus có sẵn, xây controller RL phân bổ đội xe hữu hạn và điều chỉnh dịch vụ theo nhu cầu hành khách biến động. Controller giảm thời gian chờ và khách không được phục vụ, cân bằng với chi phí vận hành và chất lượng từng tuyến.
 
-Xây một pipeline Python có thể sinh thành phố tổng hợp, tạo tuyến ứng viên, đánh giá mạng tuyến, huấn luyện RL để chọn mạng, và so sánh với heuristic trên cùng giao thức.
+Đầu ra là **policy vận hành** và chuỗi nhiệm vụ xe theo thời gian; route geometry không phải biến quyết định. “Frequency control” là thay mục tiêu xuất bến và cấp xe thực hiện, không tăng năng lực bằng một biến số độc lập với fleet.
 
-**MVP giải bài toán chọn K tuyến từ một pool hữu hạn**, là một phiên bản hạn chế của TNDP. Tuyến cố định nghĩa là sau khi thiết kế, xe chạy theo chuỗi trạm đã chọn; agent không điều hướng xe theo yêu cầu thời gian thực.
+### 1.1 Phạm vi hoàn chỉnh
 
-### Trong phạm vi bắt buộc
+- Ba tuyến hai chiều có sẵn, một depot, đội xe hữu hạn có sức chứa.
+- Demand theo thời gian, boarding/alighting, queue FIFO, travel time biến động.
+- Dispatch reserve, headway target, reassign xe rỗng tại bến, recall và short-turn được định nghĩa trước.
+- Synthetic scenarios; simulator 30 giây; RL control mỗi 2 phút.
+- Maskable PPO, baselines vận hành, multi-seed evaluation, action/reward ablations.
+- Forecast lịch sử đơn giản là experiment thêm sau core; không bắt buộc deep forecasting model.
 
-- Graph trạm–đường vô hướng, thời gian cạnh xác định, tuyến hai chiều.
-- Ma trận nhu cầu OD có hướng, cố định trong một instance.
-- Chọn đúng K tuyến khác nhau, giới hạn số trạm/tuyến và tổng route-time.
-- Headway cố định; hành khách đi tối đa hai lần chuyển tuyến.
-- Synthetic generator, evaluator, baselines, Gymnasium environment, Maskable PPO.
-- Training nhiều seed, ID/OOD evaluation, ablation reward và báo cáo hình/CSV.
+### 1.2 Các mốc có thể chạy độc lập
 
-### Ngoài MVP
+| Mốc | Khả năng |
+|---|---|
+| M1 | Simulator + dispatch reserve + headway target + recall |
+| M2 | M1 + reassign giữa các tuyến tại bến hợp lệ |
+| M3 | M2 + short-turn mission; đây là core MVP hoàn chỉnh |
 
-- Đặt vị trí trạm mới, thiết kế đường giao thông hoặc tối ưu timetable.
-- Đón/trả theo yêu cầu, multi-agent điều khiển từng xe.
-- Tối ưu headway, số xe, sức chứa, hàng chờ, chi phí nhiên liệu thực.
-- Congestion thay đổi theo lưu lượng; mô phỏng vi mô; triển khai vận hành thực.
-- Web backend/frontend, tài khoản, cloud deployment.
-- GNN, tuyến tự xây từng trạm và dữ liệu thành phố thật: hướng mở rộng, không chặn nghiệm thu MVP.
+M1/M2 chưa phải hoàn thành toàn bộ phạm vi. Core training cuối dùng M3. Các action chưa bật vẫn giữ slot trong action table nhưng luôn bị mask.
 
-## 2. Mặc định chung
+Feature flags: M1 `enable_reassign=false, enable_short_turn=false`; M2 `true,false`; M3 `true,true`. Ablation no-reassign tại M3 dùng `false,true`, không đồng nhất với M1. Recall/dispatch/headway luôn bật trong cả ba mốc.
 
-Các giá trị thuộc profile `base`; benchmark khác phải dùng config riêng và ghi rõ trong báo cáo.
+### 1.3 Ngoài phạm vi
+
+Không thiết kế tuyến mới; không đổi hành trình xe đang chở khách; không điều khiển metro. Metro/trường học chỉ là nguồn arrivals. Không passenger transfer giữa tuyến, dynamic route choice, driver rostering, ca nghỉ lao động, breakdown repair, tín hiệu giao thông hay congestion nội sinh. Tất cả tài xế sẵn sàng trong 4 giờ; compatibility khai báo trong dữ liệu. Không web app, deployment hoặc real-city claim.
+
+## 2. Mặc định để bắt đầu
 
 | Tham số | Giá trị |
 |---|---|
-| Python | 3.11; khóa patch version khi tạo môi trường |
-| OS mục tiêu | Linux; CPU là cấu hình kiểm thử bắt buộc |
-| Số trạm train/base | N = 20 |
-| Giới hạn encoding | N_max = 32; M_max = 512 |
-| Số tuyến chọn | K = 4 |
-| Số trạm/tuyến | 2 ≤ L ≤ 8 |
-| Thời gian một cạnh | 1–8 phút |
-| Ngân sách B | 100 phút tổng thời gian đi một chiều của các tuyến |
-| Headway h | 10 phút cho từng tuyến |
-| Penalty chuyển tuyến τ | 3 phút mỗi lần, ngoài thời gian chờ |
-| Số lần chuyển tuyến tối đa q | 2 |
-| Tổng OD Q | 10,000 lượt trong một kỳ nhu cầu giả định |
-| Trọng số α, λ_u | 0.7 và 2.0 |
-| Discount γ | 1.0; episode hữu hạn đúng K hành động |
-| Training seeds | 11, 22, 33 |
-
-**Đơn vị:** thời gian là phút; tọa độ chỉ phục vụ hình học tương đối; OD là lượt/kỳ. B là surrogate cho vận hành, không phải số tiền hay số xe. Route-time là một chiều; hai chiều chỉ là hệ số 2 khi h cố định, không cộng hai lần trong objective.
-
-## 3. Mathematical foundation
-
-### 3.1 Đầu vào, tuyến và không gian nghiệm
-
-Cho graph liên thông \(G=(V,E,t)\), \(|V|=N\), \(t_{uv}>0\); \(t_{uv}=t_{vu}\). \(D\in\mathbb R_+^{N\times N}\), \(D_{ii}=0\), \(Q=\sum_{i\ne j}D_{ij}>0\).
-
-Một tuyến là simple path \(r=(v_1,\ldots,v_L)\), các trạm không lặp, mỗi cặp liên tiếp thuộc E. Tuyến và tuyến đảo chiều được coi là một ứng viên:
-
-\[
-\operatorname{canon}(r)=\min_{\mathrm{lex}}(r,\operatorname{reverse}(r)).
-\]
-
-Chi phí tuyến:
-
-\[
-\ell(r)=\sum_{a=1}^{L-1}t_{v_a,v_{a+1}}.
-\]
-
-Pool \(\mathcal C=\{r_1,\ldots,r_M\}\). Tìm tập \(\mathcal R\subseteq\mathcal C\):
-
-\[
-|\mathcal R|=K,\qquad \sum_{r\in\mathcal R}\ell(r)\le B.
-\]
-
-Ràng buộc chiều dài đã được kiểm tra khi sinh pool. Không cấm tuyến giao nhau hoặc trùng một phần vì chúng có thể tạo chuyển tuyến. Không yêu cầu toàn bộ mạng hay mọi OD được kết nối như hard constraint; thiếu phục vụ bị phản ánh trong objective và metrics.
-
-### 3.2 Mô hình hành trình hành khách
-
-Với mỗi OD i→j, tìm hành trình có generalized time thấp nhất trên các tuyến đã chọn:
-
-\[
-c_{ij}(\mathcal R)=\min_{p\in\mathcal P_{ij}(\mathcal R),\,m(p)\le q}
-\left[t_{\mathrm{ride}}(p)+(m(p)+1)\frac h2+m(p)\tau\right].
-\]
-
-\(m(p)\) là số lần chuyển tuyến. Nếu tập hành trình rỗng, \(c_{ij}=+\infty\) nội bộ. Không export infinity/NaN vào JSON hoặc tensor observation.
-
-Giả định hành khách đến ngẫu nhiên so với headway đều cho kỳ vọng chờ h/2 mỗi lần lên xe; không xét đồng bộ lịch hoặc gộp tần suất nhiều tuyến chung hành lang. Đi bộ tiếp cận và chuyển trạm khác vị trí đều bằng 0/không được mô hình hóa. Chỉ chuyển tuyến tại cùng một trạm.
-
-**Graph evaluator:** state `(stop, route_id, transfers_used)` với `transfers_used ∈ {0,1,2}`. Thêm virtual source riêng cho origin, nối đến mỗi tuyến tại origin với chi phí h/2. Cạnh ride nối trạm kề nhau trên cùng tuyến, hai chiều, giữ nguyên transfers. Cạnh transfer đổi route tại cùng stop, tăng transfers và cộng h/2 + τ. Destination lấy minimum trên mọi route/layer tại stop đích. Dijkstra dùng trọng số không âm. Tie-break: generalized time, ít chuyển tuyến, route-id theo thứ tự.
-
-Ví dụ bắt buộc: đường 0–1–2, mỗi cạnh 4 phút; tuyến `(0,1,2)` cho 0→2 chi phí 5+8=13. Hai tuyến `(0,1)` và `(1,2)` cho chi phí 5+4+5+3+4=21. Thiếu tuyến chạm trạm 2 thì 0→2 chưa phục vụ.
-
-### 3.3 Objective có giá trị hữu hạn
-
-\(d^G_{ij}\) là thời gian ngắn nhất trên graph đường, dùng làm reference chứ không thay cho hành trình bus:
-
-\[
-T_{\mathrm{ref}}=\frac{\sum_{i\ne j}D_{ij}d^G_{ij}}Q+\frac h2>0.
-\]
-
-Chọn penalty chưa phục vụ lớn hơn mọi hành trình hợp lệ theo giới hạn route/transfer:
-
-\[
-C_{\max}=(q+1)(L_{\max}-1)t_{\max}+(q+1)h/2+q\tau,
-\qquad P=C_{\max}+T_{\mathrm{ref}}.
-\]
-
-Với profile base, \(C_{\max}=189\) phút. Điều kiện bound: tuyến simple, tối đa L_max trạm, mỗi cạnh ≤ t_max, tối đa q chuyển. Với dataset khác, dùng bound suy ra từ config thực; reject dữ liệu vượt bound.
-
-Đặt \(\bar c_{ij}=c_{ij}\) nếu phục vụ được, bằng P nếu không. Sau đó:
-
-\[
-C_p(\mathcal R)=\frac{\sum_{i\ne j}D_{ij}\bar c_{ij}}{QT_{\mathrm{ref}}},\quad
-C_o(\mathcal R)=\frac{\sum_{r\in\mathcal R}\ell(r)}B,
-\]
-
-\[
-U(\mathcal R)=\frac{\sum_{i\ne j}D_{ij}\mathbf 1[c_{ij}=\infty]}Q,
-\]
-
-\[
-\boxed{J(\mathcal R)=\alpha C_p(\mathcal R)+(1-\alpha)C_o(\mathcal R)+\lambda_u U(\mathcal R).}
-\]
-
-Mục tiêu là **minimize J**. P bảo đảm OD không được miễn chi phí khi bị bỏ; λ_u là mức ưu tiên bổ sung, được báo cáo và ablate. Đây là weighted objective, không bảo đảm ưu tiên coverage tuyệt đối kiểu lexicographic. T_ref, B và P cố định trong một episode, tính chỉ từ instance/config. T_ref phụ thuộc OD nên giữa các instance metric chuẩn hóa không bằng số phút thực; luôn báo cáo cả số phút.
-
-### 3.4 MDP và Bellman
-
-MDP thiết kế mạng: \((\mathcal S,\mathcal A,\mathcal T,r,\gamma)\).
-
-- State \(s_t=(G,D,\mathcal C,x_t,B_{\rm remaining},K-t,\mathrm{config})\), \(x_t\in\{0,1\}^M\) chỉ tuyến đã chọn.
-- Action a_t là index một tuyến chưa chọn và feasible theo §3.5.
-- Transition xác định: thêm tuyến, trừ route-time, tính lại evaluator.
-- Reset chọn instance từ train; validation/test nhận instance cố định.
-- Episode có đúng K action hợp lệ; không có STOP, không có chạy xe theo thời gian thực.
-- Terminal sau action thứ K. Không dùng time-limit truncation trong run chuẩn.
-
-\[
-V^\pi(s)=\mathbb E_\pi\left[\sum_{k=t}^{K-1}\gamma^{k-t}r_k\mid s_t=s\right],
-\qquad
-Q^\pi(s,a)=r(s,a)+\gamma\mathbb E[V^\pi(s')].
-\]
-
-\(V(s_K)=0\). Policy học lợi ích của tổ hợp tuyến, không chỉ score riêng mỗi tuyến.
-
-### 3.5 Mask có bảo đảm hoàn thành K tuyến
-
-Giả sử trước action đã chọn t tuyến, action thử là a. Gọi \(b'=B_{\rm remaining}-\ell(r_a)\), \(k'=K-t-1\), S là các tuyến chưa chọn trừ a. Cho phép a khi:
-
-1. a là tuyến thật, chưa chọn; b' ≥ 0.
-2. |S| ≥ k'.
-3. Tổng chi phí k' tuyến rẻ nhất trong S ≤ b'. Tổng rỗng bằng 0.
-
-Điều kiện này đủ và cần để hoàn thành đối với các hard constraints hiện tại: cardinality, uniqueness và additive budget. Nó không chứng minh full coverage. Nếu thêm ràng buộc connectivity, chứng minh này không còn đủ.
-
-Reset từ chối pool có M<K hoặc tổng K tuyến rẻ nhất>B. Mask của mọi state chưa terminal phải có ít nhất một action. Không sửa ngầm budget, không tự chọn fallback trong evaluation. Action invalid từ caller gây `ValueError` với action, step và lý do; không biến lỗi integration thành experience train.
-
-### 3.6 Reward và credit assignment
-
-Default dense reward:
-
-\[
-r_t=J(\mathcal R_t)-J(\mathcal R_{t+1}).
-\]
-
-Với γ=1 và episode hoàn thành:
-
-\[
-\sum_{t=0}^{K-1}r_t=J(\varnothing)-J(\mathcal R_K).
-\]
-
-J(∅) hữu hạn và độc lập policy trên cùng instance, nên tối đa expected return tương ứng tối thiểu expected final J. Không cộng thêm `-J(final)` ở cuối vì sẽ tính lại objective. Không clip reward trong default.
-
-Ablation terminal-only: r_t=0 trước bước cuối, bước cuối r=−J(final). Hai reward có cùng xếp hạng terminal network trên một instance. Không đổi γ để tiện dùng mặc định thư viện vì sẽ phá đẳng thức telescope.
-
-Ví dụ đơn vị reward: chi phí đi 6→4→3 cho rewards 2 và 1, return=3. Giá trị J không được hard-code thành reward thực của dataset.
-
-## 4. Algorithm và model
-
-### 4.1 Maskable PPO
-
-Policy phân phối categorical trên M_max logits. Tuyến bị mask nhận xác suất 0. Xác suất action hợp lệ được chuẩn hóa lại trên mask tại state đó. Lưu/recompute cùng mask khi cập nhật log-probability.
-
-Với \(\rho_t=\pi_\theta(a_t|s_t)/\pi_{\theta_{old}}(a_t|s_t)\):
-
-\[
-L^{clip}=\mathbb E_t[\min(\rho_t\hat A_t,
-\operatorname{clip}(\rho_t,1-\epsilon,1+\epsilon)\hat A_t)].
-\]
-
-Tối thiểu hóa loss \(-L^{clip}+c_v\mathbb E[(V_\theta-\hat G)^2]-c_H H(\pi_\theta)\).
-
-GAE: \(\delta_t=r_t+\gamma V(s_{t+1})-V(s_t)\), \(\hat A_t=\sum_l(\gamma\lambda)^l\delta_{t+l}\), cắt ở terminal và dùng V_terminal=0. PPO là thuật toán policy gradient với value baseline; không phải Q-learning.
-
-Tham khảo lý thuyết [R4](https://arxiv.org/abs/1707.06347), masking [R5](https://arxiv.org/abs/2006.14171), integration [R6](https://sb3-contrib.readthedocs.io/en/master/modules/ppo_mask.html). Công thức/objective TNDP trong spec là thiết kế riêng.
-
-### 4.2 Observation và kiến trúc baseline
-
-Gymnasium `Dict` chứa float32 arrays, bool arrays được encode 0/1 khi cần; padding luôn bằng 0. Thông tin static lặp lại ở mỗi observation để policy quan sát đủ instance.
-
-| Key | Shape | Nội dung |
-|---|---|---|
-| `nodes` | [32,4] | x, y, outgoing demand/Q, incoming demand/Q |
-| `node_valid` | [32] | Mask trạm thật |
-| `road_time` | [32,32] | Thời gian cạnh/t_max, nonedge=0 |
-| `road_adj` | [32,32] | Phân biệt nonedge và diagonal |
-| `od` | [32,32] | D/Q |
-| `route_incidence` | [512,32] | Trạm nằm trên tuyến |
-| `route_sequence` | [512,8] | Thứ tự trạm, giá trị (node_id+1)/32, padding=0 |
-| `route_meta` | [512,2] | ℓ/B, số trạm/L_max |
-| `route_valid` | [512] | Ứng viên thật |
-| `selected` | [512] | Tuyến đã chọn |
-| `context` | [8] | t/K, budget còn/B, K/4, α, λ_u/2, h/10, τ/3, q/2 |
-
-`route_sequence` và incidence cùng mô tả đầy đủ simple path hai chiều; evaluator luôn dùng tuple route gốc. Observation giữ graph + OD + tập đã chọn, không chỉ aggregate coverage, để tránh thiếu tính Markov. Config giới hạn L_max/t_max/N_max cố định cho một model; không load checkpoint với config encoding khác.
-
-**Encoder khả thi cho MVP:** custom `BaseFeaturesExtractor`. Với mỗi route, concat incidence [32], sequence [8], route_meta [2], selected [1], valid [1] → MLP dùng chung 44→64→16; nhân embedding với route_valid để padding không sinh tín hiệu từ bias. Flatten 512 route embeddings (8192 giá trị); concat flatten nodes/adj/time/OD/node_valid/context → MLP 256→128. Actor/critic mỗi nhánh hidden 128; actor xuất 512 logits, critic xuất một scalar. Sequence dùng node-id là baseline đơn giản, chưa có inductive bias graph. Kiểm tra profiler trước khi tăng batch/env count.
-
-MVP không bảo đảm permutation equivariance. Candidate IDs được sắp ổn định theo canonical path; khi relabel city phải dựng lại pool và observation. OOD size nằm trong N_max nhưng kết quả không được coi là bảo đảm tổng quát quy mô. Shared scorer/attention hoặc GNN là mở rộng riêng sau baseline.
-
-### 4.3 Tham số training khởi đầu
-
-| Tham số | Mặc định pilot |
-|---|---|
-| learning_rate | 3e-4 |
-| n_envs | 4, DummyVecEnv trước; tăng sau profiling |
-| n_steps mỗi env | 128 |
-| batch_size | 128 |
-| n_epochs | 4 |
-| gamma / gae_lambda | 1.0 / 0.95 |
-| clip_range | 0.2 |
-| ent_coef / vf_coef | 0.01 / 0.5 |
-| max_grad_norm | 0.5 |
-| pilot budget | 20,480 environment steps |
-| full budget ban đầu | 204,800 steps/seed, 3 seeds |
-| validation interval | mỗi 10,240 environment steps |
-
-Đây là tổng transitions trên các env, không phải số episode; với K=4, full budget tương ứng 51,200 episode nếu luôn chạy đầy đủ. Ghi số thực tế thư viện thực hiện; tính callback interval theo n_envs. Không hứa hội tụ trong budget này. Smoke test dùng budget nhỏ khác để xác nhận plumbing.
-
-## 5. Synthetic data và candidate generation
-
-### 5.1 Generator
-
-- Hai họ graph: `jittered_grid` và `geometric_knn`. Grid chọn ô gần hình vuông với N điểm, giữ cạnh lưới và bổ sung MST nếu cần; jitter tọa độ không làm mất topology.
-- Geometric: uniform points, k=3 nearest neighbors, đối xứng hóa rồi hợp với Euclidean MST.
-- Với cạnh uv: raw=`euclidean_distance * uniform(0.9,1.1)`; scale min/max raw về [1,8] phút. Nếu tất cả raw bằng nhau dùng 4 phút. Nhiễu draw một lần mỗi cạnh vô hướng.
-- OD theo công thức [research §4](docs/research.md), hoặc uniform. Vai trò P,A trong [0.5,2.0]; chọn 25% node làm residential và 25% khác làm employment, nhân lần lượt P hoặc A với 4. σ=median positive road shortest-time; η lognormal với log-mean −0.125, log-std 0.5.
-- Q=10,000, diagonal=0. Không ép OD đối xứng dù tuyến/đường hai chiều.
-- Mỗi instance có `schema_version`, `instance_id`, graph-family, seed, generator-config, hash graph và manifest split.
-
-### 5.2 Candidate pool
-
-Sinh một weighted shortest simple path cho mỗi unordered pair i<j; equal-cost tie-break theo node-id bằng graph được xây có thứ tự ổn định. Canonicalize, lọc 2≤L≤8, deduplicate, sort lexicographic. Với N≤32 có tối đa 496 cặp, nằm trong M_max=512. Không lọc theo D ở MVP để baseline không được lợi khác nhau từ candidate generation.
-
-Một pool thiếu tuyến dài hoặc vòng qua vùng nhu cầu cao là hạn chế đã biết. Tuyến qua waypoint chỉ làm ở extension có `candidate_version` mới; tuyệt đối không so hai model/pool khác nhau mà gọi là ảnh hưởng riêng của thuật toán.
-
-Reject instance nếu K tuyến rẻ nhất không nằm trong B; tối đa 100 lần sinh lại bằng child seed, sau đó báo lỗi có config. Ghi tỷ lệ rejection để phát hiện selection bias. Lưu pool một lần để mọi phương pháp đọc cùng candidate IDs/hash.
-
-### 5.3 Split
-
-| Tập | Số instance | Nội dung |
-|---|---:|---|
-| tiny | Các fixture N=3–6, M≤12, K=2–3 | Tính tay hoặc enumeration |
-| train | 2,000 | N=20, 50/50 hai họ graph; uniform/clustered OD 50/50 |
-| validation | 200 | Thành phố/seed riêng, cùng phân phối train |
-| test_id | 300 | Thành phố riêng, cùng phân phối |
-| test_ood_demand | 300 | N=20 mới; hệ số hotspot từ 4 lên 8 |
-| test_ood_size | 300 | N=30 mới, K/B giữ nguyên; ghi cả hiệu ứng thiếu tài nguyên/trạm |
-
-Seed gốc: train=1001, validation=2001, test_id=3001, test_ood_demand=4001, test_ood_size=5001. Hash graph không được trùng giữa split, kể cả khác OD. Group theo base graph trước mọi augmentation. Một nghiên cứu size thuần với resources scale theo N cần profile riêng; không trộn với test_ood_size mặc định.
-
-## 6. Code architecture và thư viện
-
-Ngôn ngữ chính **Python 3.11**, package tên `bus_rl`, layout `src/`. Config TOML đọc bằng `tomllib`; dataclass typed cho domain. Dependency cụ thể khóa bằng uv khi implementation và lưu `uv.lock`; không khẳng định các phiên bản chưa cài đã tương thích.
-
-| Công cụ/thư viện | Vai trò |
-|---|---|
-| NumPy | Ma trận, RNG, .npz |
-| NetworkX | Graph, MST, shortest path, reference evaluator |
-| PyTorch | Neural policy/encoder |
-| Gymnasium | Env API reset/step và spaces |
-| stable-baselines3 + sb3-contrib | Maskable PPO, vector env, callbacks |
-| pandas | CSV tổng hợp thí nghiệm |
-| Matplotlib | Hình tuyến, đường học, trade-off |
-| pytest | Domain/evaluator/env/integration tests |
-| Ruff | Lint và formatting |
-| uv | Environment và dependency locking |
-
-Chọn wheel PyTorch theo CPU/CUDA thực tế; CPU import và smoke bắt buộc. Không thêm PyTorch Geometric, Ray, SUMO, web framework ở MVP.
+| Ngôn ngữ/runtime | Python 3.11, Linux, CPU smoke bắt buộc |
+| R tuyến / số trạm mỗi tuyến | 3 / 6, hai chiều |
+| F xe | 12: 3 xe được gán mỗi tuyến + 3 reserve tại depot |
+| Giới hạn encoding | R_max=4, F_max=16, S_max=8 |
+| Capacity / comfort | 40 / 30 người mỗi xe |
+| Simulation tick δ | 30 giây |
+| Control interval Δ | 120 giây = 4 ticks |
+| Horizon H | 240 phút = 120 decisions |
+| Demand window | [0,180) phút; [180,240) không sinh khách mới |
+| Edge travel nền | 180 giây mỗi cặp trạm liền kề |
+| Intermediate dwell | 30 giây mỗi lần dừng, cố định |
+| Terminal/turnpoint layover | 120 giây, không bỏ qua |
+| Headway target ban đầu | 15 phút mỗi hướng |
+| Headway target có thể chọn | 6, 10, 15 phút; áp dụng cả hai hướng tuyến |
+| Minimum departure spacing | 2 phút cùng tuyến/hướng/điểm xuất phát |
+| Service guard headway | 20 phút, dùng dự báo khả thi và báo vi phạm thực tế |
+| Fleet floor | 2 xe cam kết FULL trên mỗi tuyến |
+| Allocation cooldown | 20 phút/xe sau dispatch/reassign/recall/short-turn |
+| Headway-change cooldown | 10 phút/tuyến |
+| Passenger patience / excessive-wait threshold | 45 / 15 phút |
+| Discount | γ=1.0 cho horizon hữu hạn |
+| Reward normalization | N_ref=3,000 hành khách tham chiếu, cố định |
+
+Các giá trị là đề xuất cấu hình, chưa hiệu chỉnh bằng dữ liệu thật. Tất cả thời gian nội bộ là integer giây; cost/report đổi sang phút. Đồng hồ/timers luôn bội δ. Không clip queue hoặc bỏ khách vì tensor đầy; simulator lưu số lượng không giới hạn theo integer/cohort, observation scale không đổi conservation.
+
+## 3. Network, fleet và passenger state
+
+### 3.1 Network
+
+Route r có ordered stops `(s0,s1,...,s5)`. Hướng `+` đi index tăng; `−` đi index giảm. Mỗi xe FULL đến endpoint, khách xuống hết, layover rồi đủ điều kiện chạy hướng ngược lại.
+
+Base fixture: A dùng node 0–5, B dùng 6–11, C dùng 12–17, depot=18. Cạnh dọc tuyến có base-time 180s; depot nối hai endpoint của mỗi tuyến bằng cạnh 360s. Deadhead dùng weighted shortest path trên graph này và traffic field. Tuyến không chia sẻ hành khách. Cấu hình mới có thể dùng hub chung với travel=0 cho cùng địa điểm thật; tuyệt đối không đặt travel=0 giữa hai bến khác nhau.
+
+Short-turn của mỗi tuyến: `s0→s1→s2→s3→s2→s1→s0`, có turnpoint cho phép tại s3 và layover 120s. Chỉ định mission trước khi xuất phát. Sau khi hoàn thành và layover ở s0, xe trở lại mode FULL trên tuyến đó.
+
+### 3.2 Vehicle state machine
+
+Mỗi xe có ID cố định, capacity, route assignment hoặc depot, pattern, direction, position/edge, remaining travel/dwell, next-stop, trip destination limit, destination passenger cohorts, ready time và cooldown.
+
+Các phase loại trừ nhau:
 
 ```text
-docs/research.md
-spec.md
-plan.md
-pyproject.toml                  # project metadata, deps, bus-rl entrypoint
-uv.lock                        # resolved khi setup
-configs/{base,pilot,train,eval}.toml
+DEPOT_IDLE -> DEADHEAD -> TERMINAL_IDLE -> SERVICE_MOVING
+                                         ^                  |
+                                         |                  v
+                                      LAYOVER <- SERVICE_DWELL
+```
+
+SERVICE_DWELL chỉ ở trạm giữa; endpoint/turnpoint chuyển qua LAYOVER. DEADHEAD không chở khách. TERMINAL_IDLE là xe đã hoàn tất layover và rỗng; đây mới là trạng thái có thể reassign/recall. Depot reserve cũng phải hết cooldown mới được điều đi.
+
+Dispatch/reassign ghi target route ngay để tránh cấp nhiệm vụ trùng, nhưng xe DEADHEAD incoming chưa tính vào floor xe FULL đang bảo vệ tuyến. Khi đến target s0, xe trở thành extra-departure pending; chỉ chở khách sau khi dispatcher thực hiện departure thật.
+
+### 3.3 Passenger records/cohorts
+
+Mỗi passenger hoặc cohort cùng đặc điểm có `(id, route, direction, origin, destination, arrival_tick, count, first_denied_flag, status)`, kèm boarding/completion/abandonment tick khi xảy ra. Destination phải nằm phía trước origin theo direction. Status: WAITING, ONBOARD, COMPLETED, ABANDONED.
+
+Cohort có thể split khi capacity còn ít hơn count; mọi phần giữ lineage và first_denied_flag. Simulator biết destination để boarding đúng hành trình; controller aggregate không được tự xem toàn bộ destination tương lai/ẩn.
+
+Board FIFO theo `(arrival_tick, passenger_id)` trong số khách đủ điều kiện. Người không đủ điều kiện đi short-turn vẫn chờ FULL và không được đánh dấu denied-capacity. Ở turnpoint chỉ đón khách theo chiều quay về. Xe không nhận người có đích ngoài short-turn pattern; không ép người xuống giữa đường.
+
+Waiting age ≥45 phút thì abandon trước boarding tại cùng tick. Boarding/alighting là sự kiện một lần; còn trong queue thì waiting vẫn tiếp tục sau denied.
+
+### 3.4 Conservation
+
+Ở mỗi tick:
+
+\[
+N_{generated}=N_{waiting}+N_{onboard}+N_{completed}+N_{abandoned}.
+\]
+
+\[
+F=N_{depot}+N_{deadhead}+N_{terminal}+N_{moving}+N_{dwell}+N_{layover}.
+\]
+
+\(0\le L_b\le40\), tất cả counts là integer không âm. Xe không có hai nhiệm vụ đồng thời; cohort không ở cả queue và xe.
+
+## 4. Simulation timing và dispatcher
+
+### 4.1 Thứ tự sự kiện xác định
+
+Tại boundary t:
+
+1. Hoàn thành movement/dwell/layover hết hạn; alight đúng destination; cập nhật ready state.
+2. Sinh arrivals tại t nếu t<180 phút; đánh dấu abandonment đủ patience.
+3. Nếu là control boundary, tạo observation/mask, nhận đúng một action; không nhìn arrivals sau t.
+4. Xử lý service boarding và autonomous terminal dispatcher; resolve tie theo vehicle ID. Không xử lý một visit/departure hai lần.
+5. Tích phân costs trên `[t,t+δ)` từ trạng thái sau sự kiện; timers tiến δ.
+
+`step(action)` thực hiện 4 ticks, đến observation boundary kế tiếp sau bước 1–2, trước bước 3–4. `reset` tạo boundary t=0 cùng quy ước. Ở t=H xử lý completion/abandonment đến hạn, không sinh arrivals hoặc departure mới, rồi terminal settlement. Các counter event ở đúng H thuộc step cuối, không bị mất.
+
+Travel duration khi vào edge được lấy từ traffic field tại entry time, làm tròn lên bội δ, tối thiểu δ; giữ nguyên đến cuối edge. Không resample mỗi tick làm xe không bao giờ đến. Intermediate dwell cố định, không mô hình hóa thời gian boarding theo số người trong MVP. Sau deadhead xe có thể ready ngay tại bến; layover 120s bắt buộc sau service leg/short-turn leg, không cộng thêm vào deadhead arrival.
+
+Terminal boarding diễn ra tại thời điểm departure; layover trước đó bao gồm recovery/terminal service. Intermediate boarding tại lúc đến sau alight/arrivals rồi dwell 30s. Đếm headway bằng actual departure timestamp, không bằng thời điểm agent đặt target.
+
+### 4.2 Autonomous dispatcher
+
+Normal operation luôn tiếp tục khi agent chọn NOOP. Ở mỗi terminal/hướng:
+
+- Ưu tiên extra-departure pending từ injection/reassign/short mission.
+- Sau đó xét xe FULL ready nếu gap từ last FULL departure ≥ headway target.
+- Mọi departure phải giữ spacing ≥2 phút từ last ANY departure cùng tuyến/hướng/terminal. Short mission cũng chiếm spacing.
+- Chỉ một xe mỗi departure opportunity; tie theo ID. Xe không có mặt/đang layover không thể xuất bến.
+- Full departure cập nhật last_FULL và last_ANY; short chỉ last_ANY. Target là mong muốn, không bảo đảm thực hiện nếu fleet không đủ.
+
+Horizon finite có departure lịch sử ban đầu `last_FULL=last_ANY=−900s` ở các endpoint. Ba xe mỗi tuyến: hai ở s0, một ở s5, đều empty/ready; ba reserve ở depot. Không có khách đầu ca. Peak bắt đầu sau khoảng startup, nhưng metrics vẫn tính cả ca cho mọi phương pháp.
+
+Fleet/headway sanity check dùng cycle gồm travel+dwell+layover. Không dùng \(C/h\) làm năng lực cả mạng: đó chỉ là xấp xỉ năng lực qua một điểm/hướng và bỏ qua quay vòng/tải theo đoạn.
+
+## 5. Action space, constraints và service protection
+
+### 5.1 Action table tĩnh
+
+Một quyết định mỗi 120s; không cho đồng thời dispatch hai xe trong một action. Muốn điều hai xe phải dùng hai bước.
+
+| Action | Hiệu ứng |
+|---|---|
+| `NOOP` | Giữ kế hoạch, dispatcher vẫn chạy |
+| `DISPATCH(b,r)` | Reserve b ở depot deadhead tới r.s0; first FULL departure là extra |
+| `SET_HEADWAY(r,h)` | Cập nhật target 6/10/15 phút cho hai hướng, không sinh xe |
+| `REASSIGN(b,r)` | Xe rỗng ready ở terminal tuyến khác deadhead tới r.s0, extra FULL đầu tiên |
+| `RECALL(b)` | Xe rỗng ready quay depot, bỏ assignment khi rời tuyến |
+| `SHORT_TURN(b,r)` | Reserve từ depot hoặc xe rỗng FULL ready tại r.s0 nhận một short mission; sau đó quay về FULL |
+
+Không có HOLD mid-route, arbitrary reroute hoặc đổi short pattern đang chạy. Những điều này cần extension spec.
+
+Encode Discrete(221): NOOP=0; 64 slots DISPATCH b-major/r-minor; 64 REASSIGN; 64 SHORT_TURN; 16 RECALL; 12 SET_HEADWAY r-major/choice-minor, với F_max=16,R_max=4. Entity padding luôn masked; ordering lưu trong checkpoint schema.
+
+### 5.2 Mask
+
+Luôn có NOOP hợp lệ trước terminal. Mask action khi sai phase, xe còn khách, cooldown, route compatibility, pattern entry/turnpoint, entity tồn tại, hoặc feature chưa bật. SET_HEADWAY đang bằng target hiện tại hoặc trong 10-minute cooldown bị mask. Target thấp nhưng hiện thiếu xe vẫn có thể yêu cầu; actual service không được giả vờ đáp ứng.
+
+DISPATCH chỉ từ DEPOT_IDLE. REASSIGN chỉ giữa hai tuyến khác nhau. RECALL/REASSIGN/SHORT lấy xe từ tuyến phải thỏa **donor guard** sau khi loại xe đó khỏi nguồn lực FULL:
+
+1. Còn ít nhất 2 xe FULL committed, không tính incoming deadhead, short mission, reserve hoặc xe đang bị chuyển đi.
+2. Còn một xe FULL empty/ready khác tại đúng donor terminal; earliest feasible departure theo spacing không muộn hơn `last_FULL + 20 phút`.
+
+Guard bảo vệ nguồn lực và departure sắp tới; không chứng minh queue không overload hoặc mọi future headway ≤20 phút dưới traffic ngẫu nhiên. Luôn báo actual violations. Baselines và RL dùng cùng guard, không cho RL hưởng helper riêng.
+
+Action request không hợp lệ gây `ValueError` khi API dùng sai, không sửa ngầm thành NOOP. Không teleport khi bắt đầu deadhead. Cooldown đặt tại action acceptance; không chặn completion/scheduler bình thường.
+
+## 6. Mathematical foundation và reward
+
+### 6.1 Dynamics
+
+Cho Q_{r,d,i,j}(t) là số người chờ, L_b(t) là load xe. Với arrivals A, boarding B và abandonment E trong một tick:
+
+\[
+Q(t+\delta)=Q(t)+A(t)-B(t)-E(t).
+\]
+
+Với alighting D_b và boarding B_b:
+
+\[
+L_b(t+\delta)=L_b(t)-D_b(t)+B_b(t),\qquad 0\le L_b\le C_b.
+\]
+
+World state S_t gồm toàn bộ cohorts, xe/timers, assignments, dispatcher clocks, target/cooldown và latent demand/traffic state. Dynamics stochastic từ exogenous process. Action làm thay đổi cả năng lực hiện tại và vị trí nguồn lực tương lai.
+
+### 6.2 Observation và POMDP
+
+Controller nhận o_t=O(S_t), gồm queue counts/age summaries, load/position/ETA, boarding/alighting và arrivals quá khứ, actual headways, reserve/assignment/cooldown và thời gian còn lại. Demand latent và destination chi tiết của người đang chờ không được lộ.
+
+Vì o_t không mô tả đầy đủ S_t, đây là **partial-observation control**. Policy baseline là \(\pi(a_t\mid o_t,\mathrm{recent\ history})\); không tuyên bố aggregate features thỏa Markov đầy đủ. Giả định queue/load sensing hoàn hảo ở MVP; noisy sensing là OOD extension.
+
+Với state đầy đủ, Bellman hữu hạn:
+
+\[
+V_t^\pi(s)=\mathbb E[r_t+\gamma V_{t+1}^\pi(S_{t+1})\mid S_t=s],\quad V_T=0.
+\]
+
+PPO critic trong triển khai ước lượng từ observation/history, nên có thể chịu sai số do thông tin ẩn. Remaining time xuất hiện trong observation để phân biệt đầu/cuối ca.
+
+### 6.3 Cost theo interval
+
+Mọi tích phân dưới đây tính bằng phút trên interval control. W: tổng queue passenger-minutes; V: tổng onboard passenger-minutes; O: excess comfort passenger-minutes; C: bus-minutes ngoài depot; C_D: deadhead bus-minutes; F: passenger-minutes của người đã chờ ≥15 phút.
+
+\[
+W_t=\int_t^{t+\Delta}\sum_{r,d,i,j} Q_{r,d,i,j}(u)\,du,
+\qquad V_t=\int_t^{t+\Delta}\sum_b L_b(u)\,du,
+\]
+
+\[
+O_t=\int_t^{t+\Delta}\sum_b\max(0,L_b(u)-30)\,du,
+\qquad F_t=\int_t^{t+\Delta}\sum_{p\in waiting(u)}\mathbf1[age_p(u)\ge15]\,du.
+\]
+
+U_t là số người **lần đầu** bị capacity-denied trong interval; E_t là số người abandon; M_t là số mission-change actions được nhận (dispatch/reassign/recall/short). Không đếm NOOP/headway update như một mission. Không đếm short-ineligible như denied. Mỗi người có thể first-denied một lần rồi abandon sau đó: hai penalty mô tả hai hậu quả khác nhau, không lặp cùng event.
+
+Default cost (đơn vị passenger-minute equivalent):
+
+\[
+c_t=W_t+0.25V_t+0.5O_t+0.5C_t+0.5C_{D,t}+F_t+5U_t+60E_t+2M_t.
+\]
+
+Deadhead chịu base operating cost và phụ phí riêng có chủ đích. C bao gồm terminal idle/layover đã gán tuyến, không chỉ lúc xe chuyển động; recall mới giải phóng nguồn lực về depot. Đây là proxy, không phải chi phí tài chính thật.
+
+Reward:
+
+\[
+\boxed{r_t=-c_t/N_{ref}},\qquad N_{ref}=3000.
+\]
+
+Ở bước cuối cộng thêm `−60*(N_waiting(H)+N_onboard(H))/N_ref`. Người đã abandon không có mặt trong settlement. Không xóa khách để tránh penalty. Chi phí waiting/ride đã phát sinh vẫn giữ nguyên; settlement là phí chưa hoàn thành, không phải tính lại cùng thời gian.
+
+Với γ=1:
+
+\[
+\sum_t r_t=-\frac{\sum_t c_t+60N_{unfinished}(H)}{N_{ref}}.
+\]
+
+Không dùng reward telescope của v0.1, không thưởng “đã đón khách” độc lập. Trọng số là điểm xuất phát phải ablate; floor/guard là hard constraints, reward fairness không thay thế chúng.
+
+### 6.4 Termination
+
+H=240 phút là terminal hữu hạn thuộc định nghĩa nhiệm vụ: `terminated=True`, `truncated=False`, bootstrap V_terminal=0. Arrivals dừng ở phút 180 nhưng controller vẫn hoạt động đến H để phục vụ phần còn lại. Simulator không auto-clear passengers; logging final residual/abandoned/completed bắt buộc.
+
+Giới hạn ngoài nhiệm vụ khi debug là truncation và phải ghi lý do; không đưa episode bị cắt này vào quality comparison như đã hoàn thành. Gymnasium phân biệt hai trường hợp [R8](https://gymnasium.farama.org/main/tutorials/handling_time_limits/).
+
+## 7. Synthetic scenarios và forecast
+
+### 7.1 Demand/traffic
+
+Mỗi scenario-day gồm network, fleet initial state, demand tape và exogenous traffic field. Poisson count mỗi stop/direction/tick với λ ở đơn vị khách/phút, nhân δ/60. Baseline tổng route demand khoảng A=180, B=160, C=140 khách/giờ cho cả hai hướng; tăng cường Gaussian peak ở một tuyến với multiplier 1.5–3.0, peak center lấy trong [45,135] phút, width 15–30 phút. Route rates chia cho direction/origin bằng probability vectors tổng 1. Destination được sample ở downstream với xác suất tỷ lệ `exp(-abs(j-i)/2)`; không sinh OD đi ngược hướng hoặc origin=end-of-direction. Baselines có thể dùng prior khoảng cách đã khai báo này để ước lượng short-turn eligibility, không xem destination thực của người đang chờ.
+
+Base noise: edge/time-bucket multiplier lognormal log-std=0.15, mean=1, chặn [0.7,2.5], bucket=5 phút. Base route edge-time khác nhau trong [150,210] giây cho ngày khác; depot connectors [300,480] giây. Round up sau khi nhân traffic. Không resample travel cho cùng edge/time trong cùng scenario.
+
+OOD burst: arrivals theo nhóm tại một trạm trong 5–10 phút, không chỉ tăng đều λ. OOD traffic: hành lang một tuyến multiplier 1.5–2.0 trong 30 phút; đây là chậm xe, không breakdown. Stress thiếu fleet đổi F bằng config riêng, không dùng checkpoint encoding khác.
+
+Pre-generate demand theo scenario_seed độc lập action. Traffic được indexed `(scenario_seed, edge_id, time_bucket)`; policy đi edge khác thời điểm khác có travel khác một cách nhân quả, nhưng các policy chia sẻ cùng field. Tách RNG của policy khỏi RNG môi trường. Không expose future tape hoặc seed có thể tra future trong observation/info dùng bởi controller.
+
+### 7.2 Split
+
+| Split | Số ngày | Nội dung |
+|---|---:|---|
+| train | 500 | Base peak/traffic distributions |
+| validation | 100 | Ngày mới, cùng phân phối |
+| test_id | 200 | Ngày mới, cùng phân phối |
+| test_ood_burst | 200 | Batch peak; tổng demand được báo riêng |
+| test_ood_traffic | 200 | Traffic disruption |
+
+Seeds gốc lần lượt 1001/2001/3001/4001/5001; training algorithm seeds=11/22/33. Cùng base network giữa các ngày là có chủ đích vì controller vận hành mạng cố định; đây là tổng quát theo ngày/demand, **không tuyên bố tổng quát topology**. Scenario/tape hash không trùng giữa split. Biến thể của cùng ngày phải nằm cùng split. Không chọn baseline thresholds hoặc checkpoint trên test.
+
+### 7.3 Forecast optional
+
+Forecaster chỉ dùng train-day arrival logs và history ≤t. Baseline: time-bin mean của train ở cùng stop/direction cho 15 phút kế tiếp, nhân correction `clip((recent_10min+1)/(historical_10min+1),0.5,2.0)`. Không dùng waiting Q làm nhãn arrivals vì Q phụ thuộc control. Fit một lần trên train, freeze ở validation/test. Báo MAE/bias, forecast/no-forecast cùng controller architecture/masks/budget. Full future tape chỉ được dùng cho oracle diagnostic riêng nếu bổ sung sau.
+
+## 8. Model, PPO và observation encoding
+
+### 8.1 Feature contract
+
+Fixed Dict float32, padding=0 có entity masks. Node/route IDs ổn định. Chia count/load theo 40, age/time theo H hoặc ngưỡng được nêu; giá trị count có thể >1, không clip mất overload. `obs_version=2`.
+
+- `stops [4,2,8,7]`: queue count/40, mean age/2700s, max age/2700s, count age≥900s/40, boarding last Δ/40, alighting last Δ/40, arrivals last Δ/40.
+- `arrival_history [4,2,8,5]`: counts 5 control bins vừa qua/40, chỉ thời gian đã xảy ra.
+- `forecast [4,2,8]`: expected next-15-min arrivals/40; zero khi disabled và có forecast-enabled flag.
+- `vehicles [16,27]`: phase one-hot 6; route one-hot 5 gồm depot; pattern one-hot 2; direction one-hot 2; current/next node IDs scaled theo số node; target-route one-hot 5 gồm none; 5 scalar load/40, phase_remaining/H, ready_remaining/H, cooldown_remaining/1200s, nominal time-to-terminal/H. Node khi không áp dụng dùng 0; ID thật encode (id+1)/(node_count+1).
+- `routes [4,8]`: headway target/1200s, actual full departure gap hai hướng/1200s, FULL committed count/16, incoming count/16, short count/16, target cooldown/600s, reserve-compatible count/16.
+- `stop_valid [4,2,8]`, `vehicle_valid [16]`, `route_valid [4]`, `context [3]`: time/H, remaining/H, forecast-enabled.
+
+27 vehicle features =6+5+2+2+2+5+5. SERVICE_MOVING/SERVICE_DWELL tách phase; 6 phase đúng §3.4. Queue destination distribution không đưa vào observation; mask có thể lộ điều kiện hành động hợp lệ nhưng không future demand. Bus load theo tổng, destination cohorts chỉ simulator dùng. Không claim feature đủ Markov.
+
+### 8.2 Architecture
+
+MVP dùng MaskablePPO `MultiInputPolicy`, flatten các Dict tensors → shared MLP [256,128], actor/critic mỗi nhánh [128], actor logits 221, critic scalar. Custom feature extractor chỉ cần normalize/flatten/mask padding đúng; không GNN và không recurrent trong core. Static route geometry cố định; flatten IDs hạn chế generalization sang mạng mới.
+
+Masked policy: logits invalid=−∞ trước categorical; valid actions được normalize lại. `NOOP` giữ nonempty support. Train và evaluation phải dùng cùng masks; MaskableEvalCallback/evaluate hoặc runner tự truyền mask. Không coi ordinary unmasked evaluate là hợp lệ.
+
+PPO dùng:
+
+\[
+\rho_t=\pi_\theta(a_t|o_t)/\pi_{old}(a_t|o_t),
+\quad L^{clip}=\mathbb E[\min(\rho_t\hat A_t,\operatorname{clip}(\rho_t,1-\epsilon,1+\epsilon)\hat A_t)].
+\]
+
+Loss minimize `−Lclip + c_v*MSE(value,return) − c_H*entropy`; GAE với γ=1, λ=0.95, terminal value=0. Observation/history critic là approximation trong POMDP. Xem [PPO](https://arxiv.org/abs/1707.06347), [masking](https://arxiv.org/abs/2006.14171).
+
+### 8.3 Training defaults
+
+| Tham số | Giá trị |
+|---|---|
+| lr / clip / GAE λ | 3e-4 / 0.2 / 0.95 |
+| n_envs / n_steps mỗi env | 4 / 256 |
+| batch_size / n_epochs | 256 / 4 |
+| entropy / value coeff / max_grad_norm | 0.01 / 0.5 / 0.5 |
+| pilot / full transitions mỗi seed | 12,288 / 245,760 |
+| validation interval | 12,288 tổng env transitions |
+| gamma / seeds | 1.0 / 11,22,33 |
+
+Transitions là control decisions, không micro-ticks hoặc passengers. Horizon=120, nên full budget tương đương 2,048 episode nếu chia hết theo episode, nhưng vector rollout có thể kết thúc giữa episode; log completed episodes thực tế. Chọn best mean validation cost, tie lấy checkpoint sớm. Training samples scenario days có replacement. Không hứa hội tụ; profile simulator trước full run.
+
+## 9. Code architecture và data contracts
+
+Python 3.11, `src/bus_rl`, TOML config qua `tomllib`. Dependencies: NumPy, NetworkX (deadhead graph), PyTorch, Gymnasium, stable-baselines3, sb3-contrib, pandas, Matplotlib; pytest/Ruff dev; uv lock. Không bắt buộc SimPy/SUMO vì fixed-tick engine đủ cho scope. CPU smoke trước chọn CUDA.
+
+```text
 src/bus_rl/
-  domain.py                    # City, Route, ProblemConfig, Instance, Evaluation
-  data/{generate,candidates,io}.py
-  transit/{paths,metrics}.py   # passenger routing và objective thuần
-  env/{masking,observation,network_design}.py
-  baselines/{random,greedy,local_search,exact}.py
-  models/features.py
+  domain.py                       # immutable network/config và runtime dataclasses
+  data/{scenario,io}.py            # generation, tapes, manifests
+  sim/{engine,passengers,vehicles,dispatcher,travel}.py
+  control/{actions,guards}.py
+  env/{observation,bus_dispatch}.py
+  rewards/costs.py
+  baselines/{fixed,threshold,proportional,random}.py
+  forecasting/historical.py
+  models/features.py             # shared MLP feature extractor
   training/{train,callbacks,checkpoint}.py
-  evaluation/{runner,statistics,plots}.py
+  evaluation/{runner,statistics,plots,profile}.py
   cli.py
-tests/{fixtures,test_data,test_candidates,test_paths,test_metrics,
-       test_masking,test_env,test_baselines,test_model,test_pipeline}.py
+configs/{base,pilot,train,eval}.toml
+configs/experiments/
+tests/{fixtures,test_data,test_passengers,test_vehicles,test_engine,
+       test_control,test_rewards,test_env,test_baselines,test_model,
+       test_forecast,test_pipeline}.py
 data/{generated,manifests}/
 runs/<run_id>/
 reports/<experiment_id>/
 ```
 
-Luồng phụ thuộc: domain ← data/transit ← env/baselines ← training/evaluation ← CLI. Evaluator không import RL; generator không gọi training. Cùng một hàm đánh giá được dùng cho mọi phương pháp.
+Dependency flow: domain → data/sim → control/rewards → env → training/evaluation/CLI. Baselines gọi cùng action API, không sửa simulator state để có advantage. Forecast không đọc future tape. Cost calculator không quyết định hành động.
 
-### 6.1 Data contracts
+Core dataclasses: `Network`, `Route`, `Vehicle`, `PassengerCohort`, `Scenario`, `SimConfig`, `WorldState`, `Action`, `StepCosts`, `EpisodeMetrics`. Scenario chứa network/initial fleet/exogenous tapes/config; WorldState là mutable runtime riêng cho mỗi reset, không sửa Scenario.
 
-```python
-Route = tuple[int, ...]
-
-# dataclasses dự kiến; array shapes được validate khi khởi tạo/load
-City(coords: ndarray, adjacency: ndarray, edge_minutes: ndarray,
-     demand: ndarray, instance_id: str, metadata: dict)
-ProblemConfig(k: int, min_stops: int, max_stops: int,
-              budget_minutes: float, headway_minutes: float,
-              transfer_penalty_minutes: float, max_transfers: int,
-              alpha: float, unserved_weight: float, edge_max_minutes: float)
-Instance(city: City, candidates: tuple[Route, ...], config: ProblemConfig)
-Evaluation(objective: float, passenger_cost: float, operator_cost: float,
-           unserved_share: float, served_mean_minutes: float | None,
-           mean_transfers: float | None, route_minutes: float,
-           direct_share: float, one_transfer_share: float,
-           two_transfer_share: float)
-```
-
-`ndarray` ở contract chỉ `numpy.ndarray`. Evaluation transfer shares có mẫu số Q cho mọi OD; `served_mean_minutes` và `mean_transfers` có mẫu số demand phục vụ, bằng None khi không ai được phục vụ. Tie-break của path quyết định transfer category. Tổng direct+one+two+unserved=1 trong tolerance.
+SimConfig chia namespace `physical`, `control`, `reward`; config train thêm namespace `algorithm`. Physical gồm mạng, fleet, tick, horizon, capacity và tapes. Control gồm feature flags/guards/cooldowns; reward gồm hệ số §6.3. Scenario hash chỉ phụ thuộc physical data và generation config. Run có physical_hash, control_hash, reward_hash riêng; env chỉ được override control/reward từ run config, không âm thầm đổi physical khi load dataset. Nhờ đó action/reward ablations dùng đúng cùng tapes, còn khác biệt controller được truy vết rõ.
 
 ```python
-generate_city(seed: int, n: int, graph_family: str,
-              demand_mode: str, hotspot_factor: float = 4.0) -> City
-build_candidates(city: City, config: ProblemConfig) -> tuple[Route, ...]
-save_instance(instance: Instance, directory: Path) -> None
-load_instance(directory: Path) -> Instance
-passenger_paths(instance: Instance, selected: tuple[int, ...]) -> PathResult
-evaluate(instance: Instance, selected: tuple[int, ...]) -> Evaluation
-action_mask(instance: Instance, selected: tuple[int, ...]) -> ndarray
-make_observation(instance: Instance, selected: tuple[int, ...]) -> dict[str, ndarray]
-solve_random(instance: Instance, seed: int) -> tuple[int, ...]
-solve_greedy(instance: Instance) -> tuple[int, ...]
-solve_local_search(instance: Instance, max_evaluations: int) -> tuple[int, ...]
-solve_exact(instance: Instance) -> tuple[int, ...]
+generate_scenario(seed: int, config: SimConfig) -> Scenario
+save_scenario(scenario: Scenario, directory: Path) -> None
+load_scenario(directory: Path) -> Scenario
+initial_state(scenario: Scenario) -> WorldState
+advance_interval(state: WorldState, scenario: Scenario, action: Action) -> StepCosts
+build_action_table() -> tuple[Action, ...]  # 221 slots
+valid_action_mask(state: WorldState, config: SimConfig) -> ndarray  # bool[221]
+observe(state: WorldState, history: ObservationHistory,
+        forecast: Forecast | None) -> dict[str, ndarray]
+interval_cost(costs: StepCosts, config: SimConfig) -> float
+summarize_episode(state: WorldState) -> EpisodeMetrics
 ```
 
-`PathResult` chứa cost_minutes[N,N], transfers[N,N], served[N,N]; diagonal cost=0, served=False, transfers=0 và bị loại khỏi thống kê. Unserved ngoài diagonal cost=inf, transfers=−1 nội bộ. `evaluate` chấp nhận mạng partial để tính reward; final validator tách riêng yêu cầu đúng K. `action_mask` trả bool[512]; terminal trả toàn false nhưng caller không được sample nữa.
+`advance_interval` mutate state đúng Δ, return **raw component increments** và terminal counts nếu đến H, không reset counters cả episode. `StepCosts`: waiting_pm, onboard_pm, crowding_pm, active_bus_min, deadhead_bus_min, excessive_wait_pm, first_denied_count, abandoned_count, mission_changes, terminal_unfinished_count. `interval_cost` dùng công thức §6, normalization ở env một lần.
 
-Env `NetworkDesignEnv(instances, reward_mode="dense")`:
+`WorldState` chứa current_time_s, vehicle map, queues/cohorts, dispatcher clocks, history bins, cumulative costs, conserved counts và reference read-only tới network/compatibility; `ObservationHistory` chỉ record past sensor aggregates. `Forecast` là tensor expected counts và model/version, không latent parameters. WorldState cung cấp properties `generated_count`, `waiting_count`, `onboard_count`, `completed_count`, `abandoned_count`, `depot_count`; Vehicle cung cấp `load`. Count properties phải đối chiếu với cohort/fleet records, không dùng số cache thiếu cập nhật.
 
-- `reset(seed=None, options=None) -> (obs, info)`; `options={"instance_index": i}` chọn xác định.
-- `step(action) -> (obs, reward, terminated, truncated, info)`; info chứa selected IDs và từng thành phần Evaluation.
-- `action_masks() -> ndarray` gọi mask thuần; phù hợp MaskablePPO.
-- `action_space=Discrete(512)`; `observation_space` khớp §4.2.
+`BusDispatchEnv(scenarios, config, forecaster=None)` implement `reset(seed, options={scenario_index})`, `step(action_index)`, `action_masks()`; action_space Discrete(221). Return obs/reward/terminated/truncated/info theo Gymnasium. Info không chứa future tapes/destinations ẩn cho controller; audit logs lưu riêng.
 
-File instance: `city.npz` không pickle + `instance.json` chứa config/metadata/routes. JSON lưu schema version, hashes và route IDs; path mặc định tương đối workspace. Checkpoint chỉ load từ artifact tin cậy của dự án.
+Scenario storage: JSON metadata/topology/fleet + numeric NPZ arrays, không pickle; schema_version=2. Validate timestamps, direction/destination, nonnegative counts, tick multiples, compatibility, shape bounds. Raw artifacts giữ scenario hash, config hash, code commit/dirty status, uv.lock hash, device, package versions và RNG seed. Fresh training only; checkpoint load cho inference phải kiểm obs/action/config version. Output đã tồn tại bị reject.
 
-## 7. Baselines và đánh giá
+## 10. Baselines, evaluation và acceptance
 
-### Baselines bắt buộc
+### 10.1 Baselines
 
-1. Random uniform trên mask; 10 rollouts/instance, báo mean và best-of-10 riêng.
-2. Greedy: tại mỗi bước chọn action giảm J nhiều nhất trên mask, tie theo ID.
-3. Greedy + local search: từ mạng greedy, xét thay một tuyến bằng một ứng viên chưa chọn; chỉ nhận swap hợp lệ giảm J > 1e-9. Best improvement, tối đa 1,000 lần gọi evaluator, dừng khi không cải thiện.
-4. Exact enumeration cho M≤12, K≤3: xét mọi subset đúng K trong budget, lấy min J. Đây là optimum **trong candidate pool**.
+- `Fixed`: NOOP mọi bước, dispatcher target ban đầu, fleet assignment cố định; reserve không dùng.
+- `Threshold`: urgency bằng queue pressure + age + headway gap; dispatch reserve trước, rồi reassign guarded, short-turn khi ước lượng demand đủ điều kiện từ queue/prior lịch sử chiếm đa số; không đọc destination ẩn. Threshold tune validation.
+- `Proportional`: desired fleet chia theo estimated demand, vẫn phải tạo các action cụ thể và đi qua guards/travel. Không fractional bus hoặc chuyển assignment tức thời.
+- `Random-valid`: kiểm env, không baseline duy nhất.
 
-Baseline và RL dùng cùng config, evaluator, pool, test instances. RL inference mặc định greedy argmax logits sau mask. Best-of-10 RL là experiment riêng, báo chi phí sampling; không so ngầm với một lần chạy baseline.
+Threshold/proportional được dùng cùng action set và thông tin policy; forecast setting ghi riêng. Không dùng actual future arrivals hoặc state ẩn. Log budget/tuning và chi phí compute.
 
-### Metrics và statistics
+### 10.2 Metrics
 
-- Primary: mean final J trên test_id; lower is better.
-- Quality: demand-weighted coverage=1−U; served_mean_minutes; generalized-time phân vị có trọng số; direct/one/two transfer shares; tổng route_minutes.
-- Robustness: invalid network rate; tỷ lệ lỗi rollout; OOD degradation.
-- Compute: training wall time; candidate generation time; evaluator calls; inference wall time cả evaluator và policy. CPU/GPU và caching regime phải ghi rõ.
-- So sánh paired theo instance; với 3 training seeds, báo riêng từng seed và mean/std giữa seed. CI paired bootstrap theo instance sau khi lấy mean model-seed cho từng instance, nhãn CI phản ánh sampling instance, không giả vờ 3×N điểm độc lập.
-- Checkpoint tốt nhất theo mean validation J trên 200 instance; tie lấy checkpoint sớm hơn. Không dùng test để chọn seed/checkpoint.
+Primary objective: total passenger-minute-equivalent cost/3000. Báo riêng:
 
-Reward experiments: dense và terminal-only tại α=0.7, λ_u=2; thêm α∈{0.3,0.9} và λ_u=0 khi budget cho phép. Mỗi cấu hình đổi objective phải train/evaluate có nhãn riêng; so raw metrics và cùng objective tham chiếu, không so trực tiếp J khác trọng số rồi kết luận tốt hơn.
+- Mean/P95 observed waiting của **mọi khách sinh trong demand window**, gồm abandonment và right-censored queue cuối H; pending queue chờ đến H được gắn censor flag. Không gọi giá trị censor này là waiting hoàn chỉnh ngoài H.
+- Completed share, abandoned share, unfinished share và unique-denied share.
+- Per-route và worst-route mean/P95 wait; excessive-wait share là tỷ lệ người từng chờ ≥15 phút trên mọi người sinh của tuyến, không chỉ số đang chờ ở cuối ca.
+- Onboard time, comfort-overload integral, load≤capacity violation count.
+- Actual headway distribution theo tuyến/hướng; headway target violation và >20-minute service gap.
+- Fleet utilization, active/deadhead bus-min, reserve use, intervention count, switching/cooldown violations.
+- Wall time, decisions/s, simulator ticks/s, inference latency CPU/GPU.
 
-## 8. Reproducibility, hiệu năng và kiểm tra
+Conservation ở đầu ca empty nên denominator demand generated; scenario zero-arrival có mean/share=None và finite costs, không chia zero. Settlement không cộng vào observed waiting, chỉ cost.
 
-Run artifact phải có resolved config, data/pool hashes, git commit/dirty status, dependency lock hash, package versions, seed, device, elapsed time, checkpoint metadata, learning CSV và evaluation CSV. Full run lưu model cuối và model tốt nhất; rerun evaluation phải dùng đúng encoding/config.
+### 10.3 Experiments
 
-MVP chỉ hỗ trợ fresh training và load checkpoint để inference; không resume training. Output directory đã tồn tại bị từ chối để bảo toàn run cũ.
+Core M3 dùng 3 seeds. Bắt buộc ablation no-reassign, no-short-turn, fairness-weight=0 (guards giữ nguyên), mỗi cấu hình train 3 seeds cùng budget. Stage M1/M2 là integration gates và có thể dùng làm action ablation nếu configs khớp. Forecast/no-forecast là experiment bổ sung 3 seeds nếu thực hiện. Không chuyển baseline data/action set để làm đẹp kết quả.
 
-Cache evaluator theo `(instance_hash, sorted(selected_ids), evaluator_version, config_hash)`. Không cache chỉ theo số tuyến. Policy permutation hoặc augmentation không được làm lệch ID/cache.
+Test paired trên cùng days/tapes; mean mỗi instance qua model seeds trước paired bootstrap theo scenario, 2,000 resamples seed6001. Báo mean/std giữa seeds riêng; CI theo day không đại diện đầy đủ training randomness. Checkpoint/thresholds chọn validation, test frozen.
 
-Profile serialized observations và rollout buffer trước full run; không materialize tensor [M,N,N] cho từng batch khi sequence [M,L_max] đã đủ lưu tuyến. Thay encoding phải tăng spec version và chạy lại observation/model tests.
+### 10.4 Acceptance
 
-Acceptance bắt buộc:
+1. Queue/fleet conservation từng tick, không tải vượt 40, không teleport, không reassignment xe có khách.
+2. 10 người chờ 5 phút tạo 50 passenger-minutes; interval splitting không làm đổi tổng.
+3. 45 khách chờ + xe rỗng capacity40 → board40, queue5, unique_denied5; không lặp denied nếu không có visit mới và không đếm lại first_denied lần sau.
+4. Deadhead 6 phút không thể phục vụ target sau 2 phút; ready sau arrival/layover semantics đúng.
+5. Short-turn không nhận khách vượt turnpoint; họ không bị mất khỏi queue hoặc bị tính capacity-denied.
+6. Fleet floor/guard/cooldown thực thi cho mọi controller; NOOP luôn hợp lệ trước terminal.
+7. Cùng scenario/action trace → cùng event logs/metrics; đổi actions không đổi exogenous tapes.
+8. 120 decisions đúng 4 giờ; terminal/truncation/cost settlement đúng, không xóa người cuối ca.
+9. Core observation không đọc future tape; thay future tape giữ past không đổi observation/action hiện tại với policy deterministic. Nếu bật forecast, cùng kiểm tra này áp dụng thêm cho forecaster.
+10. PPO smoke/save/load qua; pilot có profiler; core+ablations có đủ metrics và artifact lineage.
 
-- Fixture đi thẳng=13, chuyển tuyến=21 và unserved đúng theo §3.2.
-- Mọi reward hữu hạn; telescope đúng tolerance 1e-6; không reward terminal kép.
-- Mask bảo đảm completion, không all-false trước terminal với instance hợp lệ.
-- Routes valid, budget đúng, đủ K ở 1,000 rollout test ngẫu nhiên.
-- Tiny exact không kém mọi baseline; RL so với oracle với gap được báo cáo.
-- Hai lần generation cùng seed/config cho cùng dữ liệu và hash.
-- Model save/load cho cùng greedy action trên cùng obs/mask.
-- Pilot hoàn thành, có profiler output và metrics; full training ít nhất 3 seeds.
-- Báo cáo test/ablation có nguồn artifact và kết luận trung thực, kể cả khi RL thua baseline.
-
-## 9. Định nghĩa hoàn thành và thay đổi thiết kế
-
-Hoàn thành MVP khi tất cả acceptance trên chạy được bằng CLI, dữ liệu/model/report tái lập theo manifest và người đọc có thể lần từ config đến kết quả. Không dùng “reward tăng” làm bằng chứng duy nhất.
-
-Nếu cần thay encoding, candidate generator, objective, headway hoặc transfer semantics: tăng config/evaluator/schema version tương ứng, cập nhật spec và lưu lineage. Không ghi đè kết quả cũ dưới cùng experiment ID.
-
-Kế hoạch triển khai cụ thể, file và lệnh kiểm chứng nằm trong [plan.md](plan.md). Không bắt đầu mở rộng GNN hoặc mạng đường thật trước khi qua gate evaluator, baseline và pilot.
+Hoàn thành là có simulator đúng, baseline mạnh và kết luận tái lập; không yêu cầu RL phải thắng. Hạn chế sensing, driver, traffic và route-choice phải giữ trong final report.

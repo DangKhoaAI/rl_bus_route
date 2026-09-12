@@ -1,423 +1,416 @@
-# Fixed Bus Network RL — Implementation Plan
+# Dynamic Bus Fleet Control — Implementation Plan v0.2
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Chỉ dùng superpowers:subagent-driven-development nếu người dùng yêu cầu thực hiện bằng subagents. Các bước dùng checkbox để theo dõi.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement task-by-task. Chỉ dùng subagents khi người dùng yêu cầu. Checklist dưới đây chưa được thực thi.
 
-**Goal:** Xây pipeline tái lập cho RL chọn mạng tuyến bus cố định trên synthetic cities và đánh giá công bằng với heuristic.
+**Goal:** Xây và đánh giá RL điều phối xe dự phòng, headway, reassign và short-turn trên mạng tuyến có sẵn.
 
-**Architecture:** Domain và transit evaluator thuần Python/NumPy/NetworkX là nền tảng chung. Gymnasium env xây mạng bằng cách chọn tuyến ứng viên; MaskablePPO học policy. CLI nối generation, baseline, training, evaluation và reporting.
+**Architecture:** Fixed-tick simulator theo dõi xe/cohort và thực thi resource constraints; Gymnasium adapter tạo control decisions 2 phút. PPO/baselines dùng cùng action table và sensor information. Forecast tách khỏi simulator để kiểm soát information leakage.
 
-**Tech Stack:** Python 3.11, uv, NumPy, NetworkX, PyTorch, Gymnasium, stable-baselines3, sb3-contrib, pandas, Matplotlib, pytest, Ruff; config TOML.
+**Tech Stack:** Python 3.11, uv, NumPy, NetworkX, PyTorch, Gymnasium, stable-baselines3, sb3-contrib, pandas, Matplotlib, pytest, Ruff.
 
 **Spec:** [spec.md](spec.md). **Research:** [docs/research.md](docs/research.md).
 
-**Trạng thái:** tài liệu triển khai, chưa thực thi các task dưới đây. Mọi lệnh `uv run`, `bus-rl`, pytest và chữ ký hàm dưới đây là giao diện dự kiến sau khi task tương ứng được implement; không phải báo cáo lệnh đã chạy thành công.
+Thay thế plan v0.1 tại commit `a806bb6`; không còn task candidate selection/TNDP. Mọi file code/lệnh CLI bên dưới là dự kiến, chưa tồn tại hoặc chạy thành công tại thời điểm viết tài liệu.
 
 ## Global Constraints
 
-- Python 3.11; Linux; CPU là cấu hình kiểm thử bắt buộc.
-- Package `bus_rl`, layout `src/`; lock dependency khi setup bằng `uv.lock`.
-- Base: N=20; N_max=32; M_max=512; K=4; 2≤L≤8; edge-time 1–8 phút.
-- B=100 phút tổng route-time một chiều; h=10 phút; τ=3 phút; q=2.
-- α=0.7; λ_u=2.0; γ=1.0; không cộng terminal reward hai lần.
-- Ba training seeds: 11, 22, 33; mọi phương pháp dùng cùng pool/config/evaluator.
-- Không làm GNN, timetable, capacity, web app hoặc dữ liệu thực trong MVP.
-- Không đổi objective, transfer semantics hay schema mà không cập nhật spec/version.
-- Không chọn checkpoint theo test; lưu artifacts thay vì chỉ ảnh kết quả.
-- Các task code có vòng test fail → implementation → test pass; commit khi deliverable qua kiểm chứng. Không tạo commit chứa thay đổi ngoài task.
+- Giữ route geometry có sẵn; không arbitrary rerouting hoặc đổi nhiệm vụ xe còn khách.
+- Python 3.11, Linux, CPU smoke bắt buộc; package `bus_rl`, src layout, TOML và uv.lock.
+- Base: 3 tuyến ×6 trạm, 12 xe (9 assigned+3 reserve), capacity40, comfort30.
+- Tick30s, control120s, horizon240 phút/120 decisions, arrivals dừng ở phút180.
+- F_max16/R_max4/S_max8; Discrete(221), action/observation schema v2.
+- Target headways6/10/15 phút, initial15; floor2 FULL/tuyến; guard20 phút.
+- Allocation cooldown20 phút/xe, headway cooldown10 phút/tuyến.
+- Reward theo chi phí interval; γ=1.0, N_ref3000 và terminal-unfinished settlement.
+- M1=reserve/headway/recall; M2 thêm reassign; M3 thêm short-turn, core chỉ hoàn thành ở M3.
+- Forecast optional và causal; controller không nhận realized future hoặc private destination cohorts.
+- Conservation trước hiệu quả học; không gọi M1 hoặc reward tăng là “dự án hoàn thành”.
 
-## 1. Trình tự và gate
+## 1. Lộ trình và gate
 
 ```mermaid
 flowchart LR
-  T1[1 Domain + IO] --> T2[2 Generator + pool]
-  T1 --> T3[3 Passenger evaluator]
-  T2 --> T4[4 Mask + baselines]
-  T3 --> T4
-  T4 --> T5[5 Gymnasium env]
-  T5 --> T6[6 PPO integration]
-  T6 --> T7[7 Reproducible CLI]
-  T7 --> T8[8 Pilot + profiling]
-  T8 --> T9[9 Full experiments]
-  T9 --> T10[10 Report + acceptance]
+  T1[1 Domain + scenario] --> T2[2 Passenger/travel engine]
+  T2 --> T3[3 Dispatcher + M1 actions]
+  T3 --> T4[4 Cost + episode semantics]
+  T4 --> T5[5 Env + baselines + PPO M1]
+  T5 --> T6[6 Reassign M2]
+  T6 --> T7[7 Short-turn M3]
+  T7 --> T8[8 Reproducible CLI + pilot]
+  T8 --> T9[9 Core experiments]
+  T8 --> T10[10 Forecast extension]
+  T9 --> T11[11 Report + acceptance]
+  T10 -. if executed .-> T11
 ```
 
-Thực hiện tuần tự để giảm integration risk. Mỗi task có đầu ra kiểm chứng độc lập. Mốc thời gian dưới đây là ước lượng tổ chức cho một người đã biết Python, không phải cam kết training runtime:
+Gợi ý tổ chức 5–6 tuần cho một người có nền Python/RL: tuần1 T1–T2; tuần2 T3–T4; tuần3 T5–T6; tuần4 T7–T8; tuần5–6 T9/T11 và T10 nếu còn thời gian. Đây là lịch đề xuất, không cam kết compute hoặc tiến độ chưa biết.
 
-| Tuần đề xuất | Công việc | Gate |
-|---|---|---|
-| 1 | T1–T3 | Dữ liệu đọc/ghi và evaluator tính tay đúng |
-| 2 | T4–T5 | Baselines, masks và env đúng |
-| 3 | T6–T8 | Model save/load, pilot và profiler |
-| 4 | T9–T10 | Thí nghiệm, phân tích, báo cáo |
+Nếu thiếu thời gian: giữ conservation, ba operational stages và baseline comparison; giảm sweep hoặc bỏ forecast deep trước. Nếu thiếu compute cho 3-seed ablations, báo rõ phần còn thiếu, không âm thầm biến pilot thành full study.
 
-Nếu tuần 2 chưa qua evaluator gate, giữ quy mô tiny và sửa correctness; không bù bằng tăng training. Nếu thiếu compute, giữ base+dense/terminal trên 3 seeds; bỏ sweep mở rộng trước khi bỏ kiểm chứng cốt lõi.
+## 2. Interfaces và fixtures dùng chung
 
-## 2. File ownership và interfaces
-
-Danh sách module đầy đủ nằm ở spec §6. Mỗi task chỉ tạo những file được liệt kê; tạo `__init__.py` cần thiết trong các package mới. `tests/fixtures.py` chứa fixture dùng chung; không hard-code logic evaluator vào fixture để tạo expected output.
-
-Fixture chung được xây ở T1:
+Module tree và public signatures ở spec §9. Helper dưới đây được tạo thêm để kiểm chứng phần vật lý độc lập RL:
 
 ```python
-# tests/fixtures.py — các helper phải tạo dataclass thật, không gọi solver.
-line_instance() -> Instance
-# N=3; edges 0-1=4, 1-2=4; D[0,2]=10, OD khác=0;
-# candidates=((0,1,2), (0,1), (1,2)); K=2; B=20;
-# h=10; tau=3; max_transfers=2; max_stops=8; edge_max=8.
+integrate_tick_costs(state: WorldState, duration_s: int) -> StepCosts
+# Pure measurement cho một trạng thái cố định; không tạo boarding/movement.
 
-tiny_instance() -> Instance
-# N=4; edges 0-1=4, 1-2=4, 2-3=4, 3-0=4, 0-2=5;
-# D[0,2]=20, D[1,3]=10; OD khác=0;
-# candidates=((0,1,2),(0,3,2),(1,2,3),(0,2)); K=2; B=20.
+board_visit(state: WorldState, bus_id: int,
+            route_id: int, direction: int, stop_index: int) -> PassengerEvents
+# Mutates cohorts/load, trả boarded_count/alighted_count/first_denied_count.
+# Engine quyết định một visit hợp lệ, không để caller đổi bus location.
 
-budget_instance() -> Instance
-# N=4; edges 0-1=8, 0-2=6, 0-3=4; D[1,2]=10;
-# candidates=((0,1),(0,2),(0,3)); K=2; B=10.
+action_id(kind: str, bus_id: int | None = None,
+          route_id: int | None = None,
+          headway_s: int | None = None) -> int
+# Lookup theo action table tĩnh trong spec.
 ```
 
-Fixture không cần canonical sort theo generator vì IDs ở đây là cố ý để assert; loader vẫn kiểm tra uniqueness/path/budget. Candidate sorting chỉ là contract của generator, không phải validity của mọi imported pool.
+`PassengerEvents` là dataclass ba counter trên; boarded/alighted cohorts được cập nhật trong state. Unit test gọi boarding tại vị trí thật của xe; không di chuyển xe bằng helper này.
 
-## Task 1: Domain, environment setup và instance IO
+`tests/fixtures.py` tạo:
 
-**Files:** `pyproject.toml`, `uv.lock`, `.python-version`, `.gitignore`, `src/bus_rl/domain.py`, `src/bus_rl/data/io.py`, `tests/fixtures.py`, `tests/test_data.py`.
+- `empty_scenario(stage="M1")`: base spec network/fleet, empty arrival tape, traffic multiplier1; F12, tick30, horizon240min. Stage chỉ override action flags; M2/M3 tests truyền stage tương ứng, physical hash không đổi.
+- `waiting_state(n, destination=5)`: state ở t=0 trên empty_scenario, n khách routeA hướng+ tại s0 với đích đã cho, tất cả arrival_tick0; xe0 empty/ready tại s0. Khai báo generated_count=n.
+- `short_state()`: như waiting_state(1,destination=5), nhưng control stage M3; xe0 nhận short pattern0→3→0 đã được cấp hợp lệ; không có khách onboard.
 
-**Consumes:** schema và dataclass contract ở spec §6.1.
+Fixtures dùng literal dữ liệu để không phụ thuộc generator đúng mới kiểm engine được. `tests/__init__.py` phải có nếu import `tests.fixtures`.
 
-**Produces:** `City`, `ProblemConfig`, `Instance`, `Evaluation`, `PathResult`; `save_instance(instance, directory)` và `load_instance(directory)`.
+## Task 1: Domain, synthetic scenarios và IO
 
-- [ ] Tạo pyproject với Python `>=3.11,<3.12`, dependencies theo spec, pytest/Ruff trong dev group; tạo package import được và lock. Chọn CPU PyTorch trước, không tự đoán CUDA wheel.
-- [ ] Tạo fixture literal như §2; viết test round-trip, shape, graph connectivity, weight, Q>0, route adjacency và no-pickle loading. Trường hợp invalid dùng `pytest.raises(ValueError, match=...)` với lỗi cụ thể.
+**Files:** `pyproject.toml`, `uv.lock`, `.python-version`, `.gitignore`, `configs/base.toml`, `src/bus_rl/domain.py`, `src/bus_rl/data/{scenario,io}.py`, `tests/{__init__,fixtures,test_data}.py`.
+
+**Consumes:** spec §2–3, §7 và §9.
+
+**Produces:** typed dataclasses, `generate_scenario`, `save_scenario`, `load_scenario`, `initial_state`; immutable Scenario/read-only tapes và mutable WorldState riêng.
+
+- [ ] Setup package/deps bằng uv; khóa Python3.11 patch và CPU PyTorch sau import smoke. Ignore generated datasets/checkpoints/cache; giữ manifests nhỏ, configs và selected reports.
+- [ ] Viết seed/roundtrip tests; reject sai direction/destination, negative counts, non-tick timestamps, F/R/S vượt encoding. Scenario zero-demand hợp lệ.
 
 ```python
-def test_roundtrip_keeps_routes_and_demand(tmp_path):
-    from bus_rl.data.io import load_instance, save_instance
-    from tests.fixtures import line_instance
+def test_scenario_roundtrip_has_same_demand(tmp_path):
     import numpy as np
-    original = line_instance()
-    save_instance(original, tmp_path)
-    loaded = load_instance(tmp_path)
-    assert loaded.candidates == original.candidates
-    np.testing.assert_array_equal(loaded.city.demand, original.city.demand)
-    assert loaded.config == original.config
+    from bus_rl.data.io import save_scenario, load_scenario
+    from tests.fixtures import empty_scenario
+    scenario = empty_scenario()
+    save_scenario(scenario, tmp_path)
+    restored = load_scenario(tmp_path)
+    np.testing.assert_array_equal(restored.arrival_tape, scenario.arrival_tape)
+    assert restored.scenario_hash == scenario.scenario_hash
 ```
 
-- [ ] Chạy test fail vì IO chưa implement; sau đó implement `.npz` numeric và JSON versioned, validate tại load, hash canonical payload loại timestamp.
-- [ ] Khóa đúng patch Python trong `.python-version`; `.gitignore` bỏ `.venv`, caches, generated datasets, runs/checkpoints, nhưng giữ configs/manifests nhỏ và report đã chọn.
-- [ ] Chạy `uv run pytest tests/test_data.py -q` và `uv run ruff check .`; expected pass, commit `feat: define transit domain and versioned instance IO`.
+- [ ] Chạy fail rồi implement JSON+numeric NPZ, no pickle; hash bỏ timestamp audit, giữ semantic config/data.
+- [ ] Implement base network/initial fleet, Poisson+peak generator và indexed edge/time traffic. Destination prior và demand totals dùng đúng đơn vị spec.
+- [ ] Implement manifests500/100/200/200/200 ngày và child-seed dedup; test suite dùng 2–3 ngày mỗi split cho nhanh. Ghi rõ cùng topology là intentional.
+- [ ] `uv run pytest tests/test_data.py -q`; `uv run ruff check .`; pass rồi commit `feat: define dynamic bus scenarios and conserved domain state`.
 
-**Gate:** round-trip không thay đổi semantic/hash; invalid data bị từ chối thay vì tự sửa.
+**Gate:** Scenario không bị mutate khi reset, cùng seed→cùng tapes/hash; không có người ngoài demand window.
 
-## Task 2: Synthetic generator, candidate pool và split manifests
+## Task 2: Passenger lifecycle, travel và tick engine
 
-**Files:** `src/bus_rl/data/generate.py`, `src/bus_rl/data/candidates.py`, `configs/base.toml`, `tests/test_candidates.py`; mở rộng `tests/test_data.py`.
+**Files:** `src/bus_rl/sim/{engine,passengers,vehicles,travel}.py`, `tests/{test_passengers,test_vehicles,test_engine}.py`.
 
-**Consumes:** T1 domain/IO.
+**Consumes:** T1 scenario/world; events và timing spec §4.
 
-**Produces:** `generate_city(seed,n,graph_family,demand_mode,hotspot_factor=4.0)`; `build_candidates(city,config)`; `build_dataset(config_path: Path, output: Path) -> Path` trả đường dẫn manifest.
+**Produces:** boarding/alighting, abandonment, movement/dwell/layover và `advance_interval` engine plumbing; actions tạm chỉ NOOP trước T3.
 
-- [ ] Viết test generator seed, symmetric edges, OD asymmetry được phép, diagonal demand=0, Q=10,000, topology connected; kiểm tra 50 seeds và hai graph families.
-- [ ] Viết test shortest candidates đúng edge-time, không lặp trạm, canonical dedup cả tuyến đảo, 2≤L≤8, M≤512.
+- [ ] Viết capacity/conservation test và split cohort đúng lineage. Boarding second visit không được đếm lại first_denied đối với cùng người.
 
 ```python
-def test_candidate_pool_is_canonical_and_reproducible():
-    from bus_rl.data.candidates import build_candidates
-    from tests.fixtures import tiny_instance
-    instance = tiny_instance()
-    routes = build_candidates(instance.city, instance.config)
-    assert routes == build_candidates(instance.city, instance.config)
-    assert len(routes) == len(set(routes))
-    assert all(route <= route[::-1] for route in routes)
-    assert all(len(set(route)) == len(route) for route in routes)
+def test_capacity_denial_keeps_waiting_passengers():
+    from tests.fixtures import waiting_state
+    from bus_rl.sim.passengers import board_visit
+    state = waiting_state(45)
+    event = board_visit(state, bus_id=0, route_id=0, direction=1, stop_index=0)
+    assert event.boarded_count == 40
+    assert event.first_denied_count == 5
+    assert state.waiting_count == 5
+    assert state.onboard_count == 40
+    assert state.generated_count == state.waiting_count + state.onboard_count
 ```
 
-- [ ] Chạy tests thấy fail, implement hai graph families, OD generator và one-shortest-path-per-pair như spec §5; chuyển tất cả RNG sang `numpy.random.Generator`/seed rõ ràng.
-- [ ] Implement feasibility screening, tối đa 100 attempts với child seeds và log rejection reason; schema/config không cho phép n>32 hoặc K>M.
-- [ ] Implement split manifest với seeds/sizes spec; hash graph trước OD để loại overlap. Unit test dùng 2–3 cities/split, không cần sinh cả 3,100 instance cho unit suite.
-- [ ] Chạy `uv run pytest tests/test_data.py tests/test_candidates.py -q`; expected pass, commit `feat: generate reproducible synthetic transit instances`.
+- [ ] Chạy fail, implement eligibility/FIFO trước capacity. Các summary count properties của WorldState tính từ cohorts hoặc được đối chiếu mỗi tick để tránh cache drift.
+- [ ] Implement edge travel freeze ở entry, round-up30s; test traffic đổi khi bus đang trên edge không đổi arrival cũ, xe vào sau dùng field mới.
+- [ ] Test alight ở đúng đích, terminal turnaround, dwell30s, layover120s và patience45min tie-break trước boarding.
+- [ ] Implement đúng event order, visit ID chống duplicate processing và cost/events tại final boundary H. Audit log bus/passenger events có timestamp.
+- [ ] Chạy `uv run pytest tests/test_passengers.py tests/test_vehicles.py tests/test_engine.py -q`, pass rồi commit `feat: simulate passenger flow and physical bus movement`.
 
-**Gate:** cùng seed/config tạo cùng pool/hash; test split không trùng base graph; config rejection có thông báo rõ.
+**Gate:** conservation mỗi tick; demand/tapes không đổi theo thứ tự controller gọi RNG; không virtual teleport.
 
-## Task 3: Passenger routing, metrics và objective
+## Task 3: Dispatcher và M1 operational actions
 
-**Files:** `src/bus_rl/transit/paths.py`, `src/bus_rl/transit/metrics.py`, `tests/test_paths.py`, `tests/test_metrics.py`.
+**Files:** `src/bus_rl/sim/dispatcher.py`, `src/bus_rl/control/{actions,guards}.py`, `tests/test_control.py`; nối engine.
 
-**Consumes:** Instance và selected candidate IDs.
+**Consumes:** T2 physical engine.
 
-**Produces:** `passenger_paths(instance, selected) -> PathResult`, `evaluate(instance, selected) -> Evaluation`; partial network hợp lệ.
+**Produces:** `build_action_table`, `action_id`, `valid_action_mask`, reserve dispatch/headway/recall và autonomous normal service.
 
-- [ ] Viết oracle tính tay 13/21 phút, unreachable và transfer cap. Tạo thêm đường chain bốn tuyến hai-trạm để kiểm tra ba transfers bị loại khi q=2.
+- [ ] Viết action-table test đúng221 IDs, padding masked, NOOP valid. REASSIGN/SHORT slots giữ nguyên nhưng disabled tại M1.
+- [ ] Viết test dispatch xe9 reserve: sau một interval120s vẫn deadhead trên connector360s; không boarding target s0 trước khi đến.
 
 ```python
-def test_transfer_adds_wait_and_penalty():
-    from bus_rl.transit.paths import passenger_paths
-    from tests.fixtures import line_instance
-    instance = line_instance()
-    assert passenger_paths(instance, (0,)).cost_minutes[0, 2] == 13.0
-    two_routes = passenger_paths(instance, (1, 2))
-    assert two_routes.cost_minutes[0, 2] == 21.0
-    assert two_routes.transfers[0, 2] == 1
-
-def test_empty_network_has_finite_cost():
-    import math
-    from bus_rl.transit.metrics import evaluate
-    from tests.fixtures import line_instance
-    result = evaluate(line_instance(), ())
-    assert math.isfinite(result.objective)
-    assert result.unserved_share == 1.0
-    assert result.served_mean_minutes is None
+def test_dispatch_consumes_time_and_one_reserve():
+    from tests.fixtures import empty_scenario
+    from bus_rl.domain import initial_state
+    from bus_rl.control.actions import build_action_table, action_id
+    from bus_rl.sim.engine import advance_interval
+    scenario = empty_scenario()
+    state = initial_state(scenario)
+    action = build_action_table()[action_id("DISPATCH", bus_id=9, route_id=0)]
+    advance_interval(state, scenario, action)
+    assert state.current_time_s == 120
+    assert state.vehicles[9].phase == "DEADHEAD"
+    assert state.vehicles[9].load == 0
+    assert state.depot_count == 2
 ```
 
-- [ ] Chạy test fail; implement route-layer transfer-counter graph, Dijkstra và deterministic tie-break. Chỉ source edges chịu initial wait; không cho đi bus trên road edge ngoài tuyến.
-- [ ] Implement reference time, C_max/P, weighted metrics, objective; test generalized-time bound, demand scaling invariance, unserved không làm giảm passenger cost và transfer shares cộng thành 1.
-- [ ] Viết small exhaustive itinerary oracle độc lập cho fixture N≤4 (enumerate tối đa 3 route legs); đối chiếu Dijkstra cho mọi OD. Oracle không dùng hàm `passenger_paths` để tạo expected.
-- [ ] Chạy `uv run pytest tests/test_paths.py tests/test_metrics.py -q`; expected pass, commit `feat: evaluate passenger journeys and network objective`.
+- [ ] Chạy fail, implement dispatch reserve, donor floor/ready replacement guard cho recall, cooldown20min. Không chặn normal scheduler vì vehicle allocation cooldown.
+- [ ] Implement target headway và extra first departure; test target6min không tạo thêm xe, actual headway chỉ đổi khi có departure thật. Test minimum spacing và target cooldown10min.
+- [ ] Chạy NOOP toàn ca với empty demand: xe vẫn phục vụ/turnaround, tổng F không đổi. Test recall donor dưới floor bị mask.
+- [ ] `uv run pytest tests/test_control.py tests/test_engine.py -q`; pass, commit `feat: dispatch finite reserve buses and control target headways`.
 
-**Gate:** đúng số học và graph semantics trước mọi training. Cache chưa cần ở task này.
+**Gate:** M1 physical operation chạy được; target request không bị đánh đồng achieved frequency.
 
-## Task 4: Feasibility mask và baselines
+## Task 4: Cost, fairness và finite horizon accounting
 
-**Files:** `src/bus_rl/env/masking.py`, `src/bus_rl/baselines/{random,greedy,local_search,exact}.py`, `tests/test_masking.py`, `tests/test_baselines.py`.
+**Files:** `src/bus_rl/rewards/costs.py`, `tests/test_rewards.py`; bổ sung event counters vào engine.
 
-**Consumes:** T2 pool, T3 evaluate.
+**Consumes:** raw WorldState/passenger events.
 
-**Produces:** `action_mask`; `solve_random`, `solve_greedy`, `solve_local_search`, `solve_exact` theo spec §6.1.
+**Produces:** `StepCosts`, `integrate_tick_costs`, `interval_cost`, terminal settlement đúng spec §6.
 
-- [ ] Viết test mask nhìn trước ngân sách: chi phí 8,6,4; K=2; B=10 thì tuyến 8 không được chọn dù riêng nó chưa vượt B.
+- [ ] Viết arithmetic oracle independent, cost không dựa vào reward đã tính.
 
 ```python
-def test_mask_reserves_budget_for_remaining_routes():
-    from bus_rl.env.masking import action_mask
-    from tests.fixtures import budget_instance
-    mask = action_mask(budget_instance(), ())
-    assert mask[:3].tolist() == [False, True, True]
-    assert not mask[3:].any()
+def test_ten_people_waiting_five_minutes_is_fifty():
+    from tests.fixtures import waiting_state
+    from bus_rl.rewards.costs import integrate_tick_costs
+    costs = integrate_tick_costs(waiting_state(10), duration_s=300)
+    assert costs.waiting_pm == 50.0
 ```
 
-- [ ] Chạy fail; implement cheapest-k completion check với floating tolerance 1e-9, reject selected IDs trùng/ngoài pool. Test mọi partial subset của tiny pool so mask với enumeration feasible completions.
-- [ ] Implement random uniform valid, greedy min next J và exhaustive oracle. Exact reject M>12 hoặc K>3 để không vô tình chạy tổ hợp lớn.
-- [ ] Implement deterministic best-improvement one-route swap với max_evaluations=1,000, tính mọi call objective trong counter; dừng khi không cải thiện >1e-9.
+- [ ] Chạy fail, implement queue/onboard/crowd/active/deadhead/excessive-wait integrals và once-only event costs. So split5min thành10 intervals30s cho cùng trạng thái cố định.
+- [ ] Test first-denied5 + abandon5 là hai event semantics riêng; no repeat penalty theo tick. Hard capacity violation không được “mua” bằng soft crowd penalty.
+- [ ] Test customer còn queue/onboard tại H bị settlement60/người, không disappear; người abandon trước H không settlement lần nữa.
+- [ ] Test tổng reward khớp âm total raw costs/3000; zero demand finite, mean waiting=None, không normalization theo future realized demand.
+- [ ] `uv run pytest tests/test_rewards.py tests/test_engine.py -q`; pass, commit `feat: account for waiting operating and unfinished-service costs`.
+
+**Gate:** không bỏ khách khó, không reward chỉ đếm khách đã lên; interval/horizon accounting được xác nhận.
+
+## Task 5: Observation, Gymnasium, baselines và PPO M1
+
+**Files:** `src/bus_rl/env/{observation,bus_dispatch}.py`, `src/bus_rl/baselines/{fixed,threshold,proportional,random}.py`, `src/bus_rl/models/features.py`, `src/bus_rl/training/{train,callbacks}.py`, `configs/pilot.toml`, `tests/{test_env,test_baselines,test_model}.py`.
+
+**Consumes:** M1 engine, action guards, costs.
+
+**Produces:** `BusDispatchEnv`, fixed-shape Dict observation, `Controller.act(obs,mask)->int`, MaskablePPO integration.
+
+- [ ] Viết shapes/dtypes tests theo spec: vehicles16×27, stops4×2×8×7, action221. Observation/info controller không chứa future tape, scenario seed hoặc raw latent destination.
+- [ ] Implement history5×2min chỉ past; padding0, entity masks, elapsed/remaining time, forecast flag=0.
+- [ ] Test120 decisions=240min, `terminated=True` và `truncated=False`, reward conservation; invalid action API raises ValueError. Stock random env checker không dùng mask, không nới constraint để chiều checker.
+- [ ] Implement Fixed=NOOP và Random-valid với seed riêng. Threshold M1 dùng urgency `Q_r/(40*max(1,n_full_r)) + max_age_r/900 + max_gap_r/1200`, tie route ID; nếu Q_r≥40 ưu tiên dispatch reserve hợp lệ; sau đó SET_HEADWAY6 khi Q_r≥80,10 khi40≤Q_r<80,15 khi Q_r<40; recall khi Q_r<5 và guard cho phép. Chỉ một action, nếu không có lựa chọn hợp lệ trả NOOP.
+- [ ] Proportional: estimated rates từ arrivals10min; desired active budget9, tăng12 nếu tổng queue≥120; floor2/tuyến, phân remainder theo largest-remainder tỷ lệ rates (zero rate chia đều). Thực thi thiếu xe bằng dispatch, dư xe bằng recall; headway gần nhất trong6/10/15 theo nominal full cycle/desired fleet. Không sửa fleet count trực tiếp.
+- [ ] Implement PPO feed-forward, γ1, masked evaluation và shared MLP trong `models/features.py`. Chạy tiny CPU smoke trước khi custom full train pipeline. M1 config dùng enable_reassign=false, enable_short_turn=false mà không đổi physical scenario hash.
 
 ```python
-def test_exact_bounds_greedy_and_local_search():
-    from bus_rl.baselines.exact import solve_exact
-    from bus_rl.baselines.greedy import solve_greedy
-    from bus_rl.baselines.local_search import solve_local_search
-    from bus_rl.transit.metrics import evaluate
-    from tests.fixtures import tiny_instance
-    instance = tiny_instance()
-    cost = lambda ids: evaluate(instance, ids).objective
-    assert cost(solve_exact(instance)) <= cost(solve_greedy(instance)) + 1e-9
-    assert cost(solve_local_search(instance, 1000)) <= cost(solve_greedy(instance)) + 1e-9
-```
-
-- [ ] Chạy `uv run pytest tests/test_masking.py tests/test_baselines.py -q`; expected pass, commit `feat: add completion-safe masks and routing baselines`.
-
-**Gate:** feasible rollout luôn đủ K tuyến; oracle xác nhận baseline không tốt hơn optimum trong pool.
-
-## Task 5: Gymnasium environment và reward
-
-**Files:** `src/bus_rl/env/observation.py`, `src/bus_rl/env/network_design.py`, `tests/test_env.py`.
-
-**Consumes:** domain, evaluator, action_mask.
-
-**Produces:** `make_observation`, `NetworkDesignEnv` đúng spec API; `reward_mode` chỉ `dense` hoặc `terminal`.
-
-- [ ] Viết tests shape/dtype/padding, exact reset by instance_index, deterministic seed, budget updates, invalid action error và đúng K bước terminal.
-- [ ] Viết telescope test độc lập với implementation reward:
-
-```python
-def test_dense_return_equals_final_cost_improvement():
-    import numpy as np
-    import pytest
-    from bus_rl.env.network_design import NetworkDesignEnv
-    from bus_rl.transit.metrics import evaluate
-    from tests.fixtures import tiny_instance
-    instance = tiny_instance()
-    env = NetworkDesignEnv([instance], reward_mode="dense")
-    env.reset(seed=7)
-    total, terminal, info = 0.0, False, {}
-    while not terminal:
-        action = int(np.flatnonzero(env.action_masks())[0])
-        obs, reward, terminal, truncated, info = env.step(action)
-        assert env.observation_space.contains(obs)
-        assert not truncated
-        total += reward
-    expected = evaluate(instance, ()).objective - evaluate(
-        instance, tuple(info["selected_ids"])
-    ).objective
-    assert total == pytest.approx(expected, abs=1e-6)
-```
-
-- [ ] Chạy fail, implement pure observation encoder và env bookkeeping. Tách reward khỏi objective; terminal-only không tính dense trước đó.
-- [ ] Chạy 1,000 seeded valid-action rollouts; assert finite reward, K routes, budget, no duplicates, no all-false nonterminal mask.
-- [ ] Kiểm tra API bằng test chủ động lấy action hợp lệ. Stock `check_env` có thể sample action không theo mask; không nới ràng buộc env để làm checker pass, ghi rõ limitation và kiểm tra obs/step hợp lệ riêng.
-- [ ] Chạy `uv run pytest tests/test_env.py -q`; expected pass, commit `feat: expose fixed-route design as a masked RL environment`.
-
-**Gate:** cả dense và terminal reward đúng objective; route order không làm đổi final J.
-
-## Task 6: Feature encoder và Maskable PPO integration
-
-**Files:** `src/bus_rl/models/features.py`, `src/bus_rl/training/train.py`, `src/bus_rl/training/callbacks.py`, `tests/test_model.py`, `configs/pilot.toml`.
-
-**Consumes:** Dict observation [spec §4.2], NetworkDesignEnv.
-
-**Produces:** `RouteFeaturesExtractor`; `train_model(config_path: Path, output: Path, seed: int) -> Path` trả checkpoint tốt nhất. Task này dùng tiny fixture cho smoke; dataset đầy đủ nối ở T7.
-
-- [ ] Viết forward shape/finite test, padding embedding zero, invalid logits không được sample; kiểm tra same masked action sau save/load.
-- [ ] Implement shared route MLP 44→64→16 và global encoder 256→128; `features_dim=128`; actor/critic hidden 128. Không thêm GNN.
-- [ ] Tích hợp `MaskablePPO("MultiInputPolicy", ...)`, truyền extractor và γ=1.0. Callback validation dùng mask; n_envs=4 và n_steps=128 theo pilot config.
-
-```python
-def test_masked_ppo_smoke_learns_without_invalid_actions(tmp_path):
-    import numpy as np
+def test_masked_ppo_save_load_preserves_action(tmp_path):
     from sb3_contrib import MaskablePPO
-    from bus_rl.env.network_design import NetworkDesignEnv
-    from tests.fixtures import tiny_instance
-    env = NetworkDesignEnv([tiny_instance()])
+    from bus_rl.env.bus_dispatch import BusDispatchEnv
+    from tests.fixtures import empty_scenario
+    scenario = empty_scenario()
+    env = BusDispatchEnv([scenario], scenario.config)
     model = MaskablePPO("MultiInputPolicy", env, gamma=1.0,
                         n_steps=16, batch_size=16, n_epochs=1,
                         seed=11, device="cpu", verbose=0)
     model.learn(total_timesteps=32)
-    obs, _ = env.reset(seed=3)
-    action, _ = model.predict(obs, action_masks=env.action_masks(), deterministic=True)
-    assert env.action_masks()[int(np.asarray(action).item())]
+    obs, _ = env.reset(seed=7)
+    mask = env.action_masks()
+    action, _ = model.predict(obs, action_masks=mask, deterministic=True)
+    assert mask[int(action)]
     model.save(tmp_path / "smoke")
-    loaded = MaskablePPO.load(tmp_path / "smoke", env=env)
-    restored, _ = loaded.predict(obs, action_masks=env.action_masks(), deterministic=True)
-    assert int(action) == int(restored)
+    restored = MaskablePPO.load(tmp_path / "smoke", env=env)
+    other, _ = restored.predict(obs, action_masks=mask, deterministic=True)
+    assert int(action) == int(other)
 ```
 
-Smoke phía trên kiểm chứng library/env integration với extractor mặc định; thêm test thứ hai truyền `RouteFeaturesExtractor` qua `policy_kwargs` để kiểm chứng kiến trúc dự án. Không khẳng định policy đã học tốt từ 32 steps.
+- [ ] Thêm test architecture dự án [256,128] shared + actor/critic128; test bất kỳ key feature bị NaN đều bị reject trước training. Smoke32steps không chứng minh policy tốt.
+- [ ] `uv run pytest tests/test_env.py tests/test_baselines.py tests/test_model.py -q`; pass, commit `feat: train and compare masked bus controllers at milestone one`.
 
-- [ ] Chạy `uv run pytest tests/test_model.py -q`; expected pass. Log rollout length, entropy, value loss, approximate KL và objective components.
-- [ ] Commit `feat: train masked PPO policies for route selection`.
+**Gate M1:** physical simulator+env+baselines+PPO end-to-end chạy được; chưa gọi core hoàn thành.
 
-**Gate:** không NaN/invalid action; save/load giữ inference; training/evaluation cùng masking semantics.
+## Task 6: Reassignment giữa tuyến — M2
 
-## Task 7: CLI, checkpoint provenance và evaluation runner
+**Files:** sửa `control/actions.py`, `control/guards.py`, `sim/vehicles.py`, `baselines/{threshold,proportional}.py`, `tests/{test_control,test_baselines}.py`; `configs/experiments/m2.toml`.
 
-**Files:** `src/bus_rl/cli.py`, `src/bus_rl/training/checkpoint.py`, `src/bus_rl/evaluation/runner.py`, `src/bus_rl/evaluation/statistics.py`, `configs/train.toml`, `configs/eval.toml`, `tests/test_pipeline.py`; cập nhật pyproject entrypoint.
+**Consumes:** M1 ready/empty fleet, compatibility, terminal/deadhead paths.
 
-**Consumes:** dataset manifest, baselines, model checkpoint.
+**Produces:** REASSIGN operational, audit donor/receiver và action ablation flag.
 
-**Produces:** các lệnh bên dưới; `evaluate_run(config_path: Path, output: Path) -> Path` trả CSV; `paired_summary(csv_path: Path) -> dict`.
+- [ ] Test xe loaded hoặc moving hoặc cooldown bị mask; same-route reassign bị mask; donor sau remove còn1 FULL bị mask.
+- [ ] Test donor còn2 FULL nhưng không có replacement ready đúng terminal cũng bị mask; không chỉ kiểm count toàn tuyến.
+- [ ] Implement acceptance chuyển xe sang DEADHEAD, không được tính vừa donor vừa receiver FULL. Arrival tới receiver s0 mới thành extra-departure pending.
+- [ ] Test routeA→B mất travel time thực, no teleport; donor guard checks trước action và logged actual headway violation sau traffic để không nhầm guard với guarantee.
+- [ ] Threshold sau hết reserve chọn donor urgency thấp nhất có action hợp lệ; proportional chọn donor vượt desired và receiver thiếu, tie ID. Nếu không khả thi thì NOOP/headway, không dùng private state bypass guard.
+- [ ] `uv run pytest tests/test_control.py tests/test_baselines.py -q`; chạy seeded M2 rollouts, commit `feat: reallocate empty buses through feasible terminal transfers`.
+
+**Gate M2:** resource conservation và donor protection đúng khi dispatch/reassign/recall xen kẽ.
+
+## Task 7: Short-turn mission — M3
+
+**Files:** sửa `control/actions.py`, `sim/{passengers,vehicles,dispatcher}.py`, `baselines/threshold.py`, `tests/{test_passengers,test_control,test_engine}.py`; `configs/experiments/m3.toml`.
+
+**Consumes:** predefined route patterns, M2 engine.
+
+**Produces:** SHORT_TURN một round trip0→3→0, đủ điều kiện boarding/layover, rồi FULL.
+
+- [ ] Viết test khách đi tới s5 không được lên short mission từ s0.
+
+```python
+def test_short_turn_does_not_strand_long_distance_passenger():
+    from tests.fixtures import short_state
+    from bus_rl.sim.passengers import board_visit
+    state = short_state()
+    event = board_visit(state, bus_id=0, route_id=0, direction=1, stop_index=0)
+    assert event.boarded_count == 0
+    assert event.first_denied_count == 0
+    assert state.waiting_count == 1
+```
+
+- [ ] Chạy fail, implement passenger eligibility trước boarding. Test reverse direction khách s3→s1 được đi sau turnaround; all outbound khách xuống đúng destination.
+- [ ] Test short action chỉ từ reserve hoặc empty/ready cùng route s0; short nhận từ assigned bus phải qua donor guard và tạm không tính FULL floor.
+- [ ] Implement layover120s tại turnpoint và lúc về s0, pattern restore FULL sau completion. Không reset cooldown để tạo chuỗi short miễn phí.
+- [ ] Threshold ước lượng short-eligible mass từ aggregate origin/direction queues và prior downstream `exp(-distance/2)`; nếu estimated share≥0.7 và Q≥40 chọn short reserve trước full reserve, không đọc actual hidden destinations. Targeted short-ready assigned bus là fallback chỉ khi mask hợp lệ.
+- [ ] Test long-distance starvation case và excessive-wait metrics; không auto-reassign người ngoài pattern sang tuyến khác.
+- [ ] `uv run pytest tests/test_passengers.py tests/test_control.py tests/test_engine.py -q`; commit `feat: operate predefined short-turn reinforcement trips`.
+
+**Gate M3:** đủ core actions, mọi khách được bảo toàn và không ai bị buộc xuống trước đích.
+
+## Task 8: CLI, provenance, evaluation và pilot
+
+**Files:** `src/bus_rl/cli.py`, `training/checkpoint.py`, `evaluation/{runner,statistics,profile}.py`, `configs/{train,eval}.toml`, `tests/test_pipeline.py`, `reports/pilot.md`.
+
+**Consumes:** M3 core.
+
+**Produces:** CLI, run metadata/CSV, profiler, completed pilot và best-checkpoint selection.
 
 ```bash
 uv run bus-rl generate --config configs/base.toml --output data/generated/base
-uv run bus-rl baseline --manifest data/generated/base/manifest.json --split validation --methods random,greedy,local-search --output runs/baselines
+uv run bus-rl baseline --manifest data/generated/base/manifest.json --split validation --methods fixed,threshold,proportional --output runs/baselines
+uv run bus-rl profile --config configs/pilot.toml --decisions 120 --output runs/profile
 uv run bus-rl train --config configs/pilot.toml --seed 11 --output runs/pilot-11
 uv run bus-rl evaluate --config configs/eval.toml --checkpoint runs/pilot-11/best.zip --split validation --output runs/pilot-11/eval
 ```
 
-- [ ] Viết subprocess integration test với config tmp dùng 2 train, 1 validation, 1 test instance và 32 steps; assert CLI exit code, artifact files, CSV schema. Bắt đầu bằng generate/baseline, nối train/evaluate sau khi chúng qua test.
-- [ ] Implement argparse CLI; không phát sinh network calls. Thư mục output tồn tại phải báo lỗi `output already exists`; người chạy chọn run_id mới, không overwrite run im lặng.
-- [ ] Checkpoint metadata có config/hash/encoding; MVP hỗ trợ fresh training và load model để inference, không hỗ trợ resume training. CLI không nhận `--resume`; checkpoint load từ config/encoding khác phải báo lỗi rõ ràng.
-- [ ] CSV mỗi hàng chứa method, train_seed, rollout_seed, instance_id, split, objective components, route IDs, feasible, elapsed_seconds, evaluator_calls, candidate_hash, config_hash. Seed không áp dụng dùng null, không dùng 0 giả.
-- [ ] Implement paired statistics như spec; test CI bằng dữ liệu tổng hợp có paired difference hằng số=2, expected mean=2 và CI=[2,2]. Không coi mỗi seed-instance là độc lập.
-- [ ] Kiểm tra cùng config/checkpoint chạy evaluation hai lần cho cùng route IDs/quality metrics (elapsed time có thể khác). Chạy `uv run pytest tests/test_pipeline.py -q`, commit `feat: add reproducible experiment commands and provenance`.
+- [ ] Viết subprocess smoke với2train/1validation/1test scenarios và32trainingsteps; assert output/CSV và nonzero exit khi output tồn tại.
+- [ ] Implement scenario/run metadata: action/obs/config/schema hashes, tapes, git SHA/dirty, lock hash, device, seeds, actual transitions/episodes, wall time. Fresh training only; load mismatched schema/config phải lỗi.
+- [ ] Raw metrics CSV per method/model_seed/scenario; event trace riêng để audit. Waiting của cả demand có censor/abandon flags, per-route metrics, actual headways, cost components. Physical/control/reward hashes riêng: ablation override control/reward được phép, đổi physical config khi load checkpoint/data phải reject.
+- [ ] Test paired statistics với mọi difference=2 cho CI[2,2]; bootstrap theo ngày sau mean model seeds, không xem3×N rows là independent.
+- [ ] Chạy profiling120 decisions với empty/light/peak demand; đo engine/passenger/sensor/PPO breakdown và peak RSS, không chỉ inference GPU.
+- [ ] Chạy pilot12,288 transitions, validation100days mỗi12,288; nếu chưa có learning signal kiểm tiny deterministic overloaded scenario trước khi tăng budget. Không cần thắng heuristic để pass plumbing gate.
+- [ ] Ghi dự toán full runtime dựa measurement, phân biệt estimate/actual. Không cache state động chỉ theo tổng queue; cache chỉ immutable shortest paths/traffic keys phù hợp.
+- [ ] `uv run pytest tests/test_pipeline.py -q`; commit code+pilot report `feat: reproduce and profile dynamic fleet control experiments`.
 
-**Gate:** truy vết được một số liệu đến checkpoint, pool, config và instance; test chưa dùng để chọn checkpoint.
+**Gate:** có tài nguyên đo thực và artifact lineage trước full experiments.
 
-## Task 8: Pilot, profiling và chốt compute budget
+## Task 9: Core training và action/reward ablations
 
-**Files:** thêm `src/bus_rl/evaluation/profile.py`, `tests/test_pipeline.py`; artifacts `runs/pilot-11/`, tài liệu `reports/pilot.md`.
+**Files:** `configs/experiments/{core,no_reassign,no_short,fairness_zero}.toml`; artifacts `runs/`, `reports/results/`; cập nhật evaluator nếu cần.
 
-**Consumes:** CLI pipeline T7.
+**Consumes:** frozen manifests, M3 và T8 pilot.
 
-**Produces:** lệnh `bus-rl profile --config configs/pilot.toml --steps 512 --output runs/profile`; profiler JSON và báo cáo pilot.
+**Produces:** 4 configurations×3seeds=12 full training runs và paired evaluation. Không đổi kiến trúc trong lúc so ablation.
 
-- [ ] Viết test `profile` trả số steps thực, thời gian >0, evaluator calls và finite throughput. Implement perf_counter breakdown cho reset, observation, evaluator, policy/update; đo peak RSS trong process bằng công cụ Linux chuẩn, ghi đơn vị.
-- [ ] Sinh base dataset và kiểm tra manifest; chạy baselines validation trước. Ghi thời gian generation riêng.
-- [ ] Chạy 20,480 steps pilot seed 11; validation mỗi 10,240 environment steps; kiểm tra số episodes và checkpoint best theo validation J.
-- [ ] Nếu evaluator là bottleneck, implement cache key như spec và kiểm tra cached/uncached trả cùng metrics, không lẫn config/instance. Reprofile trên cùng instance sequence và báo hit rate.
-- [ ] Tính ước lượng full runtime từ steps/s và validation overhead; ghi CPU/GPU, RAM và actual peak. Không đưa ước lượng này vào báo cáo như thời gian đo full run.
-- [ ] Pilot không yêu cầu thắng greedy; yêu cầu finite training, valid networks, learning signals và chi phí compute chấp nhận được. Nếu không có learning signal, quay lại single tiny instance để phân biệt bug và optimization difficulty.
-- [ ] Commit code/profile report có ý nghĩa, không commit checkpoint/dataset lớn; message `perf: profile route evaluation and validate training pilot`.
-
-**Gate:** có phép đo để quyết định chạy full; mọi thay đổi config sau pilot được version trước T9.
-
-## Task 9: Full experiments và ablations
-
-**Files:** `configs/experiments/{dense,terminal,alpha03,alpha09,no_coverage_penalty}.toml`; runner mở rộng trong `src/bus_rl/evaluation/runner.py`; artifacts `runs/`, `reports/results/`.
-
-**Consumes:** pipeline đã qua T8; frozen train/validation/test manifests.
-
-**Produces:** result tables đầy đủ; không implement mô hình mới trong task này.
-
-- [ ] Khóa experiment configs và ghi Git commit. Base dense + terminal là bắt buộc; alpha/no-coverage là sweep mở rộng nếu compute cho phép, phải ghi rõ run nào chưa thực hiện.
-- [ ] Train base dense cho seeds 11,22,33; mỗi seed 204,800 steps. Chọn checkpoint theo validation, không chọn seed tốt nhất rồi bỏ hai seed khác.
+- [ ] Khóa configs trước test; tune threshold/proportional trên validation với cùng exogenous tapes. Ghi số tổ hợp/compute và công thức urgency đã chọn.
+- [ ] Train core245,760transitions cho seeds11,22,33, best checkpoint theo validation total cost/3000.
 
 ```bash
-uv run bus-rl train --config configs/experiments/dense.toml --seed 11 --output runs/dense-11
-uv run bus-rl train --config configs/experiments/dense.toml --seed 22 --output runs/dense-22
-uv run bus-rl train --config configs/experiments/dense.toml --seed 33 --output runs/dense-33
+uv run bus-rl train --config configs/experiments/core.toml --seed 11 --output runs/core-11
+uv run bus-rl train --config configs/experiments/core.toml --seed 22 --output runs/core-22
+uv run bus-rl train --config configs/experiments/core.toml --seed 33 --output runs/core-33
 ```
 
-- [ ] Lặp ba lệnh với config `terminal.toml` và output `terminal-11`, `terminal-22`, `terminal-33`; budget và preprocessing giữ nguyên.
-- [ ] Đánh giá best checkpoint mỗi run trên test_id, test_ood_demand, test_ood_size; chạy random 10 rollouts, greedy, local search trên cùng manifests/config.
-- [ ] Đánh giá tiny oracle gap `J(method)-J(exact)`, ghi absolute gap; relative gap chỉ khi denominator đủ lớn. Kiểm tra invalid network rate bằng 0.
-- [ ] Tổng hợp mean/std theo seeds, paired bootstrap theo instance 2,000 resamples, bootstrap seed=6001; lưu raw rows để chạy lại thống kê.
-- [ ] Báo inference một lần và best-of-10 tách biệt nếu làm sampling experiment; candidate generation và training cost báo riêng, không loại baseline evaluator time khỏi so sánh.
-- [ ] So raw coverage/travel/route-time ở các objective weights khác nhau; khi cần ranking chung, đánh giá lại mạng theo α=0.7, λ_u=2.0.
+- [ ] Lặp ba seed cho no_reassign, no_short và fairness_zero; giữ 221 slots và mask disabled, guards/fleet/tapes/compute không đổi. Với fairness_zero chỉ bỏ F_t term, không bỏ donor protection.
+- [ ] Đánh giá trên200test_id +200burst +200traffic days cho từng run, cùng baseline sensors/actions; flag các action subsets rõ khi so với full controller.
+- [ ] Re-evaluate cost chung theo trọng số core từ raw components khi so reward ablation; không so score khác định nghĩa như cùng metric.
+- [ ] Báo cost, all-demand observed wait/P95 và censoring, completed/abandoned/unfinished, worst-route quality, actual headways, active/deadhead time, unique denied.
+- [ ] Paired bootstrap2,000 resamples seed6001, mean/std model seeds riêng; phân tích không thắng hoặc OOD kém bằng event traces.
+- [ ] Không chọn ngày đẹp hoặc seed tốt nhất; lưu mọi run fail và nguyên nhân. Nếu budget không đủ, ghi những run chưa thực hiện và không đánh dấu hoàn thành.
 
-**Gate:** đủ sáu run cốt lõi, raw metrics và test split độc lập; không yêu cầu RL thắng.
+**Gate:** đủ core+ablations tái lập, không yêu cầu RL thắng baselines.
 
-## Task 10: Báo cáo, visualization và nghiệm thu
+## Task 10: Forecast experiment — optional
 
-**Files:** `src/bus_rl/evaluation/plots.py`, `reports/final.md`, `README.md`; bổ sung lệnh report trong `src/bus_rl/cli.py`; cập nhật trạng thái plan.
+**Files:** `src/bus_rl/forecasting/historical.py`, `configs/experiments/forecast.toml`, `tests/test_forecast.py`; forecast metadata/results.
 
-**Consumes:** CSV và network artifacts T9.
+**Consumes:** train-day **arrival logs**, not queues; past observation history.
 
-**Produces:** báo cáo đọc độc lập, hình PNG/SVG, hướng dẫn tái lập.
+**Produces:** `HistoricalForecaster.fit(train_logs)`, `predict(history, time_s) -> Forecast`, no-future-leak tests và forecast/no-forecast result nếu chạy.
 
-- [ ] Test renderer với CSV tiny chứa cả served_mean=None để không crash khi mạng không phục vụ được khách; xác nhận output file nonempty. Chọn headless Matplotlib backend khi chạy CI/CLI.
-- [ ] Implement route plot dùng đúng edges selected, OD heatmap, learning curves nhiều seed, coverage–route-time plot và bảng ID/OOD. Annotate h, transfer cap, budget và candidate-selection restriction.
+- [ ] Viết test hai tapes giống hệt ở≤t nhưng khác sau t: forecast tại t phải bằng nhau. Dùng sentinel object để fail nếu predictor truy cập future tape/scenario seed.
+- [ ] Implement time-bin mean+recent correction đúng spec §7.3; zero history dùng smoothing+1, không NaN.
+- [ ] Fit chỉ train và freeze; đánh giá15-minute forecast MAE/bias trên validation/test demand logs. Không fit lại sau nhìn test metrics.
+- [ ] Policy giữ same shape forecast tensor, flag distinguishes enabled; train forecast3seeds và so no-forecast core trên cùng days/budget.
+- [ ] Báo contribution riêng của forecast error và control; perfect-future oracle nếu thêm phải tách nhãn và không dùng làm online baseline.
+- [ ] `uv run pytest tests/test_forecast.py -q`; commit `feat: add causal historical demand forecasts for control` nếu thực hiện.
+
+**Gate optional:** không leak tương lai; thiếu task này không chặn core M3 nhưng final report phải nói forecast chưa đánh giá.
+
+## Task 11: Report, visualization và acceptance
+
+**Files:** `src/bus_rl/evaluation/plots.py`, bổ sung CLI report, `README.md`, `reports/final.md`, selected PNG/SVG; cập nhật checkboxes.
+
+**Consumes:** raw CSV/events/configs từ T9 và T10 nếu có.
+
+**Produces:** kết quả đọc độc lập và hướng dẫn tái lập.
+
+- [ ] Test plot rendering headless với zero-demand/censored days và baseline không có model seed; không crash do None.
+- [ ] Tạo route×time queue heatmap, fleet allocation timeline, bus mission Gantt gồm deadhead, target-vs-actual headway, waiting/CDF và learning curves3seeds. Hình phải có đơn vị/phạm vi M3 và không che abandonment.
 
 ```bash
-uv run bus-rl report --results runs/dense-11/eval/results.csv --output reports/dense-11
+uv run bus-rl report --results runs/core-11/eval/results.csv --output reports/core-11
 ```
-- [ ] Viết final report: câu hỏi, giả định, phương pháp, dataset, compute đo thực, kết quả, CI, thất bại và hạn chế. Mọi bảng có đường dẫn raw CSV/config/checkpoint metadata.
-- [ ] README hướng dẫn setup lockfile, chạy tiny smoke, generate/train/evaluate/report; phân biệt lệnh tái lập và artifact lớn cần tạo lại.
-- [ ] Chạy toàn bộ kiểm chứng:
+
+- [ ] Viết final report: bài toán, giới hạn sensing/driver/traffic, giả định POMDP, reward weights, baselines, compute actual, ID/OOD, ablations và failure cases. Link mỗi bảng với artifacts.
+- [ ] README setup `uv sync --locked`, tiny smoke, generate/baseline/train/evaluate/report; nói rõ file/model lớn cần tái tạo và configs đã dùng.
+- [ ] Chạy acceptance cuối:
 
 ```bash
 uv sync --locked
 uv run ruff check .
 uv run ruff format --check .
 uv run pytest -q
-uv run bus-rl evaluate --config configs/eval.toml --checkpoint runs/dense-11/best.zip --split test_id --output runs/recheck-dense-11
+uv run bus-rl evaluate --config configs/eval.toml --checkpoint runs/core-11/best.zip --split test_id --output runs/recheck-core-11
 ```
 
-- [ ] Đối chiếu quality/route IDs với evaluation trước đó; không yêu cầu elapsed_seconds bằng nhau. Mở kiểm tra hình có legend, đơn vị và không vẽ tuyến vượt đường hợp lệ.
-- [ ] Đánh dấu checkbox dựa trên bằng chứng và commit report/code; không đánh dấu sweep mở rộng hoàn thành nếu chưa chạy.
+- [ ] Đối chiếu route missions/quality metrics với run gốc, elapsed time có thể khác. Audit ít nhất một reserve dispatch, reassign và short-turn bằng event trace và conservation counts.
+- [ ] Chỉ đánh dấu task hoàn thành khi có bằng chứng; report kết quả tiêu cực trung thực. Commit code/docs/report, không commit dữ liệu/checkpoint lớn vô tình.
 
-**Gate cuối:** mọi acceptance spec §8 có bằng chứng. Nếu RL chưa vượt baseline, kết luận đúng giới hạn; nếu thiếu full training hoặc CI, ghi dự án còn thiếu thay vì gọi MVP hoàn thành.
+**Gate cuối:** toàn bộ spec §10.4 được kiểm chứng; core M3 đầy đủ, learning và comparison có thể tái lập.
 
-## 3. Mapping requirement → task
+## 3. Coverage map
 
 | Yêu cầu | Task | Bằng chứng |
 |---|---|---|
-| Architecture/language/dependencies | T1, T6, T7 | imports, lockfile, CLI smoke |
-| Synthetic graph và OD | T2 | generator tests, manifests/hashes |
-| Fixed-route candidate search | T2, T4 | path validation, shared pool |
-| Mathematical passenger model | T3 | 13/21-minute fixtures, independent oracle |
-| Objective/reward | T3, T5 | finite objective, telescope, terminal ablation |
-| Hard constraints và completion | T4, T5 | enumeration mask test, 1,000 rollouts |
-| PPO và model | T6 | masked train/save/load, forward tests |
-| Training compute | T8, T9 | profiler, logs, measured runtime |
-| Generalization/statistics | T7, T9 | ID/OOD CSV, paired CI |
-| Searchable research/report | T10 | sources, README, final report |
+| Network có sẵn, synthetic demand/traffic | T1 | Scenario/schema/tape tests |
+| Physical fleet + passenger conservation | T2 | Tick invariants/event traces |
+| Reserve/headway/recall | T3 | M1 engine tests |
+| Reward/censoring/final settlement | T4 | Arithmetic/timing tests |
+| Sensor/POMDP boundaries + PPO | T5 | No-future features, masked smoke |
+| Reassign/donor protection | T6 | Terminal/loaded/floor tests |
+| Short-turn | T7 | Downstream eligibility/turnaround |
+| Reproducible training/profiling | T8 | CLI, hashes, measured performance |
+| Baselines + 3-seed ablations | T9 | Raw paired ID/OOD results |
+| Forecast | T10 optional | Leakage tests + MAE/control comparison |
+| Accessible final explanation | T11 | Sources, plots, reproduction steps |
 
-## 4. Rủi ro và quyết định khi gặp vấn đề
+## 4. Rủi ro cần xử lý bằng bằng chứng
 
-| Dấu hiệu | Hành động |
-|---|---|
-| Mask hết action trước K | Dừng run, lưu instance/selected IDs; kiểm chứng cheapest-k logic và pool feasibility |
-| Reward tăng nhưng coverage giảm | Xem từng thành phần J, kiểm tra unserved accounting; không tự tăng reward bằng thử ngẫu nhiên |
-| Training NaN | Kiểm tra infinity/padding/normalization và valid actions trước chỉnh learning rate |
-| Không thắng greedy | Tiny learning check, so pool oracle gap; báo kết quả, không đổi test set |
-| OOD size suy giảm | Tách tác động model và K/B trên mỗi trạm; không gọi đó chỉ là lỗi GNN/MLP |
-| Runtime vượt dự kiến | Profile evaluator/cache, giảm validation frequency có version; giữ fairness |
-| Muốn dùng graph model | Ghi extension spec sau MVP, không thay model âm thầm trong thí nghiệm |
+- Queue giảm đột ngột: kiểm boarding/abandon conservation trước kết luận policy tốt.
+- Headway nhỏ nhưng không có xe: kiểm actual departures; target không phải achieved service.
+- Waiting giảm nhưng onboard/unfinished tăng: kiểm reward và horizon gaming.
+- Reassign quá nhiều: kiểm cooldown/deadhead cost, không thêm penalty theo cảm tính khi simulator còn sai.
+- Worst route kém: xem floor/guard và excess-wait metrics; variance nhỏ không chứng minh fairness.
+- PPO không thắng threshold: dùng deterministic toy và forecast ablation để tách optimization khó khỏi bug; không thay test set.
+- Simulator chậm: profile cohort splitting/history aggregation; không bỏ constraints để tăng steps/s.
 
-Kế hoạch kết thúc ở pipeline và báo cáo MVP. Triển khai code bắt đầu từ T1 khi người dùng yêu cầu tiếp tục; yêu cầu hiện tại chỉ là khởi tạo Git và tạo bộ tài liệu.
+Kế hoạch này cập nhật bộ tài liệu theo định nghĩa mới; chưa thực thi code hoặc training. Khi triển khai, bắt đầu T1 và đi qua từng gate.
