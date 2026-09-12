@@ -23,8 +23,9 @@ from bus_rl.env.bus_dispatch import BusDispatchEnv
 from bus_rl.env.factory import make_env_for_run
 from bus_rl.evaluation.runner import evaluate_scenarios
 from bus_rl.parity.fixtures import load_fixture
-from bus_rl.parity.scenarios import CATALOG, CONTROL_FLAGS, build_scenario
+from bus_rl.parity.scenarios import CATALOG, CONTROL_FLAGS
 from bus_rl.training.checkpoint import assert_backend_compatible, run_metadata
+from tests.backend_parity.rust_bridge import cached_scenario
 
 pytest.importorskip("bus_sim")
 
@@ -102,7 +103,7 @@ def test_native_env_contract_and_masked_rejection():
 )
 def test_native_env_matches_python_env_at_every_boundary(name):
     payload, _, _ = load_fixture(FIXTURES / name)
-    scenario = build_scenario(payload["spec"])
+    scenario = cached_scenario(payload["spec"])
     control = _control(payload["spec"])
     oracle = BusDispatchEnv([scenario], scenario.config, control=control)
     native = NativeBusDispatchEnv([scenario], scenario.config, control=control)
@@ -289,7 +290,7 @@ def test_forecast_context_matches_across_backends():
 
 def test_zero_demand_metrics_match_and_stay_none():
     run = load_run_config(ROOT / "configs" / "eval.toml")
-    scenario = build_scenario(CATALOG["zero_m3"])
+    scenario = cached_scenario(CATALOG["zero_m3"])
     python_run = replace(run, runtime=RuntimeConfig(backend="python"))
     rust_run = replace(run, runtime=RuntimeConfig(backend="rust"))
     frame_py, _ = evaluate_scenarios([scenario], python_run, "fixed")

@@ -2,12 +2,14 @@
 """R0 oracle tooling: freeze the Python reference and export golden fixtures.
 
 Usage:
-    python scripts/export_oracle.py build [--force]
-    python scripts/export_oracle.py verify
+    python scripts/export_oracle.py build [--force] [--skip-fixtures]
+    python scripts/export_oracle.py verify [--deep] [--hashes-only]
 
 ``build`` writes ``reports/rust-migration/oracle-manifest.json`` and exports the
 named fixtures under ``tests/backend_parity/fixtures``. ``verify`` re-derives
 every hash, replays every fixture, and re-checks the reference checkpoint.
+``--deep`` additionally regenerates the 1,200 scenario seeds (slow R0 check);
+``--hashes-only`` is the fast manifest-only check.
 """
 
 from __future__ import annotations
@@ -178,7 +180,10 @@ def write_summary(matrix: dict) -> None:
 
 def cmd_build(args) -> None:
     build_reference(force=args.force)
-    export_fixtures(force=args.force)
+    if args.skip_fixtures:
+        print("[fixture] skipped (--skip-fixtures)")
+    else:
+        export_fixtures(force=args.force)
     manifest = build_manifest(ROOT)
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     (REPORT_DIR / "oracle-manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True))
@@ -188,7 +193,15 @@ def cmd_build(args) -> None:
 
 def cmd_verify(args) -> None:
     manifest = json.loads((REPORT_DIR / "oracle-manifest.json").read_text())
-    problems = verify_manifest(manifest, ROOT)
+    problems = verify_manifest(manifest, ROOT, regenerate_scenarios=args.deep)
+    if args.hashes_only:
+        if problems:
+            print("VERIFY FAILED")
+            for problem in problems:
+                print(" -", problem)
+            raise SystemExit(1)
+        print("VERIFY OK: manifest hashes (fixtures and reference skipped)")
+        return
     failures = 0
     for name in CATALOG:
         directory = FIXTURES_DIR / name
@@ -235,8 +248,23 @@ def main() -> None:
     sub = parser.add_subparsers(dest="command", required=True)
     build = sub.add_parser("build")
     build.add_argument("--force", action="store_true")
+    build.add_argument(
+        "--skip-fixtures",
+        action="store_true",
+        help="rebuild manifest+summary only (report-only changes)",
+    )
     build.set_defaults(func=cmd_build)
     verify = sub.add_parser("verify")
+    verify.add_argument(
+        "--deep",
+        action="store_true",
+        help="also regenerate the 1,200 scenario seeds (slow R0 check)",
+    )
+    verify.add_argument(
+        "--hashes-only",
+        action="store_true",
+        help="skip fixture replay and reference evaluation",
+    )
     verify.set_defaults(func=cmd_verify)
     args = parser.parse_args()
     args.func(args)

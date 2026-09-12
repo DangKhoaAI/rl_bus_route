@@ -23,8 +23,11 @@ The oracle manifest is `reports/rust-migration/oracle-manifest.json`
 (machine-checkable, self-hashed). Everything is regenerated with:
 
 ```text
-python scripts/export_oracle.py build     # reference + fixtures + manifest
-python scripts/export_oracle.py verify    # re-derive every hash and replay
+python scripts/export_oracle.py build                 # reference + fixtures + manifest
+python scripts/export_oracle.py build --skip-fixtures # manifest + summary only (~1 s)
+python scripts/export_oracle.py verify                # hashes + fixtures + reference (~14 s)
+python scripts/export_oracle.py verify --hashes-only  # manifest hashes only (~1 s)
+python scripts/export_oracle.py verify --deep         # + regenerate 1,200 scenario seeds (~35 s)
 ```
 
 Frozen reference:

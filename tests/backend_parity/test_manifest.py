@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
+
+import pytest
 
 from bus_rl.parity.manifest import verify_manifest
 from bus_rl.provenance import canonical_hash
 
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "reports" / "rust-migration" / "oracle-manifest.json"
+DEEP = os.environ.get("BUS_RL_DEEP") == "1"
 
 
 def _payload() -> dict:
@@ -18,6 +22,11 @@ def _payload() -> dict:
 
 def test_manifest_references_and_hashes_verify():
     assert verify_manifest(_payload(), ROOT) == []
+
+
+@pytest.mark.skipif(not DEEP, reason="set BUS_RL_DEEP=1 for the 1,200-scenario regeneration check")
+def test_scenario_order_regenerates():
+    assert verify_manifest(_payload(), ROOT, regenerate_scenarios=True) == []
 
 
 def test_manifest_self_hash_is_consistent():

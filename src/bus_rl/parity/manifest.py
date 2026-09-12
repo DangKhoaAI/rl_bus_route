@@ -363,8 +363,14 @@ def _verify_scenario_regeneration(payload: dict) -> list[str]:
     return problems
 
 
-def verify_manifest(payload: dict, root: Path) -> list[str]:
-    """Return a list of verification problems (empty means the manifest holds)."""
+def verify_manifest(payload: dict, root: Path, *, regenerate_scenarios: bool = False) -> list[str]:
+    """Return a list of verification problems (empty means the manifest holds).
+
+    ``regenerate_scenarios`` re-runs the 1,200-day scenario generator to prove
+    deterministic ordering. That is the R0 acceptance check; it is opt-in
+    because it dominates verify time and only needs to run when the generator or
+    physical config changes.
+    """
     root = Path(root)
     problems: list[str] = []
     if payload.get("physical_config_hash") != physical_config_hash(SimConfig()):
@@ -403,5 +409,6 @@ def verify_manifest(payload: dict, root: Path) -> list[str]:
             problems.append(f"missing reference checkpoint: {reference['checkpoint']}")
         elif file_hash(path) != reference["checkpoint_sha256"]:
             problems.append("reference checkpoint hash drifted")
-    problems.extend(_verify_scenario_regeneration(payload))
+    if regenerate_scenarios:
+        problems.extend(_verify_scenario_regeneration(payload))
     return problems

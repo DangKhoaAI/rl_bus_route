@@ -6,7 +6,9 @@ This is test/report tooling, not the R3 Gym wrapper.
 
 from __future__ import annotations
 
+import json
 from dataclasses import replace
+from functools import lru_cache
 
 import numpy as np
 
@@ -22,8 +24,18 @@ def scenario_json(scenario, control) -> str:
     return scenario_payload(scenario, enable_reassign, enable_short_turn)
 
 
+@lru_cache(maxsize=64)
+def _scenario_for_key(spec_json: str):
+    return build_scenario(json.loads(spec_json))
+
+
+def cached_scenario(spec: dict):
+    """Build each catalog scenario once per test session (deterministic)."""
+    return _scenario_for_key(json.dumps(spec, sort_keys=True, default=str))
+
+
 def make_kernel(spec: dict, *, conservation: bool = True):
-    scenario = build_scenario(spec)
+    scenario = cached_scenario(spec)
     enable_reassign, enable_short_turn = CONTROL_FLAGS[spec.get("control", "M3")]
     scenario = replace(
         scenario,
