@@ -18,9 +18,9 @@ Thay thế plan v0.1 tại commit `a806bb6`; không còn task candidate selectio
 - **T2 hoàn thành:** passenger lifecycle, frozen travel, dwell/layover và fixed-tick NOOP engine đã có.
 - **T3 hoàn thành:** static 221-slot action schema, valid-action mask, reserve dispatch, guarded recall, headway target và autonomous terminal dispatch M1 đã có.
 - **T4 hoàn thành:** raw passenger/vehicle interval costs, event penalties và terminal-unfinished settlement đã có.
-- **T5 đang triển khai:** Gymnasium adapter, fixed-shape observation và baseline controllers đã có; PPO smoke chờ wheel PyTorch CPU hoàn tất trong `.venv`.
+- **T5 hoàn thành:** Gymnasium adapter, fixed-shape observation, baseline controllers và MaskablePPO CPU save/load smoke đã qua.
 - **T6 hoàn thành:** guarded `REASSIGN` chạy deadhead tới terminal nhận, không teleport hoặc tính double fleet commitment.
-- PyTorch CPU-only đã được khóa trong `uv.lock`; cần chạy lại `uv sync --extra dev` để hoàn tất wheel trong môi trường mới trước Task 5.
+- PyTorch CPU-only đã được khóa và kiểm tra trong `.venv` (`2.14.0+cpu`, CUDA `False`).
 
 ## Global Constraints
 
