@@ -342,7 +342,38 @@ cross-backend checkpoint rules;
 metadata) and `evaluate` with both backends producing identical
 `total_cost` (1e-9).
 
-## 7. Evidence
+## 7. R4 — light interleaved benchmark (partial)
+
+R4.1 correctness is covered by `tests/backend_parity/test_rust_acceptance.py`:
+a 2048-transition MaskablePPO smoke on both backends (finite obs/reward/loss,
+checkpoint save/load) and fixed-checkpoint per-day parity over 10 validation
+days (per-day cost and full trace identical).
+
+R4.2 light pass, measured interleaved on one machine (24 CPUs, 16 torch
+threads, CPU-only) with profiler and TIMERS disabled, conservation off, 5
+repetitions and 1 warm-up per backend. Raw per-repetition times are in
+`reports/rust-migration/speed-acceptance.json`.
+
+| Workload | Python median | Rust median | Speedup |
+|---|---:|---:|---:|
+| Simulation, 5 workloads / 600 decisions | 0.399 s | 0.0135 s | **29.59x** |
+| Isolated learn, 12,288 transitions | 34.80 s (353 t/s) | 8.63 s (1425 t/s) | **4.03x** |
+| Fixed-checkpoint eval, 10 days | 3.744 s | 1.660 s | **2.25x** |
+
+- Per-workload simulation speedups range 21.8x (zero demand) to 31.7x (burst).
+- Isolated learn matches the core protocol (4 envs, n_steps 256, batch 256,
+  n_epochs 4, seed 11, no periodic eval); setup cost is reported separately
+  (Python 0.024 s vs Rust 0.031 s).
+- Fixed-checkpoint evaluation reproduces mean `total_cost` **15471.25** on both
+  backends with identical per-day costs and traces.
+- Peak RSS for the combined process: 500 MB.
+
+Gate status: simulation median total is 29.6x (>=2x required) and isolated learn
+is 4.03x (>=2x required, 4x stretch reached). The full 245,760-transition
+workflow (R4.3) is **deferred**: no heavy full run has been executed yet, so R4
+is not marked accepted.
+
+## 8. Evidence
 
 | Command | Exit | Artifacts |
 |---|---:|---|
@@ -353,7 +384,9 @@ metadata) and `evaluate` with both backends producing identical
 | `python -m pytest tests/backend_parity/test_rust_kernel.py -q` | 0 | 26 kernel parity tests |
 | `python -m pytest tests/backend_parity/test_rust_observation.py -q` | 0 | 15 observation/mask parity tests |
 | `python -m pytest tests/backend_parity/test_rust_integration.py -q` | 0 | 21 integration tests |
-| `python -m pytest -q` | 0 | 142 passed |
+| `python -m pytest tests/backend_parity/test_rust_acceptance.py -q` | 0 | 4 R4.1 smoke/parity tests |
+| `python scripts/benchmark_backends.py --repetitions 5 --transitions 12288` | 0 | `speed-acceptance.json` (light R4.2) |
+| `python -m pytest -q` | 0 | 146 passed |
 | `python scripts/benchmark_python.py --repetitions 5 --transitions 12288` | 0 | `python-benchmark.json` |
 
 Artifacts:
@@ -361,6 +394,7 @@ Artifacts:
 - `reports/rust-migration/oracle-manifest.json` — frozen inventory + contract.
 - `reports/rust-migration/fixtures-summary.json` — fixture hashes/coverage.
 - `reports/rust-migration/python-benchmark.json` — raw repetitions.
+- `reports/rust-migration/speed-acceptance.json` — interleaved light R4.2 raw times.
 - `reports/rust-migration/native-build.json` — native toolchain/revision/hash.
 - `crates/bus-sim/`, `crates/bus-sim-py/` — native kernel + PyO3 bridge.
 - `crates/bus-sim/src/observation.rs` — incremental observation + ring.
@@ -371,10 +405,11 @@ Artifacts:
 - `tests/backend_parity/fixtures/` — golden fixtures (committed).
 - `tests/backend_parity/reference/` — committed reference checkpoint.
 
-## 8. Limitations and next steps
+## 9. Limitations and next steps
 
-- R0–R3 are accepted; R4 (correctness smoke, interleaved speed gates, full
-  workflow) remains and must not be short-circuited.
+- R0–R3 are accepted. R4.2 light gates already pass (29.6x simulation, 4.03x
+  isolated learn); R4.3 (full 245,760-transition workflow on each backend) has
+  not been run, so R4 remains open.
 - The manifest records `git_dirty=true` because R0–R3 artifacts were added in
   the same working tree; the revision field pins the pre-R1 commit `1c34457`.
 - The git-ignored `runs/` and `data/generated/` inventories are documented but
@@ -389,10 +424,10 @@ Artifacts:
   numbers are the Python baseline for the ≥2× simulation and isolated-learn
   gates.
 
-## 9. Stage checklist
+## 10. Stage checklist
 
 - [x] R0: immutable oracle, golden coverage, and unprofiled reference accepted.
 - [x] R1: native domain/lifecycle/actions/ticks/costs at oracle parity.
 - [x] R2: observation/history and mask parity accepted.
 - [x] R3: wrapper/evaluator/forecast/backend/provenance accepted.
-- [ ] R4 acceptance.
+- [ ] R4 acceptance (light R4.1/R4.2 pass; full workflow R4.3 deferred).
