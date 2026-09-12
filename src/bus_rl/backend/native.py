@@ -73,7 +73,7 @@ def build_kernel(scenario: Scenario, *, conservation: bool = True):
     require_native()
     import bus_sim
 
-    arrivals = np.ascontiguousarray(scenario.arrival_tape, dtype=np.int32)
+    arrivals = np.ascontiguousarray(scenario.arrival_tape, dtype=np.int8)
     traffic = np.ascontiguousarray(scenario.traffic_tape, dtype=np.float32)
     kernel = bus_sim.Kernel(scenario_payload(scenario), arrivals, traffic)
     kernel.set_conservation_checks(conservation)
@@ -93,7 +93,7 @@ class NativeScenarioStore:
 
         self._store = bus_sim.ScenarioStore()
         for scenario in scenarios:
-            arrivals = np.ascontiguousarray(scenario.arrival_tape, dtype=np.int32)
+            arrivals = np.ascontiguousarray(scenario.arrival_tape, dtype=np.int8)
             traffic = np.ascontiguousarray(scenario.traffic_tape, dtype=np.float32)
             self._store.add(scenario_payload(scenario), arrivals, traffic)
 

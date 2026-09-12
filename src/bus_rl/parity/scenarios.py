@@ -25,7 +25,10 @@ CONTROL_FLAGS = {
 
 
 def _with_arrivals(scenario: Scenario, arrivals: np.ndarray, seed: int | None = None) -> Scenario:
-    arrivals = np.ascontiguousarray(arrivals)
+    values = np.asarray(arrivals)
+    if values.size and (int(values.max()) > 127 or int(values.min()) < 0):
+        raise ValueError("arrival counts outside the int8 range")
+    arrivals = np.ascontiguousarray(values, dtype=np.int8)
     arrivals.setflags(write=False)
     seed = scenario.seed if seed is None else seed
     digest = scenario_digest(
@@ -53,13 +56,13 @@ def build_scenario(spec: dict) -> Scenario:
         return _with_arrivals(scenario, np.zeros_like(scenario.arrival_tape))
     if kind == "peak":
         scenario = generate_scenario(seed, config)
-        return _with_arrivals(scenario, scenario.arrival_tape * 3)
+        return _with_arrivals(scenario, scenario.arrival_tape.astype(np.int32) * 3)
     if kind == "flood":
         scenario = generate_scenario(seed, config)
-        return _with_arrivals(scenario, scenario.arrival_tape * 20)
+        return _with_arrivals(scenario, scenario.arrival_tape.astype(np.int32) * 20)
     if kind == "capacity":
         scenario = generate_scenario(seed, config)
-        arrivals = np.array(scenario.arrival_tape, copy=True)
+        arrivals = np.array(scenario.arrival_tape, dtype=np.int32, copy=True)
         stops = config.stops_per_route
         # One oversized queue at the first stop of route 0: 45 > capacity 40.
         arrivals[0, 0, 0, 0, stops - 1] = 45

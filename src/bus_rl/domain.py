@@ -276,7 +276,8 @@ def scenario_digest(
         "seed": seed,
     }
     digest = sha256(json.dumps(metadata, sort_keys=True, separators=(",", ":")).encode())
-    digest.update(np.ascontiguousarray(arrivals).tobytes())
+    # Normalize the tape dtype so the hash depends on values, not storage.
+    digest.update(np.ascontiguousarray(arrivals, dtype=np.int32).tobytes())
     digest.update(np.ascontiguousarray(traffic).tobytes())
     return digest.hexdigest()
 

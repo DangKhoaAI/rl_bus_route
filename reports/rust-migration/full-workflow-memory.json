@@ -1,8 +1,10 @@
 {
   "arrival_tape": {
     "cells": 103680,
-    "dtype": "int32",
-    "kb_per_scenario": 405.0,
+    "dtype_before": "int32",
+    "dtype_now": "int8",
+    "kb_per_scenario_before": 405.0,
+    "kb_per_scenario_now": 101.2,
     "nonzero": 1509,
     "nonzero_pct": 1.46,
     "shape": [
@@ -14,11 +16,11 @@
     ]
   },
   "manifest": "data/generated/base/manifest.json",
-  "python_scenarios_600_kb": 249376,
-  "store_after_sparse_kb": 28816,
-  "store_after_sparse_per_scenario_kb": 48.0,
+  "python_scenarios_600_kb_before": 249376,
+  "python_scenarios_600_kb_now": 67072,
+  "store_after_sparse_kb": 30136,
+  "store_after_sparse_per_scenario_kb": 50.2,
   "store_before_sparse_kb": 245628,
-  "store_before_sparse_per_scenario_kb": 409.4,
   "train_scenarios": 500,
   "validation_scenarios": 100
 }

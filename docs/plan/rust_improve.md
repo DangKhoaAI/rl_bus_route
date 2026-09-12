@@ -261,20 +261,21 @@ workflow) remains open.
 **Evidence (2026-09-12, accepted):** one full L0-protocol seed per backend
 (`configs/experiments/core-threads2.toml`, seed 11, 4 envs, 2 torch threads,
 245,760 transitions, validation every 12,288 on 100 validation days) in
-`reports/rust-migration/full-workflow.json`. Python 603.27 s vs Rust 161.19 s
-learn+validation (**3.74x**); total wall incl. setup 605.94 s vs 163.64 s
-(**3.70x**, setup 2.7/2.5 s; same-session pair, the host slowed during the
-session and the earlier pair measured 3.60x). All 20 validation costs are
-bit-identical (max abs diff 0.0) and `policy.pth`, `policy.optimizer.pth` and
+`reports/rust-migration/full-workflow.json`. Python 595.35 s vs Rust 161.61 s
+learn+validation (**3.68x**); total wall incl. setup 597.99 s vs 164.28 s
+(**3.64x**, setup 2.6/2.7 s; same-session pair, the host drifts over the session
+so earlier pairs read 3.5-3.7x). All 20 validation costs are bit-identical
+(max abs diff 0.0) and `policy.pth`, `policy.optimizer.pth` and
 `pytorch_variables.pth` are byte-identical for both `best.zip` and `last.zip`.
 Validation dominates the workflow (46% of Python wall); rerunning with
-`--eval-limit 10` isolates that cost. Two storage bugs were found and fixed so
-Rust peak RSS is now 690 MB vs Python 662 MB (**1.04x**): `NativeBusDispatchEnv`
-eagerly built one kernel per scenario (each retains ~243 KB of episode scratch;
-now lazy in `reset()`), and the store kept a dense ~405 KB arrival tape that is
-98.5% zeros (now sparse, store 245.6 -> 28.8 MB). Native revision
-`a0cf649a4b64` is frozen for RL; if the L0 seed reuses these exact settings and
-artifacts, no rerun is needed.
+`--eval-limit 10` isolates that cost. Three storage bugs were found and fixed so
+Rust peak RSS is now 508 MB vs Python 479 MB (**1.06x**):
+`NativeBusDispatchEnv` eagerly built one kernel per scenario (each retains
+~243 KB of episode scratch; now lazy in `reset()`), the store kept a dense
+~405 KB arrival tape that is 98.5% zeros (now sparse, store 245.6 -> 30.1 MB),
+and the tape was int32 with max value 5 (now int8; 600 scenarios 249 -> 67 MB).
+Rust peak went 1236 -> 508 MB. Native revision `aedc4faa4c43` is frozen for RL;
+if the L0 seed reuses these exact settings and artifacts, no rerun is needed.
 
 ## 8. Final acceptance checklist
 
@@ -284,6 +285,6 @@ artifacts, no rerun is needed.
 - [x] R3: wrapper/evaluator/forecast/backend/provenance accepted.
 - [x] R4: correctness, 2x simulation and learn gates, and faster full workflow accepted.
 - [x] Historical reports preserved; new report distinguishes measured results from projections.
-- [x] Handoff records the frozen backend revision (`a0cf649a4b64`) and unlocks task L0.1 in the [RL plan](improve_RL.md).
+- [x] Handoff records the frozen backend revision (`aedc4faa4c43`) and unlocks task L0.1 in the [RL plan](improve_RL.md).
 
 All items pass; this document now records an accepted Rust backend.

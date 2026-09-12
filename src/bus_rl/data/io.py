@@ -57,6 +57,8 @@ def load_scenario(directory: Path) -> Scenario:
     metadata = json.loads((directory / "scenario.json").read_text())
     with np.load(directory / "tapes.npz", allow_pickle=False) as arrays:
         arrivals, traffic = arrays["arrivals"], arrays["traffic"]
+    # Cast so scenarios saved with an older (int32) tape dtype load identically.
+    arrivals = np.ascontiguousarray(arrivals, dtype=np.int8)
     config = SimConfig(**metadata["config"])
     network_data = metadata["network"]
     network = Network(

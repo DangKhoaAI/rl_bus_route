@@ -29,7 +29,7 @@ def _fleet(config: SimConfig, network_depot: int) -> tuple[VehicleSpec, ...]:
 
 def _apply_burst(arrivals: np.ndarray, rng: np.random.Generator, config: SimConfig) -> np.ndarray:
     """Cluster extra arrivals at one stop for 5–10 minutes (OOD burst)."""
-    out = np.array(arrivals, copy=True)
+    out = np.array(arrivals, dtype=np.int32, copy=True)
     duration_s = int(rng.integers(5 * 60, 10 * 60 + 1))
     start_s = int(rng.integers(30 * 60, 150 * 60))
     start_tick = start_s // config.tick_s
@@ -71,6 +71,20 @@ def _apply_traffic_shock(
     return out
 
 
+def _as_int8_arrivals(arrivals: np.ndarray) -> np.ndarray:
+    """Validate and cast arrival counts to int8.
+
+    Base demand peaks at 5 and the OOD variants stay at or below 100, so int8
+    (<=127) is enough; the dense tape is the largest per-scenario allocation.
+    """
+    values = np.asarray(arrivals)
+    if values.size and int(values.max()) > 127:
+        raise ValueError("arrival counts exceed the int8 range")
+    if values.size and int(values.min()) < 0:
+        raise ValueError("arrival counts must be non-negative")
+    return np.ascontiguousarray(values, dtype=np.int8)
+
+
 def generate_scenario(
     seed: int, config: SimConfig | None = None, variant: str = "base"
 ) -> Scenario:
@@ -80,10 +94,10 @@ def generate_scenario(
     network = generate_base_network(config)
     rng = np.random.default_rng(seed)
     ticks = config.horizon_s // config.tick_s
-    # [tick, route, direction-index, origin, destination], int32 counts.
+    # [tick, route, direction-index, origin, destination], int8 counts.
     arrivals = np.zeros(
         (ticks, config.route_count, 2, config.stops_per_route, config.stops_per_route),
-        dtype=np.int32,
+        dtype=np.int8,
     )
     hourly = (180, 160, 140)
     peak_route = int(rng.integers(config.route_count))
@@ -125,8 +139,8 @@ def generate_scenario(
     ).astype(np.float32)
     if variant == "burst":
         arrivals = _apply_burst(arrivals, rng, config)
-    else:
-        arrivals.setflags(write=False)
+    arrivals = _as_int8_arrivals(arrivals)
+    arrivals.setflags(write=False)
     if variant == "traffic":
         traffic = _apply_traffic_shock(traffic, rng, config)
     else:

@@ -176,15 +176,17 @@ struct ScenarioStore {
 
 fn build_scenario(
     scenario_json: &str,
-    arrivals: &PyReadonlyArray5<i32>,
+    arrivals: &PyReadonlyArray5<i8>,
     traffic: &PyReadonlyArray2<f32>,
 ) -> PyResult<Scenario> {
     let shape = arrivals.shape();
     let arrival_dims = [shape[0], shape[1], shape[2], shape[3], shape[4]];
-    let arrival_tape = arrivals
+    let arrival_tape: Vec<i32> = arrivals
         .as_slice()
         .map_err(|error| PyValueError::new_err(error.to_string()))?
-        .to_vec();
+        .iter()
+        .map(|&value| value as i32)
+        .collect();
     let tshape = traffic.shape();
     let traffic_dims = [tshape[0], tshape[1]];
     let traffic_tape = traffic
@@ -214,7 +216,7 @@ impl ScenarioStore {
     fn add(
         &mut self,
         scenario_json: &str,
-        arrivals: PyReadonlyArray5<i32>,
+        arrivals: PyReadonlyArray5<i8>,
         traffic: PyReadonlyArray2<f32>,
     ) -> PyResult<usize> {
         let scenario = build_scenario(scenario_json, &arrivals, &traffic)?;
@@ -232,7 +234,7 @@ impl Kernel {
     #[new]
     fn new(
         scenario_json: &str,
-        arrivals: PyReadonlyArray5<i32>,
+        arrivals: PyReadonlyArray5<i8>,
         traffic: PyReadonlyArray2<f32>,
     ) -> PyResult<Self> {
         Ok(Self {

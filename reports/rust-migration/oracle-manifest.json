@@ -176,6 +176,42 @@
       "bytes": 5488784,
       "config_source": "configs/experiments/core-threads2.toml",
       "git_dirty": true,
+      "git_sha": "d47ec6010e2e89ea740c31b41b970c5f44bff26e",
+      "has_metadata": true,
+      "metadata_sha256": "0242f3430c0e71db4af69af1b21387e5507a7e0059040b34a6da939810f5a86a",
+      "note": "git-ignored historical run; documented here, regenerable",
+      "obs_schema_hash": "fa07e9254e5f5474db32935332bea7a40ddbadf7c6538defdedbdc51322397e2",
+      "path": "runs/rust-migration/full-workflow/python-int8/best.zip",
+      "physical_config_hash": "fad7a03b35b999d33b672357b439a9bf34899e8bf814bbe98077446ef4a5d4b2",
+      "required": false,
+      "seed": 11,
+      "sha256": "411fb31e892fe296b884dfd22332ebda05a560ac48e7adc96b8aae750892d583",
+      "total_timesteps_actual": 245760
+    },
+    {
+      "action_schema_hash": "ff62ae3cfa7478758a5370e575dbfc3c15729c0ea10a3ccbb2bd7a207cab761a",
+      "best_val_cost": 13199.1325,
+      "bytes": 5478646,
+      "config_source": "configs/experiments/core-threads2.toml",
+      "git_dirty": true,
+      "git_sha": "d47ec6010e2e89ea740c31b41b970c5f44bff26e",
+      "has_metadata": true,
+      "metadata_sha256": "0242f3430c0e71db4af69af1b21387e5507a7e0059040b34a6da939810f5a86a",
+      "note": "git-ignored historical run; documented here, regenerable",
+      "obs_schema_hash": "fa07e9254e5f5474db32935332bea7a40ddbadf7c6538defdedbdc51322397e2",
+      "path": "runs/rust-migration/full-workflow/python-int8/last.zip",
+      "physical_config_hash": "fad7a03b35b999d33b672357b439a9bf34899e8bf814bbe98077446ef4a5d4b2",
+      "required": false,
+      "seed": 11,
+      "sha256": "38bef38bf3db2be4a080c93e8861314657b791e9f3cb4d586f254847cba16f2d",
+      "total_timesteps_actual": 245760
+    },
+    {
+      "action_schema_hash": "ff62ae3cfa7478758a5370e575dbfc3c15729c0ea10a3ccbb2bd7a207cab761a",
+      "best_val_cost": 13199.1325,
+      "bytes": 5488784,
+      "config_source": "configs/experiments/core-threads2.toml",
+      "git_dirty": true,
       "git_sha": "b8ca7debb2b6403a0d24ee6adb2c2d01b307945a",
       "has_metadata": true,
       "metadata_sha256": "5a835ace97c7a0df6417ed6d1c3927819f21707d0fd16be25a43ab4055b72949",
@@ -536,6 +572,42 @@
       "bytes": 5488784,
       "config_source": "configs/experiments/core-threads2.toml",
       "git_dirty": true,
+      "git_sha": "d47ec6010e2e89ea740c31b41b970c5f44bff26e",
+      "has_metadata": true,
+      "metadata_sha256": "1205b0e959ab91eacdd9f7d34d578dbedf848388e5ae8d367346511a8b1086e8",
+      "note": "git-ignored historical run; documented here, regenerable",
+      "obs_schema_hash": "fa07e9254e5f5474db32935332bea7a40ddbadf7c6538defdedbdc51322397e2",
+      "path": "runs/rust-migration/full-workflow/rust-int8/best.zip",
+      "physical_config_hash": "fad7a03b35b999d33b672357b439a9bf34899e8bf814bbe98077446ef4a5d4b2",
+      "required": false,
+      "seed": 11,
+      "sha256": "8f7ba25ed24726af0c6dacc3172d2709bbd71a63eb6283a80e7a273746b49038",
+      "total_timesteps_actual": 245760
+    },
+    {
+      "action_schema_hash": "ff62ae3cfa7478758a5370e575dbfc3c15729c0ea10a3ccbb2bd7a207cab761a",
+      "best_val_cost": 13199.1325,
+      "bytes": 5478646,
+      "config_source": "configs/experiments/core-threads2.toml",
+      "git_dirty": true,
+      "git_sha": "d47ec6010e2e89ea740c31b41b970c5f44bff26e",
+      "has_metadata": true,
+      "metadata_sha256": "1205b0e959ab91eacdd9f7d34d578dbedf848388e5ae8d367346511a8b1086e8",
+      "note": "git-ignored historical run; documented here, regenerable",
+      "obs_schema_hash": "fa07e9254e5f5474db32935332bea7a40ddbadf7c6538defdedbdc51322397e2",
+      "path": "runs/rust-migration/full-workflow/rust-int8/last.zip",
+      "physical_config_hash": "fad7a03b35b999d33b672357b439a9bf34899e8bf814bbe98077446ef4a5d4b2",
+      "required": false,
+      "seed": 11,
+      "sha256": "f886068b50afe869a2f4fa707d50cf53299976bec6ceac50318ed348c37dbd6d",
+      "total_timesteps_actual": 245760
+    },
+    {
+      "action_schema_hash": "ff62ae3cfa7478758a5370e575dbfc3c15729c0ea10a3ccbb2bd7a207cab761a",
+      "best_val_cost": 13199.1325,
+      "bytes": 5488784,
+      "config_source": "configs/experiments/core-threads2.toml",
+      "git_dirty": true,
       "git_sha": "b8ca7debb2b6403a0d24ee6adb2c2d01b307945a",
       "has_metadata": true,
       "metadata_sha256": "ee6999186b2db74a91b2b84f772718be8e57dd6a9c669782187a574b8a815a91",
@@ -878,8 +950,8 @@
     }
   ],
   "git": {
-    "dirty": false,
-    "sha": "78597284ff5db40253a3c49fc1a2201b7c216a13"
+    "dirty": true,
+    "sha": "d47ec6010e2e89ea740c31b41b970c5f44bff26e"
   },
   "hashes": {
     "action_schema_hash": "ff62ae3cfa7478758a5370e575dbfc3c15729c0ea10a3ccbb2bd7a207cab761a",
@@ -944,7 +1016,7 @@
     {
       "path": "reports/rust-migration.md",
       "required": true,
-      "sha256": "acceb3733a896f1bd53576e7bc47bc5045d35c3466431a39fffff484276c8c03"
+      "sha256": "383724d7f727b243d34cde3a2187d54284097c5fc9ca411c5bb60f3104e6fc57"
     }
   ],
   "reward_defaults": {
@@ -1001,5 +1073,5 @@
       "validation": 2001
     }
   },
-  "self_hash": "38acf8af763db4927b80be6b3753397212ec2943920206f6058359b8eef62d8c"
+  "self_hash": "aec095b6cf59d037d57cd2d4be928236ffc73ab44852f12da81be793c26faba9"
 }

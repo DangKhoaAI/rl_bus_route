@@ -178,6 +178,7 @@ Artifacts mới đề xuất:
 - `reports/rust-migration.md`: parity matrix, discrepancies, benchmark protocol/results, R0–R4 checklist, decision.
 - `reports/rust-migration/`: oracle manifest/hashes, compact golden summaries, per-run benchmark JSON/CSV, fixed-checkpoint paired metrics. Traces/checkpoints lớn để `runs/rust-migration/`, link/hash trong report.
 - Giữ nguyên toàn bộ baseline và after reports cũ. Không tạo số liệu đo trước khi chạy.
+- Tối ưu bộ nhớ sau R4 (tape int8, store thưa, ownership): [memory_optimize.md](memory_optimize.md).
 
 Ghi backend, native version/build/revision, Python revision/dirty, dependency lock, seed/scenario order và physical/control/reward/obs/action hashes. Backend khác không tự đồng nghĩa physics khác: chỉ load checkpoint xuyên backend khi contract hashes phù hợp và backend parity đã được xác nhận; không disable kiểm tra provenance.
 
