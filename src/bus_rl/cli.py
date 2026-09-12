@@ -7,6 +7,7 @@ import json
 import sys
 from dataclasses import replace
 from pathlib import Path
+from time import perf_counter
 
 from bus_rl.config import ControlConfig, load_run_config, parse_counts
 from bus_rl.data.io import load_manifest, load_split, save_manifest
@@ -18,6 +19,7 @@ from bus_rl.forecasting.historical import HistoricalForecaster
 from bus_rl.provenance import physical_config_hash, require_fresh_output
 from bus_rl.rewards.costs import RewardConfig
 from bus_rl.training.checkpoint import load_metadata, load_model
+from bus_rl.training.diagnose import diagnose_train
 from bus_rl.training.train import fit_algorithm, train_run
 
 
@@ -104,6 +106,38 @@ def cmd_train(args) -> None:
         Path(args.output),
         forecaster=forecaster,
         eval_limit=args.eval_limit,
+    )
+
+
+def cmd_diagnose(args) -> None:
+    run = _run_config(args)
+    algorithm = fit_algorithm(
+        run.algorithm,
+        timesteps=args.timesteps,
+        n_envs=args.n_envs,
+        seed=args.seed,
+    )
+    run = replace(run, algorithm=algorithm)
+    started = perf_counter()
+    train_scenarios = load_split(Path(args.manifest), "train")
+    try:
+        val_scenarios = load_split(Path(args.manifest), "validation")
+    except ValueError:
+        val_scenarios = train_scenarios[:1]
+    load_s = perf_counter() - started
+    print(
+        f"[diagnose] load_manifest {load_s:.3f}s  train_days={len(train_scenarios)}",
+        flush=True,
+    )
+    summary = diagnose_train(
+        run,
+        train_scenarios,
+        val_scenarios,
+        Path(args.output),
+        eval_limit=args.eval_limit or 10,
+    )
+    print(
+        json.dumps({k: summary[k] for k in ("setup_s", "learn_s", "eval_s", "projected")}, indent=2)
     )
 
 
@@ -227,6 +261,16 @@ def build_parser() -> argparse.ArgumentParser:
     train.add_argument("--n-envs", type=int, dest="n_envs")
     train.add_argument("--eval-limit", type=int, dest="eval_limit")
     train.set_defaults(func=cmd_train)
+
+    diagnose = sub.add_parser("diagnose")
+    diagnose.add_argument("--config", required=True)
+    diagnose.add_argument("--manifest", required=True)
+    diagnose.add_argument("--seed", type=int, default=11)
+    diagnose.add_argument("--output", required=True)
+    diagnose.add_argument("--timesteps", type=int, default=2048)
+    diagnose.add_argument("--n-envs", type=int, dest="n_envs")
+    diagnose.add_argument("--eval-limit", type=int, dest="eval_limit", default=10)
+    diagnose.set_defaults(func=cmd_diagnose)
 
     evaluate = sub.add_parser("evaluate")
     evaluate.add_argument("--config", required=True)

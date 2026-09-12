@@ -5,6 +5,7 @@ from pathlib import Path
 from time import perf_counter
 
 from sb3_contrib import MaskablePPO
+from stable_baselines3.common.callbacks import BaseCallback, CallbackList
 from stable_baselines3.common.vec_env import DummyVecEnv
 
 from bus_rl.config import AlgorithmConfig, RunConfig
@@ -12,6 +13,35 @@ from bus_rl.env.bus_dispatch import BusDispatchEnv
 from bus_rl.models.features import POLICY_KWARGS
 from bus_rl.training.callbacks import BestValidationCallback
 from bus_rl.training.checkpoint import run_metadata, write_metadata
+
+
+class ProgressCallback(BaseCallback):
+    """One line per PPO rollout so long runs are diagnosable without cProfile."""
+
+    def __init__(self):
+        super().__init__()
+        self._started = 0.0
+        self._last_timesteps = 0
+
+    def _on_training_start(self) -> None:
+        self._started = perf_counter()
+        self._last_timesteps = 0
+        print("[train] start", flush=True)
+
+    def _on_rollout_end(self) -> bool:
+        elapsed = perf_counter() - self._started
+        delta = int(self.num_timesteps - self._last_timesteps)
+        fps = self.num_timesteps / elapsed if elapsed else 0.0
+        print(
+            f"[train] timesteps={self.num_timesteps}  +{delta}  "
+            f"elapsed={elapsed:.1f}s  fps={fps:.1f}",
+            flush=True,
+        )
+        self._last_timesteps = int(self.num_timesteps)
+        return True
+
+    def _on_step(self) -> bool:
+        return True
 
 
 def make_model(env, seed: int, algorithm: AlgorithmConfig | None = None):
@@ -96,7 +126,7 @@ def train_run(
         ]
     )
     model = make_model(env, algorithm.seed, algorithm)
-    callback = BestValidationCallback(
+    validation = BestValidationCallback(
         val_scenarios or train_scenarios[:1],
         run,
         output,
@@ -104,8 +134,11 @@ def train_run(
         eval_limit=eval_limit,
     )
     started = perf_counter()
-    model.learn(total_timesteps=algorithm.total_timesteps, callback=callback)
-    callback.finalize()
+    model.learn(
+        total_timesteps=algorithm.total_timesteps,
+        callback=CallbackList([ProgressCallback(), validation]),
+    )
+    validation.finalize()
     wall = perf_counter() - started
     metadata = run_metadata(
         run,
@@ -113,9 +146,9 @@ def train_run(
             "seed": algorithm.seed,
             "total_timesteps_requested": algorithm.total_timesteps,
             "total_timesteps_actual": int(model.num_timesteps),
-            "episodes_completed": callback.completed_episodes,
+            "episodes_completed": validation.completed_episodes,
             "wall_time_s": wall,
-            "best_val_cost": None if callback.best == float("inf") else callback.best,
+            "best_val_cost": None if validation.best == float("inf") else validation.best,
         },
     )
     if forecaster is not None:

@@ -20,6 +20,7 @@ from bus_rl.config import ControlConfig, RunConfig
 from bus_rl.domain import PassengerStatus, StepCosts
 from bus_rl.env.bus_dispatch import BusDispatchEnv
 from bus_rl.rewards.costs import DEFAULT_REWARD, RewardConfig, add_costs, interval_cost
+from bus_rl.timing import TIMERS
 
 
 def make_controller(method: str, model=None, seed: int = 0):
@@ -214,7 +215,8 @@ def rollout(
             rows.append(_trace_row(env, ACTION_TABLE[action].kind))
         if terminated or truncated:
             break
-    metrics = summarize_episode(env.state, env.scenario, costs, reward_sum, env.reward)
+    with TIMERS.span("eval.summarize"):
+        metrics = summarize_episode(env.state, env.scenario, costs, reward_sum, env.reward)
     metrics["wall_s"] = perf_counter() - started
     metrics["scenario_index"] = scenario_index
     return metrics, rows
