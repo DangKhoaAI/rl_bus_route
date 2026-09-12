@@ -11,7 +11,7 @@ def test_static_action_table_has_221_slots_and_noop_is_valid():
     mask = valid_action_mask(state, scenario)
     assert len(ACTION_TABLE) == 221
     assert mask[0]
-    assert not mask[action_id("REASSIGN", bus_id=0, route_id=1)]
+    assert mask[action_id("REASSIGN", bus_id=0, route_id=1)]
     assert not mask[action_id("SHORT_TURN", bus_id=0, route_id=0)]
 
 

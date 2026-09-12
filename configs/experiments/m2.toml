@@ -1,0 +1,3 @@
+[control]
+enable_reassign = true
+enable_short_turn = false

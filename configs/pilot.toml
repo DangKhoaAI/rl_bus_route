@@ -1,0 +1,9 @@
+[control]
+enable_reassign = false
+enable_short_turn = false
+
+[algorithm]
+gamma = 1.0
+seed = 11
+n_steps = 16
+batch_size = 16

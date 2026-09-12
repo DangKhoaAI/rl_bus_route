@@ -30,6 +30,13 @@ def apply_action(state: WorldState, scenario: Scenario, action: Action) -> int:
         bus.next_node = scenario.network.depot_node
         bus.remaining_s = 360
         bus.cooldown_until_s = state.current_time_s + 1200
+    elif action.kind == "REASSIGN":
+        bus = state.vehicles[action.bus_id]
+        bus.route_id = action.route_id
+        bus.phase = Phase.DEADHEAD
+        bus.next_node = scenario.network.routes[action.route_id].stops[0]
+        bus.remaining_s = 360
+        bus.cooldown_until_s = state.current_time_s + 1200
     elif action.kind == "SET_HEADWAY":
         state.headway_targets_s[action.route_id] = action.headway_s
         state.headway_changed_at_s[action.route_id] = state.current_time_s
