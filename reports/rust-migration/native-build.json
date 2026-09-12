@@ -5,13 +5,13 @@
   "crate_version": "0.1.0",
   "git": {
     "dirty": true,
-    "sha": "1a391bb53ce256953ebfd10f32ae06cc5db7e28d"
+    "sha": "6bb8c992d3cb8d15a7801de578db07989dd86b59"
   },
   "import_ok": true,
   "install_command": "python scripts/build_native.py",
   "library": "src/bus_sim.so",
-  "library_bytes": 846320,
-  "library_sha256": "bb3ec767c8c3b137c044fa4bd68d623a2717784c82538ca172b232fc52f8562e",
+  "library_bytes": 865120,
+  "library_sha256": "76a5a2a22adb44ced2b00519d65f8ef8c32e45b63ec76210150858e62449faa6",
   "native_build_schema_version": 1,
   "platform": "Linux-7.0.0-31-generic-x86_64-with-glibc2.39",
   "profile": "release",

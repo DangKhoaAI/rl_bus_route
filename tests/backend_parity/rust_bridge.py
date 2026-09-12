@@ -137,6 +137,35 @@ def kernel_flat(spec: dict, actions: list[int], *, conservation: bool = True) ->
     return flatten(run_actions(spec, actions, conservation=conservation))
 
 
+# Observation keys in the frozen oracle order; mirror
+# `bus_rl.env.observation.observe`.
+OBS_KEYS = (
+    "stops",
+    "arrival_history",
+    "forecast",
+    "vehicles",
+    "routes",
+    "stop_valid",
+    "vehicle_valid",
+    "route_valid",
+    "context",
+)
+
+
+def replay_observations(
+    spec: dict, actions: list[int], *, conservation: bool = True
+) -> tuple[list[dict], list[np.ndarray]]:
+    """Replay ``actions`` and return observations/masks at every boundary."""
+    kernel = make_kernel(spec, conservation=conservation)
+    observations = [{key: np.asarray(value) for key, value in kernel.observe().items()}]
+    masks = [np.asarray(kernel.action_mask(), dtype=bool)]
+    for action in actions:
+        kernel.debug_step(int(action))
+        observations.append({key: np.asarray(value) for key, value in kernel.observe().items()})
+        masks.append(np.asarray(kernel.action_mask(), dtype=bool))
+    return observations, masks
+
+
 # Keys the R1 kernel owns and must match the oracle exactly. Observation and
 # mask parity belong to R2.
 KERNEL_COMPARE_KEYS = (

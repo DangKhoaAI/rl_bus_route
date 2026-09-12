@@ -56,9 +56,10 @@ recreated. Selected reports live in `reports/`.
 ## Native kernel (Rust)
 
 The Rust migration (`docs/spec/rust_improve.md`, `docs/plan/rust_improve.md`)
-ports the simulator kernel. R0 (Python oracle + golden fixtures) and R1
-(domain, passenger/vehicle lifecycle, actions/guards, tick order, costs) are
-accepted; the Python CLI and backend are unchanged.
+ports the simulator kernel. R0 (Python oracle + golden fixtures), R1 (domain,
+passenger/vehicle lifecycle, actions/guards, tick order, costs) and R2
+(observation tensors + mask cache) are accepted; the Python CLI and backend are
+unchanged.
 
 ```bash
 python scripts/build_native.py       # cargo build --release + install src/bus_sim.so
@@ -66,9 +67,9 @@ cargo test -p bus-sim                # native unit tests
 python -m pytest tests/backend_parity -q
 ```
 
-`bus_sim` is a debug/parity bridge (`Kernel.debug_snapshot`, `Kernel.debug_step`)
-until R3 adds the wrapped Gym environment. See `crates/README.md` and
-`reports/rust-migration.md`.
+`bus_sim` is a debug/parity bridge (`Kernel.observe`, `Kernel.debug_snapshot`,
+`Kernel.debug_step`) until R3 adds the wrapped Gym environment. See
+`crates/README.md` and `reports/rust-migration.md`.
 
 ## What is in the observation
 

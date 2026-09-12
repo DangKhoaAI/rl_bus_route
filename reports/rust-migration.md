@@ -1,11 +1,12 @@
 # Rust migration report
 
-Status: **R0 and R1 accepted (Python oracle frozen; native kernel at parity). R2–R4 not started.**
+Status: **R0–R2 accepted (Python oracle frozen; kernel, observations and mask cache at parity). R3–R4 not started.**
 Date: 2026-09-12.
 Spec: [docs/spec/rust_improve.md](spec/rust_improve.md). Plan: [docs/plan/rust_improve.md](plan/rust_improve.md).
 
-This report records measured evidence only. It does not mark any R1–R4 task
-complete and does not claim a native backend exists.
+This report records measured evidence only. R0–R2 are accepted; R3 (integration)
+and R4 (speed/parity acceptance) are still open and no production backend is
+claimed yet.
 
 ## 0. Why R0 and not RL L0
 
@@ -247,25 +248,66 @@ to the oracle with the frozen tolerances. **Zero divergences** on:
 - departure events and accepted mission/headway events (including the D3
   `str` vs `int` pattern distinction).
 
-Tests: `cargo test -p bus-sim` (7 native unit tests: reset, invalid
+Tests: `cargo test -p bus-sim` (12 native unit tests: reset, invalid
 dimensions/IDs, capacity/conservation, config-driven ticks, rejected invalid
-action) and `python -m pytest tests/backend_parity/test_rust_kernel.py` (26
-tests: 11 fixtures x 2 surfaces plus guard/settlement/reset cases). Native build
+action, observation shapes/windows/future-tape independence) and
+`python -m pytest tests/backend_parity/test_rust_kernel.py` (26 tests: 11
+fixtures x 2 surfaces plus guard/settlement/reset cases). Native build
 provenance (toolchain, revision, `.so` hash, import check) is in
 `reports/rust-migration/native-build.json`.
 
-Observation tensors and mask caching are **not** part of R1 and remain R2; the
-`action_mask` exposed here is the guard-derived mask used by the kernel.
+## 5. R2 — observations and masks
 
-## 5. Evidence
+`crates/bus-sim/src/observation.rs` ports `bus_rl.env.observation.observe`
+channel for channel:
+
+- queue count, mean age (normalized), max-age and excessive-wait channels;
+- five-lag `arrival_history` plus the last-interval arrival channel;
+- the boarded channel restricted to currently ONBOARD cohorts whose boarding
+  time lies in the window, and the completion channel;
+- fleet/route encodings, validity tensors, node encoding, `context`, and the
+  zero forecast placeholder.
+
+Incrementality (R2.1): waiting cohorts come from the hot list, onboard cohorts
+from `Vehicle.passengers`, and finished cohorts from a bounded
+`recent_finished` ring (`WorldState::recent_finished`) that retains entries while
+either their arrival is inside the history window or their completion is inside
+the last interval. The full `finished` archive is never scanned by observation,
+yet the waiting -> onboard -> recent-finished order preserves the oracle's
+`iter_cohorts` accumulation order (float32).
+
+Mask cache (R2.2): `Kernel` computes the guard mask once at `reset` and again
+after every `step`/`debug_step`, and `action_mask()` returns a fresh copy of the
+cached buffer. `Kernel.mask_computations` proves repeated reads do not
+recompute, and `debug_validate_mask()` re-derives the mask from the current
+state to detect a stale cache. A masked, out-of-range or stale action is
+rejected before any mutation.
+
+### R2 parity result
+
+All 11 fixtures replay through the native kernel with:
+
+- every observation channel equal at `rtol=atol=1e-6` at reset and after every
+  step (shapes, `float32` dtype and validity tensors included);
+- all 221 mask bits exactly equal at reset and after every step;
+- the mask cache validating after each step and stable across repeated reads.
+
+Tests: 15 in `tests/backend_parity/test_rust_observation.py` (11 fixture
+differentials plus cache/copy/reset/rejection cases). Native window-boundary,
+future-tape-independence and recent-finished eviction are covered by the core
+unit tests. Native unit tests in total: 12.
+
+## 6. Evidence
 
 | Command | Exit | Artifacts |
 |---|---:|---|
 | `python scripts/export_oracle.py build` | 0 | manifest, 11 fixtures, summary |
 | `python scripts/export_oracle.py verify` | 0 | all hashes + 11 replays + reference 15471.25 |
 | `python scripts/build_native.py` | 0 | native build + `native-build.json` |
-| `cargo test -p bus-sim` | 0 | 7 native unit tests |
+| `cargo test -p bus-sim` | 0 | 12 native unit tests |
 | `python -m pytest tests/backend_parity/test_rust_kernel.py -q` | 0 | 26 kernel parity tests |
+| `python -m pytest tests/backend_parity/test_rust_observation.py -q` | 0 | 15 observation/mask parity tests |
+| `python -m pytest tests/backend_parity -q` | 0 | 73 passed |
 | `python scripts/benchmark_python.py --repetitions 5 --transitions 12288` | 0 | `python-benchmark.json` |
 | `python -m pytest tests/backend_parity -q` | 0 | 32 passed |
 | `python -m pytest -q` | 0 | full existing suite + parity |
@@ -277,28 +319,32 @@ Artifacts:
 - `reports/rust-migration/python-benchmark.json` — raw repetitions.
 - `reports/rust-migration/native-build.json` — native toolchain/revision/hash.
 - `crates/bus-sim/`, `crates/bus-sim-py/` — native kernel + PyO3 bridge.
+- `crates/bus-sim/src/observation.rs` — incremental observation + ring.
 - `tests/backend_parity/fixtures/` — golden fixtures (committed).
 - `tests/backend_parity/reference/` — committed reference checkpoint.
 
-## 6. Limitations and next steps
+## 7. Limitations and next steps
 
-- R0/R1 are accepted; observation/mask parity (R2) and integration (R3) remain.
-- The manifest records `git_dirty=true` because R0/R1 artifacts were added in
+- R0–R2 are accepted; backend integration (R3) and speed/parity acceptance (R4)
+  remain.
+- The manifest records `git_dirty=true` because R0–R2 artifacts were added in
   the same working tree; the revision field pins the pre-R1 commit `1c34457`.
 - The git-ignored `runs/` and `data/generated/` inventories are documented but
   optional for verification; the committed reference checkpoint and
   regeneration commands make R0 reproducible from a fresh checkout.
 - `src/bus_sim.so` and `target/` are git-ignored; rebuild with
-  `python scripts/build_native.py`. The R1 unit tests run without Python; the
+  `python scripts/build_native.py`. The core unit tests run without Python; the
   parity tests skip when the extension is absent.
+- `recent_finished` duplicates recently finished cohorts by design; its size is
+  bounded by the arrival/completion windows, not by episode length.
 - R4 must remeasure Python interleaved with Rust on one machine; the R0.3
   numbers are the Python baseline for the ≥2× simulation and isolated-learn
   gates.
 
-## 7. Stage checklist
+## 8. Stage checklist
 
 - [x] R0: immutable oracle, golden coverage, and unprofiled reference accepted.
 - [x] R1: native domain/lifecycle/actions/ticks/costs at oracle parity.
-- [ ] R2 observation/history and mask parity.
+- [x] R2: observation/history and mask parity accepted.
 - [ ] R3 integration.
 - [ ] R4 acceptance.

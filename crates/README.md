@@ -24,6 +24,8 @@ git-ignored; the release build is not part of the Python package install.
 ## Scope
 
 R1 implements the domain, lifecycle, actions/guards, the fixed tick order and
-cost/reward integration. Observation tensors, mask caching and the Gym wrapper
-are R2/R3; the PyO3 surface here is deliberately a thin debug bridge
-(`Kernel.debug_snapshot`, `Kernel.debug_step`, `Kernel.action_mask`).
+cost/reward integration. R2 adds the incremental observation tensors
+(`observation.rs`) and the kernel-owned mask cache. The Gym wrapper is R3; the
+PyO3 surface here is deliberately a thin debug bridge
+(`Kernel.observe`, `Kernel.debug_snapshot`, `Kernel.debug_step`,
+`Kernel.action_mask`).

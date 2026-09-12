@@ -4,7 +4,7 @@
 //! wide (`i64`) and mutated only through checked helpers so counters cannot
 //! silently wrap.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, VecDeque};
 
 use serde::Deserialize;
 
@@ -244,6 +244,9 @@ pub struct WorldState {
     pub vehicles: Vec<Vehicle>,
     pub cohorts: Vec<PassengerCohort>,
     pub finished: Vec<PassengerCohort>,
+    /// Bounded mirror of finished cohorts that can still contribute to the
+    /// observation (recent arrivals or a completion in the last interval).
+    pub recent_finished: VecDeque<PassengerCohort>,
     pub generated_total: i64,
     pub waiting_total: i64,
     pub onboard_total: i64,
@@ -282,6 +285,31 @@ impl WorldState {
             .iter()
             .filter(|vehicle| vehicle.phase == Phase::DepotIdle)
             .count() as i64
+    }
+
+    /// Record a just-finished cohort for bounded observation history.
+    pub fn push_recent_finished(&mut self, cohort: PassengerCohort) {
+        self.recent_finished.push_back(cohort);
+    }
+
+    /// Drop recent-finished entries once neither their arrival nor a completion
+    /// can fall inside the observation windows. Only the front is inspected;
+    /// out-of-order entries are filtered by `observe` and evicted later.
+    pub fn prune_recent_finished(&mut self, tick_s: i64, control_interval_s: i64) {
+        let arrival_floor = self.current_time_s - 1 - 5 * control_interval_s;
+        let completion_floor = self.current_time_s - control_interval_s;
+        while let Some(front) = self.recent_finished.front() {
+            let arrival_recent = front.arrival_tick * tick_s > arrival_floor;
+            let completed_recent = front.status == PassengerStatus::Completed
+                && front
+                    .completion_tick
+                    .map(|tick| tick * tick_s >= completion_floor)
+                    .unwrap_or(false);
+            if arrival_recent || completed_recent {
+                break;
+            }
+            self.recent_finished.pop_front();
+        }
     }
 
     /// Always-on conservation of passenger mass and capacity; the deeper
@@ -460,6 +488,7 @@ pub fn initial_state(scenario: &Scenario) -> Result<WorldState, KernelError> {
         vehicles,
         cohorts: Vec::new(),
         finished: Vec::new(),
+        recent_finished: VecDeque::new(),
         generated_total: 0,
         waiting_total: 0,
         onboard_total: 0,

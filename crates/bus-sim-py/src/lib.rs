@@ -5,10 +5,12 @@
 
 use bus_sim_core::costs::{interval_cost, mean_waiting_minutes, RewardConfig};
 use bus_sim_core::domain::{Scenario, StepCosts, WorldState};
+use bus_sim_core::observation;
 use bus_sim_core::snapshot::{full_snapshot, StateSnapshot};
 use bus_sim_core::{engine, guards, initial_state, scenario_from_json, KernelError};
 use numpy::{
-    IntoPyArray, PyArray1, PyArray2, PyReadonlyArray2, PyReadonlyArray5, PyUntypedArrayMethods,
+    IntoPyArray, PyArray1, PyArray2, PyArrayMethods, PyReadonlyArray2, PyReadonlyArray5,
+    PyUntypedArrayMethods,
 };
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -104,6 +106,9 @@ struct Kernel {
     state: Option<WorldState>,
     reward: RewardConfig,
     conservation_checks: bool,
+    /// Guard-derived mask owned by the kernel; `action_mask()` returns a copy.
+    mask_cache: Option<Vec<bool>>,
+    mask_computations: u64,
 }
 
 #[pymethods]
@@ -139,12 +144,17 @@ impl Kernel {
             state: None,
             reward: RewardConfig::default(),
             conservation_checks: false,
+            mask_cache: None,
+            mask_computations: 0,
         })
     }
 
     fn reset(&mut self) -> PyResult<()> {
         let mut state = initial_state(&self.scenario).map_err(to_py)?;
         state.conservation_checks = self.conservation_checks;
+        // Compute the initial mask once here; later reads reuse the cache.
+        self.mask_cache = Some(guards::valid_action_mask(&state, &self.scenario));
+        self.mask_computations += 1;
         self.state = Some(state);
         Ok(())
     }
@@ -157,9 +167,81 @@ impl Kernel {
     }
 
     fn action_mask<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyArray1<bool>>> {
+        let mask = self
+            .mask_cache
+            .as_ref()
+            .ok_or_else(|| PyValueError::new_err("reset() must be called first"))?;
+        // `from_slice` copies, so callers cannot mutate the native cache.
+        Ok(PyArray1::from_slice(py, mask))
+    }
+
+    /// Number of times the mask has been (re)computed by a mutation. Repeated
+    /// `action_mask()` reads do not change it.
+    #[getter]
+    fn mask_computations(&self) -> u64 {
+        self.mask_computations
+    }
+
+    /// Recompute the mask from the current state and compare it to the cache.
+    fn debug_validate_mask(&self) -> PyResult<bool> {
         let state = self.require_state()?;
-        let mask = guards::valid_action_mask(state, &self.scenario);
-        Ok(PyArray1::from_slice(py, &mask))
+        let fresh = guards::valid_action_mask(state, &self.scenario);
+        Ok(self.mask_cache.as_ref() == Some(&fresh))
+    }
+
+    /// Observation tensors at the current boundary (R2 parity surface).
+    fn observe<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+        let state = self.require_state()?;
+        let obs = observation::observe(state, &self.scenario);
+        let dict = PyDict::new(py);
+        dict.set_item(
+            "stops",
+            PyArray1::from_vec(py, obs.stops).reshape([
+                observation::MAX_ROUTES,
+                observation::MAX_DIRECTIONS,
+                observation::MAX_STOPS,
+                observation::STOP_CHANNELS,
+            ])?,
+        )?;
+        dict.set_item(
+            "arrival_history",
+            PyArray1::from_vec(py, obs.arrival_history).reshape([
+                observation::MAX_ROUTES,
+                observation::MAX_DIRECTIONS,
+                observation::MAX_STOPS,
+                observation::HISTORY_LAGS,
+            ])?,
+        )?;
+        dict.set_item(
+            "forecast",
+            PyArray1::from_vec(py, obs.forecast).reshape([
+                observation::MAX_ROUTES,
+                observation::MAX_DIRECTIONS,
+                observation::MAX_STOPS,
+            ])?,
+        )?;
+        dict.set_item(
+            "vehicles",
+            PyArray1::from_vec(py, obs.vehicles)
+                .reshape([observation::MAX_VEHICLES, observation::VEHICLE_FEATURES])?,
+        )?;
+        dict.set_item(
+            "routes",
+            PyArray1::from_vec(py, obs.routes)
+                .reshape([observation::MAX_ROUTES, observation::ROUTE_FEATURES])?,
+        )?;
+        dict.set_item(
+            "stop_valid",
+            PyArray1::from_vec(py, obs.stop_valid).reshape([
+                observation::MAX_ROUTES,
+                observation::MAX_DIRECTIONS,
+                observation::MAX_STOPS,
+            ])?,
+        )?;
+        dict.set_item("vehicle_valid", PyArray1::from_vec(py, obs.vehicle_valid))?;
+        dict.set_item("route_valid", PyArray1::from_vec(py, obs.route_valid))?;
+        dict.set_item("context", PyArray1::from_vec(py, obs.context))?;
+        Ok(dict)
     }
 
     #[getter]
@@ -182,6 +264,9 @@ impl Kernel {
         let costs = engine::advance_interval(state, scenario, action_index).map_err(to_py)?;
         let reward = -interval_cost(&costs, &reward_config) / reward_config.n_ref;
         let terminated = state.current_time_s >= scenario.config.horizon_s;
+        let next_mask = guards::valid_action_mask(state, scenario);
+        self.mask_cache = Some(next_mask);
+        self.mask_computations += 1;
         Ok((costs_list(&costs), reward, terminated))
     }
 
@@ -203,18 +288,23 @@ impl Kernel {
         py: Python<'py>,
         action_index: usize,
     ) -> PyResult<Bound<'py, PyDict>> {
+        {
+            let mask = self
+                .mask_cache
+                .as_ref()
+                .ok_or_else(|| PyValueError::new_err("reset() must be called first"))?;
+            if action_index >= mask.len() || !mask[action_index] {
+                return Err(PyValueError::new_err(format!(
+                    "invalid action index: {action_index}"
+                )));
+            }
+        }
         let scenario = &self.scenario;
         let reward_config = self.reward;
         let state = self
             .state
             .as_mut()
             .ok_or_else(|| PyValueError::new_err("reset() must be called first"))?;
-        let mask = guards::valid_action_mask(state, scenario);
-        if action_index >= mask.len() || !mask[action_index] {
-            return Err(PyValueError::new_err(format!(
-                "invalid action index: {action_index}"
-            )));
-        }
         let before_departures = state.departures.len();
         let before_actions = state.accepted_actions.len();
         let trace =
@@ -271,6 +361,7 @@ impl Kernel {
         let costs = &trace.costs;
         let reward = -interval_cost(costs, &reward_config) / reward_config.n_ref;
         let terminated = state.current_time_s >= scenario.config.horizon_s;
+        let next_mask = guards::valid_action_mask(state, scenario);
 
         let result = PyDict::new(py);
         result.set_item("costs", costs_list(costs))?;
@@ -279,6 +370,8 @@ impl Kernel {
         result.set_item("ticks", ticks)?;
         result.set_item("departures", departures)?;
         result.set_item("accepted_actions", actions)?;
+        self.mask_cache = Some(next_mask);
+        self.mask_computations += 1;
         Ok(result)
     }
 }
@@ -296,15 +389,9 @@ fn cost_fields() -> Vec<&'static str> {
     COST_FIELDS.to_vec()
 }
 
-#[pyfunction]
-fn observation_placeholder() -> &'static str {
-    "observation and masks are implemented in R2; this bridge exposes the R1 kernel"
-}
-
 #[pymodule]
 fn bus_sim(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Kernel>()?;
     m.add_function(wrap_pyfunction!(cost_fields, m)?)?;
-    m.add_function(wrap_pyfunction!(observation_placeholder, m)?)?;
     Ok(())
 }

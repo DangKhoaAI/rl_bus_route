@@ -133,10 +133,10 @@ Details in [reports/rust-migration.md](../reports/rust-migration.md) and
 
 ### R2.1 - Incremental observation with history parity
 
-- [ ] Implement current queue/age statistics and bounded history/completion statistics.
-- [ ] Preserve recent arrivals for completed/abandoned passengers without scanning the full finished list.
-- [ ] Preserve the current boarded-channel rule: currently ONBOARD cohorts whose boarding time lies in the window, not all boarding events.
-- [ ] Preserve all shapes, float32 outputs, normalization, validity tensors, context, and forecast placeholders.
+- [x] Implement current queue/age statistics and bounded history/completion statistics.
+- [x] Preserve recent arrivals for completed/abandoned passengers without scanning the full finished list.
+- [x] Preserve the current boarded-channel rule: currently ONBOARD cohorts whose boarding time lies in the window, not all boarding events.
+- [x] Preserve all shapes, float32 outputs, normalization, validity tensors, context, and forecast placeholders.
 
 **Verification:** differential tests for every observation channel at reset and every step; exact window boundaries; repeated splits; board-then-complete; abandonment; final episode state; tapes identical in the past but different in the future.
 
@@ -144,15 +144,23 @@ Details in [reports/rust-migration.md](../reports/rust-migration.md) and
 
 ### R2.2 - Cache masks safely
 
-- [ ] Compute the initial mask at reset, validate against the current-state mask, and compute the next-state mask after step.
-- [ ] Remove redundant computation across collector/step/dispatcher where safe; retain guards for independently callable APIs.
-- [ ] Protect cache ownership and invalidate after any supported debug mutation.
+- [x] Compute the initial mask at reset, validate against the current-state mask, and compute the next-state mask after step.
+- [x] Remove redundant computation across collector/step/dispatcher where safe; retain guards for independently callable APIs.
+- [x] Protect cache ownership and invalidate after any supported debug mutation.
 
 **Verification:** compare all 221 bits across fixtures; repeatedly call `action_masks()` without mutation; test masked/out-of-range actions, reset, cooldown boundaries, and caller attempts to modify returned arrays.
 
 **Acceptance:** masks match exactly, invalid actions leave state unchanged, NOOP stays valid, and repeated reads do not recompute or corrupt native cache.
 
 **R2 gate:** R2.1 and R2.2 accepted; observation and action semantics remain unchanged.
+
+**Evidence (2026-09-12, accepted):** `crates/bus-sim/src/observation.rs`
+reproduces all nine channels at oracle tolerance; `Kernel.mask_cache` is
+computed at reset and after each step and returns copies. All 11 fixtures match
+every observation channel within `rtol=atol=1e-6` and all 221 mask bits
+exactly at reset and after every step (15 tests in
+`tests/backend_parity/test_rust_observation.py`), plus 12 native unit tests.
+Details in [reports/rust-migration.md](../reports/rust-migration.md).
 
 ## 6. R3: integrate the backend
 
@@ -231,7 +239,7 @@ Details in [reports/rust-migration.md](../reports/rust-migration.md) and
 
 - [x] R0: immutable oracle, golden coverage, and unprofiled reference accepted.
 - [x] R1: domain/lifecycle/actions/ticks/costs accepted.
-- [ ] R2: observation/history and mask parity accepted.
+- [x] R2: observation/history and mask parity accepted.
 - [ ] R3: wrapper/evaluator/forecast/backend/provenance accepted.
 - [ ] R4: correctness, 2x simulation and learn gates, and faster full workflow accepted.
 - [ ] Historical reports preserved; new report distinguishes measured results from projections.

@@ -101,6 +101,7 @@ pub fn advance_tick(state: &mut WorldState, scenario: &Scenario) -> Result<StepC
         }
     }
     state.current_time_s += config.tick_s;
+    state.prune_recent_finished(config.tick_s, config.control_interval_s);
     if state.conservation_checks {
         state.assert_conservation()?;
     }

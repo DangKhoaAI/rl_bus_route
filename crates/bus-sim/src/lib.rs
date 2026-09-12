@@ -10,6 +10,7 @@ pub mod domain;
 pub mod engine;
 pub mod error;
 pub mod guards;
+pub mod observation;
 pub mod passengers;
 pub mod snapshot;
 pub mod travel;

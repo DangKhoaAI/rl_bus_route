@@ -132,6 +132,7 @@ pub fn alight_visit(state: &mut WorldState, bus_id: usize, stop_index: u32) -> i
             state.onboard_total -= cohort.count;
             state.completed_total += cohort.count;
             state.finished.push(cohort);
+            state.push_recent_finished(cohort);
         } else {
             remaining.push(cohort);
         }
@@ -153,6 +154,7 @@ pub fn abandon_expired(state: &mut WorldState, patience_s: i64, tick_s: i64) -> 
             state.waiting_total -= cohort.count;
             state.abandoned_total += cohort.count;
             state.finished.push(cohort);
+            state.push_recent_finished(cohort);
         } else {
             remaining.push(cohort);
         }
