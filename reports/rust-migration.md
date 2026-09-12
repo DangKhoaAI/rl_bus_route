@@ -1,13 +1,13 @@
 # Rust migration report
 
-Status: **R0–R3 accepted; R4 partial (R4.1 correctness and the R4.2 light speed pass are recorded; R4.3 full workflow deferred).**
+Status: **R0–R4 accepted; the Rust backend is frozen for the RL L0 baseline.**
 Date: 2026-09-12.
 Spec: [docs/spec/rust_improve.md](spec/rust_improve.md). Plan: [docs/plan/rust_improve.md](plan/rust_improve.md).
 
-This report records measured evidence only. R0–R3 are accepted. The native
-crate exists and R4.1/R4.2 light evidence is recorded in section 7; R4.3 (a
-full 245,760-transition workflow on each backend) is deferred, so R4 is **not**
-marked accepted.
+This report records measured evidence only. R0–R3 are accepted. R4.1
+correctness, the R4.2 light speed pass, and the R4.3 full L0-protocol workflow
+(245,760 transitions x 100 validation days per backend) are recorded; R4 is
+**accepted** and task L0.1 in the RL plan is unlocked.
 
 ## 0. Why R0 first
 
@@ -15,7 +15,8 @@ The RL plan's **L0 baseline** is gated on an *accepted Rust R4* (parity + >=2x
 simulation/learn gates). No Rust crate existed when this work started, so the
 first executable stage in the referenced documents was **R0 — freeze the Python
 oracle**. R0.1–R0.3 are implemented and accepted here; R1–R3 followed and are
-also accepted (sections 4–6). R4.3 is still open, so RL L0 is not yet unlocked.
+also accepted (sections 4–6). R4 is accepted as well (section 7), so RL L0 is
+unlocked.
 
 ## 1. R0.1 — Inventory and freeze the reference
 
@@ -351,7 +352,7 @@ cross-backend checkpoint rules;
 metadata) and `evaluate` with both backends producing identical
 `total_cost` (1e-9).
 
-## 7. R4 — light benchmark and optimization profile (partial)
+## 7. R4 — acceptance, full workflow, and optimization profile
 
 R4.1 correctness is covered by `tests/backend_parity/test_rust_acceptance.py`:
 a 2048-transition MaskablePPO smoke on both backends (finite obs/reward/loss,
@@ -380,6 +381,52 @@ per-workload medians. Raw times are in
   3.13–3.16 s), so the 4.17x ratio is not noise.
 - Peak RSS **491 MB** (from the earlier 16-thread run) is the peak of the process
   running **both** backends; it is not a per-backend figure.
+
+### R4.3 — full workflow benchmark (acceptance)
+
+One full L0-protocol seed per backend with identical schedules:
+`configs/experiments/core-threads2.toml` (4 envs, n_steps 256, batch 256,
+_epochs 4, seed 11, **2 torch threads**), budget **245,760 transitions**,
+validation every **12,288** transitions (20 evaluations) on **100 validation
+days**. Python ran first so Rust was measured on the warmer machine. Raw
+evidence: `reports/rust-migration/full-workflow.json`, with logs and
+checkpoints under `runs/rust-migration/full-workflow/`.
+
+| Metric | Python | Rust | Ratio |
+|---|---:|---:|---:|
+| Learn + validation (`wall_time_s`) | 521.13 s | 142.97 s | **3.65x** |
+| Total wall incl. setup (`/usr/bin/time`) | 523.36 s | 145.29 s | **3.60x** |
+| Setup (reported separately) | 2.23 s | 2.32 s | — |
+| Transitions / episodes | 245,760 / 2,048 | 245,760 / 2,048 | — |
+| Evaluations x validation days | 20 x 100 | 20 x 100 | — |
+| Best validation cost | 13199.1325 | 13199.1325 | equal |
+| Peak RSS | 662 MB | 1236 MB | 1.87x |
+
+**Parity.** All 20 validation costs are bit-identical (max abs diff 0.0), and
+the trained artifacts are byte-identical: `policy.pth`,
+`policy.optimizer.pth` and `pytorch_variables.pth` match exactly for both
+`best.zip` and `last.zip` (state-dict max abs diff 0.0). The checkpoint `.zip`
+sha256 values differ only because `policy_class`/`rollout_buffer_class`
+serialize as function object addresses and `start_time` is a wall-clock value;
+`_last_obs`, `_last_original_obs`, `_last_episode_starts` and `num_timesteps`
+are equal. This closes the R4.3 parity question.
+
+**Validation dominates the workflow.** Rerunning the same seed with
+`--eval-limit 10` isolates the cost: Python 280.31 s, Rust 76.21 s. The extra 90
+validation days x 20 evaluations cost Python 240.8 s (46% of its total) and Rust
+66.8 s (47%), so evaluation, not simulation, is now the largest remaining Python
+cost. R4.3 is accepted: the full Rust workflow is **3.60x** faster and every
+preceding gate passes.
+
+**Memory.** Rust peak RSS is 1.87x Python's (1236 MB vs 662 MB). Measured
+components: the shared `ScenarioStore` packs immutable tapes for all 600
+scenarios (**246 MB**, ~409 KB/scenario: 205 MB train + 41 MB validation), plus
+native heap retention at the Python/PyO3 step boundary. This is not a leak: a
+1.44M-call reset/step/mask loop over 4 kernels held RSS flat, and
+`sys.getallocatedblocks()` stayed flat in the DummyVecEnv loop (no Python object
+growth). glibc arena trimming (`MALLOC_ARENA_MAX=2 MALLOC_TRIM_THRESHOLD_=131072`)
+recovers only ~2% at 61,440 steps (1030 -> 1011 MB). Peak is bounded and well
+within the 31 GB host.
 
 ### Torch threads (chosen configuration)
 
@@ -438,11 +485,11 @@ absolute times are inflated but shares are informative) in
 
 Gate status: at the chosen 2 threads (same condition for both backends)
 simulation is 25.1x, isolated learn 4.17x (above the 4x stretch) and
-fixed-checkpoint eval 3.44x; all far above the 2x gate. R4.3 (full
-245,760-transition workflow on each backend) is **deferred**, so R4 is not marked
-accepted. Optimization should now target PPO update and evaluation inference,
-not the simulation core; batched multi-scenario inference is the next candidate
-for eval.
+fixed-checkpoint eval 3.44x; all far above the 2x gate. The R4.3 full workflow
+is 3.60x with bit-identical training, so **R4 is accepted** and the native
+revision `cf8579ef16b5` is frozen for RL. Optimization should now target PPO
+update and evaluation inference, not the simulation core; batched multi-scenario
+inference is the next candidate for eval.
 
 ## 8. Evidence
 
@@ -459,7 +506,9 @@ for eval.
 | `python scripts/benchmark_backends.py --repetitions 5 --transitions 12288` | 0 | `speed-acceptance.json` (light R4.2) |
 | `python scripts/profile_native_training.py` | 0 | `profile-native.json` (segments/threads/eval/memory) |
 | `python scripts/tune_runtime.py` | 0 | `runtime-tuning.json` (threads + validation) |
-| `python -m pytest -q` | 0 | 149 passed |
+| `python -m pytest -q` | 0 | 149 passed (1 skipped deep)
+| `python -m bus_rl.cli train ... --backend python --eval-limit 100` | 0 | `full-workflow.json` (Python full seed) |
+| `python -m bus_rl.cli train ... --backend rust --eval-limit 100` | 0 | `full-workflow.json` (Rust full seed) |
 | `python scripts/benchmark_python.py --repetitions 5 --transitions 12288` | 0 | `python-benchmark.json` |
 
 Artifacts:
@@ -472,6 +521,12 @@ Artifacts:
   thread sweep, eval segments and shared-store memory.
 - `reports/rust-migration/runtime-tuning.json` — same-condition thread matrix and
   observation-validation cost for both backends.
+- `reports/rust-migration/full-workflow.json` — R4.3 full-seed wall times, parity,
+  validation-cost ablation and memory breakdown.
+- `reports/rust-migration/full-workflow-memory.json` — native `ScenarioStore`
+  memory measurement (600 scenarios).
+- `runs/rust-migration/full-workflow/{python,rust}/` — git-ignored logs,
+  `metadata.json`, `evaluations.csv` and checkpoints for both full seeds.
 - `reports/rust-migration/native-build.json` — native toolchain/revision/hash.
 - `crates/bus-sim/`, `crates/bus-sim-py/` — native kernel + PyO3 bridge.
 - `crates/bus-sim/src/observation.rs` — incremental observation + ring.
@@ -484,11 +539,18 @@ Artifacts:
 
 ## 9. Limitations and next steps
 
-- R0–R3 are accepted. R4.2 light gates already pass (simulation ~24.9x, isolated
-  learn ~3.9–4.0x); R4.3 (full 245,760-transition workflow on each backend) has
-  not been run, so R4 remains open.
+- R0–R4 are accepted. R4.2 light gates pass (simulation ~24.9x, isolated
+  learn ~3.9–4.17x) and R4.3 full workflow is 3.60x with bit-identical training
+  (section 7). The remaining opportunity is evaluation, which is ~46% of the
+  Python full-seed wall; batched multi-scenario inference is the next candidate.
+- Rust peak RSS is 1.87x Python's (1236 MB vs 662 MB) for a full seed: ~246 MB
+  is the shared native `ScenarioStore` for 600 scenarios and the rest is native
+  heap retention at the step boundary (not a leak; see section 7). It is
+  documented rather than hidden and does not affect the speed gates.
 - The manifest records `git_dirty=true` because R0–R3 artifacts were added in
   the same working tree; the revision field pins the pre-R1 commit `1c34457`.
+  The full-workflow metadata also records `git_dirty=true`; the only uncommitted
+  file at run time was the regenerated `native-build.json` (same library hash).
 - The git-ignored `runs/` and `data/generated/` inventories are documented but
   optional for verification; the committed reference checkpoint and
   regeneration commands make R0 reproducible from a fresh checkout.
@@ -497,9 +559,8 @@ Artifacts:
   parity tests skip when the extension is absent.
 - `recent_finished` duplicates recently finished cohorts by design; its size is
   bounded by the arrival/completion windows, not by episode length.
-- R4 must remeasure Python interleaved with Rust on one machine; the R0.3
-  numbers are the Python baseline for the ≥2× simulation and isolated-learn
-  gates.
+- R4 remeasured Python on the same machine as Rust (both full seeds); the R0.3
+  numbers remain the historical Python baseline for the >=2x gates.
 
 ## 10. Stage checklist
 
@@ -507,4 +568,7 @@ Artifacts:
 - [x] R1: native domain/lifecycle/actions/ticks/costs at oracle parity.
 - [x] R2: observation/history and mask parity accepted.
 - [x] R3: wrapper/evaluator/forecast/backend/provenance accepted.
-- [ ] R4 acceptance (light R4.1/R4.2 pass; full workflow R4.3 deferred).
+- [x] R4: correctness, 2x simulation and learn gates, and 3.60x full workflow
+  (bit-identical training) accepted.
+- [x] Historical reports preserved; measured results are separated from projections.
+- [x] Frozen native revision `cf8579ef16b5` recorded; task L0.1 in the RL plan is unlocked.

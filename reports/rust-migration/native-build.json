@@ -4,8 +4,8 @@
   "crate": "bus-sim-py",
   "crate_version": "0.1.0",
   "git": {
-    "dirty": true,
-    "sha": "74e81170993d7a446d9e2cc1e8ce618b861fa832"
+    "dirty": false,
+    "sha": "b677d3bb2de2029d29b6bd379bb0b4e832dde2c8"
   },
   "import_ok": true,
   "install_command": "python scripts/build_native.py",

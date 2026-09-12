@@ -1,7 +1,8 @@
 # Rust kernel: tăng tốc simulation trước thực nghiệm RL
 
-Ngày cập nhật: **2026-09-12**. Trạng thái: **spec triển khai; chưa implement Rust**.
+Ngày cập nhật: **2026-09-12**. Trạng thái: **R0–R4 đã đạt; Rust là backend của loạt thực nghiệm L0**.
 Implementation plan (English): [rust_improve.md](../plan/rust_improve.md).
+Bằng chứng đo được: [reports/rust-migration.md](../reports/rust-migration.md).
 
 
 ## 1. Quyết định và quan hệ với kế hoạch RL
@@ -59,7 +60,7 @@ crates/bus-sim/       # domain, engine, passengers, vehicles, dispatcher,
 crates/bus-sim-py/    # PyO3 cdylib, Python import bus_sim
 ```
 
-Có thể gộp rlib + cdylib nếu đơn giản hơn. Build release cho mọi benchmark. Backend config đề xuất: `runtime.backend = "python" | "rust"`; chưa phải option CLI hiện có. Truyền lựa chọn này xuyên suốt train, validation callback, diagnose, evaluate và baselines; không silent fallback nếu người dùng chọn Rust nhưng extension thiếu.
+Có thể gộp rlib + cdylib nếu đơn giản hơn. Build release cho mọi benchmark. Backend config `runtime.backend = "python" | "rust"` (đã triển khai trong config và CLI `--backend`). Truyền lựa chọn này xuyên suốt train, validation callback, diagnose, evaluate và baselines; không silent fallback nếu người dùng chọn Rust nhưng extension thiếu.
 
 ### 3.2 State và dữ liệu
 
@@ -103,7 +104,7 @@ Giữ NOOP valid, mapping 221 slots, flags M1/M2/M3 và tất cả guards. Actio
 
 ## 5. FFI, wrapper và evaluator
 
-Contract đề xuất, chưa phải API đã implement:
+Contract đã triển khai trong `crates/bus-sim-py` (`Kernel`):
 
 ```text
 reset(scenario_index) -> (obs, mask)
@@ -137,7 +138,6 @@ Forecast vẫn Python: predict từ obs hiện tại và time hiện tại, thay
 | R4 — Acceptance | Chạy toàn bộ gates §7, ghi artifacts; đạt rồi đóng băng Rust backend revision để bắt đầu L0. |
 
 Golden suite phải có zero/normal/peak/burst/traffic, nhiều scenario seeds, M1/M2/M3, mọi action family, valid/invalid action, donor/cooldown, partial boarding/capacity, abandonment, short-turn và terminal settlement. Replay cùng action sequence trên hai backend để tách physics khỏi policy randomness. Test split kiểm tra conservation/lineage và mọi channel observation.
-
 So counters, status, IDs và masks exact; float obs mặc định `rtol=1e-6, atol=1e-6`, cost/reward `rtol=1e-9, atol=1e-9`. Mọi sai biệt ngoài tolerance phải điều tra trước gate. Với aggregate metrics, dùng tolerance cost/float tương ứng và đối chiếu categorical/None exact.
 
 Fixed checkpoint eval dùng cùng checkpoint hash, ngày và deterministic actions trên hai backend. Mean cost cũ **15471.25** là mốc regression của trial cũ, chỉ bắt buộc khi phục hồi đúng checkpoint/config/days đó. Nếu checkpoint không còn, tạo oracle checkpoint mới trên Python và ghi provenance; không giả lập mốc cũ. Mean bằng nhau không thay thế per-step/per-day parity.

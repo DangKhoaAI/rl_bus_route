@@ -1,6 +1,6 @@
 # Rust Backend Implementation Plan
 
-Date: 2026-09-12. Status: planned; no task below is accepted yet.
+Date: 2026-09-12. Status: **R0–R4 accepted; Rust backend frozen for RL L0.**
 
 ## 1. Scope and execution contract
 
@@ -249,14 +249,28 @@ workflow) remains open.
 
 ### R4.3 - Full workflow and release decision
 
-- [ ] Run one full 245,760-transition seed on each backend with identical validation/checkpoint schedules, preferably the L0 protocol to permit reuse.
-- [ ] Measure actual total wall including validation/checkpoint, with setup reported separately; explain any evaluation or memory regression.
-- [ ] Complete `reports/rust-migration.md`, link raw evidence, and freeze the native revision/build used by RL experiments.
-- [ ] Document clean build/install, backend selection, fallback, and reproduction commands.
+- [x] Run one full 245,760-transition seed on each backend with identical validation/checkpoint schedules, preferably the L0 protocol to permit reuse.
+- [x] Measure actual total wall including validation/checkpoint, with setup reported separately; explain any evaluation or memory regression.
+- [x] Complete `reports/rust-migration.md`, link raw evidence, and freeze the native revision/build used by RL experiments.
+- [x] Document clean build/install, backend selection, fallback, and reproduction commands.
 
 **Verification:** Compare full-run timing and validation schedules from metadata; reproduce the documented release installation and a saved-checkpoint evaluation.
 
 **Acceptance:** full Rust workflow is faster than Python; all preceding gates pass; evidence is reproducible; the report explicitly marks R4 accepted. Reuse this seed for RL only if every L0 setting and artifact matches.
+
+**Evidence (2026-09-12, accepted):** one full L0-protocol seed per backend
+(`configs/experiments/core-threads2.toml`, seed 11, 4 envs, 2 torch threads,
+245,760 transitions, validation every 12,288 on 100 validation days) in
+`reports/rust-migration/full-workflow.json`. Python 521.13 s vs Rust 142.97 s
+learn+validation (**3.65x**); total wall incl. setup 523.36 s vs 145.29 s
+(**3.60x**, setup 2.2/2.3 s). All 20 validation costs are bit-identical
+(max abs diff 0.0) and `policy.pth`, `policy.optimizer.pth` and
+`pytorch_variables.pth` are byte-identical for both `best.zip` and `last.zip`.
+Validation dominates the workflow (46% of Python wall); rerunning with
+`--eval-limit 10` isolates that cost. Peak RSS 662 MB (Python) vs 1236 MB (Rust),
+explained in the report (~246 MB shared native `ScenarioStore` + heap
+retention). Native revision `cf8579ef16b5` is frozen for RL; if the L0 seed
+reuses these exact settings and artifacts, no rerun is needed.
 
 ## 8. Final acceptance checklist
 
@@ -264,8 +278,8 @@ workflow) remains open.
 - [x] R1: domain/lifecycle/actions/ticks/costs accepted.
 - [x] R2: observation/history and mask parity accepted.
 - [x] R3: wrapper/evaluator/forecast/backend/provenance accepted.
-- [ ] R4: correctness, 2x simulation and learn gates, and faster full workflow accepted.
-- [ ] Historical reports preserved; new report distinguishes measured results from projections.
-- [ ] Handoff records the frozen backend revision and unlocks task L0.1 in the [RL plan](improve_RL.md).
+- [x] R4: correctness, 2x simulation and learn gates, and faster full workflow accepted.
+- [x] Historical reports preserved; new report distinguishes measured results from projections.
+- [x] Handoff records the frozen backend revision (`cf8579ef16b5`) and unlocks task L0.1 in the [RL plan](improve_RL.md).
 
-Until these items pass, the document remains an implementation plan, not proof of an accepted Rust backend.
+All items pass; this document now records an accepted Rust backend.

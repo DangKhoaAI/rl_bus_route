@@ -1,0 +1,157 @@
+{
+  "generated_at": "2026-09-12T14:00:53+00:00",
+  "host": {
+    "machine": "DangKhoa",
+    "platform": "Linux-7.0.0-31-generic-x86_64-with-glibc2.39"
+  },
+  "memory": {
+    "arena_trim_experiment_61440_steps": {
+      "MALLOC_ARENA_MAX_2_trim_peak_rss_kb": 1010980,
+      "default_peak_rss_kb": 1030300,
+      "note": "glibc arena trimming recovers only ~2% of peak.",
+      "saving_kb": 19320
+    },
+    "explanation": "Rust peak RSS is ~1.87x Python's. Measured components: the shared native ScenarioStore packs immutable tapes for all 600 scenarios (~246 MB, ~409 KB/scenario), plus native heap retention at the Python/PyO3 step boundary. The kernel does not leak: 1.44M reset/step/mask calls over 4 kernels held RSS flat, and sys.getallocatedblocks stays flat in the DummyVecEnv loop (no Python object growth), so the residual growth is allocator retention, not a leak. It is bounded (~1.2 GB peak for a full seed), well inside the machine budget, and does not affect the speed gates.",
+    "native_scenario_store_kb": {
+      "per_scenario": 409.4,
+      "total_600": 245628,
+      "train_500": 204732,
+      "validation_100": 40896
+    },
+    "peak_rss_kb": {
+      "python": 662448,
+      "rust": 1235936
+    },
+    "peak_rss_ratio": 1.866
+  },
+  "notes": [
+    "Full L0-protocol seed (245,760 transitions, 100 validation days every 12,288) reproduces the Python run exactly: identical 20-point validation curve, identical trained weights and optimizer state. This closes the R4.3 parity question.",
+    "Wall time is from /usr/bin/time; wall_time_s in metadata is model.learn + finalize (setup ~2.2-2.3 s reported separately).",
+    "Python ran first so Rust was measured on the warmer machine (conservative).",
+    "Checkpoint .zip sha256 values in 'results' differ only by embedded object addresses and start_time; the tensor members are byte-identical."
+  ],
+  "protocol": {
+    "batch_size": 256,
+    "command": "python -m bus_rl.cli train --config configs/experiments/core-threads2.toml --manifest data/generated/base/manifest.json --seed 11 --output runs/rust-migration/full-workflow/<backend> --backend <backend> --torch-threads 2 --eval-limit 100",
+    "config": "configs/experiments/core-threads2.toml",
+    "conservation_checks": true,
+    "eval_freq": 12288,
+    "eval_limit_days": 100,
+    "execution_order": [
+      "python",
+      "rust"
+    ],
+    "manifest": "data/generated/base/manifest.json",
+    "n_envs": 4,
+    "n_epochs": 4,
+    "n_steps": 256,
+    "order_note": "Python ran first so Rust was measured on the warmer machine (conservative).",
+    "seed": 11,
+    "torch_threads": 2,
+    "total_timesteps": 245760,
+    "train_scenarios": 500,
+    "validate_observation": true,
+    "validation_scenarios": 100
+  },
+  "results": {
+    "python": {
+      "backend": "python",
+      "best_val_cost": 13199.1325,
+      "checkpoints": {
+        "best": "b3e679241bf7aa5daf211b9e5e2bbf76526b2b2de81b455bb708b2806563a6ac",
+        "last": "31320e75313b64f2a884a920ef8fab4760387015c42bfc3c07ae7448d619422b"
+      },
+      "episodes_completed": 2048,
+      "evaluations": 20,
+      "last_val_cost": 13464.355,
+      "peak_rss_kb": 662448,
+      "setup_s": 2.23,
+      "total_timesteps": 245760,
+      "wall_time_s": 521.1315679010004,
+      "wall_total_s": 523.36
+    },
+    "rust": {
+      "backend": "rust",
+      "best_val_cost": 13199.1325,
+      "checkpoints": {
+        "best": "6570f0a90fb8d13e58fab6794c65768f83b221744b64cd67e09d4eb361efad57",
+        "last": "9132aa9ea7dcbe1758ea5b772801218d9bee6f24917b23686af728557a9149ee"
+      },
+      "episodes_completed": 2048,
+      "evaluations": 20,
+      "last_val_cost": 13464.355,
+      "native_library_sha256": "cf8579ef16b52f88000c30cbe0c5d1ed98425bb13bb7f6e61e943f5b1f623260",
+      "peak_rss_kb": 1235936,
+      "setup_s": 2.32,
+      "total_timesteps": 245760,
+      "wall_time_s": 142.9742439690017,
+      "wall_total_s": 145.29
+    }
+  },
+  "speedup": {
+    "full_workflow_learn_plus_validation": 3.645,
+    "full_workflow_total_wall": 3.602
+  },
+  "stage": "R4.3",
+  "training_parity": {
+    "best_val_cost": 13199.1325,
+    "equal_non_weight_fields": [
+      "_last_obs",
+      "_last_original_obs",
+      "_last_episode_starts",
+      "num_timesteps",
+      "ep_info_buffer"
+    ],
+    "identical_zip_members": [
+      "policy.pth",
+      "policy.optimizer.pth",
+      "pytorch_variables.pth"
+    ],
+    "max_abs_val_cost_diff": 0.0,
+    "optimizer_state_bitwise_identical": true,
+    "points": 20,
+    "policy_weights_bitwise_identical": true,
+    "schedule": [
+      12288,
+      24576,
+      36864,
+      49152,
+      61440,
+      73728,
+      86016,
+      98304,
+      110592,
+      122880,
+      135168,
+      147456,
+      159744,
+      172032,
+      184320,
+      196608,
+      208896,
+      221184,
+      233472,
+      245760
+    ],
+    "state_dict_max_abs_diff": 0.0,
+    "validation_curve_identical_at_all_checkpoints": true,
+    "zip_container_sha256_differs_only_because": [
+      "policy_class/rollout_buffer_class serialize as function object addresses",
+      "start_time wall-clock timestamp"
+    ]
+  },
+  "validation_cost_ablation_10day": {
+    "extra_90_days_x20_evals_s": {
+      "python": 240.82,
+      "rust": 66.77
+    },
+    "note": "Same 245,760-transition seed rerun with eval-limit=10 to isolate validation cost.",
+    "python_speedup": 3.678,
+    "python_wall_time_s": 280.312701972005,
+    "rust_wall_time_s": 76.20817656500003,
+    "validation_share_of_learn_plus_eval": {
+      "python": 0.462,
+      "rust": 0.467
+    }
+  }
+}
