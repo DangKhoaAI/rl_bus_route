@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from bus_rl.domain import Phase, StepCosts, WorldState
+from bus_rl.domain import PassengerStatus, Phase, StepCosts, WorldState
 
 
 def integrate_tick_costs(state: WorldState, duration_s: int) -> StepCosts:
@@ -25,6 +25,22 @@ def add_costs(left: StepCosts, right: StepCosts) -> StepCosts:
     return StepCosts(
         **{name: getattr(left, name) + getattr(right, name) for name in left.__dataclass_fields__}
     )
+
+
+def mean_waiting_minutes(state: WorldState, tick_s: int = 30) -> float | None:
+    """Mean observed wait; None when no one was generated (no future-demand fill-in)."""
+    if state.generated_count == 0:
+        return None
+    total = 0.0
+    for cohort in state.cohorts:
+        if cohort.status is PassengerStatus.COMPLETED and cohort.boarding_tick is not None:
+            end_s = cohort.boarding_tick * tick_s
+        elif cohort.status is PassengerStatus.ABANDONED and cohort.abandonment_tick is not None:
+            end_s = cohort.abandonment_tick * tick_s
+        else:
+            end_s = state.current_time_s
+        total += cohort.count * (end_s - cohort.arrival_tick * tick_s) / 60
+    return total / state.generated_count
 
 
 def interval_cost(costs: StepCosts) -> float:

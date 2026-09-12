@@ -1,7 +1,10 @@
+from bus_rl.baselines.random import RandomValidController
 from bus_rl.domain import Action, Pattern, Phase, initial_state
+from bus_rl.env.bus_dispatch import BusDispatchEnv
+from bus_rl.env.observation import observe
 from bus_rl.sim.engine import advance_interval, advance_tick
 from bus_rl.sim.vehicles import begin_service_edge, complete_expired_phase
-from tests.fixtures import empty_scenario
+from tests.fixtures import empty_scenario, waiting_state
 
 
 def test_noop_interval_is_four_ticks_and_preserves_fleet():
@@ -11,6 +14,32 @@ def test_noop_interval_is_four_ticks_and_preserves_fleet():
     advance_interval(state, scenario, Action())
     assert state.current_time_s == 120
     assert len(state.vehicles) == total
+
+
+def test_conservation_holds_each_tick_and_tapes_ignore_controller_rng():
+    scenario = empty_scenario()
+    state = waiting_state(8)
+    tape = scenario.arrival_tape.copy()
+    for _ in range(12):
+        advance_tick(state, scenario)
+        state.assert_conservation()
+        assert state.generated_count == (
+            state.waiting_count
+            + state.onboard_count
+            + state.completed_count
+            + state.abandoned_count
+        )
+    env = BusDispatchEnv([scenario], scenario.config)
+    observation, _ = env.reset(seed=4)
+    controller = RandomValidController(9)
+    for _ in range(6):
+        mask = env.action_masks()
+        env.step(controller.act(observation, mask))
+        observation = observe(env.state, env.scenario)
+        env.state.assert_conservation()
+    import numpy as np
+
+    np.testing.assert_array_equal(scenario.arrival_tape, tape)
 
 
 def test_moving_bus_arrives_then_laysover_at_terminal():

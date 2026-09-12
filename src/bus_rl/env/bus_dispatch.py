@@ -6,7 +6,7 @@ import numpy as np
 from bus_rl.control.actions import ACTION_TABLE
 from bus_rl.control.guards import valid_action_mask
 from bus_rl.domain import initial_state
-from bus_rl.env.observation import observe
+from bus_rl.env.observation import observe, validate_observation
 from bus_rl.rewards.costs import interval_cost
 from bus_rl.sim.engine import advance_interval
 
@@ -32,7 +32,9 @@ class BusDispatchEnv(gym.Env):
             "scenario_index", int(self.np_random.integers(len(self.scenarios)))
         )
         self.scenario, self.state = self.scenarios[index], initial_state(self.scenarios[index])
-        return observe(self.state, self.scenario), {}
+        observation = observe(self.state, self.scenario)
+        validate_observation(observation)
+        return observation, {}
 
     def action_masks(self):
         return valid_action_mask(self.state, self.scenario)
@@ -42,8 +44,10 @@ class BusDispatchEnv(gym.Env):
             raise ValueError(f"invalid action index: {action_index}")
         costs = advance_interval(self.state, self.scenario, ACTION_TABLE[action_index])
         terminated = self.state.current_time_s >= self.config.horizon_s
+        observation = observe(self.state, self.scenario)
+        validate_observation(observation)
         return (
-            observe(self.state, self.scenario),
+            observation,
             -interval_cost(costs) / 3000,
             terminated,
             False,

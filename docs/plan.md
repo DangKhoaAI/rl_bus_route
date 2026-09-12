@@ -95,8 +95,8 @@ Fixtures dùng literal dữ liệu để không phụ thuộc generator đúng m
 
 **Produces:** typed dataclasses, `generate_scenario`, `save_scenario`, `load_scenario`, `initial_state`; immutable Scenario/read-only tapes và mutable WorldState riêng.
 
-- [ ] Setup package/deps bằng uv; khóa Python3.11 patch và CPU PyTorch sau import smoke. Ignore generated datasets/checkpoints/cache; giữ manifests nhỏ, configs và selected reports.
-- [ ] Viết seed/roundtrip tests; reject sai direction/destination, negative counts, non-tick timestamps, F/R/S vượt encoding. Scenario zero-demand hợp lệ.
+- [x] Setup package/deps bằng uv; khóa Python3.11 patch và CPU PyTorch sau import smoke. Ignore generated datasets/checkpoints/cache; giữ manifests nhỏ, configs và selected reports.
+- [x] Viết seed/roundtrip tests; reject sai direction/destination, negative counts, non-tick timestamps, F/R/S vượt encoding. Scenario zero-demand hợp lệ.
 
 ```python
 def test_scenario_roundtrip_has_same_demand(tmp_path):
@@ -110,10 +110,10 @@ def test_scenario_roundtrip_has_same_demand(tmp_path):
     assert restored.scenario_hash == scenario.scenario_hash
 ```
 
-- [ ] Chạy fail rồi implement JSON+numeric NPZ, no pickle; hash bỏ timestamp audit, giữ semantic config/data.
-- [ ] Implement base network/initial fleet, Poisson+peak generator và indexed edge/time traffic. Destination prior và demand totals dùng đúng đơn vị spec.
-- [ ] Implement manifests500/100/200/200/200 ngày và child-seed dedup; test suite dùng 2–3 ngày mỗi split cho nhanh. Ghi rõ cùng topology là intentional.
-- [ ] `uv run pytest tests/test_data.py -q`; `uv run ruff check .`; pass rồi commit `feat: define dynamic bus scenarios and conserved domain state`.
+- [x] Chạy fail rồi implement JSON+numeric NPZ, no pickle; hash bỏ timestamp audit, giữ semantic config/data.
+- [x] Implement base network/initial fleet, Poisson+peak generator và indexed edge/time traffic. Destination prior và demand totals dùng đúng đơn vị spec.
+- [x] Implement manifests500/100/200/200/200 ngày và child-seed dedup; test suite dùng 2–3 ngày mỗi split cho nhanh. Ghi rõ cùng topology là intentional.
+- [x] `uv run pytest tests/test_data.py -q`; `uv run ruff check .`; pass rồi commit `feat: define dynamic bus scenarios and conserved domain state`.
 
 **Gate:** Scenario không bị mutate khi reset, cùng seed→cùng tapes/hash; không có người ngoài demand window.
 
@@ -125,7 +125,7 @@ def test_scenario_roundtrip_has_same_demand(tmp_path):
 
 **Produces:** boarding/alighting, abandonment, movement/dwell/layover và `advance_interval` engine plumbing; actions tạm chỉ NOOP trước T3.
 
-- [ ] Viết capacity/conservation test và split cohort đúng lineage. Boarding second visit không được đếm lại first_denied đối với cùng người.
+- [x] Viết capacity/conservation test và split cohort đúng lineage. Boarding second visit không được đếm lại first_denied đối với cùng người.
 
 ```python
 def test_capacity_denial_keeps_waiting_passengers():
@@ -140,11 +140,11 @@ def test_capacity_denial_keeps_waiting_passengers():
     assert state.generated_count == state.waiting_count + state.onboard_count
 ```
 
-- [ ] Chạy fail, implement eligibility/FIFO trước capacity. Các summary count properties của WorldState tính từ cohorts hoặc được đối chiếu mỗi tick để tránh cache drift.
-- [ ] Implement edge travel freeze ở entry, round-up30s; test traffic đổi khi bus đang trên edge không đổi arrival cũ, xe vào sau dùng field mới.
-- [ ] Test alight ở đúng đích, terminal turnaround, dwell30s, layover120s và patience45min tie-break trước boarding.
-- [ ] Implement đúng event order, visit ID chống duplicate processing và cost/events tại final boundary H. Audit log bus/passenger events có timestamp.
-- [ ] Chạy `uv run pytest tests/test_passengers.py tests/test_vehicles.py tests/test_engine.py -q`, pass rồi commit `feat: simulate passenger flow and physical bus movement`.
+- [x] Chạy fail, implement eligibility/FIFO trước capacity. Các summary count properties của WorldState tính từ cohorts hoặc được đối chiếu mỗi tick để tránh cache drift.
+- [x] Implement edge travel freeze ở entry, round-up30s; test traffic đổi khi bus đang trên edge không đổi arrival cũ, xe vào sau dùng field mới.
+- [x] Test alight ở đúng đích, terminal turnaround, dwell30s, layover120s và patience45min tie-break trước boarding.
+- [x] Implement đúng event order, visit ID chống duplicate processing và cost/events tại final boundary H. Audit log bus/passenger events có timestamp.
+- [x] Chạy `uv run pytest tests/test_passengers.py tests/test_vehicles.py tests/test_engine.py -q`, pass rồi commit `feat: simulate passenger flow and physical bus movement`.
 
 **Gate:** conservation mỗi tick; demand/tapes không đổi theo thứ tự controller gọi RNG; không virtual teleport.
 
@@ -156,8 +156,8 @@ def test_capacity_denial_keeps_waiting_passengers():
 
 **Produces:** `build_action_table`, `action_id`, `valid_action_mask`, reserve dispatch/headway/recall và autonomous normal service.
 
-- [ ] Viết action-table test đúng221 IDs, padding masked, NOOP valid. REASSIGN/SHORT slots giữ nguyên nhưng disabled tại M1.
-- [ ] Viết test dispatch xe9 reserve: sau một interval120s vẫn deadhead trên connector360s; không boarding target s0 trước khi đến.
+- [x] Viết action-table test đúng221 IDs, padding masked, NOOP valid. REASSIGN/SHORT slots giữ nguyên nhưng disabled tại M1.
+- [x] Viết test dispatch xe9 reserve: sau một interval120s vẫn deadhead trên connector360s; không boarding target s0 trước khi đến.
 
 ```python
 def test_dispatch_consumes_time_and_one_reserve():
@@ -175,10 +175,10 @@ def test_dispatch_consumes_time_and_one_reserve():
     assert state.depot_count == 2
 ```
 
-- [ ] Chạy fail, implement dispatch reserve, donor floor/ready replacement guard cho recall, cooldown20min. Không chặn normal scheduler vì vehicle allocation cooldown.
-- [ ] Implement target headway và extra first departure; test target6min không tạo thêm xe, actual headway chỉ đổi khi có departure thật. Test minimum spacing và target cooldown10min.
-- [ ] Chạy NOOP toàn ca với empty demand: xe vẫn phục vụ/turnaround, tổng F không đổi. Test recall donor dưới floor bị mask.
-- [ ] `uv run pytest tests/test_control.py tests/test_engine.py -q`; pass, commit `feat: dispatch finite reserve buses and control target headways`.
+- [x] Chạy fail, implement dispatch reserve, donor floor/ready replacement guard cho recall, cooldown20min. Không chặn normal scheduler vì vehicle allocation cooldown.
+- [x] Implement target headway và extra first departure; test target6min không tạo thêm xe, actual headway chỉ đổi khi có departure thật. Test minimum spacing và target cooldown10min.
+- [x] Chạy NOOP toàn ca với empty demand: xe vẫn phục vụ/turnaround, tổng F không đổi. Test recall donor dưới floor bị mask.
+- [x] `uv run pytest tests/test_control.py tests/test_engine.py -q`; pass, commit `feat: dispatch finite reserve buses and control target headways`.
 
 **Gate:** M1 physical operation chạy được; target request không bị đánh đồng achieved frequency.
 
@@ -190,7 +190,7 @@ def test_dispatch_consumes_time_and_one_reserve():
 
 **Produces:** `StepCosts`, `integrate_tick_costs`, `interval_cost`, terminal settlement đúng spec §6.
 
-- [ ] Viết arithmetic oracle independent, cost không dựa vào reward đã tính.
+- [x] Viết arithmetic oracle independent, cost không dựa vào reward đã tính.
 
 ```python
 def test_ten_people_waiting_five_minutes_is_fifty():
@@ -200,11 +200,11 @@ def test_ten_people_waiting_five_minutes_is_fifty():
     assert costs.waiting_pm == 50.0
 ```
 
-- [ ] Chạy fail, implement queue/onboard/crowd/active/deadhead/excessive-wait integrals và once-only event costs. So split5min thành10 intervals30s cho cùng trạng thái cố định.
-- [ ] Test first-denied5 + abandon5 là hai event semantics riêng; no repeat penalty theo tick. Hard capacity violation không được “mua” bằng soft crowd penalty.
-- [ ] Test customer còn queue/onboard tại H bị settlement60/người, không disappear; người abandon trước H không settlement lần nữa.
-- [ ] Test tổng reward khớp âm total raw costs/3000; zero demand finite, mean waiting=None, không normalization theo future realized demand.
-- [ ] `uv run pytest tests/test_rewards.py tests/test_engine.py -q`; pass, commit `feat: account for waiting operating and unfinished-service costs`.
+- [x] Chạy fail, implement queue/onboard/crowd/active/deadhead/excessive-wait integrals và once-only event costs. So split5min thành10 intervals30s cho cùng trạng thái cố định.
+- [x] Test first-denied5 + abandon5 là hai event semantics riêng; no repeat penalty theo tick. Hard capacity violation không được “mua” bằng soft crowd penalty.
+- [x] Test customer còn queue/onboard tại H bị settlement60/người, không disappear; người abandon trước H không settlement lần nữa.
+- [x] Test tổng reward khớp âm total raw costs/3000; zero demand finite, mean waiting=None, không normalization theo future realized demand.
+- [x] `uv run pytest tests/test_rewards.py tests/test_engine.py -q`; pass, commit `feat: account for waiting operating and unfinished-service costs`.
 
 **Gate:** không bỏ khách khó, không reward chỉ đếm khách đã lên; interval/horizon accounting được xác nhận.
 
@@ -216,12 +216,12 @@ def test_ten_people_waiting_five_minutes_is_fifty():
 
 **Produces:** `BusDispatchEnv`, fixed-shape Dict observation, `Controller.act(obs,mask)->int`, MaskablePPO integration.
 
-- [ ] Viết shapes/dtypes tests theo spec: vehicles16×27, stops4×2×8×7, action221. Observation/info controller không chứa future tape, scenario seed hoặc raw latent destination.
-- [ ] Implement history5×2min chỉ past; padding0, entity masks, elapsed/remaining time, forecast flag=0.
-- [ ] Test120 decisions=240min, `terminated=True` và `truncated=False`, reward conservation; invalid action API raises ValueError. Stock random env checker không dùng mask, không nới constraint để chiều checker.
-- [ ] Implement Fixed=NOOP và Random-valid với seed riêng. Threshold M1 dùng urgency `Q_r/(40*max(1,n_full_r)) + max_age_r/900 + max_gap_r/1200`, tie route ID; nếu Q_r≥40 ưu tiên dispatch reserve hợp lệ; sau đó SET_HEADWAY6 khi Q_r≥80,10 khi40≤Q_r<80,15 khi Q_r<40; recall khi Q_r<5 và guard cho phép. Chỉ một action, nếu không có lựa chọn hợp lệ trả NOOP.
-- [ ] Proportional: estimated rates từ arrivals10min; desired active budget9, tăng12 nếu tổng queue≥120; floor2/tuyến, phân remainder theo largest-remainder tỷ lệ rates (zero rate chia đều). Thực thi thiếu xe bằng dispatch, dư xe bằng recall; headway gần nhất trong6/10/15 theo nominal full cycle/desired fleet. Không sửa fleet count trực tiếp.
-- [ ] Implement PPO feed-forward, γ1, masked evaluation và shared MLP trong `models/features.py`. Chạy tiny CPU smoke trước khi custom full train pipeline. M1 config dùng enable_reassign=false, enable_short_turn=false mà không đổi physical scenario hash.
+- [x] Viết shapes/dtypes tests theo spec: vehicles16×27, stops4×2×8×7, action221. Observation/info controller không chứa future tape, scenario seed hoặc raw latent destination.
+- [x] Implement history5×2min chỉ past; padding0, entity masks, elapsed/remaining time, forecast flag=0.
+- [x] Test120 decisions=240min, `terminated=True` và `truncated=False`, reward conservation; invalid action API raises ValueError. Stock random env checker không dùng mask, không nới constraint để chiều checker.
+- [x] Implement Fixed=NOOP và Random-valid với seed riêng. Threshold M1 dùng urgency `Q_r/(40*max(1,n_full_r)) + max_age_r/900 + max_gap_r/1200`, tie route ID; nếu Q_r≥40 ưu tiên dispatch reserve hợp lệ; sau đó SET_HEADWAY6 khi Q_r≥80,10 khi40≤Q_r<80,15 khi Q_r<40; recall khi Q_r<5 và guard cho phép. Chỉ một action, nếu không có lựa chọn hợp lệ trả NOOP.
+- [x] Proportional: estimated rates từ arrivals10min; desired active budget9, tăng12 nếu tổng queue≥120; floor2/tuyến, phân remainder theo largest-remainder tỷ lệ rates (zero rate chia đều). Thực thi thiếu xe bằng dispatch, dư xe bằng recall; headway gần nhất trong6/10/15 theo nominal full cycle/desired fleet. Không sửa fleet count trực tiếp.
+- [x] Implement PPO feed-forward, γ1, masked evaluation và shared MLP trong `models/features.py`. Chạy tiny CPU smoke trước khi custom full train pipeline. M1 config dùng enable_reassign=false, enable_short_turn=false mà không đổi physical scenario hash.
 
 ```python
 def test_masked_ppo_save_load_preserves_action(tmp_path):
@@ -244,8 +244,8 @@ def test_masked_ppo_save_load_preserves_action(tmp_path):
     assert int(action) == int(other)
 ```
 
-- [ ] Thêm test architecture dự án [256,128] shared + actor/critic128; test bất kỳ key feature bị NaN đều bị reject trước training. Smoke32steps không chứng minh policy tốt.
-- [ ] `uv run pytest tests/test_env.py tests/test_baselines.py tests/test_model.py -q`; pass, commit `feat: train and compare masked bus controllers at milestone one`.
+- [x] Thêm test architecture dự án [256,128] shared + actor/critic128; test bất kỳ key feature bị NaN đều bị reject trước training. Smoke32steps không chứng minh policy tốt.
+- [x] `uv run pytest tests/test_env.py tests/test_baselines.py tests/test_model.py -q`; pass, commit `feat: train and compare masked bus controllers at milestone one`.
 
 **Gate M1:** physical simulator+env+baselines+PPO end-to-end chạy được; chưa gọi core hoàn thành.
 
@@ -257,12 +257,12 @@ def test_masked_ppo_save_load_preserves_action(tmp_path):
 
 **Produces:** REASSIGN operational, audit donor/receiver và action ablation flag.
 
-- [ ] Test xe loaded hoặc moving hoặc cooldown bị mask; same-route reassign bị mask; donor sau remove còn1 FULL bị mask.
-- [ ] Test donor còn2 FULL nhưng không có replacement ready đúng terminal cũng bị mask; không chỉ kiểm count toàn tuyến.
-- [ ] Implement acceptance chuyển xe sang DEADHEAD, không được tính vừa donor vừa receiver FULL. Arrival tới receiver s0 mới thành extra-departure pending.
-- [ ] Test routeA→B mất travel time thực, no teleport; donor guard checks trước action và logged actual headway violation sau traffic để không nhầm guard với guarantee.
-- [ ] Threshold sau hết reserve chọn donor urgency thấp nhất có action hợp lệ; proportional chọn donor vượt desired và receiver thiếu, tie ID. Nếu không khả thi thì NOOP/headway, không dùng private state bypass guard.
-- [ ] `uv run pytest tests/test_control.py tests/test_baselines.py -q`; chạy seeded M2 rollouts, commit `feat: reallocate empty buses through feasible terminal transfers`.
+- [x] Test xe loaded hoặc moving hoặc cooldown bị mask; same-route reassign bị mask; donor sau remove còn1 FULL bị mask.
+- [x] Test donor còn2 FULL nhưng không có replacement ready đúng terminal cũng bị mask; không chỉ kiểm count toàn tuyến.
+- [x] Implement acceptance chuyển xe sang DEADHEAD, không được tính vừa donor vừa receiver FULL. Arrival tới receiver s0 mới thành extra-departure pending.
+- [x] Test routeA→B mất travel time thực, no teleport; donor guard checks trước action và logged actual headway violation sau traffic để không nhầm guard với guarantee.
+- [x] Threshold sau hết reserve chọn donor urgency thấp nhất có action hợp lệ; proportional chọn donor vượt desired và receiver thiếu, tie ID. Nếu không khả thi thì NOOP/headway, không dùng private state bypass guard.
+- [x] `uv run pytest tests/test_control.py tests/test_baselines.py -q`; chạy seeded M2 rollouts, commit `feat: reallocate empty buses through feasible terminal transfers`.
 
 **Gate M2:** resource conservation và donor protection đúng khi dispatch/reassign/recall xen kẽ.
 

@@ -4,6 +4,15 @@ from bus_rl.sim.passengers import abandon_expired, alight_visit, board_visit
 from tests.fixtures import empty_scenario, short_state, waiting_state
 
 
+def test_capacity_split_keeps_lineage():
+    state = waiting_state(45)
+    lineage = state.cohorts[0].lineage_id
+    board_visit(state, bus_id=0, route_id=0, direction=1, stop_index=0)
+    onboard = next(c for c in state.cohorts if c.status is PassengerStatus.ONBOARD)
+    waiting = next(c for c in state.cohorts if c.status is PassengerStatus.WAITING)
+    assert onboard.lineage_id == waiting.lineage_id == lineage
+
+
 def test_capacity_denial_keeps_waiting_passengers():
     state = waiting_state(45)
     event = board_visit(state, bus_id=0, route_id=0, direction=1, stop_index=0)
@@ -54,4 +63,6 @@ def test_short_turn_boards_inbound_after_turnaround():
     state.generated_total = 1
     event = board_visit(state, bus.vehicle_id, 0, -1, 3)
     assert event.boarded_count == 1
+    assert alight_visit(state, bus.vehicle_id, 2) == 0
+    assert state.onboard_count == 1
     assert alight_visit(state, bus.vehicle_id, 1) == 1

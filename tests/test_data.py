@@ -1,8 +1,12 @@
+from dataclasses import replace
+
 import numpy as np
+import pytest
 
 from bus_rl.data.io import load_scenario, save_scenario
 from bus_rl.data.scenario import generate_manifest, generate_scenario
 from bus_rl.domain import SimConfig
+from bus_rl.env.bus_dispatch import BusDispatchEnv
 from tests.fixtures import empty_scenario
 
 
@@ -27,3 +31,32 @@ def test_manifest_has_unique_child_seeds_and_shared_topology():
     assert len({scenario.seed for scenario in scenarios}) == 3
     assert len({scenario.scenario_hash for scenario in scenarios}) == 3
     assert all(scenario.network == scenarios[0].network for scenario in scenarios)
+
+
+def test_invalid_config_and_tapes_are_rejected(tmp_path):
+    with pytest.raises(ValueError):
+        SimConfig(route_count=5)
+    with pytest.raises(ValueError):
+        SimConfig(fleet_size=17)
+    with pytest.raises(ValueError):
+        SimConfig(demand_end_s=1)
+    scenario = empty_scenario()
+    bad = np.array(scenario.arrival_tape, copy=True)
+    bad[0, 0, 0, 0, 0] = 1
+    with pytest.raises(ValueError):
+        save_scenario(replace(scenario, arrival_tape=bad), tmp_path / "upstream")
+    negative = np.array(scenario.arrival_tape, copy=True)
+    negative[0, 0, 0, 0, 1] = -3
+    with pytest.raises(ValueError):
+        save_scenario(replace(scenario, arrival_tape=negative), tmp_path / "negative")
+
+
+def test_reset_and_control_do_not_mutate_scenario():
+    scenario = generate_scenario(19)
+    tape = np.array(scenario.arrival_tape)
+    digest = scenario.scenario_hash
+    env = BusDispatchEnv([scenario], scenario.config)
+    env.reset(seed=3)
+    env.step(0)
+    np.testing.assert_array_equal(scenario.arrival_tape, tape)
+    assert scenario.scenario_hash == digest
