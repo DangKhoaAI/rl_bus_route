@@ -51,10 +51,20 @@ class RuntimeConfig:
     # Observation validation is a debug/parity aid; disabling it is opt-in and
     # must never change simulator semantics. Forecast still runs in Python.
     validate_observation: bool = True
+    # O1 opt-in. Defaults keep the scalar evaluator: one env, one predict per
+    # observation, a new env per evaluate_scenarios call. Training n_envs is
+    # independent and is not changed here.
+    eval_batch_size: int = 1
+    reuse_eval_pool: bool = False
 
     def __post_init__(self) -> None:
         if self.backend not in {"python", "rust"}:
             raise ValueError(f"unknown backend: {self.backend!r}")
+        batch_size = int(self.eval_batch_size)
+        if batch_size < 1:
+            raise ValueError(f"runtime.eval_batch_size must be >= 1, got {self.eval_batch_size!r}")
+        object.__setattr__(self, "eval_batch_size", batch_size)
+        object.__setattr__(self, "reuse_eval_pool", bool(self.reuse_eval_pool))
 
 
 @dataclass(frozen=True)

@@ -1,0 +1,11 @@
+{
+  "commands": [
+    {"cmd": "python -m pytest tests/backend_parity/test_runtime_o1.py -n 0 --tb=short", "exit": 0, "note": "16 passed"},
+    {"cmd": "python -m pytest tests/backend_parity -q --tb=line", "exit": 0, "note": "118 passed, 1 skipped"},
+    {"cmd": "python scripts/benchmark_runtime.py --mode o0-unprofiled --repetitions 2 --transitions 12288 --eval-days 100 --output reports/runtime-optimization/o0-unprofiled-run1.json", "exit": 0},
+    {"cmd": "python scripts/benchmark_runtime.py --mode o0-unprofiled --repetitions 2 --transitions 12288 --eval-days 100 --output reports/runtime-optimization/o0-unprofiled-run2.json", "exit": 0},
+    {"cmd": "python scripts/benchmark_runtime.py --mode o0-profile --transitions 4096 --eval-days 10 --output reports/runtime-optimization/o0-profile.json", "exit": 0},
+    {"cmd": "python scripts/benchmark_runtime.py --mode o1-ablation --repetitions 5 --warmup 1 --eval-days 100 --output reports/runtime-optimization/o1-ablation-run1.json", "exit": 0},
+    {"cmd": "python scripts/benchmark_runtime.py --mode o1-ablation --repetitions 5 --warmup 1 --eval-days 100 --output reports/runtime-optimization/o1-ablation-run2.json", "exit": 0}
+  ]
+}

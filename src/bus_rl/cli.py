@@ -9,7 +9,7 @@ from dataclasses import replace
 from pathlib import Path
 from time import perf_counter
 
-from bus_rl.config import ControlConfig, RuntimeConfig, load_run_config, parse_counts
+from bus_rl.config import ControlConfig, load_run_config, parse_counts
 from bus_rl.data.io import load_manifest, load_split, save_manifest
 from bus_rl.data.scenario import generate_manifest
 from bus_rl.provenance import physical_config_hash, require_fresh_output
@@ -20,7 +20,7 @@ def _run_config(args) -> object:
     run = load_run_config(Path(args.config))
     backend = getattr(args, "backend", None)
     if backend and backend != run.runtime.backend:
-        run = replace(run, runtime=RuntimeConfig(backend=backend))
+        run = replace(run, runtime=replace(run.runtime, backend=backend))
     torch_threads = getattr(args, "torch_threads", None)
     if torch_threads is not None:
         run = replace(run, algorithm=replace(run.algorithm, torch_threads=torch_threads))

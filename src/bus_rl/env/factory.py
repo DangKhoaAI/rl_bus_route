@@ -6,11 +6,12 @@ from bus_rl.backend.native import native_available, require_native
 from bus_rl.config import RunConfig
 
 
-def make_env_for_run(scenarios, run: RunConfig, forecaster=None):
+def make_env_for_run(scenarios, run: RunConfig, forecaster=None, scenario_store=None):
     """Build the env selected by ``run.runtime.backend``.
 
     ``rust`` fails loudly when the extension is missing; the Python oracle stays
     available through explicit ``backend = "python"`` selection.
+    ``scenario_store`` is native-only and lets an eval pool share one packed store.
     """
     backend = run.runtime.backend
     if backend == "python":
@@ -35,6 +36,7 @@ def make_env_for_run(scenarios, run: RunConfig, forecaster=None):
             reward=run.reward,
             control=run.control,
             validate=run.runtime.validate_observation,
+            scenario_store=scenario_store,
         )
     raise ValueError(f"unknown backend: {backend!r}")
 

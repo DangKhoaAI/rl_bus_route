@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from stable_baselines3.common.callbacks import BaseCallback
 
+from bus_rl.evaluation.pool import EvalEnvPool
 from bus_rl.evaluation.runner import mean_cost
 
 
@@ -25,6 +26,12 @@ class BestValidationCallback(BaseCallback):
         self.completed_episodes = 0
         self.history: list[dict] = []
         self._next_eval = run.algorithm.eval_freq
+        self._pool: EvalEnvPool | None = None
+
+    def _subset(self):
+        if self.eval_limit is None:
+            return list(self.scenarios)
+        return list(self.scenarios)[: self.eval_limit]
 
     def _on_step(self) -> bool:
         dones = self.locals.get("dones")
@@ -38,9 +45,16 @@ class BestValidationCallback(BaseCallback):
         return True
 
     def _evaluate(self) -> float:
-        cost = mean_cost(
-            self.model, self.scenarios, self.run, self.forecaster, limit=self.eval_limit
-        )
+        subset = self._subset()
+        pool = None
+        if self.run.runtime.reuse_eval_pool:
+            if self._pool is None:
+                self._pool = EvalEnvPool(subset, self.run, self.forecaster)
+            else:
+                self._pool = self._pool.refresh(subset, self.run, self.forecaster)
+            pool = self._pool
+        # Strict less-than: a tie keeps the earlier checkpoint.
+        cost = mean_cost(self.model, subset, self.run, self.forecaster, pool=pool)
         self.history.append({"timesteps": self.num_timesteps, "val_cost": cost})
         if cost < self.best:
             self.best = cost
@@ -54,3 +68,6 @@ class BestValidationCallback(BaseCallback):
         if self.best == float("inf"):
             self.model.save(str(self.output / "best"))
         pd.DataFrame(self.history).to_csv(self.output / "evaluations.csv", index=False)
+        if self._pool is not None:
+            self._pool.close()
+            self._pool = None
