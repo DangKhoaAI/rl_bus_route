@@ -32,6 +32,7 @@ from bus_rl.env.native_batch import (
 from bus_rl.evaluation.pool import make_eval_pool
 from bus_rl.evaluation.runner import evaluate_scenarios
 from bus_rl.rewards.costs import RewardConfig
+from bus_rl.runtime import configure_torch_distributions
 from bus_rl.training.checkpoint import load_metadata, load_model
 from bus_rl.training.train import make_env, make_model
 
@@ -381,6 +382,42 @@ def test_native_eval_pool_reuse_and_invalidations():
     finally:
         pool.close()
     assert pool.closed
+
+
+def test_disabling_distribution_validation_is_bit_identical():
+    run = _reference_run()
+    scenarios = generate_manifest("train", 16)
+    env = DummyVecEnv(
+        [make_env(scenarios, run, run.algorithm.seed + i) for i in range(4)]
+    )
+    model = make_model(env, run.algorithm.seed, run.algorithm)
+    model.policy.set_training_mode(False)
+    observation = env.reset()
+    masks = np.stack(env.env_method("action_masks"))
+    from stable_baselines3.common.utils import obs_as_tensor
+
+    obs_tensor = obs_as_tensor(observation, "cpu")
+
+    def sample():
+        import torch
+
+        torch.manual_seed(123)
+        with torch.no_grad():
+            return model.policy(obs_tensor, action_masks=masks)
+
+    import torch
+
+    torch.distributions.Distribution.set_default_validate_args(True)
+    actions_on, values_on, logprob_on = sample()
+    configure_torch_distributions()
+    actions_off, values_off, logprob_off = sample()
+    try:
+        assert torch.equal(actions_on, actions_off)
+        assert torch.equal(values_on, values_off)
+        assert torch.equal(logprob_on, logprob_off)
+    finally:
+        torch.distributions.Distribution.set_default_validate_args(True)
+        env.close()
 
 
 def test_native_batch_with_forecast_matches_scalar():

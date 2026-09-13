@@ -1,8 +1,8 @@
 {
   "memory_ratio": {
-    "o1_over_baseline": 1.0048,
-    "o2b16_over_baseline": 1.0037,
-    "o2b32_over_baseline": 1.0175
+    "o1_over_baseline": 1.0097,
+    "o2b16_over_baseline": 1.0058,
+    "o2b32_over_baseline": 1.0189
   },
   "parity": {
     "o1": {
@@ -29,14 +29,13 @@
   },
   "protocol": {
     "batch_size": 256,
-    "command": "python -m bus_rl.cli train --config configs/experiments/core-threads2.toml --manifest data/generated/base/manifest.json --seed 11 --output runs/runtime-optimization/full/<variant> --backend rust --torch-threads 2 --eval-limit 100",
+    "command": "python -m bus_rl.cli train ... --backend rust --torch-threads 2 --eval-limit 100",
     "eval_freq": 12288,
     "n_envs": 4,
     "n_epochs": 4,
     "n_steps": 256,
-    "note": "single paired session; batch-32 evaluated as a fourth variant",
     "seed": 11,
-    "session": "single sequential session (baseline, o1, o2b16, o2b32)",
+    "session": "single sequential session (baseline, o1, o2b16, o2b32), distribution validation disabled",
     "torch_threads": 2,
     "total_timesteps": 245760,
     "train_scenarios": 500,
@@ -45,29 +44,35 @@
   "results": {
     "baseline": {
       "best_val_cost": 13199.1325,
+      "build_record_matches_runtime": [
+        "runtime-optimization"
+      ],
       "checkpoints": {
-        "best": "46bf9274cee50ea7281e01fc18317218ca0ea3c205a474d5dd3ec2ed0719d8a3",
-        "last": "fcdab1d3d64b00ccfd67462d0d31ce39bef4c157da0e157cc0ae0df0cbbc2ebf"
+        "best": "01959518b367945b92f95731216b66be5cc415e854797feba17850b87d619ca8",
+        "last": "4e827e02d9fc39fc94f7bdef97d85bd8ded2f5f0f5401a9ea744b4a9f2bc7dbd"
       },
-      "elapsed_wall_s": 151.76,
+      "elapsed_wall_s": 139.41,
       "episodes_completed": 2048,
       "eval_batch_size": 1,
       "evaluations": 20,
       "flags": [],
-      "learn_wall_s": 149.723,
+      "learn_wall_s": 137.379,
       "native_batch": false,
       "native_library_sha256": "74b3a8fabbbabb5d4b167b92e56ac30af6f0957c180db78b6c501b21c50622ae",
-      "peak_rss_kb": 449996,
+      "peak_rss_kb": 447856,
       "reuse_eval_pool": false,
       "total_timesteps_actual": 245760
     },
     "o1": {
       "best_val_cost": 13199.1325,
+      "build_record_matches_runtime": [
+        "runtime-optimization"
+      ],
       "checkpoints": {
-        "best": "9fde83d0f3c6e13d83ebdaf0decad3452586b4036f36255e3456cb9597010b81",
-        "last": "c7f8cdb9e8c3968f6313e524d9cbfd2ac6f0092af564f05017c8f92aa51087dd"
+        "best": "c16aad6addaf6bba560d4fdc4f900cbaf22ce6ec4e9925b426e2ad28a20fec1e",
+        "last": "fdbd83143403bd9f7c6c16bd2fe95cb5e154779912c660a637cdc9815b5ab068"
       },
-      "elapsed_wall_s": 94.21,
+      "elapsed_wall_s": 85.89,
       "episodes_completed": 2048,
       "eval_batch_size": 16,
       "evaluations": 20,
@@ -76,20 +81,23 @@
         "16",
         "--reuse-eval-pool"
       ],
-      "learn_wall_s": 92.018,
+      "learn_wall_s": 83.772,
       "native_batch": false,
       "native_library_sha256": "74b3a8fabbbabb5d4b167b92e56ac30af6f0957c180db78b6c501b21c50622ae",
-      "peak_rss_kb": 452152,
+      "peak_rss_kb": 452196,
       "reuse_eval_pool": true,
       "total_timesteps_actual": 245760
     },
     "o2b16": {
       "best_val_cost": 13199.1325,
+      "build_record_matches_runtime": [
+        "runtime-optimization"
+      ],
       "checkpoints": {
-        "best": "c4e1e86cf0dc90571a62b4d99f976445c8ee87a90f68a5761b582de5887f9502",
-        "last": "aba1e34ee43013afbd9c8ba916c1b091a339d7c38a00342a59733aba73d127ba"
+        "best": "1b78c2d717569667bf2e34633e4cf781916a6e464e9136101034dccd13d60883",
+        "last": "fdb62de738a88b60997b100b394965b3aebd9b066e07ec5d7c1c37674257250f"
       },
-      "elapsed_wall_s": 85.96,
+      "elapsed_wall_s": 74.94,
       "episodes_completed": 2048,
       "eval_batch_size": 16,
       "evaluations": 20,
@@ -99,20 +107,23 @@
         "16",
         "--reuse-eval-pool"
       ],
-      "learn_wall_s": 83.741,
+      "learn_wall_s": 72.781,
       "native_batch": true,
       "native_library_sha256": "74b3a8fabbbabb5d4b167b92e56ac30af6f0957c180db78b6c501b21c50622ae",
-      "peak_rss_kb": 451660,
+      "peak_rss_kb": 450436,
       "reuse_eval_pool": true,
       "total_timesteps_actual": 245760
     },
     "o2b32": {
       "best_val_cost": 13199.1325,
+      "build_record_matches_runtime": [
+        "runtime-optimization"
+      ],
       "checkpoints": {
-        "best": "ba307fc27ee3d43ee1b6e8eca9a4d449fcf3124c4d3e3bda251bfed1b40dce53",
-        "last": "f064dff631fac95da97558f5b2a2b54e7c1c54575d99c5c5087d0a0e5f7d3e4f"
+        "best": "f5e5e9c4a061d2ca10d529bd542c492b4b78becda7d869ee19f5921f2c8bb18b",
+        "last": "d925371d78389280e3ce9e293386fe709b091ab12dbb8aca9f06e308e15cb335"
       },
-      "elapsed_wall_s": 85.87,
+      "elapsed_wall_s": 73.26,
       "episodes_completed": 2048,
       "eval_batch_size": 32,
       "evaluations": 20,
@@ -122,18 +133,18 @@
         "32",
         "--reuse-eval-pool"
       ],
-      "learn_wall_s": 83.581,
+      "learn_wall_s": 71.204,
       "native_batch": true,
       "native_library_sha256": "74b3a8fabbbabb5d4b167b92e56ac30af6f0957c180db78b6c501b21c50622ae",
-      "peak_rss_kb": 457880,
+      "peak_rss_kb": 456312,
       "reuse_eval_pool": true,
       "total_timesteps_actual": 245760
     }
   },
   "speedup": {
-    "o1_vs_baseline_total": 1.611,
-    "o2b16_vs_baseline_total": 1.765,
-    "o2b16_vs_o2b32_total": 1.001,
-    "o2b32_vs_baseline_total": 1.767
+    "o1_vs_baseline_total": 1.623,
+    "o2b16_vs_baseline_total": 1.86,
+    "o2b16_vs_o2b32_total": 1.023,
+    "o2b32_vs_baseline_total": 1.903
   }
 }

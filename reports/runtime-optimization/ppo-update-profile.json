@@ -6,120 +6,120 @@
     "role": "explanatory-only",
     "summary": {
       "dummy": {
-        "backward": 0.02786644100706326,
+        "backward": 0.030419438029639423,
         "calls": {
           "backward": 16,
           "clip": 16,
           "forward": 16,
           "optimizer": 16
         },
-        "clip": 0.00347195901122177,
-        "forward": 0.029457226002705283,
-        "optimizer": 0.014078162013902329,
-        "other_s": 0.0077941300041857176,
+        "clip": 0.0038228910270845518,
+        "forward": 0.029269452003063634,
+        "optimizer": 0.015706941980170086,
+        "other_s": 0.008770139960688539,
         "raw": [
           {
-            "backward": 0.02776067599916132,
+            "backward": 0.030419438029639423,
             "calls": {
               "backward": 16,
               "clip": 16,
               "forward": 16,
               "optimizer": 16
             },
-            "clip": 0.0035023180025746115,
-            "forward": 0.029519747986341827,
-            "optimizer": 0.014078162013902329,
-            "other_s": 0.007759204003377818,
-            "total_s": 0.0826201080053579
+            "clip": 0.0038228910270845518,
+            "forward": 0.029269452003063634,
+            "optimizer": 0.015706941980170086,
+            "other_s": 0.008770139960688539,
+            "total_s": 0.08798886300064623
           },
           {
-            "backward": 0.02786644100706326,
+            "backward": 0.030354602000443265,
             "calls": {
               "backward": 16,
               "clip": 16,
               "forward": 16,
               "optimizer": 16
             },
-            "clip": 0.003348127007484436,
-            "forward": 0.02925269299885258,
-            "optimizer": 0.013983466982608661,
-            "other_s": 0.0077941300041857176,
-            "total_s": 0.08224485800019465
+            "clip": 0.003686864976771176,
+            "forward": 0.02901612395362463,
+            "optimizer": 0.015308710018871352,
+            "other_s": 0.008552602041163482,
+            "total_s": 0.0869189029908739
           },
           {
-            "backward": 0.027869165998708922,
+            "backward": 0.03080019701155834,
             "calls": {
               "backward": 16,
               "clip": 16,
               "forward": 16,
               "optimizer": 16
             },
-            "clip": 0.00347195901122177,
-            "forward": 0.029457226002705283,
-            "optimizer": 0.014140774997940753,
-            "other_s": 0.008011506994080264,
-            "total_s": 0.08295063300465699
+            "clip": 0.003941190007026307,
+            "forward": 0.0295473270380171,
+            "optimizer": 0.01612403198669199,
+            "other_s": 0.009104307959205471,
+            "total_s": 0.08951705400249921
           }
         ],
-        "total_s": 0.0826201080053579
+        "total_s": 0.08798886300064623
       },
       "native": {
-        "backward": 0.027749883010983467,
+        "backward": 0.0305416200280888,
         "calls": {
           "backward": 16,
           "clip": 16,
           "forward": 16,
           "optimizer": 16
         },
-        "clip": 0.003343407988722902,
-        "forward": 0.029185104991483968,
-        "optimizer": 0.013866477005649358,
-        "other_s": 0.00774211000680225,
+        "clip": 0.0037868910148972645,
+        "forward": 0.029310864993021823,
+        "optimizer": 0.0156699409999419,
+        "other_s": 0.008860676971380599,
         "raw": [
           {
-            "backward": 0.027749883010983467,
+            "backward": 0.03067916202417109,
             "calls": {
               "backward": 16,
               "clip": 16,
               "forward": 16,
               "optimizer": 16
             },
-            "clip": 0.003250759982620366,
-            "forward": 0.029185104991483968,
-            "optimizer": 0.013866477005649358,
-            "other_s": 0.007724832008534577,
-            "total_s": 0.08177705699927174
+            "clip": 0.0039019690302666277,
+            "forward": 0.029467100015608594,
+            "optimizer": 0.016098783002234995,
+            "other_s": 0.008946314934291877,
+            "total_s": 0.08909332900657319
           },
           {
-            "backward": 0.02821936600957997,
+            "backward": 0.0305416200280888,
             "calls": {
               "backward": 16,
               "clip": 16,
               "forward": 16,
               "optimizer": 16
             },
-            "clip": 0.003387513010238763,
-            "forward": 0.029683160013519228,
-            "optimizer": 0.014157409998006187,
-            "other_s": 0.007967167963215616,
-            "total_s": 0.08341461699455976
+            "clip": 0.0037868910148972645,
+            "forward": 0.029310864993021823,
+            "optimizer": 0.0156699409999419,
+            "other_s": 0.008860676971380599,
+            "total_s": 0.08816999400733039
           },
           {
-            "backward": 0.02756753799621947,
+            "backward": 0.030277429017587565,
             "calls": {
               "backward": 16,
               "clip": 16,
               "forward": 16,
               "optimizer": 16
             },
-            "clip": 0.003343407988722902,
-            "forward": 0.029043929018371273,
-            "optimizer": 0.013813135992677417,
-            "other_s": 0.00774211000680225,
-            "total_s": 0.08151012100279331
+            "clip": 0.003664992007543333,
+            "forward": 0.029018710018135607,
+            "optimizer": 0.015274081990355626,
+            "other_s": 0.008542073977878317,
+            "total_s": 0.08677728701150045
           }
         ],
-        "total_s": 0.08177705699927174
+        "total_s": 0.08816999400733039
       }
     },
     "transitions_per_update": 1024
@@ -138,10 +138,10 @@
       "validate_observation": true
     },
     "git": {
-      "diff_stat": "crates/bus-sim-py/src/lib.rs            | 551 ++++++++++++++++++++++++++++----\n scripts/benchmark_runtime.py            | 490 +++++++++++++++++++++++++++-\n scripts/build_native.py                 |  22 +-\n src/bus_rl/backend/native.py            |   8 +\n src/bus_rl/cli.py                       |  32 ++\n src/bus_rl/config.py                    |   9 +\n src/bus_rl/evaluation/pool.py           |  10 +\n src/bus_rl/evaluation/runner.py         | 138 +++++++-\n src/bus_rl/training/callbacks.py        |   6 +-\n src/bus_rl/training/checkpoint.py       |   1 +\n src/bus_rl/training/train.py            |  19 +-\n tests/backend_parity/test_runtime_o1.py |   6 +-\n 12 files changed, 1210 insertions(+), 82 deletions(-)",
+      "diff_stat": ".../runtime-optimization/o1-breakdown-run1.json    | 440 ++++++++++-----------\n .../runtime-optimization/o1-breakdown-run2.json    | 440 ++++++++++-----------\n reports/runtime-optimization/rollout-profile.json  | 214 +++++-----\n src/bus_rl/runtime.py                              |  19 +-\n tests/backend_parity/test_runtime_o2.py            |  37 ++\n 5 files changed, 602 insertions(+), 548 deletions(-)",
       "dirty": true,
-      "porcelain": "M crates/bus-sim-py/src/lib.rs\n M scripts/benchmark_runtime.py\n M scripts/build_native.py\n M src/bus_rl/backend/native.py\n M src/bus_rl/cli.py\n M src/bus_rl/config.py\n M src/bus_rl/evaluation/pool.py\n M src/bus_rl/evaluation/runner.py\n M src/bus_rl/training/callbacks.py\n M src/bus_rl/training/checkpoint.py\n M src/bus_rl/training/train.py\n M tests/backend_parity/test_runtime_o1.py\n?? reports/runtime-optimization/native-build-o2.json\n?? reports/runtime-optimization/o1-breakdown-run1.json\n?? reports/runtime-optimization/o1-breakdown-run2.json\n?? reports/runtime-optimization/o2-ablation-run1.json\n?? reports/runtime-optimization/o2-ablation-run2.json\n?? reports/runtime-optimization/o2-full-workflow.json\n?? src/bus_rl/env/native_batch.py\n?? tests/backend_parity/test_runtime_o2.py",
-      "sha": "11a20f84bd291f1e30315dd6bada951f94f829fd"
+      "porcelain": "M reports/runtime-optimization/o1-breakdown-run1.json\n M reports/runtime-optimization/o1-breakdown-run2.json\n M reports/runtime-optimization/rollout-profile.json\n M src/bus_rl/runtime.py\n M tests/backend_parity/test_runtime_o2.py",
+      "sha": "dff4fc92190be6fce9306708822cf5f0f4144c87"
     },
     "library_sha256": "74b3a8fabbbabb5d4b167b92e56ac30af6f0957c180db78b6c501b21c50622ae",
     "lock_hash": "5ed56349910166b5fe6232c3d79c8421c6714e8cc8504cc5ac785d68f4ddb530",
