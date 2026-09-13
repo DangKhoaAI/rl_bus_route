@@ -280,7 +280,7 @@ def inventory_reports(root: Path) -> list[dict]:
 
 
 def _load_reference(root: Path) -> dict | None:
-    path = Path(root) / "tests" / "parity" / "reference" / "reference.json"
+    path = Path(root) / "fixtures" / "reference" / "reference.json"
     return json.loads(path.read_text()) if path.exists() else None
 
 

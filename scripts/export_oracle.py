@@ -8,7 +8,7 @@ Usage:
 ``build`` writes ``reports/rust-migration/oracle-manifest.json`` and the fixture
 summary. By default it is fast (manifest only); ``--fixtures`` replays and
 ``--force`` (re)writes the named fixtures under
-``tests/parity/fixtures``. ``verify`` re-derives every hash, replays
+``fixtures/golden``. ``verify`` re-derives every hash, replays
 every fixture, and re-checks the reference checkpoint. ``--deep`` additionally
 regenerates the 1,200 scenario seeds (slow R0 check); ``--hashes-only`` is the
 fast manifest-only check.
@@ -48,8 +48,8 @@ from bus_sim.parity.scenarios import CATALOG
 from bus_sim.parity.snapshot import compare_records
 
 REPORT_DIR = ROOT / "reports" / "rust-migration"
-FIXTURES_DIR = ROOT / "tests" / "backend_parity" / "fixtures"
-REFERENCE_DIR = ROOT / "tests" / "backend_parity" / "reference"
+FIXTURES_DIR = ROOT / "fixtures" / "golden"
+REFERENCE_DIR = ROOT / "fixtures" / "reference"
 REFERENCE_SOURCE = ROOT / "runs" / "diagnose-after"
 
 

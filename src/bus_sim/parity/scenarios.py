@@ -136,4 +136,4 @@ def run_config(
 
 
 def catalog_path(root: Path | None = None) -> Path:
-    return (root or Path.cwd()) / "tests" / "backend_parity" / "fixtures"
+    return (root or Path.cwd()) / "fixtures" / "golden"

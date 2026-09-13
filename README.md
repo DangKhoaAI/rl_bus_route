@@ -29,9 +29,11 @@ crates/
 ├── bus-sim-core/        # Optimized Rust simulator
 └── bus-sim-python/      # PyO3 bridge (`bus_sim_native`)
 tests/
-├── unit/                # Python unit tests
+├── support/             # Shared factories, paths and comparison helpers
+├── unit/                # Python unit tests (sim/, rl/)
 ├── integration/         # CLI and training workflow tests
-└── parity/              # Python-oracle versus Rust-native tests
+└── parity/              # oracle/ (Python-only) and native/ (Rust) parity tests
+fixtures/                # Frozen test data (golden scenarios, reference checkpoint)
 configs/                 # Run and experiment configurations
 scripts/                 # Build, benchmark, and profiling utilities
 docs/                    # Specifications, plans, and research notes
@@ -53,7 +55,7 @@ uv run pytest -q
 ```
 
 Tiny smoke (2 train / 1 val / 1 test days, 32 PPO steps) lives in
-`tests/integration/test_pipeline.py`.
+`tests/integration/test_cli_pipeline.py`.
 
 ## Reproduce
 
@@ -132,7 +134,7 @@ when debugging.
 
 Run the slower checks only when needed: `build --fixtures` replays the 11
 golden fixtures (~8 s), `verify` adds fixture + reference parity (~13 s), and
-`verify --deep` (or `BUS_RL_DEEP=1 pytest tests/parity/test_manifest.py`)
+`verify --deep` (or `BUS_RL_DEEP=1 pytest tests/parity/oracle/test_manifest.py`)
 regenerates the 1,200 scenario seeds (~35 s).
 
 ## What is in the observation

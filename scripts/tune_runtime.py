@@ -40,7 +40,7 @@ from bus_sim.oracle.costs import RewardConfig
 from bus_sim.parity.controllers import CoverageController
 
 REPORT_DIR = ROOT / "reports" / "rust-migration"
-REFERENCE = ROOT / "tests" / "backend_parity" / "reference" / "diagnose-after" / "last.zip"
+REFERENCE = ROOT / "fixtures" / "reference" / "diagnose-after" / "last.zip"
 BACKENDS = ("python", "rust")
 
 
