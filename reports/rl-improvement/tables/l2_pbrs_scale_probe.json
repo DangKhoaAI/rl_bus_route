@@ -1,0 +1,31 @@
+{
+  "purpose": "fixed PBRS scale for L2-PBRS, chosen on train tapes before trials",
+  "command": "5 train scenarios, first-mask-valid action, core.toml; see reports/rl-improvement.md",
+  "steps": 600,
+  "queue_weight": 2.0,
+  "excess_weight": 5.0,
+  "n_ref": 3000.0,
+  "reward_per_step": {
+    "mean": -0.04487048611111111,
+    "std": 0.024888230240598993,
+    "min": -0.08929166666666667,
+    "max": -0.003
+  },
+  "waiting_count": {
+    "mean": 51.35500153700511,
+    "std": 31.201159738704668,
+    "max": 122.00000762939453
+  },
+  "excess_count": {
+    "mean": 0.5666666682561239,
+    "std": 1.4232201431987155,
+    "max": 10.0
+  },
+  "potential_phi": {
+    "mean": -0.03518111213843028,
+    "std": 0.02156977919560133,
+    "min": -0.08133333841959635,
+    "max": -0.0
+  },
+  "scale_rule": "weights chosen so std(Phi) ~= std(per-step reward); not tuned on validation"
+}

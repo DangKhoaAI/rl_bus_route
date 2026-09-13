@@ -1,0 +1,122 @@
+{
+  "checks": [
+    {
+      "arm": "L0-CORE",
+      "seed": 11,
+      "actual_timesteps": 245760,
+      "episodes": 2048,
+      "eval_points": 20,
+      "unique_days": 100,
+      "native_hash": "2d5fa9e3d7672966277efbdba9fc179bdfe6cd8e3bd72f3b60e730d65192fe26",
+      "finite_failures": 0,
+      "shaping": {
+        "enabled": false
+      },
+      "best_timestep": 159744,
+      "best_val_cost": 13199.1325,
+      "best_zip_sha256": "2e7e927c45928cd84ca670e6bef61f8c377568a7cd7a94f9ed9297084575c529",
+      "last_zip_sha256": "dbde36abda8534bcee56a7d8da9281621c3469ed5f176aded86bb3755c278bb0",
+      "wall_time_s": 108.93005553199328
+    },
+    {
+      "arm": "L0-CORE",
+      "seed": 22,
+      "actual_timesteps": 245760,
+      "episodes": 2048,
+      "eval_points": 20,
+      "unique_days": 100,
+      "native_hash": "2d5fa9e3d7672966277efbdba9fc179bdfe6cd8e3bd72f3b60e730d65192fe26",
+      "finite_failures": 0,
+      "shaping": {
+        "enabled": false
+      },
+      "best_timestep": 98304,
+      "best_val_cost": 13113.9725,
+      "best_zip_sha256": "b93103d43d778c59d3afdbb08476eda4f411c2706574dc047d0800106c16eb80",
+      "last_zip_sha256": "12ac801eb2eb1c89332c9d4b54d86c4b65b898020eae8031e0410f41d467c0b3",
+      "wall_time_s": 109.09586805499566
+    },
+    {
+      "arm": "L0-CORE",
+      "seed": 33,
+      "actual_timesteps": 245760,
+      "episodes": 2048,
+      "eval_points": 20,
+      "unique_days": 100,
+      "native_hash": "2d5fa9e3d7672966277efbdba9fc179bdfe6cd8e3bd72f3b60e730d65192fe26",
+      "finite_failures": 0,
+      "shaping": {
+        "enabled": false
+      },
+      "best_timestep": 233472,
+      "best_val_cost": 13213.45625,
+      "best_zip_sha256": "1e46ab6a14c13f884a83669efde265118ec71b1dc39e38806ad3853c97a0cb60",
+      "last_zip_sha256": "3163df26fcf5fc7a335ef0d1b8b0b66557012193f2eb010e2638da7002d1fcdc",
+      "wall_time_s": 109.56994424499862
+    },
+    {
+      "arm": "L2-PBRS",
+      "seed": 11,
+      "actual_timesteps": 245760,
+      "episodes": 2048,
+      "eval_points": 20,
+      "unique_days": 100,
+      "native_hash": "2d5fa9e3d7672966277efbdba9fc179bdfe6cd8e3bd72f3b60e730d65192fe26",
+      "finite_failures": 0,
+      "shaping": {
+        "enabled": true,
+        "excess_weight": 5.0,
+        "n_ref": 3000.0,
+        "queue_weight": 2.0
+      },
+      "best_timestep": 73728,
+      "best_val_cost": 14119.9975,
+      "best_zip_sha256": "8c8a21ea405b47c92bca27073e4d2cf1cfbc2e4cba8fabce311258504b81ac4f",
+      "last_zip_sha256": "712af5017b85742173a3850484fa1a6b587affe646a08d280e5ba694077c0386",
+      "wall_time_s": 99.60612172399124
+    },
+    {
+      "arm": "L2-PBRS",
+      "seed": 22,
+      "actual_timesteps": 245760,
+      "episodes": 2048,
+      "eval_points": 20,
+      "unique_days": 100,
+      "native_hash": "2d5fa9e3d7672966277efbdba9fc179bdfe6cd8e3bd72f3b60e730d65192fe26",
+      "finite_failures": 0,
+      "shaping": {
+        "enabled": true,
+        "excess_weight": 5.0,
+        "n_ref": 3000.0,
+        "queue_weight": 2.0
+      },
+      "best_timestep": 135168,
+      "best_val_cost": 13197.79,
+      "best_zip_sha256": "431c268b074c2ac3d61721e45d9075b928269fb255723cefc0d32e0cc455024a",
+      "last_zip_sha256": "fb725e7826db913277642abd3add1ca93a5a4802d01d9233d018a523ac20784e",
+      "wall_time_s": 81.70120574699831
+    },
+    {
+      "arm": "L2-PBRS",
+      "seed": 33,
+      "actual_timesteps": 245760,
+      "episodes": 2048,
+      "eval_points": 20,
+      "unique_days": 100,
+      "native_hash": "2d5fa9e3d7672966277efbdba9fc179bdfe6cd8e3bd72f3b60e730d65192fe26",
+      "finite_failures": 0,
+      "shaping": {
+        "enabled": true,
+        "excess_weight": 5.0,
+        "n_ref": 3000.0,
+        "queue_weight": 2.0
+      },
+      "best_timestep": 122880,
+      "best_val_cost": 13628.5075,
+      "best_zip_sha256": "07e20dfc5a40e9a5738296cd4259d86ef3f7b4029165681e1bcedfbf4956d92a",
+      "last_zip_sha256": "e587ef426361830444d6260ac2ffd6f47239dd655a641f4c0e1817d4f49b5ea2",
+      "wall_time_s": 103.69164712099882
+    }
+  ],
+  "all_full_runs_valid": true
+}

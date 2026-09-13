@@ -51,6 +51,32 @@ class ForecastConfig:
 
 
 @dataclass(frozen=True)
+class ShapingConfig:
+    """Training-only potential-based reward shaping (L2.3 PBRS).
+
+    Disabled by default and never applied during evaluation: the environment's
+    raw rewards and cost components stay the primary comparison. The potential
+    is computed from the current observation only (queue and excessive-wait
+    counts), so it carries no future or hidden information.
+    """
+
+    enabled: bool = False
+    queue_weight: float = 2.0
+    excess_weight: float = 5.0
+    n_ref: float = 3000.0
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "enabled", bool(self.enabled))
+        for name in ("queue_weight", "excess_weight", "n_ref"):
+            value = float(getattr(self, name))
+            if not (value >= 0.0):
+                raise ValueError(f"shaping.{name} must be non-negative, got {value!r}")
+            object.__setattr__(self, name, value)
+        if self.n_ref <= 0.0:
+            raise ValueError(f"shaping.n_ref must be positive, got {self.n_ref!r}")
+
+
+@dataclass(frozen=True)
 class RuntimeConfig:
     # The native Rust kernel is the default and the maintained backend. The
     # Python oracle is deprecated: selecting it requires an explicit
@@ -115,6 +141,7 @@ class RunConfig:
     forecast: ForecastConfig
     source: str
     runtime: RuntimeConfig = field(default_factory=RuntimeConfig)
+    shaping: ShapingConfig = field(default_factory=ShapingConfig)
 
     @property
     def control_hash(self) -> str:
@@ -160,6 +187,7 @@ def load_run_config(path: Path, project_root: Path | None = None) -> RunConfig:
         reward=_from_section(RewardConfig, merged.get("reward", {})),
         algorithm=_from_section(AlgorithmConfig, merged.get("algorithm", {})),
         forecast=_from_section(ForecastConfig, merged.get("forecast", {})),
+        shaping=_from_section(ShapingConfig, merged.get("shaping", {})),
         source=str(path),
         runtime=_from_section(RuntimeConfig, merged.get("runtime", {})),
     )

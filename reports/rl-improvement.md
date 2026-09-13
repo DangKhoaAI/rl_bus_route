@@ -1,7 +1,7 @@
 # RL improvement study status
 
-Status: **L0 and L1 accepted with core retained; first L2 direction (causal
-forecast) rejected on three-seed confirmation.**
+Status: **L0 and L1 accepted with core retained; both selected L2 directions
+(causal forecast, PBRS) rejected on three-seed confirmation.**
 
 The active study follows [`docs/spec/improve_RL.md`](../docs/spec/improve_RL.md)
 and [`docs/plan/improve_RL.md`](../docs/plan/improve_RL.md). The frozen protocol,
@@ -17,6 +17,8 @@ experiment cards and raw-artifact index are under
 - L1 screening table: `rl-improvement/tables/l1_screening_summary.csv`
 - L2.1 forecast summary/contrast/audit: `rl-improvement/tables/l2_forecast_summary.csv`,
   `l2_forecast_contrast.json`, `l2_forecast_verification.json`
+- L2.3 PBRS summary/contrast/audit/scale probe: `rl-improvement/tables/l2_pbrs_summary.csv`,
+  `l2_pbrs_contrast.json`, `l2_pbrs_verification.json`, `l2_pbrs_scale_probe.json`
 - Structural run audit: `rl-improvement/tables/verification.json`
 
 Three core Rust runs completed at 245,760 transitions and 100 validation days
@@ -86,9 +88,58 @@ and MAE 0.01908 (bias 1.9e-04) on train (`l2_forecast_error.json`); the good
 forecast error did not translate into better control, and this report does not
 read MAE as a policy-quality result.
 
-Unselected L2 directions (encoder/memory, reward shaping/PBRS, curriculum or
-BC warm-start, PopArt) remain SKIPPED/DEFERRED: L0 diagnostics do not trigger
-them, and the plan allows stopping after one L2 direction.
+Unselected L2 directions (encoder/memory, curriculum or BC warm-start, PopArt)
+remain SKIPPED/DEFERRED: L0 diagnostics do not trigger them.
+
+## L2.3 potential-based reward shaping (selected second L2 direction, REJECT)
+
+Diagnostic trigger: L0 shows the same dominant `waiting_pm` cost and the delayed
+dispatch/cooldown effects it named for the L1 GAE round; L1 then rejected both
+`gae_lambda` candidates, so the credit-assignment explanation was still open. The
+registered hypothesis was that a fixed causal potential on observed queue and
+excessive-wait counts would densify credit assignment and lower
+`total_cost_core` at fixed B without changing physics, masks or reward weights.
+
+Card `L2-PBRS` was registered before the runs. Single-group diff vs `L0-CORE`:
+`[shaping] enabled = false -> true` with `queue_weight=2.0`, `excess_weight=5.0`.
+The potential is `Phi(o) = -(2*W + 5*E)/3000` from the observation's waiting (`W`)
+and excessive-wait (`E`) counts, forced to 0 at terminal states; the training-only
+`PotentialShapingVecEnv` returns `r + gamma*Phi_next - Phi_now`. Evaluation is
+never wrapped and `total_cost_core` is recomputed from raw components. The weights
+were fixed before trials from a train-only probe (`l2_pbrs_scale_probe.json`:
+`std(Phi)=0.0216` vs `std(per-step reward)=0.0249`) and were not tuned on
+validation. Policy invariance holds for the shaped return under a fixed
+initial-state distribution because `Phi(s_T)=0` (Ng et al., 1999).
+
+Best-checkpoint validation on the same 100 days:
+
+| arm | seed | best transition | cost | P95 wait | worst-route wait |
+|---|---:|---:|---:|---:|---:|
+| L0-CORE | 11 | 159,744 | 13,199.1325 | 11.325 | 5.704 |
+| L0-CORE | 22 | 98,304 | 13,113.9725 | 11.103 | 5.667 |
+| L0-CORE | 33 | 233,472 | 13,213.4563 | 11.376 | 5.744 |
+| L2-PBRS | 11 | 73,728 | 14,119.9975 | 13.759 | 6.580 |
+| L2-PBRS | 22 | 135,168 | 13,197.7900 | 11.287 | 5.713 |
+| L2-PBRS | 33 | 122,880 | 13,628.5075 | 13.480 | 7.391 |
+
+Contrast (candidate - control), averaging model seeds per validation day first:
+mean `delta = +473.24` (`+3.592%`), paired 100-day bootstrap 95% CI
+`[447.66, 498.57]` entirely above zero, lower cost on 0/3 seeds. Seeds 11 and 33
+increase P95 wait by 2.43 and 2.10 min and worst-route wait by 0.88 and 1.65 min;
+the P95 and seed-33 worst-route deltas are outside the registered +1.0 min
+limits. The candidate is rejected by every registered quality/service rule and
+the core control is retained.
+
+Structural audit (`l2_pbrs_verification.json`): all six runs reached 245,760
+transitions, 2,048 episodes, 20 evaluation points and 100 unique days; zero
+finite-check failures; native hash matches the frozen L0 build; metadata records
+the shaping config. The unit telescoping/terminal-zero/causality suite and the
+native `test_shaping_flow.py` reward-accounting test passed before the full runs.
+
+L2.2 encoder/memory, L2.4 curriculum/BC warm-start and L2.5 PopArt remain
+SKIPPED/DEFERRED: L0 diagnostics do not trigger them (flat MLP has no measured
+sample-efficiency failure; PPO already beats heuristics; explained variance is
+high), and the first-round limit of two L2 directions is now used.
 
 ## Compute and limitations
 
@@ -99,19 +150,21 @@ flags are in each run's `metadata.json`. The host was shared, so these walls are
 reported as observed run measurements, not a cross-session speed claim.
 The three L2 forecast runs consumed 76.3, 81.5 and 81.6 s wall time including
 forecaster fitting and per-step prediction (forecast extra compute is inside
-these observed walls, not a separate claim). Exact values are in each run's
-`metadata.json` and `l2_forecast_verification.json`.
+these observed walls, not a separate claim). The three L2 PBRS runs consumed
+99.6, 81.7 and 103.7 s; shaping adds one O(observation) potential per training
+step and no extra transitions. Exact values are in each run's `metadata.json`,
+`l2_forecast_verification.json` and `l2_pbrs_verification.json`.
 
 The Python oracle, historical R4/runtime runs, and incomplete `runs/core-11`
 checkpoint were not reused as L0 quality evidence. Held-out ID/OOD evaluation,
-T9 ablations, L2 directions and fixed-wall-clock comparison remain unopened.
-No global defaults were changed and no candidate was combined or adopted.
+T9 ablations and fixed-wall-clock comparison remain unopened. No global defaults
+were changed and no candidate was combined or adopted.
 
 ## Next task
 
 **Single next task: STOP algorithm exploration and freeze this L0/L1/L2 decision
-for L3 planning.** One L2 direction was selected and rejected; the remaining L2
-directions (encoder/memory, reward shaping, warm-start, PopArt and all other L2
-tasks) stay SKIPPED/DEFERRED and are not missing implementation work. The next
-opening phase is L3, which requires its own registered held-out matrix and must
-not reuse any test split read here (none was read).
+for L3 planning.** Two L2 directions (causal forecast and PBRS) were selected and
+rejected; the remaining L2 directions (encoder/memory, warm-start, PopArt and all
+other L2 tasks) stay SKIPPED/DEFERRED and are not missing implementation work.
+The next opening phase is L3, which requires its own registered held-out matrix
+and must not reuse any test split read here (none was read).

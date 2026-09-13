@@ -170,18 +170,28 @@ Optional L2 tasks are independent research choices, not a requirement to impleme
 
 Use the research shortlist and primary sources in spec §6.5–6.6. Select at most two L2 directions in the first round; forecasts may occupy one slot. For each selected L2 task, register a control and candidate before running, use seeds 11/22/33 and matched transition/validation budgets, preserve raw metrics, and record added compute. Confirm a change independently before combining it with another extension. Unselected tasks receive an explicit SKIPPED decision.
 
-**Round decision (2026-09-13).** One direction was selected: **L2.1 causal
-forecast**. It was implemented as the single-group config toggle
-`configs/experiments/rl-improvement/forecast.toml` (`[forecast] enabled=true`),
-registered as `L2-FORECAST`, run on seeds 11/22/33 at B=245,760 and confirmed.
-The candidate is **REJECTED**: mean cost +2.03% worse than the L0 core control,
-paired 100-day bootstrap 95% CI `[240.38, 295.72]`, lower on 1/3 seeds, and the
-seed-11 P95/worst-route wait deltas exceed the registered +1.0 min limits. Core
-is retained. **L2.2 encoder/memory, L2.3 reward shaping/PBRS, L2.4
-curriculum/warm-start and L2.5 PopArt are SKIPPED** — L0 diagnostics do not
-trigger them (explained variance is high, PPO already beats heuristics, no KL
-instability) and the plan allows stopping after one L2 direction. Evidence:
-`reports/rl-improvement.md`, `reports/rl-improvement/tables/l2_forecast_*.{csv,json}`.
+**Round decision (2026-09-13).** Two directions were selected, one at a time,
+and both were rejected on three-seed confirmation; the first-round limit is now
+used.
+
+- **L2.1 causal forecast** (`configs/experiments/rl-improvement/forecast.toml`,
+  single-group `[forecast] enabled=false -> true`; card `L2-FORECAST`): mean cost
+  +2.03% worse than the L0 core control, paired 100-day bootstrap 95% CI
+  `[240.38, 295.72]`, lower on 1/3 seeds, seed-11 P95/worst-route wait deltas
+  over +1.0 min. **REJECT**.
+- **L2.3 potential-based reward shaping** (`configs/experiments/rl-improvement/pbrs.toml`,
+  single-group `[shaping] enabled=false -> true`, `queue_weight=2.0`,
+  `excess_weight=5.0`; card `L2-PBRS`): mean cost +3.59% worse, paired CI
+  `[447.66, 498.57]`, lower on 0/3 seeds, seed-11/33 P95 and seed-33 worst-route
+  wait deltas over +1.0 min. **REJECT**.
+
+Core is retained. **L2.2 encoder/memory, L2.4 curriculum/warm-start and L2.5
+PopArt are SKIPPED** — L0 diagnostics do not trigger them (flat MLP has no
+measured sample-efficiency failure, PPO already beats heuristics, explained
+variance is high) and the first-round limit of two L2 directions is used.
+Evidence: `reports/rl-improvement.md`,
+`reports/rl-improvement/tables/l2_forecast_*.{csv,json}` and
+`reports/rl-improvement/tables/l2_pbrs_*.{csv,json}`.
 
 ### L2.1 - Causal forecast contribution (SELECTED; REJECT)
 
@@ -209,15 +219,20 @@ round decision above and `reports/rl-improvement.md`.
 
 **Acceptance:** the model integrates correctly and has comparable evidence. A schema change is versioned and never presented as a checkpoint-compatible backend-only change.
 
-### L2.3 - Reward or credit-assignment experiment
+### L2.3 - Reward or credit-assignment experiment (SELECTED; REJECT)
 
-- [ ] Select one hypothesis tied to a cost component, terminal penalty, fairness trade-off, discounting, or explicitly defined shaping.
-- [ ] If shaping is selected, register a fixed causal potential with r_shaped=r+gamma*Phi_next-Phi_now, zero potential at all true terminal states, explicit truncation/bootstrap handling and no hidden/future inputs. Add telescoping fixtures across action traces; keep original terminal settlement and raw rewards. Do not promise equivalent learned PPO weights or improved learning.
-- [ ] Version the changed learning objective/config; preserve physical dynamics and guards.
-- [ ] Retain raw cost components and recompute `total_cost_core` using original weights for the primary comparison.
-- [ ] Report completion, abandonment, wait/P95, route fairness, and operating cost alongside the scalar score.
+- [x] Select one hypothesis tied to a cost component, terminal penalty, fairness trade-off, discounting, or explicitly defined shaping.
+- [x] If shaping is selected, register a fixed causal potential with r_shaped=r+gamma*Phi_next-Phi_now, zero potential at all true terminal states, explicit truncation/bootstrap handling and no hidden/future inputs. Add telescoping fixtures across action traces; keep original terminal settlement and raw rewards. Do not promise equivalent learned PPO weights or improved learning.
+- [x] Version the changed learning objective/config; preserve physical dynamics and guards.
+- [x] Retain raw cost components and recompute `total_cost_core` using original weights for the primary comparison.
+- [x] Report completion, abandonment, wait/P95, route fairness, and operating cost alongside the scalar score.
 
-**Verification:** tests for the selected maintained reward/shaping module and native integration showing both objectives evaluated on identical raw components; do not extend deprecated oracle tests to implement the candidate; matched three-seed validation.
+Outcome: **REJECT** on three-seed confirmation (mean cost +3.59% vs control,
+paired CI entirely above zero, 0/3 seeds lower, P95/worst-route limits violated);
+core control retained. See the round decision above and
+`reports/rl-improvement.md`.
+
+**Verification:** `tests/unit/bus_rl/learning/test_shaping.py` (telescoping, terminal-zero, causality, finite) and native `tests/integration/bus_rl/learning/training/test_shaping_flow.py` (reward accounting on the real kernel), plus matched three-seed validation.
 
 **Acceptance:** the effect is separated from metric redefinition; no unsupported claim of policy invariance; any service regression is visible.
 
@@ -307,7 +322,7 @@ Keep pilot, Python diagnosis, and earlier study artifacts unchanged. Use stable 
 - [x] Existing R4/memory/runtime evidence verified; research config and actual loaded binary frozen.
 - [x] L0 baseline and diagnostics accepted.
 - [x] L1 bounded search and multi-seed decision accepted (no candidate shortlisted; core retained).
-- [x] Selected L2 experiments accepted; others explicitly skipped. (L2.1 forecast selected and REJECTED with evidence; L2.2–L2.5 explicitly SKIPPED.)
+- [x] Selected L2 experiments accepted; others explicitly skipped. (L2.1 forecast and L2.3 PBRS selected and REJECTED with evidence; L2.2, L2.4, L2.5 explicitly SKIPPED.)
 - [ ] L3 full paired matrix, statistics, service metrics, and report accepted.
 - [ ] Throughput, sample efficiency, and wall-clock efficiency are reported separately.
 - [ ] No unfinished task or experiment is marked complete because the result appears favorable.

@@ -40,6 +40,7 @@ def run_metadata(run: RunConfig, extra: dict | None = None) -> dict:
         "reward": asdict(run.reward),
         "reward_hash": run.reward_hash,
         "forecast_enabled": run.forecast.enabled,
+        "shaping": asdict(run.shaping),
         "algorithm": asdict(run.algorithm),
         "runtime": asdict(run.runtime),
         "git_sha": sha,

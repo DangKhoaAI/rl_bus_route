@@ -1,0 +1,46 @@
+# L2.3-PBRS: potential-based reward shaping candidate (training-only).
+# Single-group diff vs configs/experiments/rl-improvement/core.toml:
+#   [shaping] enabled = false -> true (queue_weight=2.0, excess_weight=5.0)
+# Everything else (physics, control, reward weights, PPO, runtime, budget,
+# validation) is the frozen core control. The potential uses the current
+# observation's waiting/excessive-wait counts only and is forced to 0 at every
+# terminal state; evaluation is never shaped.
+[control]
+enable_reassign = true
+enable_short_turn = true
+
+[algorithm]
+gamma = 1.0
+seed = 11
+learning_rate = 3.0e-4
+n_steps = 256
+n_envs = 4
+batch_size = 256
+n_epochs = 4
+ent_coef = 0.01
+vf_coef = 0.5
+max_grad_norm = 0.5
+gae_lambda = 0.95
+clip_range = 0.2
+total_timesteps = 245760
+eval_freq = 12288
+device = "cpu"
+torch_threads = 2
+diagnostics_enabled = true
+diagnostics_interval = 256
+
+[runtime]
+backend = "rust"
+eval_batch_size = 16
+reuse_eval_pool = true
+native_batch = true
+validate_distributions = false
+validate_observation = true
+
+[forecast]
+enabled = false
+
+[shaping]
+enabled = true
+queue_weight = 2.0
+excess_weight = 5.0

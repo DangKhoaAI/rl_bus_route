@@ -128,6 +128,10 @@ def train_run(
                 for index in range(algorithm.n_envs)
             ]
         )
+    if run.shaping.enabled:
+        from bus_rl.learning.shaping import PotentialShapingVecEnv
+
+        env = PotentialShapingVecEnv(env, run.shaping, algorithm.gamma)
     model = make_model(env, algorithm.seed, algorithm)
     validation = BestValidationCallback(
         val_scenarios or train_scenarios[:1],

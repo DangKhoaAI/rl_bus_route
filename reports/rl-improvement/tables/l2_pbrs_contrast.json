@@ -1,0 +1,14 @@
+{
+  "contrast": "L2-PBRS - L0-CORE",
+  "paired_days": 100,
+  "mean_delta_cost": 473.2445833333332,
+  "ci_low": 447.6593854166666,
+  "ci_high": 498.5726666666665,
+  "pct_of_control_mean": 3.591847368204841,
+  "n_resamples": 2000,
+  "bootstrap_seed": 6001,
+  "seeds_lower_than_control": 0,
+  "mean_reduction_required": 0.02,
+  "service_limits_satisfied": false,
+  "decision": "REJECT"
+}
