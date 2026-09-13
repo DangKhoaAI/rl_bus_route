@@ -69,7 +69,9 @@ def _observation_space(scenarios, forecaster) -> gym.spaces.Dict:
 class NativeBatchKernel:
     """Thin owner of a `bus_sim_native.BatchKernel` over shared, packed scenarios."""
 
-    def __init__(self, scenarios, capacity: int, *, store=None, conservation: bool = True):
+    def __init__(
+        self, scenarios, capacity: int, *, store=None, conservation: bool = True, reward=None
+    ):
         scenarios = list(scenarios)
         if not scenarios:
             raise ValueError("native batch kernel requires at least one scenario")
@@ -79,7 +81,7 @@ class NativeBatchKernel:
         self.scenarios = scenarios
         self.store = store if store is not None else shared_store(scenarios)
         self.capacity = capacity
-        self._kernel = self.store.batch_kernel(capacity, conservation=conservation)
+        self._kernel = self.store.batch_kernel(capacity, conservation=conservation, reward=reward)
         self.last_reset_indices: dict[int, int] = {}
 
     def reset(self, slots, scenario_indices) -> tuple[dict, np.ndarray]:
@@ -141,7 +143,7 @@ class NativeBatchVecEnv(VecEnv):
         self.forecaster = forecaster
         self.validate = bool(run.runtime.validate_observation)
         n_envs = int(run.algorithm.n_envs)
-        self.kernel = NativeBatchKernel(applied, n_envs)
+        self.kernel = NativeBatchKernel(applied, n_envs, reward=run.reward)
         self._actions = np.zeros(n_envs, dtype=np.int64)
         super().__init__(n_envs, _observation_space(applied, forecaster), gym.spaces.Discrete(221))
         # Construction reset mirrors `make_env`: seed each slot and draw one
@@ -297,7 +299,7 @@ class NativeBatchEvalPool:
         self.requested_batch_size = requested
         self.batch_size = min(requested, len(scenarios))
         self.key = eval_pool_key(scenarios, run, forecaster)
-        self.kernel = NativeBatchKernel(applied, self.batch_size)
+        self.kernel = NativeBatchKernel(applied, self.batch_size, reward=run.reward)
         self.validate = bool(run.runtime.validate_observation)
         self.closed = False
 

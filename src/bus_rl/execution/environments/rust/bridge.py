@@ -92,7 +92,7 @@ def _scenario_tapes(scenario: Scenario) -> tuple[np.ndarray, np.ndarray]:
     return arrivals, traffic
 
 
-def build_kernel(scenario: Scenario, *, conservation: bool = True):
+def build_kernel(scenario: Scenario, *, conservation: bool = True, reward=None):
     """Pack a scenario into a native kernel. Tapes are copied once here."""
     require_native()
     import bus_sim_native
@@ -100,6 +100,8 @@ def build_kernel(scenario: Scenario, *, conservation: bool = True):
     arrivals, traffic = _scenario_tapes(scenario)
     kernel = bus_sim_native.Kernel(scenario_payload(scenario), arrivals, traffic)
     kernel.set_conservation_checks(conservation)
+    if reward is not None:
+        kernel.set_reward(**asdict(reward))
     return kernel
 
 
@@ -122,19 +124,23 @@ class NativeScenarioStore:
     def __len__(self) -> int:
         return len(self._store)
 
-    def kernel(self, index: int, *, conservation: bool = True):
+    def kernel(self, index: int, *, conservation: bool = True, reward=None):
         import bus_sim_native
 
         kernel = bus_sim_native.Kernel.from_store(self._store, index)
         kernel.set_conservation_checks(conservation)
+        if reward is not None:
+            kernel.set_reward(**asdict(reward))
         return kernel
 
-    def batch_kernel(self, capacity: int, *, conservation: bool = True):
+    def batch_kernel(self, capacity: int, *, conservation: bool = True, reward=None):
         """One native kernel owning ``capacity`` episode slots over this store."""
         import bus_sim_native
 
         kernel = bus_sim_native.BatchKernel.from_store(self._store, int(capacity))
         kernel.set_conservation_checks(conservation)
+        if reward is not None:
+            kernel.set_reward(**asdict(reward))
         return kernel
 
 

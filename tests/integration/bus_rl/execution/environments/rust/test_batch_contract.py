@@ -113,3 +113,30 @@ def test_batch_helpers_shape_and_liveness(batch):
 
     with pytest.raises(ValueError, match="has not been reset"):
         batch.trace_snapshot_slot(2)
+
+
+def test_set_reward_changes_returned_reward(batch):
+    """Regression: the kernel must honor run.reward, not only its defaults.
+
+    ``n_ref`` only rescales the returned reward, so halving it must exactly
+    double the reward for an identical reset/step. Before the wiring fix the
+    kernel silently ignored every reward field except the defaults.
+    """
+    batch.reset_batch([0], [0])
+    baseline = batch.step_batch([0], [0])["reward"][0]
+    batch.reset_batch([0], [0])
+    batch.set_reward(
+        waiting=1.0,
+        onboard=0.25,
+        crowding=0.5,
+        active=0.5,
+        deadhead=0.5,
+        fairness=1.0,
+        first_denied=5.0,
+        abandoned=60.0,
+        mission=2.0,
+        unfinished=60.0,
+        n_ref=1500.0,
+    )
+    scaled = batch.step_batch([0], [0])["reward"][0]
+    assert scaled == pytest.approx(2.0 * baseline)

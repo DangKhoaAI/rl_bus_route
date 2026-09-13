@@ -494,6 +494,38 @@ impl Kernel {
         }
     }
 
+    /// Apply the run's reward weights. The kernel starts at the package defaults;
+    /// evaluation recomputes costs independently from the raw components.
+    #[allow(clippy::too_many_arguments)]
+    fn set_reward(
+        &mut self,
+        waiting: f64,
+        onboard: f64,
+        crowding: f64,
+        active: f64,
+        deadhead: f64,
+        fairness: f64,
+        first_denied: f64,
+        abandoned: f64,
+        mission: f64,
+        unfinished: f64,
+        n_ref: f64,
+    ) {
+        self.reward = RewardConfig {
+            waiting,
+            onboard,
+            crowding,
+            active,
+            deadhead,
+            fairness,
+            first_denied,
+            abandoned,
+            mission,
+            unfinished,
+            n_ref,
+        };
+    }
+
     fn action_mask<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyArray1<bool>>> {
         let mask = self
             .mask_cache
@@ -812,6 +844,37 @@ impl BatchKernel {
         for state in self.states.iter_mut().flatten() {
             state.conservation_checks = enabled;
         }
+    }
+
+    /// Apply the run's reward weights to every slot in the batch kernel.
+    #[allow(clippy::too_many_arguments)]
+    fn set_reward(
+        &mut self,
+        waiting: f64,
+        onboard: f64,
+        crowding: f64,
+        active: f64,
+        deadhead: f64,
+        fairness: f64,
+        first_denied: f64,
+        abandoned: f64,
+        mission: f64,
+        unfinished: f64,
+        n_ref: f64,
+    ) {
+        self.reward = RewardConfig {
+            waiting,
+            onboard,
+            crowding,
+            active,
+            deadhead,
+            fairness,
+            first_denied,
+            abandoned,
+            mission,
+            unfinished,
+            n_ref,
+        };
     }
 
     #[getter]

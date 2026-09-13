@@ -122,7 +122,7 @@ class NativeBusDispatchEnv(gym.Env):
         )
         self._scenario_index = index
         self.scenario = self.scenarios[index]
-        self.kernel = self._scenario_store.kernel(index)
+        self.kernel = self._scenario_store.kernel(index, reward=self.reward)
         result = self.kernel.reset_contract()
         self._mask = np.asarray(result["mask"], dtype=bool)
         return self._observation(result["obs"]), {}
