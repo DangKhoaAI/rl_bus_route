@@ -359,7 +359,16 @@ def test_metadata_records_backend_and_native_build():
     assert python_meta["native_build"] is None
     rust_meta = run_metadata(replace(run, runtime=RuntimeConfig(backend="rust")))
     assert rust_meta["backend"] == "rust"
-    assert rust_meta["native_build"]["library_sha256"]
+    native = rust_meta["native_build"]
+    assert native["library_sha256"]
+    # The recorded hash must be the binary actually installed, and at least one
+    # build record must describe it (the frozen R4 record may not).
+    import hashlib
+
+    actual = hashlib.sha256((ROOT / "src" / "bus_sim.so").read_bytes()).hexdigest()
+    assert native["library_sha256"] == actual
+    assert native["library_sha256_runtime"] == actual
+    assert native["build_record_matches_runtime"]
 
 
 def test_cross_backend_checkpoint_rules():

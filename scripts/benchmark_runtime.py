@@ -684,7 +684,16 @@ def _native_segments(pool, controller, scenarios) -> dict:
 
     n_days = len(scenarios)
     batch_size = min(pool.batch_size, n_days)
-    seg = {"reset_s": 0.0, "mask_s": 0.0, "infer_s": 0.0, "step_s": 0.0, "summary_s": 0.0}
+    seg = {
+        "reset_s": 0.0,
+        "mask_s": 0.0,
+        "infer_s": 0.0,
+        "step_s": 0.0,
+        "summary_s": 0.0,
+        "summary_export_s": 0.0,
+        "summary_convert_s": 0.0,
+        "summary_metrics_s": 0.0,
+    }
     records: list[dict | None] = [None] * n_days
     started = perf_counter()
     offset = 0
@@ -738,14 +747,22 @@ def _native_segments(pool, controller, scenarios) -> dict:
                     continue
                 slot_state["done"] = True
                 t0 = perf_counter()
+                payload = pool.kernel.summary_inputs(slot_state["slot"])
+                t1 = perf_counter()
+                inputs = from_native_payload(payload)
+                t2 = perf_counter()
                 summarize_inputs(
-                    from_native_payload(pool.kernel.summary_inputs(slot_state["slot"])),
+                    inputs,
                     pool.applied[slot_state["scenario_index"]],
                     slot_state["costs"],
                     slot_state["reward_sum"],
                     pool.run.reward,
                 )
-                seg["summary_s"] += perf_counter() - t0
+                t3 = perf_counter()
+                seg["summary_export_s"] += t1 - t0
+                seg["summary_convert_s"] += t2 - t1
+                seg["summary_metrics_s"] += t3 - t2
+                seg["summary_s"] += t3 - t0
                 records[slot_state["scenario_index"]] = {"done": True}
         offset += len(chunk)
     seg["wall_s"] = perf_counter() - started
@@ -867,10 +884,21 @@ def measure_o2_ablation(repetitions: int, warmup: int, eval_days: int) -> dict:
     summary = {}
     for name, payload in results.items():
         rows = payload["rows"]
-        entry = {
-            field: statistics.median([row[field] for row in rows])
-            for field in ("wall_s", "reset_s", "mask_s", "infer_s", "step_s", "summary_s")
-        }
+        entry = {}
+        for field in (
+            "wall_s",
+            "reset_s",
+            "mask_s",
+            "infer_s",
+            "step_s",
+            "summary_s",
+            "summary_export_s",
+            "summary_convert_s",
+            "summary_metrics_s",
+        ):
+            values = [row[field] for row in rows if field in row]
+            if values:
+                entry[field] = statistics.median(values)
         entry["effective_batch"] = rows[0]["batch_size"]
         entry["rss_median_kb"] = int(statistics.median([row["rss_current_kb"] for row in rows]))
         entry["raw"] = rows
@@ -981,6 +1009,133 @@ def measure_ppo_update_profile(repetitions: int) -> dict:
     }
 
 
+def measure_rollout_profile(repetitions: int) -> dict:
+    """Sub-step split of one rollout (n_steps x n_envs) for dummy vs native (O2).
+
+    Wraps `collect_rollouts` collaborators: policy forward (features/distribution/
+    sampling), mask retrieval, tensor conversion, native/env step, buffer add and
+    GAE. Timer overhead is present, so this ranks sub-steps and is not a speed
+    number.
+    """
+    from sb3_contrib.ppo_mask import ppo_mask
+
+    run = rust_run()
+    apply_torch_threads(run.algorithm.torch_threads)
+    train_scenarios = generate_manifest("train", 16)
+    names = (
+        "obs_to_tensor",
+        "action_masks",
+        "features",
+        "distribution",
+        "sample",
+        "policy_forward",
+        "env_step",
+        "buffer_add",
+        "gae",
+    )
+
+    def _profile_once(native_batch: bool) -> dict:
+        if native_batch:
+            from bus_rl.env.native_batch import NativeBatchVecEnv
+
+            vec = NativeBatchVecEnv(train_scenarios, run, run.algorithm.seed)
+        else:
+            vec = DummyVecEnv(
+                [
+                    make_env(train_scenarios, run, run.algorithm.seed + index)
+                    for index in range(run.algorithm.n_envs)
+                ]
+            )
+        model = make_model(vec, run.algorithm.seed, run.algorithm)
+        stats = {name: 0.0 for name in names}
+        counts = {name: 0 for name in names}
+        restores: list = []
+
+        def wrap(target, attr, name):
+            original = getattr(target, attr)
+            exposed = attr in getattr(target, "__dict__", {})
+
+            def wrapper(*args, **kwargs):
+                started = perf_counter()
+                result = original(*args, **kwargs)
+                stats[name] += perf_counter() - started
+                counts[name] += 1
+                return result
+
+            setattr(target, attr, wrapper)
+
+            def restore():
+                if exposed:
+                    setattr(target, attr, original)
+                else:
+                    delattr(target, attr)
+
+            restores.append(restore)
+
+        wrap(ppo_mask, "obs_as_tensor", "obs_to_tensor")
+        wrap(ppo_mask, "get_action_masks", "action_masks")
+        wrap(model.policy, "forward", "policy_forward")
+        wrap(model.policy, "extract_features", "features")
+        wrap(model.policy, "_get_action_dist_from_latent", "distribution")
+        wrap(type(model.policy.action_dist), "get_actions", "sample")
+        wrap(vec, "step_wait", "env_step")
+        wrap(model.rollout_buffer, "add", "buffer_add")
+        wrap(model.rollout_buffer, "compute_returns_and_advantage", "gae")
+
+        callback = _SegmentCallback()
+        try:
+            model.learn(
+                total_timesteps=run.algorithm.n_steps * run.algorithm.n_envs,
+                callback=callback,
+            )
+        finally:
+            for restore in reversed(restores):
+                restore()
+            vec.close()
+        policy_forward = stats["policy_forward"]
+        forward_parts = stats["features"] + stats["distribution"] + stats["sample"]
+        rollout = callback.rollout_s
+        accounted = (
+            policy_forward
+            + stats["obs_to_tensor"]
+            + stats["action_masks"]
+            + stats["env_step"]
+            + stats["buffer_add"]
+            + stats["gae"]
+        )
+        return {
+            "rollout_s": rollout,
+            "update_s": callback.update_s,
+            **stats,
+            "forward_other_s": policy_forward - forward_parts,
+            "rollout_other_s": rollout - accounted,
+            "counts": counts,
+        }
+
+    _profile_once(False)
+    rows = {"dummy": [], "native": []}
+    for _ in range(repetitions):
+        rows["dummy"].append(_profile_once(False))
+        rows["native"].append(_profile_once(True))
+    scalar_fields = ("rollout_s", "update_s", *names, "forward_other_s", "rollout_other_s")
+    summary = {}
+    for kind, payloads in rows.items():
+        summary[kind] = {
+            field: statistics.median([row[field] for row in payloads]) for field in scalar_fields
+        }
+        summary[kind]["counts"] = payloads[0]["counts"]
+        summary[kind]["raw"] = payloads
+    return {
+        "role": "explanatory-only",
+        "not_a_speed_number": True,
+        "transitions_per_rollout": run.algorithm.n_steps * run.algorithm.n_envs,
+        "n_envs": run.algorithm.n_envs,
+        "n_steps": run.algorithm.n_steps,
+        "note": "features/distribution/sample are nested under policy_forward",
+        "summary": summary,
+    }
+
+
 def _write(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True))
@@ -998,6 +1153,7 @@ def main() -> None:
             "o1-breakdown",
             "o2-ablation",
             "ppo-update-profile",
+            "rollout-profile",
         ),
         required=True,
     )
@@ -1044,6 +1200,17 @@ def main() -> None:
             ),
         }
         output = args.output or REPORT_DIR / "o1-breakdown.json"
+        _write(output, payload)
+        return
+    if args.mode == "rollout-profile":
+        payload = {
+            "role": "rollout-profile",
+            "provenance": collect_provenance(threads),
+            "profile": measure_rollout_profile(args.repetitions),
+        }
+        payload["provenance"]["flags"]["timers"] = True
+        payload["provenance"]["flags"]["note"] = "explanatory; sub-step timers on"
+        output = args.output or REPORT_DIR / "rollout-profile.json"
         _write(output, payload)
         return
     if args.mode == "ppo-update-profile":

@@ -1,0 +1,292 @@
+{
+  "profile": {
+    "n_envs": 4,
+    "n_steps": 256,
+    "not_a_speed_number": true,
+    "note": "features/distribution/sample are nested under policy_forward",
+    "role": "explanatory-only",
+    "summary": {
+      "dummy": {
+        "action_masks": 0.0043613060406642035,
+        "buffer_add": 0.007095851018675603,
+        "counts": {
+          "action_masks": 256,
+          "buffer_add": 256,
+          "distribution": 272,
+          "env_step": 256,
+          "features": 272,
+          "gae": 1,
+          "obs_to_tensor": 257,
+          "policy_forward": 256,
+          "sample": 256
+        },
+        "distribution": 0.025673405994893983,
+        "env_step": 0.055225900796358474,
+        "features": 0.03811725309060421,
+        "forward_other_s": 0.00845273800950963,
+        "gae": 0.0007896330062067136,
+        "obs_to_tensor": 0.0035449670831440017,
+        "policy_forward": 0.08512642308778595,
+        "raw": [
+          {
+            "action_masks": 0.0043613060406642035,
+            "buffer_add": 0.007095851018675603,
+            "counts": {
+              "action_masks": 256,
+              "buffer_add": 256,
+              "distribution": 272,
+              "env_step": 256,
+              "features": 272,
+              "gae": 1,
+              "obs_to_tensor": 257,
+              "policy_forward": 256,
+              "sample": 256
+            },
+            "distribution": 0.025673405994893983,
+            "env_step": 0.055225900796358474,
+            "features": 0.03811725309060421,
+            "forward_other_s": 0.00845273800950963,
+            "gae": 0.0007476199971279129,
+            "obs_to_tensor": 0.0035391878482187167,
+            "policy_forward": 0.08512642308778595,
+            "rollout_other_s": 0.006874016224173829,
+            "rollout_s": 0.1629703050130047,
+            "sample": 0.01288302599277813,
+            "update_s": 0.08612324199930299
+          },
+          {
+            "action_masks": 0.004358209058409557,
+            "buffer_add": 0.006989188099396415,
+            "counts": {
+              "action_masks": 256,
+              "buffer_add": 256,
+              "distribution": 272,
+              "env_step": 256,
+              "features": 272,
+              "gae": 1,
+              "obs_to_tensor": 257,
+              "policy_forward": 256,
+              "sample": 256
+            },
+            "distribution": 0.02531827891652938,
+            "env_step": 0.05453198881878052,
+            "features": 0.03798247204395011,
+            "forward_other_s": 0.008303919865284115,
+            "gae": 0.0007900800119386986,
+            "obs_to_tensor": 0.0035449670831440017,
+            "policy_forward": 0.08444046198565047,
+            "rollout_other_s": 0.006848046949016862,
+            "rollout_s": 0.16150294200633653,
+            "sample": 0.012835791159886867,
+            "update_s": 0.08574570299242623
+          },
+          {
+            "action_masks": 0.004369096117443405,
+            "buffer_add": 0.007111316866939887,
+            "counts": {
+              "action_masks": 256,
+              "buffer_add": 256,
+              "distribution": 272,
+              "env_step": 256,
+              "features": 272,
+              "gae": 1,
+              "obs_to_tensor": 257,
+              "policy_forward": 256,
+              "sample": 256
+            },
+            "distribution": 0.025789473103941418,
+            "env_step": 0.05547801787906792,
+            "features": 0.03837822024070192,
+            "forward_other_s": 0.008599493332440034,
+            "gae": 0.0007896330062067136,
+            "obs_to_tensor": 0.0036733538727276027,
+            "policy_forward": 0.08580756781157106,
+            "rollout_other_s": 0.007049600448226556,
+            "rollout_s": 0.16427858600218315,
+            "sample": 0.013040381134487689,
+            "update_s": 0.08611396799096838
+          }
+        ],
+        "rollout_other_s": 0.006874016224173829,
+        "rollout_s": 0.1629703050130047,
+        "sample": 0.01288302599277813,
+        "update_s": 0.08611396799096838
+      },
+      "native": {
+        "action_masks": 0.003220355967641808,
+        "buffer_add": 0.006942283871467225,
+        "counts": {
+          "action_masks": 256,
+          "buffer_add": 256,
+          "distribution": 272,
+          "env_step": 256,
+          "features": 272,
+          "gae": 1,
+          "obs_to_tensor": 257,
+          "policy_forward": 256,
+          "sample": 256
+        },
+        "distribution": 0.02562057184695732,
+        "env_step": 0.03449526689655613,
+        "features": 0.03847657902224455,
+        "forward_other_s": 0.008985882290289737,
+        "gae": 0.0007870779954828322,
+        "obs_to_tensor": 0.0035107640142086893,
+        "policy_forward": 0.08621384200523607,
+        "raw": [
+          {
+            "action_masks": 0.003220355967641808,
+            "buffer_add": 0.006942283871467225,
+            "counts": {
+              "action_masks": 256,
+              "buffer_add": 256,
+              "distribution": 272,
+              "env_step": 256,
+              "features": 272,
+              "gae": 1,
+              "obs_to_tensor": 257,
+              "policy_forward": 256,
+              "sample": 256
+            },
+            "distribution": 0.0258967240806669,
+            "env_step": 0.03449526689655613,
+            "features": 0.038531558064278215,
+            "forward_other_s": 0.00906201099860482,
+            "gae": 0.0007342559983953834,
+            "obs_to_tensor": 0.0035107640142086893,
+            "policy_forward": 0.086690327982069,
+            "rollout_other_s": 0.0075867652776651084,
+            "rollout_s": 0.14318002000800334,
+            "sample": 0.013200034838519059,
+            "update_s": 0.08692078999592923
+          },
+          {
+            "action_masks": 0.0031017741712275892,
+            "buffer_add": 0.00677069001540076,
+            "counts": {
+              "action_masks": 256,
+              "buffer_add": 256,
+              "distribution": 272,
+              "env_step": 256,
+              "features": 272,
+              "gae": 1,
+              "obs_to_tensor": 257,
+              "policy_forward": 256,
+              "sample": 256
+            },
+            "distribution": 0.024888453917810693,
+            "env_step": 0.033330024059978314,
+            "features": 0.03759889093635138,
+            "forward_other_s": 0.007718302935245447,
+            "gae": 0.0007870779954828322,
+            "obs_to_tensor": 0.003363228897796944,
+            "policy_forward": 0.08287133289559279,
+            "rollout_other_s": 0.007361596974078566,
+            "rollout_s": 0.1375857250095578,
+            "sample": 0.012665685106185265,
+            "update_s": 0.08735459900344722
+          },
+          {
+            "action_masks": 0.0032318550220225006,
+            "buffer_add": 0.007052966029732488,
+            "counts": {
+              "action_masks": 256,
+              "buffer_add": 256,
+              "distribution": 272,
+              "env_step": 256,
+              "features": 272,
+              "gae": 1,
+              "obs_to_tensor": 257,
+              "policy_forward": 256,
+              "sample": 256
+            },
+            "distribution": 0.02562057184695732,
+            "env_step": 0.03450471692485735,
+            "features": 0.03847657902224455,
+            "forward_other_s": 0.008985882290289737,
+            "gae": 0.000801653994130902,
+            "obs_to_tensor": 0.003558657001121901,
+            "policy_forward": 0.08621384200523607,
+            "rollout_other_s": 0.007634666020749137,
+            "rollout_s": 0.14299835699785035,
+            "sample": 0.013130808845744468,
+            "update_s": 0.0857955329993274
+          }
+        ],
+        "rollout_other_s": 0.0075867652776651084,
+        "rollout_s": 0.14299835699785035,
+        "sample": 0.013130808845744468,
+        "update_s": 0.08692078999592923
+      }
+    },
+    "transitions_per_rollout": 1024
+  },
+  "provenance": {
+    "checkpoint": "tests/backend_parity/reference/diagnose-after/last.zip",
+    "checkpoint_sha256": "98f99ebf151cdf6dde914df95ea780c25f4856e6a36f90e30ccd7a9f5906501e",
+    "config": "configs/experiments/core-threads2.toml",
+    "flags": {
+      "conservation_checks": false,
+      "cprofile": false,
+      "logging": "quiet",
+      "note": "explanatory; sub-step timers on",
+      "timers": true,
+      "trace": false,
+      "validate_observation": true
+    },
+    "git": {
+      "diff_stat": "reports/runtime-optimization.md                    | 355 ++++++-----\n reports/runtime-optimization/commands.json         |  12 +-\n reports/runtime-optimization/o2-ablation-run1.json | 670 +++++++++++----------\n reports/runtime-optimization/o2-ablation-run2.json | 670 +++++++++++----------\n reports/runtime-optimization/o2-full-workflow.json |  93 +--\n scripts/benchmark_runtime.py                       | 181 +++++-\n src/bus_rl/backend/native.py                       |  52 +-\n tests/backend_parity/test_rust_integration.py      |  11 +-\n 8 files changed, 1186 insertions(+), 858 deletions(-)",
+      "dirty": true,
+      "porcelain": "M reports/runtime-optimization.md\n M reports/runtime-optimization/commands.json\n M reports/runtime-optimization/o2-ablation-run1.json\n M reports/runtime-optimization/o2-ablation-run2.json\n M reports/runtime-optimization/o2-full-workflow.json\n M scripts/benchmark_runtime.py\n M src/bus_rl/backend/native.py\n M tests/backend_parity/test_rust_integration.py\n?? reports/runtime-optimization/rollout-profile.json",
+      "sha": "2d00b5ca74e750418b1d67e9af177938d0153886"
+    },
+    "library_sha256": "74b3a8fabbbabb5d4b167b92e56ac30af6f0957c180db78b6c501b21c50622ae",
+    "lock_hash": "5ed56349910166b5fe6232c3d79c8421c6714e8cc8504cc5ac785d68f4ddb530",
+    "machine": {
+      "cpu_count": 24,
+      "machine": "x86_64",
+      "numpy": "2.4.6",
+      "platform": "Linux-7.0.0-31-generic-x86_64-with-glibc2.39",
+      "python": "3.11.14",
+      "torch": "2.14.0+cpu"
+    },
+    "native_build": {
+      "build_command": "cargo build --release -p bus-sim-py",
+      "cargo": "cargo 1.97.1 (c980f4866 2026-06-30)",
+      "crate": "bus-sim-py",
+      "crate_version": "0.1.0",
+      "git": {
+        "dirty": true,
+        "sha": "d47ec6010e2e89ea740c31b41b970c5f44bff26e"
+      },
+      "import_ok": true,
+      "install_command": "python scripts/build_native.py",
+      "library": "src/bus_sim.so",
+      "library_bytes": 899208,
+      "library_sha256": "aedc4faa4c434fd1f9565f08586332da0560e09d6349eef7dfebf961eb75bab2",
+      "native_build_schema_version": 1,
+      "platform": "Linux-7.0.0-31-generic-x86_64-with-glibc2.39",
+      "profile": "release",
+      "python": "3.11.14",
+      "roles": {
+        "r1": "debug kernel bridge for golden-fixture parity",
+        "r3": "Gym wrapper is added in Python on top of this module"
+      },
+      "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)"
+    },
+    "seeds": {
+      "algorithm": 11,
+      "validation_split": 2001
+    },
+    "threads": {
+      "mkl": null,
+      "omp": null,
+      "openblas": null,
+      "torch_actual": 2,
+      "torch_interop": 16,
+      "torch_requested": 2
+    },
+    "uv_lock_sha256": "5ed56349910166b5fe6232c3d79c8421c6714e8cc8504cc5ac785d68f4ddb530"
+  },
+  "role": "rollout-profile"
+}

@@ -1,22 +1,26 @@
 {
   "memory_ratio": {
-    "o1_over_baseline": 1.0186,
-    "o2_over_baseline": 1.0075
+    "o1_over_baseline": 1.0048,
+    "o2b16_over_baseline": 1.0037,
+    "o2b32_over_baseline": 1.0175
   },
   "parity": {
     "o1": {
-      "best_non_numeric_leaves": 0,
       "best_tensor_max_abs_diff": 0.0,
-      "last_non_numeric_leaves": 0,
       "last_tensor_max_abs_diff": 0.0,
       "max_abs_val_cost_diff": 0.0,
       "points": 20,
       "schedule_identical": true
     },
-    "o2": {
-      "best_non_numeric_leaves": 0,
+    "o2b16": {
       "best_tensor_max_abs_diff": 0.0,
-      "last_non_numeric_leaves": 0,
+      "last_tensor_max_abs_diff": 0.0,
+      "max_abs_val_cost_diff": 0.0,
+      "points": 20,
+      "schedule_identical": true
+    },
+    "o2b32": {
+      "best_tensor_max_abs_diff": 0.0,
       "last_tensor_max_abs_diff": 0.0,
       "max_abs_val_cost_diff": 0.0,
       "points": 20,
@@ -27,16 +31,12 @@
     "batch_size": 256,
     "command": "python -m bus_rl.cli train --config configs/experiments/core-threads2.toml --manifest data/generated/base/manifest.json --seed 11 --output runs/runtime-optimization/full/<variant> --backend rust --torch-threads 2 --eval-limit 100",
     "eval_freq": 12288,
-    "execution_order": [
-      "baseline",
-      "o1",
-      "o2"
-    ],
     "n_envs": 4,
     "n_epochs": 4,
     "n_steps": 256,
-    "note": "single paired repetition; see spec 10.1 for the multi-repetition protocol",
+    "note": "single paired session; batch-32 evaluated as a fourth variant",
     "seed": 11,
+    "session": "single sequential session (baseline, o1, o2b16, o2b32)",
     "torch_threads": 2,
     "total_timesteps": 245760,
     "train_scenarios": 500,
@@ -46,27 +46,28 @@
     "baseline": {
       "best_val_cost": 13199.1325,
       "checkpoints": {
-        "best": "dd3d1b3b5633b131f0375bbf56cb5360800cb5ead8a1c1ab5e3eb5453f80592a",
-        "last": "e3478cba613c91ca056db4fe3772064fa2b1f9353d8242d802a343aca2bdca47"
+        "best": "46bf9274cee50ea7281e01fc18317218ca0ea3c205a474d5dd3ec2ed0719d8a3",
+        "last": "fcdab1d3d64b00ccfd67462d0d31ce39bef4c157da0e157cc0ae0df0cbbc2ebf"
       },
-      "elapsed_wall_s": 143.53,
+      "elapsed_wall_s": 151.76,
       "episodes_completed": 2048,
       "eval_batch_size": 1,
       "evaluations": 20,
       "flags": [],
-      "learn_wall_s": 141.558,
+      "learn_wall_s": 149.723,
       "native_batch": false,
-      "peak_rss_kb": 446952,
+      "native_library_sha256": "74b3a8fabbbabb5d4b167b92e56ac30af6f0957c180db78b6c501b21c50622ae",
+      "peak_rss_kb": 449996,
       "reuse_eval_pool": false,
       "total_timesteps_actual": 245760
     },
     "o1": {
       "best_val_cost": 13199.1325,
       "checkpoints": {
-        "best": "5b2c775d58f1e131455c93a6465081c3a6893cfaeab475711861774dff86c9e3",
-        "last": "091c3a79243309bb029b702380b307102ce386d2f368d41cca30af9c0be288ee"
+        "best": "9fde83d0f3c6e13d83ebdaf0decad3452586b4036f36255e3456cb9597010b81",
+        "last": "c7f8cdb9e8c3968f6313e524d9cbfd2ac6f0092af564f05017c8f92aa51087dd"
       },
-      "elapsed_wall_s": 87.79,
+      "elapsed_wall_s": 94.21,
       "episodes_completed": 2048,
       "eval_batch_size": 16,
       "evaluations": 20,
@@ -75,19 +76,20 @@
         "16",
         "--reuse-eval-pool"
       ],
-      "learn_wall_s": 85.727,
+      "learn_wall_s": 92.018,
       "native_batch": false,
-      "peak_rss_kb": 455272,
+      "native_library_sha256": "74b3a8fabbbabb5d4b167b92e56ac30af6f0957c180db78b6c501b21c50622ae",
+      "peak_rss_kb": 452152,
       "reuse_eval_pool": true,
       "total_timesteps_actual": 245760
     },
-    "o2": {
+    "o2b16": {
       "best_val_cost": 13199.1325,
       "checkpoints": {
-        "best": "505b42195f74b1f4ab1d1cac646a6331aa9fac11da4e94743af20f0817804c27",
-        "last": "4190c16ef0423831679396172ea12a33effb6ee10c420a7eeb01075aca78d421"
+        "best": "c4e1e86cf0dc90571a62b4d99f976445c8ee87a90f68a5761b582de5887f9502",
+        "last": "aba1e34ee43013afbd9c8ba916c1b091a339d7c38a00342a59733aba73d127ba"
       },
-      "elapsed_wall_s": 77.61,
+      "elapsed_wall_s": 85.96,
       "episodes_completed": 2048,
       "eval_batch_size": 16,
       "evaluations": 20,
@@ -97,18 +99,41 @@
         "16",
         "--reuse-eval-pool"
       ],
-      "learn_wall_s": 75.584,
+      "learn_wall_s": 83.741,
       "native_batch": true,
-      "peak_rss_kb": 450304,
+      "native_library_sha256": "74b3a8fabbbabb5d4b167b92e56ac30af6f0957c180db78b6c501b21c50622ae",
+      "peak_rss_kb": 451660,
+      "reuse_eval_pool": true,
+      "total_timesteps_actual": 245760
+    },
+    "o2b32": {
+      "best_val_cost": 13199.1325,
+      "checkpoints": {
+        "best": "ba307fc27ee3d43ee1b6e8eca9a4d449fcf3124c4d3e3bda251bfed1b40dce53",
+        "last": "f064dff631fac95da97558f5b2a2b54e7c1c54575d99c5c5087d0a0e5f7d3e4f"
+      },
+      "elapsed_wall_s": 85.87,
+      "episodes_completed": 2048,
+      "eval_batch_size": 32,
+      "evaluations": 20,
+      "flags": [
+        "--native-batch",
+        "--eval-batch-size",
+        "32",
+        "--reuse-eval-pool"
+      ],
+      "learn_wall_s": 83.581,
+      "native_batch": true,
+      "native_library_sha256": "74b3a8fabbbabb5d4b167b92e56ac30af6f0957c180db78b6c501b21c50622ae",
+      "peak_rss_kb": 457880,
       "reuse_eval_pool": true,
       "total_timesteps_actual": 245760
     }
   },
   "speedup": {
-    "o1_vs_baseline_learn": 1.651,
-    "o1_vs_baseline_total": 1.635,
-    "o2_vs_baseline_learn": 1.873,
-    "o2_vs_baseline_total": 1.849,
-    "o2_vs_o1_total": 1.131
+    "o1_vs_baseline_total": 1.611,
+    "o2b16_vs_baseline_total": 1.765,
+    "o2b16_vs_o2b32_total": 1.001,
+    "o2b32_vs_baseline_total": 1.767
   }
 }

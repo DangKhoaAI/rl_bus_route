@@ -10,10 +10,10 @@ from pathlib import Path
 import numpy as np
 
 from bus_rl.domain import Scenario, scenario_digest
+from bus_rl.provenance import file_hash
 
 NATIVE_MODULE = "bus_sim"
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
-NATIVE_BUILD_REPORT = PROJECT_ROOT / "reports" / "rust-migration" / "native-build.json"
 
 
 def native_available() -> bool:
@@ -160,15 +160,47 @@ def shared_store(scenarios) -> NativeScenarioStore:
 
 
 def native_build_info(root: Path | None = None) -> dict | None:
-    path = (root / "reports/rust-migration/native-build.json") if root else NATIVE_BUILD_REPORT
-    if not Path(path).exists():
+    """Provenance for the native binary actually installed at import time.
+
+    `library_sha256` is the hash of `src/bus_sim.so` on disk, not the hash in a
+    build record: the two differ whenever the kernel is rebuilt without
+    refreshing `reports/rust-migration/native-build.json` (kept frozen for R4).
+    `build_record_matches_runtime` names which record, if any, describes the
+    running binary.
+    """
+    root = Path(root) if root else PROJECT_ROOT
+    report = root / "reports" / "rust-migration" / "native-build.json"
+    o2_report = root / "reports" / "runtime-optimization" / "native-build-o2.json"
+    records: dict[str, dict] = {}
+    for name, path in (("runtime-optimization", o2_report), ("rust-migration", report)):
+        if not Path(path).exists():
+            continue
+        payload = json.loads(Path(path).read_text())
+        records[name] = {
+            "report": str(Path(path).relative_to(root)),
+            "library_sha256": payload.get("library_sha256"),
+            "git": payload.get("git"),
+            "crate_version": payload.get("crate_version"),
+            "rustc": payload.get("rustc"),
+            "cargo": payload.get("cargo"),
+        }
+    library = root / "src" / "bus_sim.so"
+    runtime_sha = file_hash(library) if library.exists() else None
+    if runtime_sha is None and not records:
         return None
-    payload = json.loads(Path(path).read_text())
+    matched = sorted(
+        name for name, record in records.items() if record["library_sha256"] == runtime_sha
+    )
+    primary_name = matched[0] if matched else next(iter(records), None)
+    primary = records.get(primary_name, {}) if primary_name else {}
     return {
-        "crate": payload.get("crate"),
-        "crate_version": payload.get("crate_version"),
-        "library_sha256": payload.get("library_sha256"),
-        "rustc": payload.get("rustc"),
-        "cargo": payload.get("cargo"),
-        "git_sha": payload.get("git", {}).get("sha"),
+        "library_sha256": runtime_sha,
+        "library_sha256_runtime": runtime_sha,
+        "build_record_matches_runtime": matched,
+        "build_records": records,
+        "crate": "bus-sim-py",
+        "crate_version": primary.get("crate_version"),
+        "rustc": primary.get("rustc"),
+        "cargo": primary.get("cargo"),
+        "git_sha": (primary.get("git") or {}).get("sha"),
     }
