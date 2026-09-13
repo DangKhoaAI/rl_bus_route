@@ -41,6 +41,10 @@ testpaths = ["tests"]
 # Parallel by default: the suite is process-independent, and 4 workers is the
 # sweet spot on this machine (auto/24 pays more per-worker import overhead).
 addopts = "-n 4"
+markers = [
+    "native: exercises the `bus_sim_native` extension (skipped until built)",
+    "legacy_python: exercises the deprecated Python oracle backend (needs --legacy-python)",
+]
 
 [tool.ruff]
 line-length = 100
