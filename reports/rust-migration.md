@@ -546,7 +546,6 @@ inference is the next candidate for eval.
 Artifacts:
 
 - `reports/rust-migration/oracle-manifest.json` — frozen inventory + contract.
-- `reports/rust-migration/fixtures-summary.json` — fixture hashes/coverage.
 - `reports/rust-migration/python-benchmark.json` — raw repetitions.
 - `reports/rust-migration/speed-acceptance.json` — interleaved light R4.2 raw times.
 - `reports/rust-migration/profile-native.json` — Rust training segments, torch
@@ -566,8 +565,9 @@ Artifacts:
 - `src/bus_rl/env/native_bus_dispatch.py` — native Gym wrapper.
 - `src/bus_rl/env/factory.py` — `runtime.backend` selection.
 - `src/bus_rl/evaluation/summary.py` — shared summary/trace inputs + metrics.
-- `tests/backend_parity/fixtures/` — golden fixtures (committed).
-- `tests/backend_parity/reference/` — committed reference checkpoint.
+- `tests/backend_parity/fixtures/` — golden fixtures (retired after acceptance).
+- `tests/backend_parity/reference/` — reference checkpoint (now read from the
+  git-ignored `runs/diagnose-after/`).
 
 ## 9. Limitations and next steps
 

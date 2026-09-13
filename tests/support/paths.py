@@ -10,8 +10,3 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 CONFIGS = ROOT / "configs"
-
-# The historical checkpoint lives in the git-ignored `runs/` tree; tests that
-# need it skip when it has not been produced locally.
-REFERENCE_DIR = ROOT / "runs" / "diagnose-after"
-REFERENCE = REFERENCE_DIR / "last.zip"

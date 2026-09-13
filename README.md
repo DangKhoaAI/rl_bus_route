@@ -31,8 +31,7 @@ crates/
 tests/
 ├── support/             # Shared factories, paths and comparison helpers
 ├── unit/                # Python unit tests (sim/, rl/)
-├── integration/         # CLI and training workflow tests
-└── parity/              # oracle/ (Python-only) and native/ (Rust) parity tests
+└── integration/         # CLI and training workflow tests
 configs/                 # Run and experiment configurations
 scripts/                 # Build, benchmark, and profiling utilities
 docs/                    # Specifications, plans, and research notes
@@ -94,16 +93,14 @@ recreated. Selected reports live in `reports/`.
 
 The Rust migration (`docs/spec/rust_improve.md`, `docs/plan/rust_improve.md`)
 is complete: R0-R4 ported the kernel and the native backend is accepted, while
-Python remains the default reference. The one-off R0 golden fixtures were
-retired after acceptance (their evidence is archived under
-`reports/rust-migration/`); the remaining native parity tests compare the live
-Python oracle against the native kernel and skip when the historical
-`runs/diagnose-after` checkpoint is absent.
+Python remains the default reference. The one-off R0 golden fixtures and the
+native Python-level parity suite were retired after acceptance; their evidence
+is archived under `reports/rust-migration/`, and the Rust core keeps its own
+`cargo test` coverage.
 
 ```bash
 python scripts/build_native.py       # build and install src/bus_sim_native.so
 cargo test -p bus-sim-core           # native unit tests
-python -m pytest tests/parity -q
 ```
 
 Select the backend per run (default `python`, configurable via `[runtime]
@@ -125,10 +122,8 @@ python -m pytest -q                              # parallel -n 4 (~20 s)
 python -m pytest -q -n 0                         # serial, for debugging
 ```
 
-`pytest` runs 4 xdist workers by default (2 torch threads each, catalog
-scenarios cached per worker). Native tests are marked `native`; tests that need
-the historical `runs/diagnose-after` checkpoint skip automatically when it has
-not been produced locally.
+`pytest` runs 4 xdist workers by default (2 torch threads each); use
+`python -m pytest -q -n 0` for a serial run when debugging.
 
 ## What is in the observation
 

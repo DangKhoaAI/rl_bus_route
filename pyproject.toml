@@ -41,9 +41,6 @@ testpaths = ["tests"]
 # Parallel by default: the suite is process-independent, and 4 workers is the
 # sweet spot on this machine (auto/24 pays more per-worker import overhead).
 addopts = "-n 4"
-markers = [
-    "native: requires the built bus_sim_native extension (auto-skipped when absent)",
-]
 
 [tool.ruff]
 line-length = 100
