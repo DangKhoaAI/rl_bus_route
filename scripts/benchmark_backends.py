@@ -75,12 +75,12 @@ def _rss_kb() -> int:
 
 def _run_for(backend: str):
     core = load_run_config(ROOT / "configs" / "experiments" / "core.toml", ROOT)
-    return replace(core, runtime=RuntimeConfig(backend=backend))
+    return replace(core, runtime=RuntimeConfig(backend=backend, legacy_python=backend == "python"))
 
 
 def _env_for(spec: dict, backend: str):
     cfg = run_config(spec)
-    run = replace(cfg, runtime=RuntimeConfig(backend=backend))
+    run = replace(cfg, runtime=RuntimeConfig(backend=backend, legacy_python=backend == "python"))
     return make_env_for_run([build_scenario(spec)], run)
 
 
@@ -260,12 +260,20 @@ def benchmark_eval(repetitions: int) -> dict:
 
     results = {backend: {"wall_s": [], "mean_cost": [], "per_day": []} for backend in BACKENDS}
     for backend in BACKENDS:  # warm-up per backend, reported separately
-        env = make_env_for_run(scenarios, replace(run, runtime=RuntimeConfig(backend=backend)))
+        env = make_env_for_run(
+            scenarios,
+            replace(run, runtime=RuntimeConfig(backend=backend, legacy_python=backend == "python")),
+        )
         for index in range(len(scenarios)):
             rollout(env, controller, index)
     for _ in range(repetitions):
         for backend in BACKENDS:
-            env = make_env_for_run(scenarios, replace(run, runtime=RuntimeConfig(backend=backend)))
+            env = make_env_for_run(
+                scenarios,
+                replace(
+                    run, runtime=RuntimeConfig(backend=backend, legacy_python=backend == "python")
+                ),
+            )
             started = perf_counter()
             costs = []
             for index in range(len(scenarios)):

@@ -44,7 +44,7 @@ REFERENCE = ROOT / "runs" / "diagnose-after" / "last.zip"
 
 def _run_for(backend: str):
     core = load_run_config(ROOT / "configs" / "experiments" / "core.toml", ROOT)
-    return replace(core, runtime=RuntimeConfig(backend=backend))
+    return replace(core, runtime=RuntimeConfig(backend=backend, legacy_python=backend == "python"))
 
 
 def _segment_profile(transitions: int) -> dict:

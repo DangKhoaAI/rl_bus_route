@@ -48,7 +48,9 @@ def _run_for(backend: str, *, validate: bool = True, threads: int = 2):
     core = load_run_config(ROOT / "configs" / "experiments" / "core.toml", ROOT)
     return replace(
         core,
-        runtime=RuntimeConfig(backend=backend, validate_observation=validate),
+        runtime=RuntimeConfig(
+            backend=backend, legacy_python=backend == "python", validate_observation=validate
+        ),
         algorithm=replace(core.algorithm, torch_threads=threads),
     )
 
@@ -135,7 +137,7 @@ def eval_matrix(threads: list[int], repetitions: int, warmup: int) -> dict:
             scenarios,
             replace(
                 run,
-                runtime=RuntimeConfig(backend=backend),
+                runtime=RuntimeConfig(backend=backend, legacy_python=backend == "python"),
                 algorithm=replace(run.algorithm, torch_threads=t),
             ),
         )
@@ -198,7 +200,11 @@ def validation_cost(repetitions: int) -> dict:
                 [scenario],
                 replace(
                     base,
-                    runtime=RuntimeConfig(backend=backend, validate_observation=validate),
+                    runtime=RuntimeConfig(
+                        backend=backend,
+                        legacy_python=backend == "python",
+                        validate_observation=validate,
+                    ),
                 ),
             )
             times = []

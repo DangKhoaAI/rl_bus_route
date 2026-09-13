@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import tomllib
+import warnings
 from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 
@@ -46,8 +47,12 @@ class ForecastConfig:
 
 @dataclass(frozen=True)
 class RuntimeConfig:
-    # "python" keeps the R0 oracle; "rust" selects the native kernel.
-    backend: str = "python"
+    # The native Rust kernel is the default and the maintained backend. The
+    # Python oracle is deprecated: selecting it requires an explicit
+    # `legacy_python=True` opt-in (CLI: `--legacy-python`).
+    backend: str = "rust"
+    # Explicit opt-in for the deprecated Python oracle backend.
+    legacy_python: bool = False
     # Observation validation is a debug/parity aid; disabling it is opt-in and
     # must never change simulator semantics. Forecast still runs in Python.
     validate_observation: bool = True
@@ -66,17 +71,33 @@ class RuntimeConfig:
     def __post_init__(self) -> None:
         if self.backend not in {"python", "rust"}:
             raise ValueError(f"unknown backend: {self.backend!r}")
+        legacy_python = bool(self.legacy_python)
+        if self.backend == "python":
+            if not legacy_python:
+                raise ValueError(
+                    "the Python oracle backend is deprecated; set runtime.legacy_python=true "
+                    "(CLI: --legacy-python) to run it, or use backend='rust'"
+                )
+            warnings.warn(
+                "runtime.backend='python' is deprecated: the Rust kernel is the default and "
+                "maintained path; the Python oracle receives no further fixes.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        elif legacy_python:
+            raise ValueError("runtime.legacy_python is only meaningful with backend='python'")
         batch_size = int(self.eval_batch_size)
         if batch_size < 1:
             raise ValueError(f"runtime.eval_batch_size must be >= 1, got {self.eval_batch_size!r}")
+        object.__setattr__(self, "legacy_python", legacy_python)
         object.__setattr__(self, "eval_batch_size", batch_size)
         object.__setattr__(self, "reuse_eval_pool", bool(self.reuse_eval_pool))
         object.__setattr__(self, "native_batch", bool(self.native_batch))
         object.__setattr__(self, "validate_distributions", bool(self.validate_distributions))
         if self.native_batch and self.backend != "rust":
             raise ValueError(
-                "runtime.native_batch requires runtime.backend='rust'; the Python oracle "
-                "stays on the scalar path"
+                "runtime.native_batch requires runtime.backend='rust'; the deprecated Python "
+                "oracle stays on the scalar path"
             )
 
 

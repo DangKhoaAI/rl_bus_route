@@ -19,8 +19,14 @@ from bus_sim.oracle.costs import RewardConfig
 def _run_config(args) -> object:
     run = load_run_config(Path(args.config))
     backend = getattr(args, "backend", None)
-    if backend and backend != run.runtime.backend:
-        run = replace(run, runtime=replace(run.runtime, backend=backend))
+    legacy_python = bool(getattr(args, "legacy_python", False))
+    if backend:
+        run = replace(
+            run,
+            runtime=replace(run.runtime, backend=backend, legacy_python=legacy_python),
+        )
+    elif legacy_python:
+        run = replace(run, runtime=replace(run.runtime, legacy_python=True))
     torch_threads = getattr(args, "torch_threads", None)
     if torch_threads is not None:
         run = replace(run, algorithm=replace(run.algorithm, torch_threads=torch_threads))
@@ -278,6 +284,11 @@ def _add_runtime_flags(parser: argparse.ArgumentParser) -> None:
         help="O2: step eval/train envs through one native BatchKernel call (rust only)",
     )
     parser.add_argument(
+        "--legacy-python",
+        action="store_true",
+        help="opt in to the deprecated Python oracle backend (use with `--backend python`)",
+    )
+    parser.add_argument(
         "--validate-distributions",
         action=argparse.BooleanOptionalAction,
         default=None,
@@ -304,7 +315,9 @@ def build_parser() -> argparse.ArgumentParser:
     baseline.add_argument("--output", required=True)
     baseline.add_argument("--trace", action="store_true")
     baseline.add_argument("--limit", type=int)
-    baseline.add_argument("--backend", choices=("python", "rust"))
+    baseline.add_argument(
+        "--backend", choices=("python", "rust"), help="default rust; python is deprecated"
+    )
     baseline.add_argument("--torch-threads", type=int, dest="torch_threads")
     _add_runtime_flags(baseline)
     baseline.set_defaults(func=cmd_baseline)
@@ -323,7 +336,9 @@ def build_parser() -> argparse.ArgumentParser:
     train.add_argument("--timesteps", type=int)
     train.add_argument("--n-envs", type=int, dest="n_envs")
     train.add_argument("--eval-limit", type=int, dest="eval_limit")
-    train.add_argument("--backend", choices=("python", "rust"))
+    train.add_argument(
+        "--backend", choices=("python", "rust"), help="default rust; python is deprecated"
+    )
     train.add_argument("--torch-threads", type=int, dest="torch_threads")
     _add_runtime_flags(train)
     train.set_defaults(func=cmd_train)
@@ -336,7 +351,9 @@ def build_parser() -> argparse.ArgumentParser:
     diagnose.add_argument("--timesteps", type=int, default=2048)
     diagnose.add_argument("--n-envs", type=int, dest="n_envs")
     diagnose.add_argument("--eval-limit", type=int, dest="eval_limit", default=10)
-    diagnose.add_argument("--backend", choices=("python", "rust"))
+    diagnose.add_argument(
+        "--backend", choices=("python", "rust"), help="default rust; python is deprecated"
+    )
     diagnose.add_argument("--torch-threads", type=int, dest="torch_threads")
     _add_runtime_flags(diagnose)
     diagnose.set_defaults(func=cmd_diagnose)
@@ -351,7 +368,9 @@ def build_parser() -> argparse.ArgumentParser:
     evaluate.add_argument("--output", required=True)
     evaluate.add_argument("--trace", action="store_true")
     evaluate.add_argument("--limit", type=int)
-    evaluate.add_argument("--backend", choices=("python", "rust"))
+    evaluate.add_argument(
+        "--backend", choices=("python", "rust"), help="default rust; python is deprecated"
+    )
     evaluate.add_argument("--torch-threads", type=int, dest="torch_threads")
     _add_runtime_flags(evaluate)
     evaluate.set_defaults(func=cmd_evaluate)

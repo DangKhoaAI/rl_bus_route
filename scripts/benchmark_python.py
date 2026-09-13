@@ -32,7 +32,7 @@ from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.vec_env import DummyVecEnv
 
 from bus_rl import domain
-from bus_rl.config import ControlConfig, load_run_config
+from bus_rl.config import ControlConfig, RuntimeConfig, load_run_config
 from bus_rl.evaluation.runner import make_controller, rollout
 from bus_rl.execution.environments.python.environment import BusDispatchEnv
 from bus_rl.execution.scenarios.generation import generate_manifest
@@ -252,6 +252,8 @@ def main() -> None:
         raise SystemExit("conservation checks must be off for the speed reference")
 
     core = load_run_config(ROOT / "configs" / "experiments" / "core.toml", ROOT)
+    # This script measures the deprecated Python oracle reference on purpose.
+    core = replace(core, runtime=RuntimeConfig(backend="python", legacy_python=True))
     started = perf_counter()
     simulation = benchmark_simulation(args.repetitions, args.warmup)
     learn = benchmark_learn(args.repetitions, args.warmup, args.transitions, core)

@@ -9,8 +9,9 @@ from bus_rl.execution.environments.rust.bridge import native_available, require_
 def make_env_for_run(scenarios, run: RunConfig, forecaster=None, scenario_store=None):
     """Build the env selected by ``run.runtime.backend``.
 
-    ``rust`` fails loudly when the extension is missing; the Python oracle stays
-    available through explicit ``backend = "python"`` selection.
+    The native ``rust`` backend is the default and fails loudly when the
+    extension is missing. The deprecated Python oracle needs an explicit opt-in
+    (``backend = "python"`` plus ``legacy_python = true``).
     ``scenario_store`` is native-only and lets an eval pool share one packed store.
     """
     backend = run.runtime.backend
@@ -47,4 +48,5 @@ def backend_status(run: RunConfig) -> dict:
         "backend": backend,
         "native_available": native_available(),
         "fallback": backend == "rust" and not native_available(),
+        "legacy_python": backend == "python",
     }

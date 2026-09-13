@@ -15,6 +15,7 @@ traffic_log_std = 0.15
 traffic_bucket_s = 300
 
 [runtime]
-# "python" keeps the R0 oracle; "rust" selects the native kernel.
-# The CLI also accepts --backend python|rust to override this per run.
-backend = "python"
+# The native Rust kernel is the default and the maintained path.
+# The Python oracle is deprecated and requires an explicit opt-in:
+#   runtime.legacy_python = true   (CLI: --legacy-python --backend python)
+backend = "rust"
