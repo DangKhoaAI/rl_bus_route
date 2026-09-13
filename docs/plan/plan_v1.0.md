@@ -89,7 +89,7 @@ Fixtures dùng literal dữ liệu để không phụ thuộc generator đúng m
 
 ## Task 1: Domain, synthetic scenarios và IO
 
-**Files:** `pyproject.toml`, `uv.lock`, `.python-version`, `.gitignore`, `configs/base.toml`, `src/bus_rl/domain.py`, `src/bus_rl/data/{scenario,io}.py`, `tests/{__init__,fixtures,test_data}.py`.
+**Files:** `pyproject.toml`, `uv.lock`, `.python-version`, `.gitignore`, `configs/base.toml`, `src/bus_sim/oracle/domain.py`, `src/bus_rl/execution/scenarios/{generation,io}.py`, `tests/{__init__,fixtures,test_data}.py`.
 
 **Consumes:** spec §2–3, §7 và §9.
 
@@ -103,6 +103,7 @@ def test_scenario_roundtrip_has_same_demand(tmp_path):
     import numpy as np
     from bus_rl.data.io import save_scenario, load_scenario
     from tests.fixtures import empty_scenario
+
     scenario = empty_scenario()
     save_scenario(scenario, tmp_path)
     restored = load_scenario(tmp_path)
@@ -119,7 +120,7 @@ def test_scenario_roundtrip_has_same_demand(tmp_path):
 
 ## Task 2: Passenger lifecycle, travel và tick engine
 
-**Files:** `src/bus_rl/sim/{engine,passengers,vehicles,travel}.py`, `tests/{test_passengers,test_vehicles,test_engine}.py`.
+**Files:** `src/bus_sim/oracle/{engine,passengers,vehicles,travel}.py`, `tests/{test_passengers,test_vehicles,test_engine}.py`.
 
 **Consumes:** T1 scenario/world; events và timing spec §4.
 
@@ -131,6 +132,7 @@ def test_scenario_roundtrip_has_same_demand(tmp_path):
 def test_capacity_denial_keeps_waiting_passengers():
     from tests.fixtures import waiting_state
     from bus_rl.sim.passengers import board_visit
+
     state = waiting_state(45)
     event = board_visit(state, bus_id=0, route_id=0, direction=1, stop_index=0)
     assert event.boarded_count == 40
@@ -150,7 +152,7 @@ def test_capacity_denial_keeps_waiting_passengers():
 
 ## Task 3: Dispatcher và M1 operational actions
 
-**Files:** `src/bus_rl/sim/dispatcher.py`, `src/bus_rl/control/{actions,guards}.py`, `tests/test_control.py`; nối engine.
+**Files:** `src/bus_sim/oracle/dispatcher.py`, `src/bus_sim/oracle/{actions,guards}.py`, `tests/test_control.py`; nối engine.
 
 **Consumes:** T2 physical engine.
 
@@ -165,6 +167,7 @@ def test_dispatch_consumes_time_and_one_reserve():
     from bus_rl.domain import initial_state
     from bus_rl.control.actions import build_action_table, action_id
     from bus_rl.sim.engine import advance_interval
+
     scenario = empty_scenario()
     state = initial_state(scenario)
     action = build_action_table()[action_id("DISPATCH", bus_id=9, route_id=0)]
@@ -184,7 +187,7 @@ def test_dispatch_consumes_time_and_one_reserve():
 
 ## Task 4: Cost, fairness và finite horizon accounting
 
-**Files:** `src/bus_rl/rewards/costs.py`, `tests/test_rewards.py`; bổ sung event counters vào engine.
+**Files:** `src/bus_sim/oracle/costs.py`, `tests/test_rewards.py`; bổ sung event counters vào engine.
 
 **Consumes:** raw WorldState/passenger events.
 
@@ -196,6 +199,7 @@ def test_dispatch_consumes_time_and_one_reserve():
 def test_ten_people_waiting_five_minutes_is_fifty():
     from tests.fixtures import waiting_state
     from bus_rl.rewards.costs import integrate_tick_costs
+
     costs = integrate_tick_costs(waiting_state(10), duration_s=300)
     assert costs.waiting_pm == 50.0
 ```
@@ -210,7 +214,7 @@ def test_ten_people_waiting_five_minutes_is_fifty():
 
 ## Task 5: Observation, Gymnasium, baselines và PPO M1
 
-**Files:** `src/bus_rl/env/{observation,bus_dispatch}.py`, `src/bus_rl/baselines/{fixed,threshold,proportional,random}.py`, `src/bus_rl/models/features.py`, `src/bus_rl/training/{train,callbacks}.py`, `configs/pilot.toml`, `tests/{test_env,test_baselines,test_model}.py`.
+**Files:** `src/bus_sim/oracle/observation.py and src/bus_rl/execution/environments/python/environment.py`, `src/bus_rl/learning/baselines/{fixed,threshold,proportional,random}.py`, `src/bus_rl/learning/policy.py`, `src/bus_rl/learning/training/{train,callbacks}.py`, `configs/pilot.toml`, `tests/{test_env,test_baselines,test_model}.py`.
 
 **Consumes:** M1 engine, action guards, costs.
 
@@ -226,13 +230,22 @@ def test_ten_people_waiting_five_minutes_is_fifty():
 ```python
 def test_masked_ppo_save_load_preserves_action(tmp_path):
     from sb3_contrib import MaskablePPO
-    from bus_rl.env.bus_dispatch import BusDispatchEnv
+    from bus_rl.execution.environments.python.environment import BusDispatchEnv
     from tests.fixtures import empty_scenario
+
     scenario = empty_scenario()
     env = BusDispatchEnv([scenario], scenario.config)
-    model = MaskablePPO("MultiInputPolicy", env, gamma=1.0,
-                        n_steps=16, batch_size=16, n_epochs=1,
-                        seed=11, device="cpu", verbose=0)
+    model = MaskablePPO(
+        "MultiInputPolicy",
+        env,
+        gamma=1.0,
+        n_steps=16,
+        batch_size=16,
+        n_epochs=1,
+        seed=11,
+        device="cpu",
+        verbose=0,
+    )
     model.learn(total_timesteps=32)
     obs, _ = env.reset(seed=7)
     mask = env.action_masks()
@@ -280,6 +293,7 @@ def test_masked_ppo_save_load_preserves_action(tmp_path):
 def test_short_turn_does_not_strand_long_distance_passenger():
     from tests.fixtures import short_state
     from bus_rl.sim.passengers import board_visit
+
     state = short_state()
     event = board_visit(state, bus_id=0, route_id=0, direction=1, stop_index=0)
     assert event.boarded_count == 0

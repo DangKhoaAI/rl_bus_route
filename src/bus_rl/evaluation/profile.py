@@ -13,10 +13,10 @@ from time import perf_counter
 import numpy as np
 from sb3_contrib import MaskablePPO
 
-from bus_rl.data.scenario import generate_scenario
-from bus_rl.domain import SimConfig, scenario_digest
-from bus_rl.env.bus_dispatch import BusDispatchEnv
-from bus_rl.models.features import POLICY_KWARGS
+from bus_rl.execution.environments.python.environment import BusDispatchEnv
+from bus_rl.execution.scenarios.generation import generate_scenario
+from bus_rl.learning.policy import POLICY_KWARGS
+from bus_sim.oracle.domain import SimConfig, scenario_digest
 
 
 def _empty_and_light(config: SimConfig) -> tuple:
@@ -47,13 +47,13 @@ def _empty_and_light(config: SimConfig) -> tuple:
 def _bucket(stats: pstats.Stats) -> dict[str, float]:
     mapping = {
         "engine": (
-            "bus_rl/sim/engine.py",
-            "bus_rl/sim/vehicles.py",
-            "bus_rl/sim/dispatcher.py",
-            "bus_rl/sim/travel.py",
+            "bus_sim.oracle/engine.py",
+            "bus_sim.oracle/vehicles.py",
+            "bus_sim.oracle/dispatcher.py",
+            "bus_sim.oracle/travel.py",
         ),
-        "passenger": ("bus_rl/sim/passengers.py",),
-        "sensor": ("bus_rl/env/observation.py",),
+        "passenger": ("bus_sim.oracle/passengers.py",),
+        "sensor": ("bus_sim.oracle/observation.py",),
         "ppo": ("torch/", "stable_baselines3", "sb3_contrib", "bus_rl/models"),
     }
     totals = {name: 0.0 for name in mapping}

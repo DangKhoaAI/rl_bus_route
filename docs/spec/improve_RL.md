@@ -271,5 +271,5 @@ Manifest experiment ghi backend/build và actual library hash, torch_threads req
 - [Runtime optimization spec](runtime_optimize.md), [runtime results](../../reports/runtime-optimization.md), [memory spec](memory_optimize.md).
 - [Rust migration spec](rust_improve.md), [spec nền](spec_v1.0.md), [plan T9–T11](../plan/plan_v1.0.md).
 - [Pilot report](../../reports/pilot.md), [Python after](../../reports/training-diagnosis-v1.1-python-improve.md), [forecast diagnostic](../../reports/forecast.md).
-- Code: `src/bus_rl/training/{train,callbacks,diagnose}.py`, `models/features.py`, `rewards/costs.py`, `evaluation/{runner,statistics}.py`, `configs/experiments/`.
+- Code: `src/bus_rl/learning/training/{train,callbacks,diagnose}.py`, `models/features.py`, `rewards/costs.py`, `evaluation/{runner,statistics}.py`, `configs/experiments/`.
 - [SB3 RL Tips](https://stable-baselines3.readthedocs.io/en/master/guide/rl_tips.html): đánh giá môi trường riêng, nhiều runs và tuning có kiểm soát. Các candidates trong tài liệu này là đề xuất cho project, không phải kết quả đã xác nhận từ tài liệu SB3.

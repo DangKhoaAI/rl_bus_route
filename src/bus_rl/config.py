@@ -6,9 +6,9 @@ import tomllib
 from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 
-from bus_rl.domain import SimConfig
 from bus_rl.provenance import canonical_hash
-from bus_rl.rewards.costs import RewardConfig
+from bus_sim.oracle.costs import RewardConfig
+from bus_sim.oracle.domain import SimConfig
 
 
 @dataclass(frozen=True)
@@ -140,7 +140,7 @@ def load_run_config(path: Path, project_root: Path | None = None) -> RunConfig:
 
 
 def parse_counts(text: str | None) -> dict[str, int]:
-    from bus_rl.data.scenario import DEFAULT_COUNTS
+    from bus_rl.execution.scenarios.generation import DEFAULT_COUNTS
 
     if not text:
         return dict(DEFAULT_COUNTS)

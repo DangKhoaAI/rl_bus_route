@@ -30,14 +30,14 @@ import torch
 from stable_baselines3.common.vec_env import DummyVecEnv
 
 from bus_rl.config import ControlConfig, RuntimeConfig, load_run_config
-from bus_rl.data.scenario import generate_manifest
-from bus_rl.env.factory import make_env_for_run
 from bus_rl.evaluation.runner import make_controller, rollout
-from bus_rl.parity.controllers import CoverageController
-from bus_rl.rewards.costs import RewardConfig
-from bus_rl.runtime import apply_torch_threads
-from bus_rl.training.checkpoint import load_metadata, load_model
-from bus_rl.training.train import make_env, make_model
+from bus_rl.execution.environments.factory import make_env_for_run
+from bus_rl.execution.runtime import apply_torch_threads
+from bus_rl.execution.scenarios.generation import generate_manifest
+from bus_rl.learning.training.checkpoint import load_metadata, load_model
+from bus_rl.learning.training.train import make_env, make_model
+from bus_sim.oracle.costs import RewardConfig
+from bus_sim.parity.controllers import CoverageController
 
 REPORT_DIR = ROOT / "reports" / "rust-migration"
 REFERENCE = ROOT / "tests" / "backend_parity" / "reference" / "diagnose-after" / "last.zip"

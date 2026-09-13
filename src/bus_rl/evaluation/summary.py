@@ -15,8 +15,8 @@ from itertools import pairwise
 
 import numpy as np
 
-from bus_rl.domain import PassengerStatus, StepCosts
-from bus_rl.rewards.costs import DEFAULT_REWARD, RewardConfig, interval_cost
+from bus_sim.oracle.costs import DEFAULT_REWARD, RewardConfig, interval_cost
+from bus_sim.oracle.domain import PassengerStatus, StepCosts
 
 
 @dataclass(frozen=True)
@@ -75,7 +75,7 @@ def from_python_state(state) -> SummaryInputs:
 #  arrival_tick, count, status, first_denied, boarding_tick, completion_tick,
 #  abandonment_tick]
 def from_native_payload(payload: dict) -> SummaryInputs:
-    """Adapter for ``bus_sim.Kernel.episode_summary_inputs()``."""
+    """Adapter for ``bus_sim_native.Kernel.episode_summary_inputs()``."""
     counters = np.asarray(payload["counters"])
     rows = np.asarray(payload["cohorts"])
     kinds = np.asarray(payload["cohort_kind"])

@@ -1,6 +1,6 @@
 import pytest
 
-from bus_rl import domain
+from bus_sim.oracle import domain
 
 
 @pytest.fixture(autouse=True, scope="session")

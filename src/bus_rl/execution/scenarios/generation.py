@@ -1,0 +1,204 @@
+"""Synthetic, action-independent demand and traffic scenario generation."""
+
+from __future__ import annotations
+
+import math
+
+import numpy as np
+
+from bus_sim.oracle.domain import (
+    Scenario,
+    SimConfig,
+    VehicleSpec,
+    generate_base_network,
+    scenario_digest,
+)
+
+
+def _fleet(config: SimConfig, network_depot: int) -> tuple[VehicleSpec, ...]:
+    assigned = config.fleet_size - 3
+    if assigned < config.route_count * 2:
+        raise ValueError("fleet is too small to place two assigned vehicles per route")
+    result: list[VehicleSpec] = []
+    for vehicle_id in range(config.fleet_size):
+        route_id = vehicle_id // 3 if vehicle_id < min(assigned, config.route_count * 3) else None
+        if route_id is None:
+            result.append(VehicleSpec(vehicle_id, None, network_depot, 1))
+        else:
+            slot = vehicle_id % 3
+            node = route_id * config.stops_per_route + (
+                config.stops_per_route - 1 if slot == 2 else 0
+            )
+            result.append(VehicleSpec(vehicle_id, route_id, node, -1 if slot == 2 else 1))
+    return tuple(result)
+
+
+def _apply_burst(arrivals: np.ndarray, rng: np.random.Generator, config: SimConfig) -> np.ndarray:
+    """Cluster extra arrivals at one stop for 5–10 minutes (OOD burst)."""
+    out = np.array(arrivals, dtype=np.int32, copy=True)
+    duration_s = int(rng.integers(5 * 60, 10 * 60 + 1))
+    start_s = int(rng.integers(30 * 60, 150 * 60))
+    start_tick = start_s // config.tick_s
+    end_tick = min((start_s + duration_s) // config.tick_s, config.demand_end_s // config.tick_s)
+    route_id = int(rng.integers(config.route_count))
+    direction = int(rng.choice((1, -1)))
+    direction_index = 0 if direction == 1 else 1
+    origin = (
+        int(rng.integers(0, config.stops_per_route - 1))
+        if direction == 1
+        else int(rng.integers(1, config.stops_per_route))
+    )
+    destinations = (
+        np.arange(origin + 1, config.stops_per_route) if direction == 1 else np.arange(0, origin)
+    )
+    for tick in range(start_tick, end_tick):
+        extra = int(rng.integers(8, 21))
+        destination = int(rng.choice(destinations))
+        out[tick, route_id, direction_index, origin, destination] += extra
+    out.setflags(write=False)
+    return out
+
+
+def _apply_traffic_shock(
+    traffic: np.ndarray, rng: np.random.Generator, config: SimConfig
+) -> np.ndarray:
+    """Multiply one route corridor by 1.5–2.0 for 30 minutes (OOD traffic)."""
+    out = np.array(traffic, copy=True)
+    route_id = int(rng.integers(config.route_count))
+    multiplier = float(rng.uniform(1.5, 2.0))
+    edges_per_route = config.stops_per_route - 1
+    start_edge = route_id * edges_per_route
+    buckets = 30 * 60 // config.traffic_bucket_s
+    start_bucket = int(rng.integers(0, max(1, out.shape[1] - buckets)))
+    out[start_edge : start_edge + edges_per_route, start_bucket : start_bucket + buckets] *= (
+        multiplier
+    )
+    out.setflags(write=False)
+    return out
+
+
+def _as_int8_arrivals(arrivals: np.ndarray) -> np.ndarray:
+    """Validate and cast arrival counts to int8.
+
+    Base demand peaks at 5 and the OOD variants stay at or below 100, so int8
+    (<=127) is enough; the dense tape is the largest per-scenario allocation.
+    """
+    values = np.asarray(arrivals)
+    if values.size and int(values.max()) > 127:
+        raise ValueError("arrival counts exceed the int8 range")
+    if values.size and int(values.min()) < 0:
+        raise ValueError("arrival counts must be non-negative")
+    return np.ascontiguousarray(values, dtype=np.int8)
+
+
+def generate_scenario(
+    seed: int, config: SimConfig | None = None, variant: str = "base"
+) -> Scenario:
+    if variant not in {"base", "burst", "traffic"}:
+        raise ValueError(f"unknown variant: {variant}")
+    config = config or SimConfig()
+    network = generate_base_network(config)
+    rng = np.random.default_rng(seed)
+    ticks = config.horizon_s // config.tick_s
+    # [tick, route, direction-index, origin, destination], int8 counts.
+    arrivals = np.zeros(
+        (ticks, config.route_count, 2, config.stops_per_route, config.stops_per_route),
+        dtype=np.int8,
+    )
+    hourly = (180, 160, 140)
+    peak_route = int(rng.integers(config.route_count))
+    peak_center = int(rng.integers(45 * 60, 135 * 60))
+    peak_width = int(rng.integers(15 * 60, 30 * 60 + 1))
+    peak_multiplier = float(rng.uniform(1.5, 3.0))
+    for tick in range(config.demand_end_s // config.tick_s):
+        time_s = tick * config.tick_s
+        for route_id in range(config.route_count):
+            rate = hourly[route_id] / 60.0
+            if route_id == peak_route:
+                rate *= 1 + (peak_multiplier - 1) * math.exp(
+                    -0.5 * ((time_s - peak_center) / peak_width) ** 2
+                )
+            for direction_index, direction in enumerate((1, -1)):
+                origins = (
+                    range(config.stops_per_route - 1)
+                    if direction == 1
+                    else range(1, config.stops_per_route)
+                )
+                for origin in origins:
+                    total = int(
+                        rng.poisson(rate * config.tick_s / 60 / (2 * (config.stops_per_route - 1)))
+                    )
+                    if not total:
+                        continue
+                    destinations = (
+                        np.arange(origin + 1, config.stops_per_route)
+                        if direction == 1
+                        else np.arange(0, origin)
+                    )
+                    weights = np.exp(-np.abs(destinations - origin) / 2)
+                    destination = int(rng.choice(destinations, p=weights / weights.sum()))
+                    arrivals[tick, route_id, direction_index, origin, destination] = total
+    buckets = math.ceil(config.horizon_s / config.traffic_bucket_s)
+    edge_count = config.route_count * (config.stops_per_route - 1)
+    traffic = np.clip(
+        rng.lognormal(-0.5 * 0.15**2, 0.15, size=(edge_count, buckets)), 0.7, 2.5
+    ).astype(np.float32)
+    if variant == "burst":
+        arrivals = _apply_burst(arrivals, rng, config)
+    arrivals = _as_int8_arrivals(arrivals)
+    arrivals.setflags(write=False)
+    if variant == "traffic":
+        traffic = _apply_traffic_shock(traffic, rng, config)
+    else:
+        traffic.setflags(write=False)
+    fleet = _fleet(config, network.depot_node)
+    return Scenario(
+        config,
+        network,
+        fleet,
+        arrivals,
+        traffic,
+        seed,
+        scenario_digest(config, network, fleet, arrivals, traffic, seed),
+    )
+
+
+SPLIT_SEEDS = {
+    "train": 1001,
+    "validation": 2001,
+    "test_id": 3001,
+    "test_ood_burst": 4001,
+    "test_ood_traffic": 5001,
+}
+
+SPLIT_VARIANTS = {
+    "train": "base",
+    "validation": "base",
+    "test_id": "base",
+    "test_ood_burst": "burst",
+    "test_ood_traffic": "traffic",
+}
+
+DEFAULT_COUNTS = {
+    "train": 500,
+    "validation": 100,
+    "test_id": 200,
+    "test_ood_burst": 200,
+    "test_ood_traffic": 200,
+}
+
+
+def generate_manifest(
+    split: str, count: int, config: SimConfig | None = None
+) -> tuple[Scenario, ...]:
+    """Generate a deterministic split with unique child seeds and shared topology."""
+    if split not in SPLIT_SEEDS:
+        raise ValueError(f"unknown split: {split}")
+    if count <= 0:
+        raise ValueError("manifest count must be positive")
+    seed_sequence = np.random.SeedSequence(SPLIT_SEEDS[split]).spawn(count)
+    seeds = [int(child.generate_state(1, dtype=np.uint64)[0]) for child in seed_sequence]
+    if len(seeds) != len(set(seeds)):
+        raise AssertionError("child seed collision")
+    variant = SPLIT_VARIANTS[split]
+    return tuple(generate_scenario(seed, config, variant=variant) for seed in seeds)

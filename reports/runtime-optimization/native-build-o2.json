@@ -1,17 +1,17 @@
 {
-  "build_command": "cargo build --release -p bus-sim-py",
+  "build_command": "cargo build --release -p bus-sim-python",
   "cargo": "cargo 1.97.1 (c980f4866 2026-06-30)",
-  "crate": "bus-sim-py",
+  "crate": "bus-sim-python",
   "crate_version": "0.1.0",
   "git": {
     "dirty": true,
-    "sha": "11a20f84bd291f1e30315dd6bada951f94f829fd"
+    "sha": "3d0a2ac3a8656e9991c654ef208b1b822df73186"
   },
   "import_ok": true,
   "install_command": "python scripts/build_native.py",
-  "library": "src/bus_sim.so",
-  "library_bytes": 955448,
-  "library_sha256": "74b3a8fabbbabb5d4b167b92e56ac30af6f0957c180db78b6c501b21c50622ae",
+  "library": "src/bus_sim_native.so",
+  "library_bytes": 956592,
+  "library_sha256": "2d5fa9e3d7672966277efbdba9fc179bdfe6cd8e3bd72f3b60e730d65192fe26",
   "native_build_schema_version": 1,
   "platform": "Linux-7.0.0-31-generic-x86_64-with-glibc2.39",
   "profile": "release",

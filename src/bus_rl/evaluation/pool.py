@@ -13,7 +13,7 @@ from hashlib import sha256
 import numpy as np
 
 from bus_rl.config import RunConfig
-from bus_rl.env.factory import make_env_for_run
+from bus_rl.execution.environments.factory import make_env_for_run
 from bus_rl.provenance import (
     action_schema_hash,
     observation_schema_hash,
@@ -84,8 +84,7 @@ class EvalEnvPool:
         # Let each env apply control flags, then hit the shared-store cache.
         # Packing before that would freeze the un-applied M-flags into the kernel.
         self.envs = [
-            make_env_for_run(scenarios, run, forecaster=forecaster)
-            for _ in range(self.batch_size)
+            make_env_for_run(scenarios, run, forecaster=forecaster) for _ in range(self.batch_size)
         ]
         self.scenario_store = getattr(self.envs[0], "_scenario_store", None)
         self.closed = False
@@ -116,7 +115,7 @@ class EvalEnvPool:
 def make_eval_pool(scenarios, run: RunConfig, forecaster=None):
     """Build the pool for the configured evaluator (native batch vs Python)."""
     if run.runtime.native_batch:
-        from bus_rl.env.native_batch import NativeBatchEvalPool
+        from bus_rl.execution.environments.rust.batch import NativeBatchEvalPool
 
         return NativeBatchEvalPool(scenarios, run, forecaster)
     return EvalEnvPool(scenarios, run, forecaster)

@@ -8,21 +8,25 @@ from time import perf_counter
 import numpy as np
 import pandas as pd
 
-from bus_rl.baselines import (
+from bus_rl.config import ControlConfig, RunConfig
+from bus_rl.evaluation.pool import EvalEnvPool, make_eval_pool
+from bus_rl.evaluation.summary import (
+    from_native_payload,
+    from_python_state,
+    summarize_inputs,
+)
+from bus_rl.execution.environments.factory import make_env_for_run
+from bus_rl.execution.runtime import apply_runtime_settings
+from bus_rl.execution.timing import TIMERS
+from bus_rl.learning.baselines import (
     FixedController,
     ProportionalController,
     RandomValidController,
     ThresholdController,
 )
-from bus_rl.config import ControlConfig, RunConfig
-from bus_rl.control.actions import ACTION_TABLE
-from bus_rl.domain import StepCosts
-from bus_rl.env.factory import make_env_for_run
-from bus_rl.evaluation.pool import EvalEnvPool, make_eval_pool
-from bus_rl.evaluation.summary import from_native_payload, from_python_state, summarize_inputs
-from bus_rl.rewards.costs import RewardConfig, add_costs
-from bus_rl.runtime import apply_runtime_settings
-from bus_rl.timing import TIMERS
+from bus_sim.oracle.actions import ACTION_TABLE
+from bus_sim.oracle.costs import RewardConfig, add_costs
+from bus_sim.oracle.domain import StepCosts
 
 PPO_METHODS = frozenset({"ppo", "maskable_ppo"})
 
@@ -60,9 +64,7 @@ class PPOController:
             for key in observations[0]
         }
         stacked_masks = np.stack([np.asarray(mask) for mask in masks])
-        actions, _ = self.model.predict(
-            stacked_obs, action_masks=stacked_masks, deterministic=True
-        )
+        actions, _ = self.model.predict(stacked_obs, action_masks=stacked_masks, deterministic=True)
         values = [int(value) for value in np.asarray(actions).reshape(-1)]
         if len(values) != len(observations):
             raise RuntimeError(
@@ -271,9 +273,7 @@ def _evaluate_batched(
                 masks = [slot["env"].action_masks() for slot in active]
             with TIMERS.span("eval.infer"):
                 if isinstance(controller, PPOController):
-                    actions = controller.act_batch(
-                        [slot["observation"] for slot in active], masks
-                    )
+                    actions = controller.act_batch([slot["observation"] for slot in active], masks)
                 else:
                     actions = [
                         int(controller.act(slot["observation"], mask))
@@ -336,7 +336,7 @@ def _evaluate_batched_native(
     pool,
 ) -> tuple[pd.DataFrame, dict[int, list[dict]]]:
     """O2: one native `step_batch` per control step for all active slots."""
-    from bus_rl.env.native_bus_dispatch import _step_costs
+    from bus_rl.execution.environments.rust.environment import _step_costs
 
     del forecaster  # applied inside the pool's observation post-processing
     controller = make_controller(method, model=model, seed=model_seed or 0)
@@ -399,9 +399,7 @@ def _evaluate_batched_native(
                 )
                 masks[slot] = step_masks[position]
                 if slot_state["trace"]:
-                    slot_state["rows"].append(
-                        _native_trace_row(pool, slot, int(actions[position]))
-                    )
+                    slot_state["rows"].append(_native_trace_row(pool, slot, int(actions[position])))
                 if not (bool(step_terminated[position]) or bool(step_truncated[position])):
                     continue
                 slot_state["done"] = True

@@ -1031,7 +1031,7 @@
     "version": "3.11.14"
   },
   "reference_checkpoint": {
-    "checkpoint": "tests/backend_parity/reference/diagnose-after/last.zip",
+    "checkpoint": "tests/parity/reference/diagnose-after/last.zip",
     "checkpoint_sha256": "98f99ebf151cdf6dde914df95ea780c25f4856e6a36f90e30ccd7a9f5906501e",
     "config": "configs/experiments/core.toml",
     "days": 10,
@@ -1109,5 +1109,5 @@
       "validation": 2001
     }
   },
-  "self_hash": "66c30fdc74b6b9e0391ba64ea1c7a435c076b59a8d330ee005a0200a7d31ccda"
+  "self_hash": "370209add1bb5faf035d11b09cd395346674f66454045aee61ec7ef48c66dfae"
 }

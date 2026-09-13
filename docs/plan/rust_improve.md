@@ -54,7 +54,7 @@ Each task starts unchecked. Mark it complete only after its acceptance criteria 
 - [x] Add fixtures for history boundaries, immediate completion after boarding, repeated splits, and finished passengers remaining in recent arrival history.
 - [x] Select a fixed checkpoint for paired evaluation. Reuse the historical 15471.25 reference only if its exact checkpoint/config/days are recoverable; otherwise create and label a new Python reference.
 
-**Implementation surface:** proposed `tests/backend_parity/`, fixture exporter under `scripts/`, raw `runs/rust-migration/oracle/`.
+**Implementation surface:** proposed `tests/parity/`, fixture exporter under `scripts/`, raw `runs/rust-migration/oracle/`.
 
 **Verification:** replay exported actions on Python and reproduce the fixture; deliberately alter a fixture value to demonstrate useful first-divergence reporting.
 
@@ -87,7 +87,7 @@ transitions). Freeze the oracle before native implementation.
 
 ### R1.1 - Native build, domain, and scenario ownership
 
-- [x] Create `crates/bus-sim/` and the chosen PyO3 packaging layout; document the release build/install procedure while retaining the existing Python CLI.
+- [x] Create `crates/bus-sim-core/` and the chosen PyO3 packaging layout; document the release build/install procedure while retaining the existing Python CLI.
 - [x] Implement enums, IDs, vehicles, cohort storage, cached loads, and incremental totals with checked bounds.
 - [x] Pack immutable network/tapes/traffic/config once; define native ownership or a valid retained Python owner.
 - [x] Implement reset and debug snapshots with deterministic vehicle/cohort ordering.
@@ -119,13 +119,13 @@ transitions). Freeze the oracle before native implementation.
 
 **R1 gate:** R1.1-R1.3 accepted; kernel behavior is equivalent before observation optimization.
 
-**Evidence (2026-09-12, accepted):** crate layout `crates/bus-sim`
-(`bus_sim_core`) + `crates/bus-sim-py` (`bus_sim`); build via
+**Evidence (2026-09-12, accepted):** crate layout `crates/bus-sim-core`
+(`bus_sim_core`) + `crates/bus-sim-python` (`bus_sim_native`); build via
 `python scripts/build_native.py`. All 11 R0 fixtures replay through the native
 kernel with zero divergences on state/counters/IDs/lineage, every cost
 component, per-tick state, departure/action events and terminal settlement;
-`cargo test -p bus-sim` (7 tests) and
-`python -m pytest tests/backend_parity/test_rust_kernel.py` (26 tests) pass.
+`cargo test -p bus-sim-core` (7 tests) and
+`python -m pytest tests/parity/test_rust_kernel.py` (26 tests) pass.
 Details in [reports/rust-migration.md](../reports/rust-migration.md) and
 `reports/rust-migration/native-build.json`. Observation/mask parity remains R2.
 
@@ -154,12 +154,12 @@ Details in [reports/rust-migration.md](../reports/rust-migration.md) and
 
 **R2 gate:** R2.1 and R2.2 accepted; observation and action semantics remain unchanged.
 
-**Evidence (2026-09-12, accepted):** `crates/bus-sim/src/observation.rs`
+**Evidence (2026-09-12, accepted):** `crates/bus-sim-core/src/observation.rs`
 reproduces all nine channels at oracle tolerance; `Kernel.mask_cache` is
 computed at reset and after each step and returns copies. All 11 fixtures match
 every observation channel within `rtol=atol=1e-6` and all 221 mask bits
 exactly at reset and after every step (15 tests in
-`tests/backend_parity/test_rust_observation.py`), plus 12 native unit tests.
+`tests/parity/test_rust_observation.py`), plus 12 native unit tests.
 Details in [reports/rust-migration.md](../reports/rust-migration.md).
 
 ## 6. R3: integrate the backend
@@ -200,12 +200,12 @@ Details in [reports/rust-migration.md](../reports/rust-migration.md).
 **R3 gate:** R3.1-R3.3 accepted; the Rust backend supports the complete workflow.
 
 **Evidence (2026-09-12, accepted):** `Kernel.reset_contract`/
-`step_contract` plus `bus_rl.env.native_bus_dispatch.NativeBusDispatchEnv`
+`step_contract` plus `bus_rl.execution.environments.rust.environment.NativeBusDispatchEnv`
 mirror the oracle Gym contract; `bus_rl.evaluation.summary` is the shared
 summary/trace interface with Python and native adapters; `runtime.backend`
 selects the backend across config/CLI/train/validation/evaluate/baselines and
 fails loudly when Rust is missing. 21 integration tests
-(`tests/backend_parity/test_rust_integration.py`) cover the Gym contract, VecEnv
+(`tests/parity/test_rust_integration.py`) cover the Gym contract, VecEnv
 auto-reset, output ownership, interleaved envs, evaluator/trace parity for four
 controllers, forecast on/off, zero-demand censoring, plotting, backend
 selection, metadata and cross-backend checkpoint rules. Details in

@@ -31,18 +31,23 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 
 from bus_rl import domain
 from bus_rl.config import ControlConfig, load_run_config
-from bus_rl.data.scenario import generate_manifest
-from bus_rl.domain import StepCosts
-from bus_rl.env.factory import make_env_for_run
 from bus_rl.evaluation.pool import EvalEnvPool
-from bus_rl.evaluation.runner import PPOController, evaluate_scenarios, make_controller, rollout
+from bus_rl.evaluation.runner import (
+    PPOController,
+    evaluate_scenarios,
+    make_controller,
+    rollout,
+)
 from bus_rl.evaluation.summary import from_native_payload, summarize_inputs
+from bus_rl.execution.environments.factory import make_env_for_run
+from bus_rl.execution.runtime import apply_runtime_settings, configure_torch_distributions
+from bus_rl.execution.scenarios.generation import generate_manifest
+from bus_rl.execution.timing import TIMERS
+from bus_rl.learning.training.checkpoint import load_metadata, load_model
+from bus_rl.learning.training.train import make_env, make_model
 from bus_rl.provenance import file_hash, git_status, lock_hash
-from bus_rl.rewards.costs import RewardConfig, add_costs
-from bus_rl.runtime import apply_runtime_settings, configure_torch_distributions
-from bus_rl.timing import TIMERS
-from bus_rl.training.checkpoint import load_metadata, load_model
-from bus_rl.training.train import make_env, make_model
+from bus_sim.oracle.costs import RewardConfig, add_costs
+from bus_sim.oracle.domain import StepCosts
 
 REPORT_DIR = ROOT / "reports" / "runtime-optimization"
 REFERENCE = ROOT / "tests" / "backend_parity" / "reference" / "diagnose-after" / "last.zip"
@@ -144,7 +149,7 @@ def collect_provenance(threads_actual: int) -> dict:
         diff_stat = ""
     native_path = ROOT / "reports" / "rust-migration" / "native-build.json"
     native = json.loads(native_path.read_text()) if native_path.exists() else None
-    library = ROOT / "src" / "bus_sim.so"
+    library = ROOT / "src" / "bus_sim_native.so"
     return {
         "git": {
             "sha": sha,
@@ -181,9 +186,7 @@ def collect_provenance(threads_actual: int) -> dict:
             "cprofile": False,
             "conservation_checks": bool(domain.CONSERVATION_CHECKS),
             "validate_observation": True,
-            "validate_distributions": bool(
-                torch.distributions.Distribution._validate_args
-            ),
+            "validate_distributions": bool(torch.distributions.Distribution._validate_args),
             "trace": False,
             "logging": "quiet",
         },
@@ -210,7 +213,7 @@ def measure_unprofiled(repetitions: int, transitions: int, eval_days: int) -> di
     for _ in range(repetitions):
         started = perf_counter()
         generate_manifest("validation", 100)
-        from bus_rl.backend.native import shared_store
+        from bus_rl.execution.environments.rust.bridge import shared_store
 
         shared_store(train_scenarios)
         load_times.append(perf_counter() - started)
@@ -251,9 +254,7 @@ def measure_unprofiled(repetitions: int, transitions: int, eval_days: int) -> di
         updates.append(update_s)
         actuals.append(actual)
 
-    ckpt_run, eval_scenarios, model, _, load_pack_s, load_env = _load_model_and_scenarios(
-        eval_days
-    )
+    ckpt_run, eval_scenarios, model, _, load_pack_s, load_env = _load_model_and_scenarios(eval_days)
     controller = make_controller("ppo", model=model, seed=ckpt_run.algorithm.seed)
     eval_env = make_env_for_run(eval_scenarios, ckpt_run)
 
@@ -311,7 +312,10 @@ def measure_unprofiled(repetitions: int, transitions: int, eval_days: int) -> di
 
     vec_times = []
     vec = DummyVecEnv(
-        [make_env(train_scenarios, run, run.algorithm.seed + i) for i in range(run.algorithm.n_envs)]
+        [
+            make_env(train_scenarios, run, run.algorithm.seed + i)
+            for i in range(run.algorithm.n_envs)
+        ]
     )
     vec.reset()
     for _ in range(repetitions):
@@ -379,9 +383,7 @@ def measure_profile(transitions: int, eval_days: int) -> dict:
     run = rust_run()
     apply_runtime_settings(run)
     train_scenarios = generate_manifest("train", 16)
-    vec = DummyVecEnv(
-        [make_env(train_scenarios, run, run.algorithm.seed + i) for i in range(4)]
-    )
+    vec = DummyVecEnv([make_env(train_scenarios, run, run.algorithm.seed + i) for i in range(4)])
     model = make_model(vec, run.algorithm.seed, run.algorithm)
     callback = _SegmentCallback()
     model.learn(total_timesteps=transitions, callback=callback)
@@ -462,7 +464,9 @@ def measure_ablation(repetitions: int, warmup: int, eval_days: int) -> dict:
     load_env = make_env_for_run(scenarios[:1], run)
     model, _ = load_model(REFERENCE, load_env, run.physical)
 
-    variants: list[dict] = [{"name": "scalar", "batch_size": 1, "reuse_pool": False, "force_pool": False}]
+    variants: list[dict] = [
+        {"name": "scalar", "batch_size": 1, "reuse_pool": False, "force_pool": False}
+    ]
     for size in BATCH_SIZES:
         variants.append(
             {"name": f"batch-{size}", "batch_size": size, "reuse_pool": False, "force_pool": True}
@@ -472,7 +476,9 @@ def measure_ablation(repetitions: int, warmup: int, eval_days: int) -> dict:
         )
 
     pools: dict[str, EvalEnvPool] = {}
-    results = {item["name"]: {"wall_s": [], "mean_cost": [], "days": [], "rss_kb": []} for item in variants}
+    results = {
+        item["name"]: {"wall_s": [], "mean_cost": [], "days": [], "rss_kb": []} for item in variants
+    }
     try:
         for item in variants:
             variant_run = replace(
@@ -688,7 +694,7 @@ def _native_segments(pool, controller, scenarios) -> dict:
 
     Mirrors `evaluation/runner.py::_evaluate_batched_native`.
     """
-    from bus_rl.env.native_bus_dispatch import _step_costs
+    from bus_rl.execution.environments.rust.environment import _step_costs
 
     n_days = len(scenarios)
     batch_size = min(pool.batch_size, n_days)
@@ -731,9 +737,7 @@ def _native_segments(pool, controller, scenarios) -> dict:
             active_masks = [np.asarray(masks[slot["slot"]]) for slot in active]
             seg["mask_s"] += perf_counter() - t0
             t0 = perf_counter()
-            actions = controller.act_batch(
-                [slot["observation"] for slot in active], active_masks
-            )
+            actions = controller.act_batch([slot["observation"] for slot in active], active_masks)
             seg["infer_s"] += perf_counter() - t0
             t0 = perf_counter()
             result = pool.step(active_slots, actions)
@@ -789,7 +793,7 @@ def _learn_segments(native_batch: bool, transitions: int, repetitions: int) -> d
     def _learn_once() -> tuple[dict, int]:
         callback = _SegmentCallback()
         if native_batch:
-            from bus_rl.env.native_batch import NativeBatchVecEnv
+            from bus_rl.execution.environments.rust.batch import NativeBatchVecEnv
 
             vec = NativeBatchVecEnv(train_scenarios, run, run.algorithm.seed)
         else:
@@ -838,7 +842,7 @@ def measure_o2_ablation(repetitions: int, warmup: int, eval_days: int) -> dict:
     model, _ = load_model(REFERENCE, load_env, run.physical)
     controller = PPOController(model)
 
-    from bus_rl.env.native_batch import NativeBatchEvalPool
+    from bus_rl.execution.environments.rust.batch import NativeBatchEvalPool
 
     variants = []
     for size in (8, 16, 32):
@@ -944,7 +948,7 @@ def measure_ppo_update_profile(repetitions: int) -> dict:
 
     def _profile_once(native_batch: bool) -> dict:
         if native_batch:
-            from bus_rl.env.native_batch import NativeBatchVecEnv
+            from bus_rl.execution.environments.rust.batch import NativeBatchVecEnv
 
             vec = NativeBatchVecEnv(train_scenarios, run, run.algorithm.seed)
         else:
@@ -1044,7 +1048,7 @@ def measure_rollout_profile(repetitions: int) -> dict:
 
     def _profile_once(native_batch: bool) -> dict:
         if native_batch:
-            from bus_rl.env.native_batch import NativeBatchVecEnv
+            from bus_rl.execution.environments.rust.batch import NativeBatchVecEnv
 
             vec = NativeBatchVecEnv(train_scenarios, run, run.algorithm.seed)
         else:
@@ -1185,9 +1189,9 @@ def measure_distribution_validation(repetitions: int) -> dict:
         torch.manual_seed(123)
         with torch.no_grad():
             actions, values, log_prob = model.policy(obs_tensor, action_masks=masks)
-            argmax = model.policy.get_distribution(
-                obs_tensor, action_masks=masks
-            ).get_actions(deterministic=True)
+            argmax = model.policy.get_distribution(obs_tensor, action_masks=masks).get_actions(
+                deterministic=True
+            )
         return actions, values, log_prob, argmax
 
     def rollout_once(validate: bool) -> dict:
@@ -1201,9 +1205,7 @@ def measure_distribution_validation(repetitions: int) -> dict:
         )
         probe = make_model(env, run.algorithm.seed, run.algorithm)
         started = perf_counter()
-        probe.learn(
-            total_timesteps=run.algorithm.n_steps * run.algorithm.n_envs, callback=callback
-        )
+        probe.learn(total_timesteps=run.algorithm.n_steps * run.algorithm.n_envs, callback=callback)
         wall = perf_counter() - started
         env.close()
         return {

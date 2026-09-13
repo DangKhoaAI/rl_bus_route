@@ -58,7 +58,7 @@ Thay đổi:
   để giữ nguyên `scenario_hash`.
 - `data/io.py::load_scenario` ép `int8` khi nạp (dữ liệu cũ int32 vẫn đọc được).
 - `parity/scenarios.py::_with_arrivals` ép `int8` + kiểm tra dải giá trị.
-- `crates/bus-sim-py` nhận `PyReadonlyArray5<i8>` và nâng lên `i32` khi pack
+- `crates/bus-sim-python` nhận `PyReadonlyArray5<i8>` và nâng lên `i32` khi pack
   (store vẫn sparse như cũ), nên lõi kernel không đổi.
 
 **Acceptance:** `scenario_hash` không đổi; `verify` tái tạo 11 fixture;

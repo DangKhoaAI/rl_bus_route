@@ -284,11 +284,11 @@ Checklist ban đầu:
 ## 12. Nguồn triển khai cần đối chiếu
 
 - `src/bus_rl/evaluation/runner.py`, `evaluation/summary.py`: scalar rollout, metrics, trace.
-- `src/bus_rl/training/train.py`, `training/callbacks.py`: VecEnv, validation, checkpoint selection.
-- `src/bus_rl/env/native_bus_dispatch.py`, `env/factory.py`: reset/step, observation, mask ownership.
+- `src/bus_rl/learning/training/train.py`, `training/callbacks.py`: VecEnv, validation, checkpoint selection.
+- `src/bus_rl/execution/environments/rust/environment.py`, `environments/factory.py`: reset/step, observation, mask ownership.
 - `src/bus_rl/backend/native.py`: sparse store packing, metadata tapes và shared cache.
-- `crates/bus-sim-py/src/lib.rs`: native boundary, contract arrays và kernel lifetime.
-- `crates/bus-sim/src/engine.rs`, `observation.rs`, `guards.rs`: compute giữ nguyên semantics.
+- `crates/bus-sim-python/src/lib.rs`: native boundary, contract arrays và kernel lifetime.
+- `crates/bus-sim-core/src/engine.rs`, `observation.rs`, `guards.rs`: compute giữ nguyên semantics.
 - `src/bus_rl/config.py`, `configs/experiments/core-threads2.toml`: defaults và baseline thực nghiệm.
 - `scripts/benchmark_backends.py`, `profile_native_training.py`, `tune_runtime.py`: tận dụng harness hiện có.
-- `tests/backend_parity/`: mở rộng parity/ownership/integration suite khi triển khai.
+- `tests/parity/`: mở rộng parity/ownership/integration suite khi triển khai.

@@ -28,14 +28,14 @@ import torch
 from stable_baselines3.common.vec_env import DummyVecEnv
 
 from bus_rl.config import ControlConfig, RuntimeConfig, load_run_config
-from bus_rl.data.scenario import generate_manifest
-from bus_rl.env.factory import make_env_for_run
 from bus_rl.evaluation.runner import make_controller, rollout
-from bus_rl.rewards.costs import RewardConfig
-from bus_rl.timing import TIMERS
-from bus_rl.training.checkpoint import load_metadata, load_model
-from bus_rl.training.diagnose import DiagnoseCallback
-from bus_rl.training.train import fit_algorithm, make_env, make_model
+from bus_rl.execution.environments.factory import make_env_for_run
+from bus_rl.execution.scenarios.generation import generate_manifest
+from bus_rl.execution.timing import TIMERS
+from bus_rl.learning.training.checkpoint import load_metadata, load_model
+from bus_rl.learning.training.diagnose import DiagnoseCallback
+from bus_rl.learning.training.train import fit_algorithm, make_env, make_model
+from bus_sim.oracle.costs import RewardConfig
 
 REPORT_DIR = ROOT / "reports" / "rust-migration"
 PROFILE_RUNS = ROOT / "runs" / "rust-migration" / "profile"
@@ -179,9 +179,9 @@ import os
 import sys
 sys.path.insert(0, {src!r})
 from bus_rl.config import ControlConfig
-from bus_rl.data.scenario import generate_manifest
-from bus_rl.backend.native import build_kernel
-from bus_rl.env.native_bus_dispatch import NativeBusDispatchEnv
+from bus_rl.execution.scenarios.generation import generate_manifest
+from bus_rl.execution.environments.rust.bridge import build_kernel
+from bus_rl.execution.environments.rust.environment import NativeBusDispatchEnv
 
 
 def rss_kb():

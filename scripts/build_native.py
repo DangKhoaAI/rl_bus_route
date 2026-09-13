@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Build the native PyO3 kernel, install it as `bus_sim`, and record provenance.
+"""Build the native PyO3 kernel, install it as `bus_sim_native`, and record provenance.
 
 Usage:
     python scripts/build_native.py [--release] [--output PATH]
@@ -50,24 +50,24 @@ def main() -> None:
     build = ["cargo", "build"]
     if args.release:
         build.append("--release")
-    build.extend(["-p", "bus-sim-py"])
+    build.extend(["-p", "bus-sim-python"])
     print("[native]", " ".join(build), flush=True)
     subprocess.run(build, cwd=ROOT, check=True)
 
-    source = ROOT / "target" / profile / "libbus_sim.so"
-    target = ROOT / "src" / "bus_sim.so"
+    source = ROOT / "target" / profile / "libbus_sim_native.so"
+    target = ROOT / "src" / "bus_sim_native.so"
     shutil.copy2(source, target)
     digest = hashlib.sha256(target.read_bytes()).hexdigest()
 
     sys.path.insert(0, str(ROOT / "src"))
-    import bus_sim
+    import bus_sim_native
 
     revision = _run(["git", "rev-parse", "HEAD"])
     dirty = bool(_run(["git", "status", "--porcelain"]))
     payload = {
         "native_build_schema_version": 1,
         "profile": profile,
-        "crate": "bus-sim-py",
+        "crate": "bus-sim-python",
         "crate_version": _workspace_version(),
         "library": str(target.relative_to(ROOT)),
         "library_sha256": digest,
@@ -79,14 +79,14 @@ def main() -> None:
         "git": {"sha": revision, "dirty": dirty},
         "python": sys.version.split()[0],
         "platform": platform.platform(),
-        "import_ok": hasattr(bus_sim, "Kernel"),
+        "import_ok": hasattr(bus_sim_native, "Kernel"),
         "roles": {
             "r1": "debug kernel bridge for golden-fixture parity",
             "r3": "Gym wrapper is added in Python on top of this module",
         },
     }
     if not payload["import_ok"]:
-        raise SystemExit("bus_sim.Kernel missing after build")
+        raise SystemExit("bus_sim_native.Kernel missing after build")
     report = Path(args.output)
     report = report if report.is_absolute() else ROOT / report
     report.parent.mkdir(parents=True, exist_ok=True)

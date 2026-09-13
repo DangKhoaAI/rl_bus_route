@@ -1,33 +1,35 @@
-# Native kernel (`bus-sim`)
+# Native simulator crates
 
-Rust port of the Python oracle in `src/bus_rl`. Layout follows the migration
-spec section 3.1:
-
-```text
-crates/bus-sim/       # rlib `bus_sim_core`: domain, engine, passengers,
-                      # vehicles, dispatcher, travel, guards, costs, snapshots
-crates/bus-sim-py/    # cdylib `bus_sim`: PyO3 bridge (debug/parity surface)
-```
-
-## Build and install
+The Rust-native simulator consists of two Cargo workspace members:
 
 ```text
-python scripts/build_native.py     # cargo build --release + install src/bus_sim.so
-cargo test -p bus-sim              # native unit tests
-python -m pytest tests/backend_parity -q
+crates/bus-sim-core/    # optimized simulator kernel
+crates/bus-sim-python/  # PyO3 bridge exposing `bus_sim_native`
 ```
 
-The build also writes `reports/rust-migration/native-build.json` (toolchain,
-git revision, `.so` hash, import check). `target/` and `src/bus_sim.so` are
-git-ignored; the release build is not part of the Python package install.
+Its reference implementation is the Python package at `src/bus_sim/oracle/`.
+Golden fixtures and differential tests in `tests/parity/` ensure that both
+implementations remain behaviorally equivalent.
 
-## Scope
+## Build and test
 
-R1 implements the domain, lifecycle, actions/guards, the fixed tick order and
-cost/reward integration. R2 adds the incremental observation tensors
-(`observation.rs`) and the kernel-owned mask cache. R3 adds the per-decision
-contract (`reset_contract`/`step_contract`), the evaluator summary/trace
-surfaces and the Python Gym wrapper (`src/bus_rl/env/native_bus_dispatch.py`)
-selected via `runtime.backend`. R4 (speed/parity acceptance) is still open.
-`Kernel.observe`, `Kernel.debug_snapshot` and `Kernel.debug_step` remain the
+```bash
+python scripts/build_native.py
+cargo test -p bus-sim-core
+python -m pytest tests/parity -q
+```
+
+The build installs the ignored extension at `src/bus_sim_native.so` and writes
+a provenance record under `reports/rust-migration/` by default. Requesting the
+Rust backend without that extension fails explicitly; Python remains the
+default selected by `runtime.backend = "python"`.
+
+The Gym adapters are grouped by implementation:
+
+```text
+src/bus_rl/execution/environments/python/  # calls `bus_sim.oracle`
+src/bus_rl/execution/environments/rust/    # calls `bus_sim_native`
+```
+
+`Kernel.observe`, `Kernel.debug_snapshot`, and `Kernel.debug_step` remain the
 golden-test surfaces.

@@ -1,0 +1,206 @@
+"""Native (`bus_sim_native`) backend helpers: scenario serialization and provenance."""
+
+from __future__ import annotations
+
+import importlib.util
+import json
+from dataclasses import asdict
+from pathlib import Path
+
+import numpy as np
+
+from bus_rl.provenance import file_hash
+from bus_sim.oracle.domain import Scenario, scenario_digest
+
+NATIVE_MODULE = "bus_sim_native"
+PROJECT_ROOT = Path(__file__).resolve().parents[5]
+
+
+def native_available() -> bool:
+    return importlib.util.find_spec(NATIVE_MODULE) is not None
+
+
+def require_native() -> None:
+    if not native_available():
+        raise RuntimeError(
+            "runtime.backend='rust' requires the native `bus_sim_native` extension; "
+            "build it with `python scripts/build_native.py`"
+        )
+
+
+def scenario_payload(
+    scenario: Scenario,
+    enable_reassign: bool | None = None,
+    enable_short_turn: bool | None = None,
+) -> str:
+    """Serialize the immutable scenario fields the kernel owns."""
+    return json.dumps(
+        {
+            "config": asdict(scenario.config),
+            "network": {
+                "routes": [
+                    {
+                        "route_id": route.route_id,
+                        "stops": list(route.stops),
+                        "short_turn_stop": route.short_turn_stop,
+                    }
+                    for route in scenario.network.routes
+                ],
+                "depot_node": scenario.network.depot_node,
+                "edge_base_s": list(scenario.network.edge_base_s),
+            },
+            "fleet": [
+                {
+                    "vehicle_id": spec.vehicle_id,
+                    "route_id": spec.route_id,
+                    "node": spec.node,
+                    "direction": spec.direction,
+                }
+                for spec in scenario.fleet
+            ],
+            "enable_reassign": (
+                scenario.enable_reassign if enable_reassign is None else enable_reassign
+            ),
+            "enable_short_turn": (
+                scenario.enable_short_turn if enable_short_turn is None else enable_short_turn
+            ),
+        }
+    )
+
+
+def _scenario_tapes(scenario: Scenario) -> tuple[np.ndarray, np.ndarray]:
+    """Return `(arrivals int8, traffic float32)` for a scenario.
+
+    Metadata-only scenarios (Rust runs do not keep the 600 dense tapes in
+    Python) load their tapes from `scenario.path` once, at store construction.
+    """
+    if scenario.arrival_tape.size:
+        return (
+            np.ascontiguousarray(scenario.arrival_tape, dtype=np.int8),
+            np.ascontiguousarray(scenario.traffic_tape, dtype=np.float32),
+        )
+    if scenario.path is None:
+        raise ValueError("scenario has neither tapes nor a path")
+    with np.load(Path(scenario.path) / "tapes.npz", allow_pickle=False) as arrays:
+        arrivals = np.ascontiguousarray(arrays["arrivals"], dtype=np.int8)
+        traffic = np.ascontiguousarray(arrays["traffic"], dtype=np.float32)
+    digest = scenario_digest(
+        scenario.config, scenario.network, scenario.fleet, arrivals, traffic, scenario.seed
+    )
+    if digest != scenario.scenario_hash:
+        raise ValueError(f"scenario hash does not match persisted data: {scenario.path}")
+    return arrivals, traffic
+
+
+def build_kernel(scenario: Scenario, *, conservation: bool = True):
+    """Pack a scenario into a native kernel. Tapes are copied once here."""
+    require_native()
+    import bus_sim_native
+
+    arrivals, traffic = _scenario_tapes(scenario)
+    kernel = bus_sim_native.Kernel(scenario_payload(scenario), arrivals, traffic)
+    kernel.set_conservation_checks(conservation)
+    return kernel
+
+
+class NativeScenarioStore:
+    """Owns packed native scenarios so many env kernels share immutable tapes.
+
+    Without this, ``n_envs`` envs each copy every scenario tape; with a shared
+    store the tapes exist once per distinct scenario list.
+    """
+
+    def __init__(self, scenarios) -> None:
+        require_native()
+        import bus_sim_native
+
+        self._store = bus_sim_native.ScenarioStore()
+        for scenario in scenarios:
+            arrivals, traffic = _scenario_tapes(scenario)
+            self._store.add(scenario_payload(scenario), arrivals, traffic)
+
+    def __len__(self) -> int:
+        return len(self._store)
+
+    def kernel(self, index: int, *, conservation: bool = True):
+        import bus_sim_native
+
+        kernel = bus_sim_native.Kernel.from_store(self._store, index)
+        kernel.set_conservation_checks(conservation)
+        return kernel
+
+    def batch_kernel(self, capacity: int, *, conservation: bool = True):
+        """One native kernel owning ``capacity`` episode slots over this store."""
+        import bus_sim_native
+
+        kernel = bus_sim_native.BatchKernel.from_store(self._store, int(capacity))
+        kernel.set_conservation_checks(conservation)
+        return kernel
+
+
+_STORE_CACHE: dict[tuple, NativeScenarioStore] = {}
+_STORE_CACHE_LIMIT = 4
+
+
+def shared_store(scenarios) -> NativeScenarioStore:
+    """Reuse one packed store for an identical scenario list within a process."""
+    scenarios = tuple(scenarios)
+    key = tuple(
+        (scenario.scenario_hash, bool(scenario.enable_reassign), bool(scenario.enable_short_turn))
+        for scenario in scenarios
+    )
+    cached = _STORE_CACHE.get(key)
+    if cached is not None:
+        return cached
+    store = NativeScenarioStore(scenarios)
+    if len(_STORE_CACHE) >= _STORE_CACHE_LIMIT:
+        _STORE_CACHE.pop(next(iter(_STORE_CACHE)))
+    _STORE_CACHE[key] = store
+    return store
+
+
+def native_build_info(root: Path | None = None) -> dict | None:
+    """Provenance for the native binary actually installed at import time.
+
+    `library_sha256` is the hash of `src/bus_sim_native.so` on disk, not the hash in a
+    build record: the two differ whenever the kernel is rebuilt without
+    refreshing `reports/rust-migration/native-build.json` (kept frozen for R4).
+    `build_record_matches_runtime` names which record, if any, describes the
+    running binary.
+    """
+    root = Path(root) if root else PROJECT_ROOT
+    report = root / "reports" / "rust-migration" / "native-build.json"
+    o2_report = root / "reports" / "runtime-optimization" / "native-build-o2.json"
+    records: dict[str, dict] = {}
+    for name, path in (("runtime-optimization", o2_report), ("rust-migration", report)):
+        if not Path(path).exists():
+            continue
+        payload = json.loads(Path(path).read_text())
+        records[name] = {
+            "report": str(Path(path).relative_to(root)),
+            "library_sha256": payload.get("library_sha256"),
+            "git": payload.get("git"),
+            "crate_version": payload.get("crate_version"),
+            "rustc": payload.get("rustc"),
+            "cargo": payload.get("cargo"),
+        }
+    library = root / "src" / "bus_sim_native.so"
+    runtime_sha = file_hash(library) if library.exists() else None
+    if runtime_sha is None and not records:
+        return None
+    matched = sorted(
+        name for name, record in records.items() if record["library_sha256"] == runtime_sha
+    )
+    primary_name = matched[0] if matched else next(iter(records), None)
+    primary = records.get(primary_name, {}) if primary_name else {}
+    return {
+        "library_sha256": runtime_sha,
+        "library_sha256_runtime": runtime_sha,
+        "build_record_matches_runtime": matched,
+        "build_records": records,
+        "crate": "bus-sim-python",
+        "crate_version": primary.get("crate_version"),
+        "rustc": primary.get("rustc"),
+        "cargo": primary.get("cargo"),
+        "git_sha": (primary.get("git") or {}).get("sha"),
+    }

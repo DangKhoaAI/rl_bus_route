@@ -10,10 +10,10 @@ from pathlib import Path
 from time import perf_counter
 
 from bus_rl.config import ControlConfig, load_run_config, parse_counts
-from bus_rl.data.io import load_manifest, load_split, save_manifest
-from bus_rl.data.scenario import generate_manifest
+from bus_rl.execution.scenarios.generation import generate_manifest
+from bus_rl.execution.scenarios.io import load_manifest, load_split, save_manifest
 from bus_rl.provenance import physical_config_hash, require_fresh_output
-from bus_rl.rewards.costs import RewardConfig
+from bus_sim.oracle.costs import RewardConfig
 
 
 def _run_config(args) -> object:
@@ -41,7 +41,7 @@ def _run_config(args) -> object:
 def _maybe_forecaster(args, run, train_scenarios=None):
     if not run.forecast.enabled:
         return None
-    from bus_rl.forecasting.historical import HistoricalForecaster
+    from bus_rl.learning.forecasting import HistoricalForecaster
 
     logs = [scenario.arrival_tape for scenario in train_scenarios or []]
     if not logs:
@@ -113,7 +113,7 @@ def cmd_profile(args) -> None:
 
 
 def cmd_train(args) -> None:
-    from bus_rl.training.train import fit_algorithm, train_run
+    from bus_rl.learning.training.train import fit_algorithm, train_run
 
     run = _run_config(args)
     algorithm = fit_algorithm(
@@ -140,8 +140,8 @@ def cmd_train(args) -> None:
 
 
 def cmd_diagnose(args) -> None:
-    from bus_rl.training.diagnose import diagnose_train
-    from bus_rl.training.train import fit_algorithm
+    from bus_rl.learning.training.diagnose import diagnose_train
+    from bus_rl.learning.training.train import fit_algorithm
 
     run = _run_config(args)
     algorithm = fit_algorithm(
@@ -180,10 +180,10 @@ def _reward_from_metadata(payload: dict) -> RewardConfig:
 
 
 def cmd_evaluate(args) -> None:
-    from bus_rl.env.factory import make_env_for_run
     from bus_rl.evaluation.runner import evaluate_scenarios, write_results
-    from bus_rl.forecasting.historical import HistoricalForecaster
-    from bus_rl.training.checkpoint import load_metadata, load_model
+    from bus_rl.execution.environments.factory import make_env_for_run
+    from bus_rl.learning.forecasting import HistoricalForecaster
+    from bus_rl.learning.training.checkpoint import load_metadata, load_model
 
     run = _run_config(args)
     output = Path(args.output)

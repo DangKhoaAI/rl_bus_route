@@ -8,8 +8,8 @@ from dataclasses import asdict
 from hashlib import sha256
 from pathlib import Path
 
-from bus_rl.control.actions import ACTION_TABLE
-from bus_rl.domain import SimConfig
+from bus_sim.oracle.actions import ACTION_TABLE
+from bus_sim.oracle.domain import SimConfig
 
 
 def canonical_hash(payload: object) -> str:

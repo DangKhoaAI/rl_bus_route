@@ -11,33 +11,49 @@ not a city deployment or a new-route design tool.
 ## Repository layout
 
 ```text
-src/bus_rl/             # Installable Python package (Python src layout)
-tests/                  # Pytest suite, including Python/Rust parity tests
-crates/bus-sim/         # Rust simulator core; unit tests live beside the source
-crates/bus-sim-py/      # PyO3 extension exposing the Rust core to Python
-configs/                # Base, evaluation, training, and experiment configs
-scripts/                # Build, benchmark, profiling, and migration utilities
-docs/                   # Specifications, plans, and research notes
-reports/                # Selected reproducible results and evidence
+src/
+├── bus_sim/
+│   ├── oracle/          # Reference Python simulator
+│   └── parity/          # Python/Rust fixtures, snapshots, and contracts
+└── bus_rl/
+    ├── execution/
+    │   ├── environments/
+    │   │   ├── python/  # Gym wrapper for `bus_sim.oracle`
+    │   │   └── rust/    # Gym wrappers and bridge for `bus_sim_native`
+    │   ├── scenarios/   # Scenario generation and persistence
+    │   ├── runtime.py   # Runtime and thread settings
+    │   └── timing.py    # Runtime timing instrumentation
+    ├── learning/        # Baselines, forecasting, policy, and training
+    └── evaluation/      # Controller metrics, plots, and profiling
+crates/
+├── bus-sim-core/        # Optimized Rust simulator
+└── bus-sim-python/      # PyO3 bridge (`bus_sim_native`)
+tests/
+├── unit/                # Python unit tests
+├── integration/         # CLI and training workflow tests
+└── parity/              # Python-oracle versus Rust-native tests
+configs/                 # Run and experiment configurations
+scripts/                 # Build, benchmark, and profiling utilities
+docs/                    # Specifications, plans, and research notes
+reports/                 # Selected reproducible results and evidence
 ```
 
-`src/` is the Python package root, not a container for every language in the
-repository. Each Rust workspace member follows Cargo's own layout under
-`crates/<name>/src/`. Rust integration tests, when needed, belong under the
-relevant `crates/<name>/tests/` directory; cross-backend integration tests live
-in `tests/backend_parity/` and run through pytest.
+Python packages follow the standard `src/` layout, while Rust packages follow
+the Cargo workspace convention under `crates/`. Historical PPO checkpoints
+that reference `bus_rl.models.features` are translated transparently by the
+checkpoint loader; the obsolete package is not retained in the source tree.
 
 ## Setup
 
 ```bash
-uv sync --locked
+uv sync --locked --extra dev
 uv run ruff check .
 uv run ruff format --check .
 uv run pytest -q
 ```
 
 Tiny smoke (2 train / 1 val / 1 test days, 32 PPO steps) lives in
-`tests/test_pipeline.py`.
+`tests/integration/test_pipeline.py`.
 
 ## Reproduce
 
@@ -83,9 +99,9 @@ interface, `runtime.backend` selection) are accepted; the Python CLI and
 backend remain the default and the oracle.
 
 ```bash
-python scripts/build_native.py       # cargo build --release + install src/bus_sim.so
-cargo test -p bus-sim                # native unit tests
-python -m pytest tests/backend_parity -q
+python scripts/build_native.py       # build and install src/bus_sim_native.so
+cargo test -p bus-sim-core           # native unit tests
+python -m pytest tests/parity -q
 ```
 
 Select the backend per run (default `python`, configurable via `[runtime]
@@ -116,7 +132,7 @@ when debugging.
 
 Run the slower checks only when needed: `build --fixtures` replays the 11
 golden fixtures (~8 s), `verify` adds fixture + reference parity (~13 s), and
-`verify --deep` (or `BUS_RL_DEEP=1 pytest tests/backend_parity/test_manifest.py`)
+`verify --deep` (or `BUS_RL_DEEP=1 pytest tests/parity/test_manifest.py`)
 regenerates the 1,200 scenario seeds (~35 s).
 
 ## What is in the observation

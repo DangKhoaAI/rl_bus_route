@@ -55,9 +55,9 @@ Một lần gọi native `step` thực hiện action, toàn bộ ticks của con
 Layout đề xuất:
 
 ```text
-crates/bus-sim/       # domain, engine, passengers, vehicles, dispatcher,
+crates/bus-sim-core/       # domain, engine, passengers, vehicles, dispatcher,
                      # travel, costs, observe, masks; rlib
-crates/bus-sim-py/    # PyO3 cdylib, Python import bus_sim
+crates/bus-sim-python/    # PyO3 cdylib, Python import bus_sim_native
 ```
 
 Có thể gộp rlib + cdylib nếu đơn giản hơn. Build release cho mọi benchmark. Backend config `runtime.backend = "python" | "rust"` (đã triển khai trong config và CLI `--backend`). Truyền lựa chọn này xuyên suốt train, validation callback, diagnose, evaluate và baselines; không silent fallback nếu người dùng chọn Rust nhưng extension thiếu.
@@ -104,7 +104,7 @@ Giữ NOOP valid, mapping 221 slots, flags M1/M2/M3 và tất cả guards. Actio
 
 ## 5. FFI, wrapper và evaluator
 
-Contract đã triển khai trong `crates/bus-sim-py` (`Kernel`):
+Contract đã triển khai trong `crates/bus-sim-python` (`Kernel`):
 
 ```text
 reset(scenario_index) -> (obs, mask)
@@ -186,7 +186,7 @@ Sau R4, **Rust là backend của loạt thực nghiệm mới** ở [improve_RL.
 
 ## 9. Nguồn code cần đối chiếu khi triển khai
 
-- `src/bus_rl/domain.py`, `sim/engine.py`, `sim/passengers.py`, `sim/vehicles.py`, `sim/dispatcher.py`, `sim/travel.py`.
-- `src/bus_rl/env/observation.py`, `env/bus_dispatch.py`, `control/actions.py`, `control/guards.py`, `rewards/costs.py`.
-- `src/bus_rl/training/diagnose.py`, `train.py`, `callbacks.py`, `checkpoint.py`, `evaluation/runner.py`.
+- `src/bus_sim/oracle/domain.py`, `sim/engine.py`, `sim/passengers.py`, `sim/vehicles.py`, `sim/dispatcher.py`, `sim/travel.py`.
+- `src/bus_sim/oracle/observation.py`, `env/bus_dispatch.py`, `control/actions.py`, `control/guards.py`, `rewards/costs.py`.
+- `src/bus_rl/learning/training/diagnose.py`, `train.py`, `callbacks.py`, `checkpoint.py`, `evaluation/runner.py`.
 - `tests/test_engine.py`, `test_passengers.py`, `test_vehicles.py`, `test_control.py`, `test_env.py`, `test_rewards.py`, `test_forecast.py`, `test_pipeline.py`.

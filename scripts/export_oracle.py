@@ -8,7 +8,7 @@ Usage:
 ``build`` writes ``reports/rust-migration/oracle-manifest.json`` and the fixture
 summary. By default it is fast (manifest only); ``--fixtures`` replays and
 ``--force`` (re)writes the named fixtures under
-``tests/backend_parity/fixtures``. ``verify`` re-derives every hash, replays
+``tests/parity/fixtures``. ``verify`` re-derives every hash, replays
 every fixture, and re-checks the reference checkpoint. ``--deep`` additionally
 regenerates the 1,200 scenario seeds (slow R0 check); ``--hashes-only`` is the
 fast manifest-only check.
@@ -28,10 +28,14 @@ if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
 
 from bus_rl.config import ControlConfig, load_run_config
-from bus_rl.data.scenario import generate_manifest
-from bus_rl.env.bus_dispatch import BusDispatchEnv
 from bus_rl.evaluation.runner import evaluate_scenarios
-from bus_rl.parity.fixtures import (
+from bus_rl.execution.environments.python.environment import BusDispatchEnv
+from bus_rl.execution.scenarios.generation import generate_manifest
+from bus_rl.execution.timing import TIMERS
+from bus_rl.learning.training.checkpoint import load_metadata, load_model
+from bus_rl.provenance import file_hash
+from bus_sim.oracle.costs import RewardConfig
+from bus_sim.parity.fixtures import (
     fixtures_summary,
     flatten,
     load_fixture,
@@ -39,13 +43,9 @@ from bus_rl.parity.fixtures import (
     replay_fixture,
     save_fixture,
 )
-from bus_rl.parity.manifest import build_manifest, verify_manifest
-from bus_rl.parity.scenarios import CATALOG
-from bus_rl.parity.snapshot import compare_records
-from bus_rl.provenance import file_hash
-from bus_rl.rewards.costs import RewardConfig
-from bus_rl.timing import TIMERS
-from bus_rl.training.checkpoint import load_metadata, load_model
+from bus_sim.parity.manifest import build_manifest, verify_manifest
+from bus_sim.parity.scenarios import CATALOG
+from bus_sim.parity.snapshot import compare_records
 
 REPORT_DIR = ROOT / "reports" / "rust-migration"
 FIXTURES_DIR = ROOT / "tests" / "backend_parity" / "fixtures"
@@ -100,7 +100,7 @@ def build_reference(force: bool = False) -> dict:
         "config": "configs/experiments/core.toml",
         "split": "validation",
         "days": 10,
-        "scenario_source": "bus_rl.data.scenario.generate_manifest('validation', 100)[:10]",
+        "scenario_source": "bus_rl.execution.scenarios.generation.generate_manifest('validation', 100)[:10]",
         "seed": metadata.get("seed"),
         "total_timesteps_actual": metadata.get("total_timesteps_actual"),
         "historical_mean_total_cost": 15471.25,
@@ -121,7 +121,7 @@ def build_reference(force: bool = False) -> dict:
 
 
 def coverage_matrix() -> dict:
-    from bus_rl.control.actions import ACTION_TABLE
+    from bus_sim.oracle.actions import ACTION_TABLE
 
     matrix = {}
     for name in CATALOG:

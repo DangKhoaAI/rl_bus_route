@@ -2,8 +2,14 @@ from __future__ import annotations
 
 import numpy as np
 
-from bus_rl.data.scenario import generate_scenario
-from bus_rl.domain import PassengerCohort, Pattern, SimConfig, initial_state, scenario_digest
+from bus_rl.execution.scenarios.generation import generate_scenario
+from bus_sim.oracle.domain import (
+    PassengerCohort,
+    Pattern,
+    SimConfig,
+    initial_state,
+    scenario_digest,
+)
 
 _STAGE_FLAGS = {
     "M1": (False, False),

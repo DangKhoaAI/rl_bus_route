@@ -150,7 +150,9 @@ def _max_tensor_diff(left: dict, right: dict) -> float:
         if isinstance(a, (str, type(None), bool)) or isinstance(b, (str, type(None), bool)):
             assert a == b, (key, a, b)
             continue
-        diff = max(diff, float(np.abs(np.asarray(a, dtype=float) - np.asarray(b, dtype=float)).max()))
+        diff = max(
+            diff, float(np.abs(np.asarray(a, dtype=float) - np.asarray(b, dtype=float)).max())
+        )
     return diff
 
 
@@ -193,9 +195,7 @@ def main() -> None:
 
     baseline = next(record for record in records if record["variant"] == "baseline")
     reference_curve = baseline["evaluations"]
-    reference_state = {
-        which: _tensor_state(baseline, which) for which in ("last", "best")
-    }
+    reference_state = {which: _tensor_state(baseline, which) for which in ("last", "best")}
     parity = {}
     for record in records:
         key = f"{record['variant']}-r{record['repetition']}"
@@ -266,9 +266,17 @@ def main() -> None:
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(payload, indent=2, sort_keys=True))
-    print(json.dumps({"speedup_median": speedup, "memory_median_ratio": memory,
-                      "wall_medians": {k: results[k]["wall_s"]["median"] for k in results}},
-                     indent=2), flush=True)
+    print(
+        json.dumps(
+            {
+                "speedup_median": speedup,
+                "memory_median_ratio": memory,
+                "wall_medians": {k: results[k]["wall_s"]["median"] for k in results},
+            },
+            indent=2,
+        ),
+        flush=True,
+    )
     print(f"[fw] wrote {args.output}", flush=True)
 
 
