@@ -1,57 +1,466 @@
 {
-  "selection": "three highest total_cost_core held-out days per split for core (all 3 seeds averaged); scenario_index ascending on ties",
+  "selection": "for each held-out split and core seed, the three highest total_cost_core days at that checkpoint; ties broken by ascending scenario_index",
   "checkpoint_timestep": "lowest validation total_cost_core; earliest tie",
-  "traces": {
-    "test_id": [
-      {
-        "scenario_seed": 18004568296848718802,
-        "scenario_index": 63,
-        "mean_cost_core": 15015.416666666666
-      },
-      {
-        "scenario_seed": 6300082838632318686,
-        "scenario_index": 79,
-        "mean_cost_core": 14971.833333333334
-      },
-      {
-        "scenario_seed": 5067743257267350029,
-        "scenario_index": 139,
-        "mean_cost_core": 14563.791666666666
-      }
-    ],
-    "test_ood_burst": [
-      {
-        "scenario_seed": 4505524787729195896,
-        "scenario_index": 35,
-        "mean_cost_core": 41911.166666666664
-      },
-      {
-        "scenario_seed": 4397080196289151357,
-        "scenario_index": 176,
-        "mean_cost_core": 39927.75
-      },
-      {
-        "scenario_seed": 2161007827515201842,
-        "scenario_index": 16,
-        "mean_cost_core": 38496.291666666664
-      }
-    ],
-    "test_ood_traffic": [
-      {
-        "scenario_seed": 11308784907264027045,
-        "scenario_index": 82,
-        "mean_cost_core": 16758.916666666668
-      },
-      {
-        "scenario_seed": 5919512783220777065,
-        "scenario_index": 103,
-        "mean_cost_core": 15303.833333333334
-      },
-      {
-        "scenario_seed": 3624707838559502678,
-        "scenario_index": 114,
-        "mean_cost_core": 15051.708333333334
-      }
-    ]
-  }
+  "raw_trace_root": "runs/rl-improvement/l3-failure-traces",
+  "traces": [
+    {
+      "split": "test_id",
+      "seed": 11,
+      "days": [
+        {
+          "scenario_index": 79,
+          "scenario_seed": 6300082838632318686,
+          "scenario_hash": "6c6049c1b09c01ac5a770af836914a202a83cdf77e74a8fb29b5a5c428be81d4",
+          "total_cost_core": 15120.125,
+          "decisions": 120,
+          "action_families": {
+            "DISPATCH": 3,
+            "SET_HEADWAY": 3,
+            "NOOP": 114
+          },
+          "peak_queue": 55,
+          "raw_trace": "runs/rl-improvement/l3-failure-traces/test_id-seed11.json"
+        },
+        {
+          "scenario_index": 63,
+          "scenario_seed": 18004568296848718802,
+          "scenario_hash": "d6e442d833eada6abe119c56c86c49ab6d068ac47e8303ff24504f846ec930da",
+          "total_cost_core": 14921.5,
+          "decisions": 120,
+          "action_families": {
+            "DISPATCH": 3,
+            "SET_HEADWAY": 3,
+            "NOOP": 114
+          },
+          "peak_queue": 68,
+          "raw_trace": "runs/rl-improvement/l3-failure-traces/test_id-seed11.json"
+        },
+        {
+          "scenario_index": 139,
+          "scenario_seed": 5067743257267350029,
+          "scenario_hash": "a608853e8d7fd1b804d97ff8a83c57edf2fd237c9abddfd7c3df7feb98f63d1c",
+          "total_cost_core": 14523.375,
+          "decisions": 120,
+          "action_families": {
+            "DISPATCH": 3,
+            "SET_HEADWAY": 3,
+            "NOOP": 114
+          },
+          "peak_queue": 67,
+          "raw_trace": "runs/rl-improvement/l3-failure-traces/test_id-seed11.json"
+        }
+      ]
+    },
+    {
+      "split": "test_id",
+      "seed": 22,
+      "days": [
+        {
+          "scenario_index": 63,
+          "scenario_seed": 18004568296848718802,
+          "scenario_hash": "d6e442d833eada6abe119c56c86c49ab6d068ac47e8303ff24504f846ec930da",
+          "total_cost_core": 14991.625,
+          "decisions": 120,
+          "action_families": {
+            "SHORT_TURN": 1,
+            "DISPATCH": 2,
+            "SET_HEADWAY": 3,
+            "NOOP": 114
+          },
+          "peak_queue": 75,
+          "raw_trace": "runs/rl-improvement/l3-failure-traces/test_id-seed22.json"
+        },
+        {
+          "scenario_index": 79,
+          "scenario_seed": 6300082838632318686,
+          "scenario_hash": "6c6049c1b09c01ac5a770af836914a202a83cdf77e74a8fb29b5a5c428be81d4",
+          "total_cost_core": 14832.25,
+          "decisions": 120,
+          "action_families": {
+            "SHORT_TURN": 1,
+            "DISPATCH": 2,
+            "SET_HEADWAY": 3,
+            "NOOP": 114
+          },
+          "peak_queue": 57,
+          "raw_trace": "runs/rl-improvement/l3-failure-traces/test_id-seed22.json"
+        },
+        {
+          "scenario_index": 139,
+          "scenario_seed": 5067743257267350029,
+          "scenario_hash": "a608853e8d7fd1b804d97ff8a83c57edf2fd237c9abddfd7c3df7feb98f63d1c",
+          "total_cost_core": 14488.5,
+          "decisions": 120,
+          "action_families": {
+            "SHORT_TURN": 1,
+            "DISPATCH": 2,
+            "SET_HEADWAY": 3,
+            "NOOP": 114
+          },
+          "peak_queue": 67,
+          "raw_trace": "runs/rl-improvement/l3-failure-traces/test_id-seed22.json"
+        }
+      ]
+    },
+    {
+      "split": "test_id",
+      "seed": 33,
+      "days": [
+        {
+          "scenario_index": 63,
+          "scenario_seed": 18004568296848718802,
+          "scenario_hash": "d6e442d833eada6abe119c56c86c49ab6d068ac47e8303ff24504f846ec930da",
+          "total_cost_core": 15133.125,
+          "decisions": 120,
+          "action_families": {
+            "REASSIGN": 1,
+            "DISPATCH": 2,
+            "SHORT_TURN": 1,
+            "SET_HEADWAY": 3,
+            "NOOP": 113
+          },
+          "peak_queue": 60,
+          "raw_trace": "runs/rl-improvement/l3-failure-traces/test_id-seed33.json"
+        },
+        {
+          "scenario_index": 79,
+          "scenario_seed": 6300082838632318686,
+          "scenario_hash": "6c6049c1b09c01ac5a770af836914a202a83cdf77e74a8fb29b5a5c428be81d4",
+          "total_cost_core": 14963.125,
+          "decisions": 120,
+          "action_families": {
+            "REASSIGN": 1,
+            "DISPATCH": 2,
+            "SHORT_TURN": 1,
+            "SET_HEADWAY": 3,
+            "NOOP": 113
+          },
+          "peak_queue": 58,
+          "raw_trace": "runs/rl-improvement/l3-failure-traces/test_id-seed33.json"
+        },
+        {
+          "scenario_index": 139,
+          "scenario_seed": 5067743257267350029,
+          "scenario_hash": "a608853e8d7fd1b804d97ff8a83c57edf2fd237c9abddfd7c3df7feb98f63d1c",
+          "total_cost_core": 14679.5,
+          "decisions": 120,
+          "action_families": {
+            "REASSIGN": 1,
+            "DISPATCH": 2,
+            "SHORT_TURN": 1,
+            "SET_HEADWAY": 3,
+            "NOOP": 113
+          },
+          "peak_queue": 76,
+          "raw_trace": "runs/rl-improvement/l3-failure-traces/test_id-seed33.json"
+        }
+      ]
+    },
+    {
+      "split": "test_ood_burst",
+      "seed": 11,
+      "days": [
+        {
+          "scenario_index": 176,
+          "scenario_seed": 4397080196289151357,
+          "scenario_hash": "0376eef11de04a96056df8b45fa5127fb215c47db4863a0c6dc09c42be4a0407",
+          "total_cost_core": 40366.125,
+          "decisions": 120,
+          "action_families": {
+            "DISPATCH": 3,
+            "SET_HEADWAY": 3,
+            "NOOP": 114
+          },
+          "peak_queue": 315,
+          "raw_trace": "runs/rl-improvement/l3-failure-traces/test_ood_burst-seed11.json"
+        },
+        {
+          "scenario_index": 35,
+          "scenario_seed": 4505524787729195896,
+          "scenario_hash": "a07efa419dd118ab06fabce00991f255f0b2f3881e665d8996494eadbcd1e885",
+          "total_cost_core": 40062.125,
+          "decisions": 120,
+          "action_families": {
+            "DISPATCH": 3,
+            "SET_HEADWAY": 3,
+            "NOOP": 114
+          },
+          "peak_queue": 298,
+          "raw_trace": "runs/rl-improvement/l3-failure-traces/test_ood_burst-seed11.json"
+        },
+        {
+          "scenario_index": 16,
+          "scenario_seed": 2161007827515201842,
+          "scenario_hash": "e6c1e8be7b3ddca0f2628f8892cc381fcdefbd0db5040f195369d02fa67e36ca",
+          "total_cost_core": 38589.625,
+          "decisions": 120,
+          "action_families": {
+            "DISPATCH": 3,
+            "SET_HEADWAY": 3,
+            "NOOP": 114
+          },
+          "peak_queue": 299,
+          "raw_trace": "runs/rl-improvement/l3-failure-traces/test_ood_burst-seed11.json"
+        }
+      ]
+    },
+    {
+      "split": "test_ood_burst",
+      "seed": 22,
+      "days": [
+        {
+          "scenario_index": 35,
+          "scenario_seed": 4505524787729195896,
+          "scenario_hash": "a07efa419dd118ab06fabce00991f255f0b2f3881e665d8996494eadbcd1e885",
+          "total_cost_core": 41470.625,
+          "decisions": 120,
+          "action_families": {
+            "SHORT_TURN": 1,
+            "DISPATCH": 2,
+            "SET_HEADWAY": 3,
+            "NOOP": 114
+          },
+          "peak_queue": 322,
+          "raw_trace": "runs/rl-improvement/l3-failure-traces/test_ood_burst-seed22.json"
+        },
+        {
+          "scenario_index": 176,
+          "scenario_seed": 4397080196289151357,
+          "scenario_hash": "0376eef11de04a96056df8b45fa5127fb215c47db4863a0c6dc09c42be4a0407",
+          "total_cost_core": 40212.125,
+          "decisions": 120,
+          "action_families": {
+            "SHORT_TURN": 1,
+            "DISPATCH": 2,
+            "SET_HEADWAY": 3,
+            "NOOP": 114
+          },
+          "peak_queue": 315,
+          "raw_trace": "runs/rl-improvement/l3-failure-traces/test_ood_burst-seed22.json"
+        },
+        {
+          "scenario_index": 16,
+          "scenario_seed": 2161007827515201842,
+          "scenario_hash": "e6c1e8be7b3ddca0f2628f8892cc381fcdefbd0db5040f195369d02fa67e36ca",
+          "total_cost_core": 38367.125,
+          "decisions": 120,
+          "action_families": {
+            "SHORT_TURN": 1,
+            "DISPATCH": 2,
+            "SET_HEADWAY": 3,
+            "NOOP": 114
+          },
+          "peak_queue": 299,
+          "raw_trace": "runs/rl-improvement/l3-failure-traces/test_ood_burst-seed22.json"
+        }
+      ]
+    },
+    {
+      "split": "test_ood_burst",
+      "seed": 33,
+      "days": [
+        {
+          "scenario_index": 35,
+          "scenario_seed": 4505524787729195896,
+          "scenario_hash": "a07efa419dd118ab06fabce00991f255f0b2f3881e665d8996494eadbcd1e885",
+          "total_cost_core": 44200.75,
+          "decisions": 120,
+          "action_families": {
+            "REASSIGN": 1,
+            "DISPATCH": 2,
+            "SHORT_TURN": 1,
+            "SET_HEADWAY": 3,
+            "NOOP": 113
+          },
+          "peak_queue": 336,
+          "raw_trace": "runs/rl-improvement/l3-failure-traces/test_ood_burst-seed33.json"
+        },
+        {
+          "scenario_index": 176,
+          "scenario_seed": 4397080196289151357,
+          "scenario_hash": "0376eef11de04a96056df8b45fa5127fb215c47db4863a0c6dc09c42be4a0407",
+          "total_cost_core": 39205.0,
+          "decisions": 120,
+          "action_families": {
+            "REASSIGN": 1,
+            "DISPATCH": 2,
+            "SHORT_TURN": 1,
+            "SET_HEADWAY": 3,
+            "NOOP": 113
+          },
+          "peak_queue": 315,
+          "raw_trace": "runs/rl-improvement/l3-failure-traces/test_ood_burst-seed33.json"
+        },
+        {
+          "scenario_index": 107,
+          "scenario_seed": 7733690596321458566,
+          "scenario_hash": "fb0f2cc72e64509503be9c7a55899a8354abdf0d19cae58e218c6a87ce50f4dd",
+          "total_cost_core": 38939.875,
+          "decisions": 120,
+          "action_families": {
+            "REASSIGN": 1,
+            "DISPATCH": 2,
+            "SHORT_TURN": 1,
+            "SET_HEADWAY": 3,
+            "NOOP": 113
+          },
+          "peak_queue": 286,
+          "raw_trace": "runs/rl-improvement/l3-failure-traces/test_ood_burst-seed33.json"
+        }
+      ]
+    },
+    {
+      "split": "test_ood_traffic",
+      "seed": 11,
+      "days": [
+        {
+          "scenario_index": 82,
+          "scenario_seed": 11308784907264027045,
+          "scenario_hash": "ae0505a22043be56a656d180e725e214a5402c8853473e0ac6978590843b0a59",
+          "total_cost_core": 17239.75,
+          "decisions": 120,
+          "action_families": {
+            "DISPATCH": 3,
+            "SET_HEADWAY": 3,
+            "NOOP": 114
+          },
+          "peak_queue": 115,
+          "raw_trace": "runs/rl-improvement/l3-failure-traces/test_ood_traffic-seed11.json"
+        },
+        {
+          "scenario_index": 103,
+          "scenario_seed": 5919512783220777065,
+          "scenario_hash": "d09256dd6bcbe5b04d9b1effd5ad1b57eca113813a5d024344cf5f77127e716a",
+          "total_cost_core": 15270.625,
+          "decisions": 120,
+          "action_families": {
+            "DISPATCH": 3,
+            "SET_HEADWAY": 3,
+            "NOOP": 114
+          },
+          "peak_queue": 87,
+          "raw_trace": "runs/rl-improvement/l3-failure-traces/test_ood_traffic-seed11.json"
+        },
+        {
+          "scenario_index": 29,
+          "scenario_seed": 8477121560150496602,
+          "scenario_hash": "a0bbf190b88eda5be8c484defa3c5fdf1e531dc94dc97ab4f255c5ed767d8d27",
+          "total_cost_core": 15047.25,
+          "decisions": 120,
+          "action_families": {
+            "DISPATCH": 3,
+            "SET_HEADWAY": 3,
+            "NOOP": 114
+          },
+          "peak_queue": 49,
+          "raw_trace": "runs/rl-improvement/l3-failure-traces/test_ood_traffic-seed11.json"
+        }
+      ]
+    },
+    {
+      "split": "test_ood_traffic",
+      "seed": 22,
+      "days": [
+        {
+          "scenario_index": 82,
+          "scenario_seed": 11308784907264027045,
+          "scenario_hash": "ae0505a22043be56a656d180e725e214a5402c8853473e0ac6978590843b0a59",
+          "total_cost_core": 16700.5,
+          "decisions": 120,
+          "action_families": {
+            "SHORT_TURN": 1,
+            "DISPATCH": 2,
+            "SET_HEADWAY": 3,
+            "NOOP": 114
+          },
+          "peak_queue": 108,
+          "raw_trace": "runs/rl-improvement/l3-failure-traces/test_ood_traffic-seed22.json"
+        },
+        {
+          "scenario_index": 103,
+          "scenario_seed": 5919512783220777065,
+          "scenario_hash": "d09256dd6bcbe5b04d9b1effd5ad1b57eca113813a5d024344cf5f77127e716a",
+          "total_cost_core": 15362.375,
+          "decisions": 120,
+          "action_families": {
+            "SHORT_TURN": 1,
+            "DISPATCH": 2,
+            "SET_HEADWAY": 3,
+            "NOOP": 114
+          },
+          "peak_queue": 91,
+          "raw_trace": "runs/rl-improvement/l3-failure-traces/test_ood_traffic-seed22.json"
+        },
+        {
+          "scenario_index": 114,
+          "scenario_seed": 3624707838559502678,
+          "scenario_hash": "f11ef99aa71220c7ea0a7e301d2322b7884381a065b7d85f23bbfae6e7887e2b",
+          "total_cost_core": 15084.375,
+          "decisions": 120,
+          "action_families": {
+            "SHORT_TURN": 1,
+            "DISPATCH": 2,
+            "SET_HEADWAY": 3,
+            "NOOP": 114
+          },
+          "peak_queue": 68,
+          "raw_trace": "runs/rl-improvement/l3-failure-traces/test_ood_traffic-seed22.json"
+        }
+      ]
+    },
+    {
+      "split": "test_ood_traffic",
+      "seed": 33,
+      "days": [
+        {
+          "scenario_index": 82,
+          "scenario_seed": 11308784907264027045,
+          "scenario_hash": "ae0505a22043be56a656d180e725e214a5402c8853473e0ac6978590843b0a59",
+          "total_cost_core": 16336.5,
+          "decisions": 120,
+          "action_families": {
+            "REASSIGN": 1,
+            "DISPATCH": 2,
+            "SHORT_TURN": 1,
+            "SET_HEADWAY": 3,
+            "NOOP": 113
+          },
+          "peak_queue": 110,
+          "raw_trace": "runs/rl-improvement/l3-failure-traces/test_ood_traffic-seed33.json"
+        },
+        {
+          "scenario_index": 103,
+          "scenario_seed": 5919512783220777065,
+          "scenario_hash": "d09256dd6bcbe5b04d9b1effd5ad1b57eca113813a5d024344cf5f77127e716a",
+          "total_cost_core": 15278.5,
+          "decisions": 120,
+          "action_families": {
+            "REASSIGN": 1,
+            "DISPATCH": 2,
+            "SHORT_TURN": 1,
+            "SET_HEADWAY": 3,
+            "NOOP": 113
+          },
+          "peak_queue": 83,
+          "raw_trace": "runs/rl-improvement/l3-failure-traces/test_ood_traffic-seed33.json"
+        },
+        {
+          "scenario_index": 114,
+          "scenario_seed": 3624707838559502678,
+          "scenario_hash": "f11ef99aa71220c7ea0a7e301d2322b7884381a065b7d85f23bbfae6e7887e2b",
+          "total_cost_core": 15228.875,
+          "decisions": 120,
+          "action_families": {
+            "REASSIGN": 1,
+            "DISPATCH": 2,
+            "SHORT_TURN": 1,
+            "SET_HEADWAY": 3,
+            "NOOP": 113
+          },
+          "peak_queue": 61,
+          "raw_trace": "runs/rl-improvement/l3-failure-traces/test_ood_traffic-seed33.json"
+        }
+      ]
+    }
+  ]
 }

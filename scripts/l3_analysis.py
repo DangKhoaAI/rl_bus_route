@@ -7,7 +7,9 @@ Raw inputs (gitignored):
 Curated outputs:
   reports/rl-improvement/tables/l3_*.csv|json
   reports/rl-improvement/plots/l3_*.png
-  reports/rl-improvement/evidence/l3_failure_traces.json
+
+Failure-trace decision rows are produced separately by
+``scripts/l3_failure_traces.py`` (they require loading checkpoints).
 
 Run:  uv run python scripts/l3_analysis.py
 """
@@ -27,7 +29,6 @@ ROOT = Path(__file__).resolve().parents[1]
 RUNS = ROOT / "runs" / "rl-improvement"
 TABLES = ROOT / "reports" / "rl-improvement" / "tables"
 PLOTS = ROOT / "reports" / "rl-improvement" / "plots"
-EVIDENCE = ROOT / "reports" / "rl-improvement" / "evidence"
 CONFIGS = ROOT / "configs" / "experiments" / "rl-improvement"
 
 ARMS = ["core", "no_reassign", "no_short", "fairness_zero"]
@@ -67,6 +68,12 @@ def load_held_out() -> pd.DataFrame:
     return pd.concat(frames, ignore_index=True)
 
 
+def _hashes(arm: str, seed: int) -> tuple[str, str]:
+    config_sha = sha256((CONFIGS / f"{arm}.toml").read_bytes()).hexdigest()
+    checkpoint_sha = sha256((training_dir(arm, seed) / "best.zip").read_bytes()).hexdigest()
+    return config_sha, checkpoint_sha
+
+
 def build_tables(held: pd.DataFrame) -> dict[str, pd.DataFrame]:
     summary_rows, contrast_rows, paired_rows = [], [], []
     for split in SPLITS:
@@ -80,11 +87,14 @@ def build_tables(held: pd.DataFrame) -> dict[str, pd.DataFrame]:
             arm_seed = sub.groupby("model_seed")["total_cost_core"].mean()
             for seed in SEEDS:
                 s = sub[sub.model_seed == seed]
+                config_sha, checkpoint_sha = _hashes(arm, seed)
                 summary_rows.append(
                     {
                         "arm": arm,
                         "split": split,
                         "seed": seed,
+                        "config_sha256": config_sha,
+                        "checkpoint_sha256": checkpoint_sha,
                         "mean_cost": float(s.total_cost_core.mean()),
                         "std_cost_across_days": float(s.total_cost_core.std(ddof=1)),
                         "mean_wait": float(s.mean_wait.mean()),
@@ -301,33 +311,15 @@ def make_plots(curves: pd.DataFrame, held: pd.DataFrame, tables: dict) -> None:
     plt.close(fig)
 
 
-def make_failure_traces(held: pd.DataFrame) -> dict:
-    """Top-3 held-out days for the core incumbent, chosen by cost before tracing."""
-    EVIDENCE.mkdir(parents=True, exist_ok=True)
-    payload = {
-        "selection": "three highest total_cost_core held-out days per split for core (all 3 seeds averaged); scenario_index ascending on ties",
-        "checkpoint_timestep": "lowest validation total_cost_core; earliest tie",
-        "traces": {},
-    }
-    for split in SPLITS:
-        sub = (
-            held[(held.arm == "core") & (held.split == split)]
-            .groupby(["scenario_seed", "scenario_index"])["total_cost_core"]
-            .mean()
-            .reset_index()
-            .sort_values(["total_cost_core", "scenario_index"], ascending=[False, True])
-            .head(3)
-        )
-        payload["traces"][split] = [
-            {
-                "scenario_seed": int(r.scenario_seed),
-                "scenario_index": int(r.scenario_index),
-                "mean_cost_core": float(r.total_cost_core),
-            }
-            for r in sub.itertuples()
-        ]
-    (EVIDENCE / "l3_failure_traces.json").write_text(json.dumps(payload, indent=2))
-    return payload
+def assert_plot_inputs(held: pd.DataFrame, tables: dict[str, pd.DataFrame]) -> None:
+    """Guard the figure inputs against NaN / empty ranges before plotting."""
+    assert held["total_cost_core"].notna().all() and (held["total_cost_core"] > 0).all()
+    assert held["p95_wait"].notna().all() and (held["p95_wait"] >= 0).all()
+    contrast = tables["l3_contrasts"]
+    for column in ("mean_delta", "ci_low", "ci_high", "pct_of_core", "delta_p95", "delta_worst"):
+        assert np.isfinite(contrast[column]).all(), column
+    assert (contrast["ci_low"] <= contrast["mean_delta"]).all()
+    assert (contrast["mean_delta"] <= contrast["ci_high"]).all()
 
 
 def main() -> None:
@@ -335,15 +327,16 @@ def main() -> None:
     curves = load_training_curves()
     held = load_held_out()
     tables = build_tables(held)
+    assert_plot_inputs(held, tables)
     for name, frame in tables.items():
         frame.to_csv(TABLES / f"{name}.csv", index=False)
     verification = build_verification(held)
     (TABLES / "l3_verification.json").write_text(json.dumps(verification, indent=2))
     make_plots(curves, held, tables)
-    traces = make_failure_traces(held)
+    for path in ("l3_validation_curves.png", "l3_held_out_costs.png", "l3_service_tradeoffs.png"):
+        assert (PLOTS / path).stat().st_size > 10_000, path
     print(json.dumps({k: v for k, v in verification.items() if k != "checks"}, indent=2))
     print(tables["l3_contrasts"].round(4).to_string(index=False))
-    print("failure-trace days:", json.dumps(traces["traces"]))
 
 
 if __name__ == "__main__":

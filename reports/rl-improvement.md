@@ -234,9 +234,15 @@ e.g. `test_id` core 13,065.7 vs fixed 15,861.3, proportional 16,056.6, threshold
   no adopted algorithm change alters per-step compute it is not a distinct
   contrast; the fixed-transition runs' observed wall time is the wall-clock view.
 
-Failure traces: `evidence/l3_failure_traces.json` records the three
-highest-cost core days per split, selected by cost before tracing, by
-`scenario_index` order on ties.
+Failure traces: `evidence/l3_failure_traces.json` wraps the decision rows for the
+three highest-cost core held-out days at each seed/checkpoint, selected by cost
+before tracing (ties by ascending `scenario_index`). It is a 15 KB digest
+(decisions, action-family counts, peak queue) keyed to full raw traces under the
+gitignored `runs/rl-improvement/l3-failure-traces/` tree; regenerate both with
+`uv run python scripts/l3_failure_traces.py`. On the 27 selected worst-case days
+the policy takes 3,069 NOOP, 81 SET_HEADWAY, 63 DISPATCH, 18 SHORT_TURN and 9
+REASSIGN decisions out of 3,240 — i.e. the highest-cost days are dominated by
+inaction, which is the actionable failure mode the traces expose.
 
 ## Compute and limitations
 

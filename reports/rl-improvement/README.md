@@ -27,9 +27,11 @@ checkpoints, per-day validation rows and telemetry are under the gitignored
   results, statistics, baseline summary and structural audit.
 - `plots/l3_validation_curves.png`, `plots/l3_held_out_costs.png` and
   `plots/l3_service_tradeoffs.png` are the L3 figures; failure traces live in
-  `evidence/l3_failure_traces.json`.
+  `evidence/l3_failure_traces.json` (compact digest; raw decision rows under
+  the gitignored `runs/rl-improvement/l3-failure-traces/`).
 - `uv run python scripts/l3_analysis.py` regenerates every L3 table and plot
-  from the raw `runs/rl-improvement/l3-*` tree.
+  from the raw `runs/rl-improvement/l3-*` tree;
+  `uv run python scripts/l3_failure_traces.py` regenerates the failure traces.
 
 ## L3 reward-wiring fix
 
