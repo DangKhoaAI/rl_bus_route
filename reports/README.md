@@ -19,8 +19,8 @@ report must say why; do not keep duplicate copies in two places.
 | `forecast.md` | Forecast diagnostic (Task 10). |
 | `training-diagnosis-v1.0.md` | Python training-time diagnosis before hot-path work. |
 | `training-diagnosis-v1.1-python-improve.md` | Python training-time diagnosis after hot-path work. |
-| `rl-improvement.md` | L0/L1/L2 study status, decisions and reproduction evidence links. |
-| `rl-improvement/` | Frozen L0/L1 protocol, experiment ledger and curated RL-improvement evidence (L0/L1 and the rejected L2.1 forecast + L2.3 PBRS rounds). |
+| `rl-improvement.md` | L0/L1/L2/L3 study status, decisions and final paired held-out analysis. |
+| `rl-improvement/` | Frozen L0/L1 protocol, L3 matrix protocol, experiment ledger and curated RL-improvement evidence (L1/L2 rejections, L3 T9 held-out results, plots and failure traces). |
 
 The diagnosis runs' raw artifacts live in the git-ignored `runs/diagnose/`
 and `runs/diagnose-after/`; the two `training-diagnosis-*.md` summaries keep the

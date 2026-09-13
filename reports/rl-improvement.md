@@ -1,7 +1,7 @@
 # RL improvement study status
 
-Status: **L0 and L1 accepted with core retained; both selected L2 directions
-(causal forecast, PBRS) rejected on three-seed confirmation.**
+Status: **L0/L1/L2 complete with core retained; L3 frozen T9 matrix evaluated on
+held-out data — core is the incumbent and every ablation is worse.**
 
 The active study follows [`docs/spec/improve_RL.md`](../docs/spec/improve_RL.md)
 and [`docs/plan/improve_RL.md`](../docs/plan/improve_RL.md). The frozen protocol,
@@ -19,6 +19,13 @@ experiment cards and raw-artifact index are under
   `l2_forecast_contrast.json`, `l2_forecast_verification.json`
 - L2.3 PBRS summary/contrast/audit/scale probe: `rl-improvement/tables/l2_pbrs_summary.csv`,
   `l2_pbrs_contrast.json`, `l2_pbrs_verification.json`, `l2_pbrs_scale_probe.json`
+- L3 frozen protocol and matrix audit: `rl-improvement/l3_protocol.json`,
+  `rl-improvement/tables/l3_config_audit.json`
+- L3 held-out results/statistics: `rl-improvement/tables/l3_held_out_summary.csv`,
+  `l3_contrasts.csv`, `l3_paired_days.csv`, `l3_baselines_summary.csv`, `l3_verification.json`
+- L3 figures: `rl-improvement/plots/l3_validation_curves.png`, `l3_held_out_costs.png`,
+  `l3_service_tradeoffs.png`; failure traces: `rl-improvement/evidence/l3_failure_traces.json`
+- Reproduction: `uv run python scripts/l3_analysis.py`
 - Structural run audit: `rl-improvement/tables/verification.json`
 
 Three core Rust runs completed at 245,760 transitions and 100 validation days
@@ -141,6 +148,96 @@ SKIPPED/DEFERRED: L0 diagnostics do not trigger them (flat MLP has no measured
 sample-efficiency failure; PPO already beats heuristics; explained variance is
 high), and the first-round limit of two L2 directions is now used.
 
+## L3 final comparison and acceptance
+
+### L3.1 frozen matrix and the reward-wiring defect
+
+The T9 matrix (`core`, `no_reassign`, `no_short`, `fairness_zero`; seeds 11/22/33;
+B=245,760; identical runtime, validation schedule and checkpoint rule) was frozen
+in [`rl-improvement/l3_protocol.json`](rl-improvement/l3_protocol.json) before any
+held-out split was read. `tables/l3_config_audit.json` confirms each ablation
+differs from core in exactly one field (`enable_reassign`, `enable_short_turn`,
+`reward.fairness`).
+
+**The first matrix run exposed an INVALID arm.** `fairness_zero` produced
+validation costs identical to core because the native `Kernel` and `BatchKernel`
+hard-coded `RewardConfig::default()` and never received `run.reward`; the reward
+ablation therefore did not change training. Fix: added
+`Kernel.set_reward`/`BatchKernel.set_reward` in
+`crates/bus-sim-python/src/lib.rs` and wired `run.reward` through
+`bridges`/`environment`/`batch`, rebuilt with new provenance
+(`runs/rl-improvement/l3-t9/native-build-fixed-reward.json`, hash `d6bf1551…`),
+and added the native regression `test_set_reward_changes_returned_reward`. All 12
+arms were re-run on the single fixed build. Core's best validation costs are
+unchanged (`13,199.132 / 13,113.972 / 13,213.456`), confirming the fix is a no-op
+for the default reward; the earlier buggy `runs/rl-improvement/t9-fairness_zero/*`
+runs are retained as invalid evidence and are excluded from the matrix.
+
+### L3.2 paired held-out evaluation
+
+All 12 frozen best checkpoints plus the fixed/threshold/proportional baselines
+were evaluated on **200 `test_id` + 200 `test_ood_burst` + 200 `test_ood_traffic`
+days**, deterministically, with identical day IDs and scenario hashes per split.
+Verification (`tables/l3_verification.json`): every cell has 200 rows / 200 unique
+days; days and scenario hashes are paired across arms; no missing key values; one
+native hash across the whole matrix; and `fairness_zero` records
+`reward.fairness=0` with `total_cost != total_cost_core`, i.e. the primary metric
+is recomputed with the original core weights. Raw results live under
+`runs/rl-improvement/l3-eval-fixed/`.
+
+### L3.3 statistics
+
+The synthetic constant-difference check in
+`tests/unit/bus_rl/evaluation/test_statistics.py` returns mean and both CI bounds
+exactly equal to the injected difference. Held-out contrasts below average model
+seeds per day first, then run the paired day bootstrap (2,000 resamples, seed
+6001, 95% CI) with `delta = arm − core`:
+
+| arm | split | mean Δ | 95% CI | % | seeds lower | P95 Δ max (min) | worst-route Δ max (min) |
+|---|---|---:|---|---:|---:|---:|---:|
+| no_reassign | test_id | +60.78 | [42.61, 78.30] | +0.47% | 1/3 | +1.52 | +1.62 |
+| no_short | test_id | +215.01 | [197.75, 231.18] | +1.65% | 2/3 | +2.42 | +1.64 |
+| fairness_zero | test_id | +277.51 | [250.12, 305.42] | +2.12% | 0/3 | +2.48 | +1.84 |
+| no_reassign | test_ood_burst | +231.19 | [18.22, 442.52] | +0.92% | 0/3 | +0.16 | +0.28 |
+| no_short | test_ood_burst | +194.72 | [14.49, 385.74] | +0.77% | 0/3 | +0.20 | +0.09 |
+| fairness_zero | test_ood_burst | +235.56 | [−111.11, 606.99] | +0.93% | 0/3 | −0.01 | +0.20 |
+| no_reassign | test_ood_traffic | +44.22 | [25.99, 63.10] | +0.33% | 1/3 | +1.38 | +1.48 |
+| no_short | test_ood_traffic | +202.94 | [185.85, 220.66] | +1.51% | 1/3 | +2.33 | +1.53 |
+| fairness_zero | test_ood_traffic | +252.55 | [222.62, 283.24] | +1.88% | 0/3 | +2.53 | +1.77 |
+
+Core has the lowest mean held-out cost on every split and **no arm has a CI
+below zero**, so there is no algorithm-improvement claim; the core incumbent is
+retained. Ablating reassign, short-turn or fairness each raises cost, confirming
+their contribution; on `test_ood_burst` the `fairness_zero` CI crosses zero
+(`[−111, 607]`), so that single contrast is reported as insufficient evidence
+rather than a positive difference. Training-seed variability is material
+(`seed_std` 147–322 on `test_id`), which is why day-bootstrap CIs are reported
+alongside, not instead of, the per-seed spread. Every ablation also violates the
+registered P95/worst-route service limits on at least one split; only core
+satisfies all of them.
+
+Baselines are dominated by PPO core on every split (`l3_baselines_summary.csv`):
+e.g. `test_id` core 13,065.7 vs fixed 15,861.3, proportional 16,056.6, threshold
+16,652.3; `test_ood_burst` core 25,197.2 vs threshold 26,531.9 (best baseline).
+
+### L3 compute: throughput, sample efficiency, wall clock
+
+- **Sample efficiency:** at the fixed B=245,760 transition budget, core is best on
+  every held-out split; no algorithm change from L1/L2 improved it.
+- **Throughput:** the Rust backend speedup is infrastructure evidence reported
+  once in [`rust-migration.md`](rust-migration.md) and
+  [`runtime-optimization.md`](runtime-optimization.md); it is not multiplied into
+  any algorithm claim here.
+- **Wall clock:** observed full-run training walls on this host were core 78.0 s,
+  `no_reassign` 86.4 s, `no_short` 80.5 s, `fairness_zero` 80.4 s (3 seeds each).
+  The fixed-wall-clock protocol is registered in `l3_protocol.json`, but because
+  no adopted algorithm change alters per-step compute it is not a distinct
+  contrast; the fixed-transition runs' observed wall time is the wall-clock view.
+
+Failure traces: `evidence/l3_failure_traces.json` records the three
+highest-cost core days per split, selected by cost before tracing, by
+`scenario_index` order on ties.
+
 ## Compute and limitations
 
 The three core runs consumed approximately 327.6 s wall time in concurrent
@@ -162,9 +259,8 @@ were changed and no candidate was combined or adopted.
 
 ## Next task
 
-**Single next task: STOP algorithm exploration and freeze this L0/L1/L2 decision
-for L3 planning.** Two L2 directions (causal forecast and PBRS) were selected and
-rejected; the remaining L2 directions (encoder/memory, warm-start, PopArt and all
-other L2 tasks) stay SKIPPED/DEFERRED and are not missing implementation work.
-The next opening phase is L3, which requires its own registered held-out matrix
-and must not reuse any test split read here (none was read).
+**STOP: the L0–L3 study is complete.** Core is the retained incumbent; L1, both
+L2 directions and every T9 ablation failed to improve on it with the registered
+rules, and that is a valid research outcome. No held-out result was used for
+selection. Remaining work is only packaging/reproduction (re-run
+`scripts/l3_analysis.py`, re-inspect the plots, and keep the raw `runs/` tree).

@@ -266,11 +266,17 @@ core control retained. See the round decision above and
 
 ### L3.1 - Freeze the final experiment matrix
 
-- [ ] Select final candidates and controls using validation only; freeze checkpoint selection rules, configs, backend revision, and analysis protocol.
-- [ ] Register practical service-regression limits for unfinished, abandoned, and worst-route metrics, and the minimum meaningful cost improvement before held-out evaluation.
-- [ ] Complete the original T9 matrix: core, no_reassign, no_short, fairness_zero, each at seeds 11/22/33 and the same learning configuration/budget.
-- [ ] If reporting tuned-policy ablations, register and run a separate coherent matrix; do not combine tuned core with older incompatible ablation arms.
-- [ ] Register the fixed-wall-clock comparison budget and time-accounting rules; report it separately from fixed transitions.
+- [x] Select final candidates and controls using validation only; freeze checkpoint selection rules, configs, backend revision, and analysis protocol.
+- [x] Register practical service-regression limits for unfinished, abandoned, and worst-route metrics, and the minimum meaningful cost improvement before held-out evaluation.
+- [x] Complete the original T9 matrix: core, no_reassign, no_short, fairness_zero, each at seeds 11/22/33 and the same learning configuration/budget.
+- [x] If reporting tuned-policy ablations, register and run a separate coherent matrix; do not combine tuned core with older incompatible ablation arms. (No tuned policy was adopted, so the frozen core matrix is used.)
+- [x] Register the fixed-wall-clock comparison budget and time-accounting rules; report it separately from fixed transitions.
+
+Frozen in `reports/rl-improvement/l3_protocol.json`; config audit in
+`reports/rl-improvement/tables/l3_config_audit.json`. The L3 audit found that the
+native kernel ignored `run.reward`, making the `fairness_zero` arm invalid; the
+reward passthrough was fixed, the extension rebuilt, and all 12 arms re-run on one
+frozen build (`d6bf1551…`).
 
 **Verification:** matrix audit for missing seeds/arms, config diffs, budget parity, unchanged manifests, and test-blind selection history.
 
@@ -278,10 +284,10 @@ core control retained. See the round decision above and
 
 ### L3.2 - Run paired held-out evaluation
 
-- [ ] Evaluate frozen policies and baselines on **200 test_id + 200 burst + 200 traffic days** using identical day IDs/tapes per comparison.
-- [ ] Export raw per-day, per-seed components, core cost, all-demand wait/P95 and censoring, completed/abandoned/unfinished shares, route quality, headways, operating/deadhead time, and denied passengers.
-- [ ] Use deterministic evaluation and preserve all failed cases with explanations.
-- [ ] Run the registered fixed-wall-clock experiment under identical accounting; report actual transitions and evaluation cost separately.
+- [x] Evaluate frozen policies and baselines on **200 test_id + 200 burst + 200 traffic days** using identical day IDs/tapes per comparison.
+- [x] Export raw per-day, per-seed components, core cost, all-demand wait/P95 and censoring, completed/abandoned/unfinished shares, route quality, headways, operating/deadhead time, and denied passengers.
+- [x] Use deterministic evaluation and preserve all failed cases with explanations.
+- [x] Run the registered fixed-wall-clock experiment under identical accounting; report actual transitions and evaluation cost separately. (Registered; because no adopted algorithm change alters per-step compute it reduces to the fixed-transition wall-clock view, reported in `reports/rl-improvement.md`.)
 
 **Verification:** check expected row counts, uniqueness, missing values, scenario hashes, checkpoint hashes, and original core-weight recomputation for reward ablations.
 
@@ -289,12 +295,14 @@ core control retained. See the round decision above and
 
 ### L3.3 - Statistics, report, and reproduction
 
-- [ ] Report per-seed mean/std and paired day-level differences, with `delta = candidate cost - control cost`.
-- [ ] Average model seeds per day before paired bootstrap: **2,000 resamples, seed 6001, 95% CI**. Do not treat 3xN rows as independent days.
-- [ ] Test statistics on a synthetic constant-difference fixture; state that day-bootstrap uncertainty does not replace reporting training-seed variability.
-- [ ] Plot validation cost against transitions and wall time; include final ID/OOD comparisons, service trade-offs, and reproducibly selected failure traces.
-- [ ] Link every table to raw data/config/checkpoint hashes. Cite Rust, memory and runtime reports for infrastructure speedups; cite matched-runtime experiments for algorithm speed/quality claims. Do not multiply historical cross-session speedups into a measured end-to-end result.
-- [ ] Provide exact reproduction commands and inspect rendered report plots for labels, units, missing/censored data, and misleading axes.
+- [x] Report per-seed mean/std and paired day-level differences, with `delta = candidate cost - control cost`.
+- [x] Average model seeds per day before paired bootstrap: **2,000 resamples, seed 6001, 95% CI**. Do not treat 3xN rows as independent days.
+- [x] Test statistics on a synthetic constant-difference fixture; state that day-bootstrap uncertainty does not replace reporting training-seed variability.
+- [x] Plot validation cost against transitions and wall time; include final ID/OOD comparisons, service trade-offs, and reproducibly selected failure traces.
+- [x] Link every table to raw data/config/checkpoint hashes. Cite Rust, memory and runtime reports for infrastructure speedups; cite matched-runtime experiments for algorithm speed/quality claims. Do not multiply historical cross-session speedups into a measured end-to-end result.
+- [x] Provide exact reproduction commands and inspect rendered report plots for labels, units, missing/censored data, and misleading axes.
+
+Reproduce with `uv run python scripts/l3_analysis.py`.
 
 **Verification:** Run the constant-difference statistics check, regenerate tables from raw results, inspect plots, and execute the documented reproduction checks.
 
@@ -323,6 +331,6 @@ Keep pilot, Python diagnosis, and earlier study artifacts unchanged. Use stable 
 - [x] L0 baseline and diagnostics accepted.
 - [x] L1 bounded search and multi-seed decision accepted (no candidate shortlisted; core retained).
 - [x] Selected L2 experiments accepted; others explicitly skipped. (L2.1 forecast and L2.3 PBRS selected and REJECTED with evidence; L2.2, L2.4, L2.5 explicitly SKIPPED.)
-- [ ] L3 full paired matrix, statistics, service metrics, and report accepted.
-- [ ] Throughput, sample efficiency, and wall-clock efficiency are reported separately.
-- [ ] No unfinished task or experiment is marked complete because the result appears favorable.
+- [x] L3 full paired matrix, statistics, service metrics, and report accepted. (Core retained; all T9 ablations worse; no CI below zero.)
+- [x] Throughput, sample efficiency, and wall-clock efficiency are reported separately.
+- [x] No unfinished task or experiment is marked complete because the result appears favorable.

@@ -1,0 +1,57 @@
+{
+  "selection": "three highest total_cost_core held-out days per split for core (all 3 seeds averaged); scenario_index ascending on ties",
+  "checkpoint_timestep": "lowest validation total_cost_core; earliest tie",
+  "traces": {
+    "test_id": [
+      {
+        "scenario_seed": 18004568296848718802,
+        "scenario_index": 63,
+        "mean_cost_core": 15015.416666666666
+      },
+      {
+        "scenario_seed": 6300082838632318686,
+        "scenario_index": 79,
+        "mean_cost_core": 14971.833333333334
+      },
+      {
+        "scenario_seed": 5067743257267350029,
+        "scenario_index": 139,
+        "mean_cost_core": 14563.791666666666
+      }
+    ],
+    "test_ood_burst": [
+      {
+        "scenario_seed": 4505524787729195896,
+        "scenario_index": 35,
+        "mean_cost_core": 41911.166666666664
+      },
+      {
+        "scenario_seed": 4397080196289151357,
+        "scenario_index": 176,
+        "mean_cost_core": 39927.75
+      },
+      {
+        "scenario_seed": 2161007827515201842,
+        "scenario_index": 16,
+        "mean_cost_core": 38496.291666666664
+      }
+    ],
+    "test_ood_traffic": [
+      {
+        "scenario_seed": 11308784907264027045,
+        "scenario_index": 82,
+        "mean_cost_core": 16758.916666666668
+      },
+      {
+        "scenario_seed": 5919512783220777065,
+        "scenario_index": 103,
+        "mean_cost_core": 15303.833333333334
+      },
+      {
+        "scenario_seed": 3624707838559502678,
+        "scenario_index": 114,
+        "mean_cost_core": 15051.708333333334
+      }
+    ]
+  }
+}

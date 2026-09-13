@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "study": "rl-improvement",
+  "phase": "L3",
+  "status": "frozen-before-L3-held-out",
+  "frozen_at": "2026-09-13",
+  "incumbent": "core",
+  "selection_history": "L1 and both L2 rounds were rejected; no algorithm change was adopted, so core is the final candidate. The T9 matrix quantifies reassign, short-turn and fairness contributions on held-out data. No held-out split was read before this freeze.",
+  "backend": {
+    "backend": "rust",
+    "native_library_sha256": "d6bf15516113dff6de9d6332deb98d2f5e9eee047cb916ec8f1b131193462eea",
+    "torch_threads": 2,
+    "eval_batch_size": 16,
+    "native_batch": true,
+    "reuse_eval_pool": true,
+    "validate_distributions": false,
+    "validate_observation": true,
+    "native_build_record": "runs/rl-improvement/l3-t9/native-build-fixed-reward.json"
+  },
+  "matrix": [
+    {
+      "arm": "core",
+      "config_path": "configs/experiments/rl-improvement/core.toml",
+      "config_sha256": "5779ec9e39b266e77c5ef71ff4f2f7d7224175c94fe19b9a465787eca560dc3b",
+      "control_hash": "ff53d8cecf390343bc48e899644e2c7a995f3865977c051e0c765857300ef9fb",
+      "reward_hash": "649504d863e8fc09e16091f4a213db496277b3cc9ced69f72faa6343043f0a71",
+      "change_vs_core": "none (incumbent)",
+      "seeds": [
+        11,
+        22,
+        33
+      ],
+      "budget_transitions": 245760
+    },
+    {
+      "arm": "no_reassign",
+      "config_path": "configs/experiments/rl-improvement/no_reassign.toml",
+      "config_sha256": "595a4c50c7587dcb62b46fdb56d50b0c8017b40cd14c87bf02abfcf3687648a0",
+      "control_hash": "b224b616da3de4f02f83b32c74411b2dff98336460cc9919c45670fc4105f72b",
+      "reward_hash": "649504d863e8fc09e16091f4a213db496277b3cc9ced69f72faa6343043f0a71",
+      "change_vs_core": "enable_reassign true -> false",
+      "seeds": [
+        11,
+        22,
+        33
+      ],
+      "budget_transitions": 245760
+    },
+    {
+      "arm": "no_short",
+      "config_path": "configs/experiments/rl-improvement/no_short.toml",
+      "config_sha256": "5acd500f1758db158451f7e8781d468df42fcd00c4840b959667f79d15c6dc79",
+      "control_hash": "ac7184b6bbec771056509b825c5a91385b356cab5b7965a434bf8fc0cf6b60dc",
+      "reward_hash": "649504d863e8fc09e16091f4a213db496277b3cc9ced69f72faa6343043f0a71",
+      "change_vs_core": "enable_short_turn true -> false",
+      "seeds": [
+        11,
+        22,
+        33
+      ],
+      "budget_transitions": 245760
+    },
+    {
+      "arm": "fairness_zero",
+      "config_path": "configs/experiments/rl-improvement/fairness_zero.toml",
+      "config_sha256": "052dfd98596305c9182725be7c37c73da0777c303a2a49f51303a0f9d1b74d7f",
+      "control_hash": "ff53d8cecf390343bc48e899644e2c7a995f3865977c051e0c765857300ef9fb",
+      "reward_hash": "15dbe78759c3b0913cf4c285bcc3a69f92b6a9056f2d8dcb3474cc2819e52d48",
+      "change_vs_core": "reward.fairness 1.0 -> 0.0",
+      "seeds": [
+        11,
+        22,
+        33
+      ],
+      "budget_transitions": 245760
+    }
+  ],
+  "checkpoint_selection": "lowest mean validation total_cost_core over 100 days; earliest checkpoint on exact tie",
+  "held_out": {
+    "manifest": "data/generated/base/manifest.json",
+    "manifest_sha256": "abecff223150f4fc004f62b30069436f7ea839d999ec5f1c955c1eb884744e61",
+    "physical_config_hash": "fad7a03b35b999d33b672357b439a9bf34899e8bf814bbe98077446ef4a5d4b2",
+    "splits": {
+      "test_id": 200,
+      "test_ood_burst": 200,
+      "test_ood_traffic": 200
+    },
+    "pairing": "identical day IDs/scenario hashes and tapes across every arm",
+    "opened_before_freeze": false
+  },
+  "primary_metric": "total_cost_core",
+  "cost_weights": "core DEFAULT_REWARD for every arm, including fairness_zero: total_cost is the trained objective, total_cost_core is recomputed with core weights",
+  "service_metrics": [
+    "unfinished_share",
+    "abandoned_share",
+    "p95_wait",
+    "worst_route_mean_wait",
+    "completed_share",
+    "mean_wait",
+    "censored_share",
+    "unique_denied_share",
+    "mean_headway_s",
+    "p95_headway_s",
+    "active_bus_min",
+    "deadhead_bus_min"
+  ],
+  "analysis": {
+    "contrast": "arm - core",
+    "unit": "validation/test day (scenario_seed); model seeds averaged per day before resampling",
+    "n_resamples": 2000,
+    "bootstrap_seed": 6001,
+    "ci": 0.95,
+    "claim_rule": "improvement claim requires mean delta with CI entirely below zero; ID-only gains do not establish OOD robustness"
+  },
+  "service_limits": {
+    "unfinished_share_max_delta": 0.005,
+    "abandoned_share_max_delta": 0.002,
+    "p95_wait_max_delta_min": 1.0,
+    "worst_route_wait_max_delta_min": 1.0
+  },
+  "minimum_meaningful_improvement": 0.02,
+  "fixed_wall_clock": {
+    "status": "registered-secondary",
+    "budget_s": 120,
+    "accounting": "train + periodic validation + checkpoint; setup excluded",
+    "reason_not_a_distinct_contrast": "No L1/L2 algorithm change was adopted, so every T9 arm has identical per-step compute. The registered fixed-transition runs' observed wall_time_s is reported as the wall-clock view; a separate wall-clock budget would re-measure the same contrast. Rust throughput gains are reported once, in reports/rust-migration.md and reports/runtime-optimization.md."
+  },
+  "reward_wiring_fix": {
+    "finding": "The first L3 matrix run showed fairness_zero identical to core: Kernel/BatchKernel hard-coded RewardConfig::default() and never received run.reward, so the reward ablation was INVALID.",
+    "fix": "Added Kernel.set_reward/BatchKernel.set_reward (crates/bus-sim-python/src/lib.rs) and wired run.reward through the Python bridge, environment and batch VecEnv; added native regression test_set_reward_changes_returned_reward.",
+    "revision": "All 12 T9 arms were re-run on the single fixed build d6bf1551. Core best validation costs are unchanged, confirming the fix is a no-op for the default reward.",
+    "invalid_runs_retained": "runs/rl-improvement/t9-fairness_zero/*"
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "core": {
+    "config_path": "configs/experiments/rl-improvement/core.toml",
+    "config_sha256": "5779ec9e39b266e77c5ef71ff4f2f7d7224175c94fe19b9a465787eca560dc3b",
+    "control_hash": "ff53d8cecf390343bc48e899644e2c7a995f3865977c051e0c765857300ef9fb",
+    "reward_hash": "649504d863e8fc09e16091f4a213db496277b3cc9ced69f72faa6343043f0a71",
+    "single_group_diff": {}
+  },
+  "no_reassign": {
+    "config_path": "configs/experiments/rl-improvement/no_reassign.toml",
+    "config_sha256": "595a4c50c7587dcb62b46fdb56d50b0c8017b40cd14c87bf02abfcf3687648a0",
+    "control_hash": "b224b616da3de4f02f83b32c74411b2dff98336460cc9919c45670fc4105f72b",
+    "reward_hash": "649504d863e8fc09e16091f4a213db496277b3cc9ced69f72faa6343043f0a71",
+    "single_group_diff": {
+      "control": {
+        "enable_reassign": {
+          "core": true,
+          "arm": false
+        }
+      },
+      "source": {
+        "core": "configs/experiments/rl-improvement/core.toml",
+        "arm": "configs/experiments/rl-improvement/no_reassign.toml"
+      }
+    }
+  },
+  "no_short": {
+    "config_path": "configs/experiments/rl-improvement/no_short.toml",
+    "config_sha256": "5acd500f1758db158451f7e8781d468df42fcd00c4840b959667f79d15c6dc79",
+    "control_hash": "ac7184b6bbec771056509b825c5a91385b356cab5b7965a434bf8fc0cf6b60dc",
+    "reward_hash": "649504d863e8fc09e16091f4a213db496277b3cc9ced69f72faa6343043f0a71",
+    "single_group_diff": {
+      "control": {
+        "enable_short_turn": {
+          "core": true,
+          "arm": false
+        }
+      },
+      "source": {
+        "core": "configs/experiments/rl-improvement/core.toml",
+        "arm": "configs/experiments/rl-improvement/no_short.toml"
+      }
+    }
+  },
+  "fairness_zero": {
+    "config_path": "configs/experiments/rl-improvement/fairness_zero.toml",
+    "config_sha256": "052dfd98596305c9182725be7c37c73da0777c303a2a49f51303a0f9d1b74d7f",
+    "control_hash": "ff53d8cecf390343bc48e899644e2c7a995f3865977c051e0c765857300ef9fb",
+    "reward_hash": "15dbe78759c3b0913cf4c285bcc3a69f92b6a9056f2d8dcb3474cc2819e52d48",
+    "single_group_diff": {
+      "reward": {
+        "fairness": {
+          "core": 1.0,
+          "arm": 0.0
+        }
+      },
+      "source": {
+        "core": "configs/experiments/rl-improvement/core.toml",
+        "arm": "configs/experiments/rl-improvement/fairness_zero.toml"
+      }
+    }
+  }
+}

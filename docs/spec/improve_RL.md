@@ -1,6 +1,6 @@
 # Cải thiện RL sau khi tăng tốc bằng Rust
 
-Ngày cập nhật: **2026-09-13**. Trạng thái: **L0 và vòng L1 đầu tiên đã có evidence; core được giữ làm incumbent**. Hai hướng L2 đầu tiên (L2.1 causal forecast, L2.3 PBRS) đã được chọn, chạy 3 seeds và **REJECT**; core giữ nguyên. Chi tiết trong [reports/rl-improvement.md](../../reports/rl-improvement.md).
+Ngày cập nhật: **2026-09-13**. Trạng thái: **L0–L2 hoàn tất, core được giữ làm incumbent; L3 đã chạy ma trận T9 trên held-out (200+200+200 ngày), core thấp nhất trên mọi split và mọi ablation đều kém hơn; không có claim cải thiện nào.** Chi tiết trong [reports/rl-improvement.md](../../reports/rl-improvement.md).
 Implementation plan (English): [improve_RL.md](../plan/improve_RL.md).
 
 
@@ -265,8 +265,8 @@ Manifest experiment ghi backend/build và actual library hash, torch_threads req
 - [x] Chọn hướng L1 theo diagnostics, không sweep vô hạn (GAE lambda round).
 - [x] Xác nhận tối đa 2 candidates đa seed, giữ cả kết quả âm (không candidate qua screening; core retained).
 - [x] Chọn L2 nếu có giả thuyết cần kiểm chứng; không bắt buộc. (Đã chọn L2.1 causal forecast và L2.3 PBRS, xác nhận 3 seeds, cả hai REJECT; L2.2, L2.4, L2.5 SKIPPED có lý do.)
-- [ ] Freeze trước held-out test; paired statistics đúng đơn vị ngày.
-- [ ] L3 báo throughput, sample efficiency và wall-clock efficiency riêng.
+- [x] Freeze trước held-out test; paired statistics đúng đơn vị ngày. (Đã khóa `l3_protocol.json` trước khi mở held-out; bootstrap theo ngày, 2000 resamples, seed 6001.)
+- [x] L3 báo throughput, sample efficiency và wall-clock efficiency riêng. (Báo tách trong `reports/rl-improvement.md`; Rust throughput chỉ trích dẫn từ rust-migration/runtime-optimization, không nhân vào claim thuật toán.)
 
 ## 9. Nguồn và điểm bắt đầu triển khai
 

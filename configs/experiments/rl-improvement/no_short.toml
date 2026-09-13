@@ -1,0 +1,41 @@
+# L3 T9 ablation arm: no_short.
+# Single-group diff vs configs/experiments/rl-improvement/core.toml:
+#   [control] enable_short_turn = true -> false
+# All PPO, reward, runtime, budget and validation settings match the frozen core.
+[control]
+enable_reassign = true
+enable_short_turn = false
+
+[algorithm]
+gamma = 1.0
+seed = 11
+learning_rate = 3.0e-4
+n_steps = 256
+n_envs = 4
+batch_size = 256
+n_epochs = 4
+ent_coef = 0.01
+vf_coef = 0.5
+max_grad_norm = 0.5
+gae_lambda = 0.95
+clip_range = 0.2
+total_timesteps = 245760
+eval_freq = 12288
+device = "cpu"
+torch_threads = 2
+diagnostics_enabled = true
+diagnostics_interval = 256
+
+[runtime]
+backend = "rust"
+eval_batch_size = 16
+reuse_eval_pool = true
+native_batch = true
+validate_distributions = false
+validate_observation = true
+
+[forecast]
+enabled = false
+
+[shaping]
+enabled = false
