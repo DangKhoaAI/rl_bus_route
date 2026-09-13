@@ -170,12 +170,28 @@ Optional L2 tasks are independent research choices, not a requirement to impleme
 
 Use the research shortlist and primary sources in spec §6.5–6.6. Select at most two L2 directions in the first round; forecasts may occupy one slot. For each selected L2 task, register a control and candidate before running, use seeds 11/22/33 and matched transition/validation budgets, preserve raw metrics, and record added compute. Confirm a change independently before combining it with another extension. Unselected tasks receive an explicit SKIPPED decision.
 
-### L2.1 - Causal forecast contribution
+**Round decision (2026-09-13).** One direction was selected: **L2.1 causal
+forecast**. It was implemented as the single-group config toggle
+`configs/experiments/rl-improvement/forecast.toml` (`[forecast] enabled=true`),
+registered as `L2-FORECAST`, run on seeds 11/22/33 at B=245,760 and confirmed.
+The candidate is **REJECTED**: mean cost +2.03% worse than the L0 core control,
+paired 100-day bootstrap 95% CI `[240.38, 295.72]`, lower on 1/3 seeds, and the
+seed-11 P95/worst-route wait deltas exceed the registered +1.0 min limits. Core
+is retained. **L2.2 encoder/memory, L2.3 reward shaping/PBRS, L2.4
+curriculum/warm-start and L2.5 PopArt are SKIPPED** — L0 diagnostics do not
+trigger them (explained variance is high, PPO already beats heuristics, no KL
+instability) and the plan allows stopping after one L2 direction. Evidence:
+`reports/rl-improvement.md`, `reports/rl-improvement/tables/l2_forecast_*.{csv,json}`.
 
-- [ ] Compare the existing forecast configuration against a matching no-forecast learning configuration.
-- [ ] Fit the forecaster using train arrival logs only, freeze it, and save its artifact/hash with the policy.
-- [ ] Verify past-equivalent tapes produce identical predictions regardless of future demand or scenario identity.
-- [ ] Report forecast error alongside policy cost, unfinished share, and service outcomes.
+### L2.1 - Causal forecast contribution (SELECTED; REJECT)
+
+- [x] Compare the existing forecast configuration against a matching no-forecast learning configuration.
+- [x] Fit the forecaster using train arrival logs only, freeze it, and save its artifact/hash with the policy.
+- [x] Verify past-equivalent tapes produce identical predictions regardless of future demand or scenario identity.
+- [x] Report forecast error alongside policy cost, unfinished share, and service outcomes.
+
+Outcome: **REJECT** on three-seed confirmation; core control retained. See the
+round decision above and `reports/rl-improvement.md`.
 
 **Verification:** `tests/unit/bus_rl/learning/test_forecasting.py` for isolated causality plus native environment/training integration under the entry-point path; matched three-seed validation comparison.
 
@@ -291,7 +307,7 @@ Keep pilot, Python diagnosis, and earlier study artifacts unchanged. Use stable 
 - [x] Existing R4/memory/runtime evidence verified; research config and actual loaded binary frozen.
 - [x] L0 baseline and diagnostics accepted.
 - [x] L1 bounded search and multi-seed decision accepted (no candidate shortlisted; core retained).
-- [ ] Selected L2 experiments accepted; others explicitly skipped.
+- [x] Selected L2 experiments accepted; others explicitly skipped. (L2.1 forecast selected and REJECTED with evidence; L2.2–L2.5 explicitly SKIPPED.)
 - [ ] L3 full paired matrix, statistics, service metrics, and report accepted.
 - [ ] Throughput, sample efficiency, and wall-clock efficiency are reported separately.
 - [ ] No unfinished task or experiment is marked complete because the result appears favorable.

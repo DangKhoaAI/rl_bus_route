@@ -1,0 +1,13 @@
+{
+  "validation": {
+    "mae": 0.019055691304914944,
+    "bias": 2.669302933645669e-05,
+    "n": 1600.0
+  },
+  "train": {
+    "mae": 0.019084623108620875,
+    "bias": 0.0001857641465961933,
+    "n": 8000.0
+  },
+  "note": "past-only predictions from the frozen train-fit forecaster; error is diagnostic, not a policy-quality gate"
+}

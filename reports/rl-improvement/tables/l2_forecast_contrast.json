@@ -1,0 +1,20 @@
+{
+  "contrast": "L2-FORECAST - L0-CORE",
+  "paired_days": 100,
+  "mean_delta_cost": 268.0504166666666,
+  "ci_low": 240.37947916666647,
+  "ci_high": 295.72024999999996,
+  "pct_of_control_mean": 2.034457905189007,
+  "n_resamples": 2000,
+  "bootstrap_seed": 6001,
+  "seeds_lower_than_control": 1,
+  "mean_reduction_required": 0.02,
+  "service_limits": {
+    "unfinished_max_delta": 0.005,
+    "abandoned_max_delta": 0.002,
+    "p95_wait_max_delta_min": 1.0,
+    "worst_route_wait_max_delta_min": 1.0
+  },
+  "service_limits_satisfied": false,
+  "decision": "REJECT"
+}

@@ -34,6 +34,10 @@ def pytest_addoption(parser):
 
 
 def _is_legacy(item) -> bool:
+    # Native (maintained Rust backend) tests live in the same directories as the
+    # deprecated Python-oracle tests, so an explicit native marker wins.
+    if item.get_closest_marker("native") is not None:
+        return False
     path = getattr(item, "path", None)
     if path is None:
         return False
