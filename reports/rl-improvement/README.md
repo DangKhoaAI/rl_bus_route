@@ -23,8 +23,9 @@ checkpoints, per-day validation rows and telemetry are under the gitignored
   decisions, audits and the PBRS train-only scale probe.
 - `tables/l3_config_audit.json` is the frozen-matrix single-field diff audit;
   `tables/l3_held_out_summary.csv`, `l3_contrasts.csv`, `l3_paired_days.csv`,
-  `l3_baselines_summary.csv` and `l3_verification.json` are the paired held-out
-  results, statistics, baseline summary and structural audit.
+  `l3_baselines_summary.csv`, `l3_baseline_contrasts.csv` and
+  `l3_verification.json` are the paired held-out results, statistics, baseline
+  summary/contrasts and structural audit.
 - `plots/l3_validation_curves.png`, `plots/l3_held_out_costs.png` and
   `plots/l3_service_tradeoffs.png` are the L3 figures; failure traces live in
   `evidence/l3_failure_traces.json` (compact digest; raw decision rows under

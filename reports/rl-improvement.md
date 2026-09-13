@@ -22,7 +22,8 @@ experiment cards and raw-artifact index are under
 - L3 frozen protocol and matrix audit: `rl-improvement/l3_protocol.json`,
   `rl-improvement/tables/l3_config_audit.json`
 - L3 held-out results/statistics: `rl-improvement/tables/l3_held_out_summary.csv`,
-  `l3_contrasts.csv`, `l3_paired_days.csv`, `l3_baselines_summary.csv`, `l3_verification.json`
+  `l3_contrasts.csv`, `l3_paired_days.csv`, `l3_baselines_summary.csv`,
+  `l3_baseline_contrasts.csv`, `l3_verification.json`
 - L3 figures: `rl-improvement/plots/l3_validation_curves.png`, `l3_held_out_costs.png`,
   `l3_service_tradeoffs.png`; failure traces: `rl-improvement/evidence/l3_failure_traces.json`
 - Reproduction: `uv run python scripts/l3_analysis.py`
@@ -216,9 +217,15 @@ alongside, not instead of, the per-seed spread. Every ablation also violates the
 registered P95/worst-route service limits on at least one split; only core
 satisfies all of them.
 
-Baselines are dominated by PPO core on every split (`l3_baselines_summary.csv`):
-e.g. `test_id` core 13,065.7 vs fixed 15,861.3, proportional 16,056.6, threshold
-16,652.3; `test_ood_burst` core 25,197.2 vs threshold 26,531.9 (best baseline).
+Baselines are dominated by PPO core on every split. Paired 200-day contrasts
+(`l3_baseline_contrasts.csv`, `delta = baseline − core`, so positive means the
+baseline is more expensive; all CIs exclude zero): `test_id` core 13,065.7 vs
+fixed +2,795.6 [2,759.6, 2,831.6], proportional +2,991.0 [2,871.1, 3,114.8],
+threshold +3,586.6 [3,450.7, 3,727.8]; `test_ood_burst` core 25,197.2 vs fixed
++8,550.2 [8,276.7, 8,819.4], proportional +2,783.6 [2,184.8, 3,403.5], threshold
++1,334.7 [760.8, 1,927.0]; `test_ood_traffic` core 13,412.4 vs fixed +2,895.4
+[2,850.0, 2,939.4], proportional +3,137.3 [3,014.4, 3,270.9], threshold +3,512.2
+[3,385.1, 3,638.2].
 
 ### L3 compute: throughput, sample efficiency, wall clock
 
@@ -226,8 +233,10 @@ e.g. `test_id` core 13,065.7 vs fixed 15,861.3, proportional 16,056.6, threshold
   every held-out split; no algorithm change from L1/L2 improved it.
 - **Throughput:** the Rust backend speedup is infrastructure evidence reported
   once in [`rust-migration.md`](rust-migration.md) and
-  [`runtime-optimization.md`](runtime-optimization.md); it is not multiplied into
-  any algorithm claim here.
+  [`runtime-optimization.md`](runtime-optimization.md), with the retained
+  sparse-store/lazy-kernel memory work recorded in
+  [`memory_optimize.md`](../docs/spec/memory_optimize.md); it is not multiplied
+  into any algorithm claim here.
 - **Wall clock:** observed full-run training walls on this host were core 78.0 s,
   `no_reassign` 86.4 s, `no_short` 80.5 s, `fairness_zero` 80.4 s (3 seeds each).
   The fixed-wall-clock protocol is registered in `l3_protocol.json`, but because

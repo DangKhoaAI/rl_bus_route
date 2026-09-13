@@ -151,7 +151,13 @@ def build_tables(held: pd.DataFrame) -> dict[str, pd.DataFrame]:
                     }
                 )
     baselines = []
+    baseline_contrast_rows = []
     for split in SPLITS:
+        core_daily = (
+            held[(held.arm == "core") & (held.split == split)]
+            .groupby("scenario_seed")["total_cost_core"]
+            .mean()
+        )
         frame = pd.read_csv(RUNS / EVAL_RUN / "baselines" / split / "results.csv")
         for method, group in frame.groupby("method"):
             baselines.append(
@@ -166,11 +172,30 @@ def build_tables(held: pd.DataFrame) -> dict[str, pd.DataFrame]:
                     "completed_share": float(group.completed_share.mean()),
                 }
             )
+            daily = group.set_index("scenario_seed")["total_cost_core"]
+            aligned = core_daily.index.intersection(daily.index)
+            point, low, high = paired_bootstrap(
+                daily.loc[aligned].to_numpy(), core_daily.loc[aligned].to_numpy()
+            )
+            baseline_contrast_rows.append(
+                {
+                    "split": split,
+                    "baseline": method,
+                    "paired_days": len(aligned),
+                    "core_mean": float(core_daily.loc[aligned].mean()),
+                    "baseline_mean": float(daily.loc[aligned].mean()),
+                    "mean_delta": point,
+                    "ci_low": low,
+                    "ci_high": high,
+                    "pct_of_core": 100 * point / core_daily.loc[aligned].mean(),
+                }
+            )
     return {
         "l3_held_out_summary": pd.DataFrame(summary_rows),
         "l3_contrasts": pd.DataFrame(contrast_rows),
         "l3_paired_days": pd.DataFrame(paired_rows),
         "l3_baselines_summary": pd.DataFrame(baselines),
+        "l3_baseline_contrasts": pd.DataFrame(baseline_contrast_rows),
     }
 
 
@@ -320,6 +345,9 @@ def assert_plot_inputs(held: pd.DataFrame, tables: dict[str, pd.DataFrame]) -> N
         assert np.isfinite(contrast[column]).all(), column
     assert (contrast["ci_low"] <= contrast["mean_delta"]).all()
     assert (contrast["mean_delta"] <= contrast["ci_high"]).all()
+    baseline = tables["l3_baseline_contrasts"]
+    assert (baseline["paired_days"] == 200).all()
+    assert (baseline["ci_low"] > 0).all(), "PPO-over-baseline claim requires CIs above zero"
 
 
 def main() -> None:
