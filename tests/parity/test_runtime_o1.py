@@ -107,7 +107,7 @@ def _reference_run():
 @pytest.fixture(scope="module")
 def reference_bundle():
     run = _reference_run()
-    scenarios = generate_manifest("validation", 100)[:10]
+    scenarios = generate_manifest("validation", 10)
     load_env = make_env_for_run(scenarios[:1], run)
     model, metadata = load_model(REFERENCE, load_env, run.physical)
     scalar_frame, scalar_traces = evaluate_scenarios(

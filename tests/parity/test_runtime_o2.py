@@ -101,7 +101,7 @@ def test_native_batch_is_opt_in_and_config_validated():
 
 def test_batch_kernel_scalar_replay_is_exact():
 
-    scenarios = generate_manifest("validation", 100)[:4]
+    scenarios = generate_manifest("validation", 4)
     store = shared_store(scenarios)
     kernels = [store.kernel(index) for index in range(len(scenarios))]
     batch = NativeBatchKernel(scenarios, len(scenarios), store=store)
@@ -163,7 +163,7 @@ def test_mixed_horizons_only_step_active_slots():
 
 
 def test_retained_outputs_are_not_mutated_by_later_steps_or_resets():
-    scenarios = generate_manifest("validation", 100)[:2]
+    scenarios = generate_manifest("validation", 2)
     batch = NativeBatchKernel(scenarios, 2)
     _obs, _mask = batch.reset([0, 1], [0, 1])
     actions = [0, 0]
@@ -184,7 +184,7 @@ def test_retained_outputs_are_not_mutated_by_later_steps_or_resets():
 
 
 def test_invalid_batch_is_rejected_before_mutation():
-    scenarios = generate_manifest("validation", 100)[:2]
+    scenarios = generate_manifest("validation", 2)
     batch = NativeBatchKernel(scenarios, 2)
     _obs, mask = batch.reset([0, 1], [0, 1])
     time_before = batch.current_times([0, 1])
@@ -209,7 +209,7 @@ def test_invalid_batch_is_rejected_before_mutation():
 
 
 def test_partial_reset_keeps_other_slots_untouched():
-    scenarios = generate_manifest("validation", 100)[:2]
+    scenarios = generate_manifest("validation", 2)
     batch = NativeBatchKernel(scenarios, 2)
     batch.reset([0, 1], [0, 1])
     batch.step([0, 1], [0, 0])
@@ -322,7 +322,7 @@ def test_training_parity_2048_transitions_bit_identical():
 
 def test_native_eval_matches_scalar_including_traces():
     run = _reference_run()
-    scenarios = generate_manifest("validation", 100)[:10]
+    scenarios = generate_manifest("validation", 10)
     load_env = make_env_for_run(scenarios[:1], run)
     model, _ = load_model(REFERENCE, load_env, run.physical)
     scalar, scalar_traces = evaluate_scenarios(
@@ -358,7 +358,7 @@ def test_native_eval_matches_scalar_including_traces():
 
 def test_native_eval_pool_reuse_and_invalidations():
     run = _reference_run()
-    scenarios = generate_manifest("validation", 100)[:3]
+    scenarios = generate_manifest("validation", 3)
     native_run = replace(
         run,
         runtime=replace(run.runtime, native_batch=True, eval_batch_size=4, reuse_eval_pool=True),
