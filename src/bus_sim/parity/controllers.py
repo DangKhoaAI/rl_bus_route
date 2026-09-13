@@ -1,4 +1,4 @@
-"""Deterministic controllers used only to drive golden fixtures.
+"""Deterministic controllers used to drive benchmark and parity runs.
 
 These are not research baselines; they exist to exercise every action family
 and a broad range of states in a reproducible way.
@@ -15,7 +15,7 @@ for _index, _action in enumerate(ACTION_TABLE):
     FAMILY_SLOTS.setdefault(_action.kind, []).append(_index)
 
 # Rotation order deliberately starts with the rarely-valid families so that a
-# 120-decision fixture gives each family a chance to appear.
+# 120-decision run gives each family a chance to appear.
 ROTATION = ("SHORT_TURN", "REASSIGN", "RECALL", "SET_HEADWAY", "DISPATCH", "NOOP")
 
 
@@ -54,4 +54,4 @@ def make_controller(kind: str, seed: int = 0):
         return CoverageController()
     if kind == "random":
         return RandomValidController(seed)
-    raise ValueError(f"unknown fixture controller: {kind}")
+    raise ValueError(f"unknown controller: {kind}")

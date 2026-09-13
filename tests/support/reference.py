@@ -1,13 +1,20 @@
-"""The committed historical checkpoint used as the evaluation anchor."""
+"""The historical evaluate anchor checkpoint (kept in the git-ignored `runs/`)."""
 
 from __future__ import annotations
 
 from dataclasses import replace
 
+import pytest
+
 from bus_rl.config import ControlConfig, load_run_config
 from bus_rl.learning.training.checkpoint import load_metadata
 from bus_sim.oracle.costs import RewardConfig
 from tests.support.paths import CONFIGS, REFERENCE, ROOT
+
+requires_reference = pytest.mark.skipif(
+    not REFERENCE.exists(),
+    reason="reference checkpoint absent; produce runs/diagnose-after first",
+)
 
 
 def reference_run(config: str = "experiments/core-threads2.toml", *, backend: str | None = None):

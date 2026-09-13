@@ -50,7 +50,7 @@ from bus_sim.oracle.costs import RewardConfig, add_costs
 from bus_sim.oracle.domain import StepCosts
 
 REPORT_DIR = ROOT / "reports" / "runtime-optimization"
-REFERENCE = ROOT / "fixtures" / "reference" / "diagnose-after" / "last.zip"
+REFERENCE = ROOT / "runs" / "diagnose-after" / "last.zip"
 CORE = ROOT / "configs" / "experiments" / "core-threads2.toml"
 BATCH_SIZES = (1, 4, 8, 16, 32)
 

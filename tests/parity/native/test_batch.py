@@ -23,7 +23,7 @@ from bus_sim.oracle.domain import SimConfig
 from tests.support.compare import assert_obs_exact, assert_single_result
 from tests.support.contract import OBS_KEYS
 from tests.support.paths import REFERENCE, ROOT
-from tests.support.reference import reference_run
+from tests.support.reference import reference_run, requires_reference
 
 pytest.importorskip("bus_sim_native")
 
@@ -164,6 +164,7 @@ def test_partial_reset_keeps_other_slots_untouched():
     assert snapshot.shape == (10,)
 
 
+@requires_reference
 def test_native_eval_matches_scalar_including_traces():
     run = reference_run(backend="rust")
     scenarios = generate_manifest("validation", 10)
@@ -200,6 +201,7 @@ def test_native_eval_matches_scalar_including_traces():
         closer()
 
 
+@requires_reference
 def test_native_eval_pool_reuse_and_invalidations():
     run = reference_run(backend="rust")
     scenarios = generate_manifest("validation", 3)
@@ -232,6 +234,7 @@ def test_native_eval_pool_reuse_and_invalidations():
     assert pool.closed
 
 
+@requires_reference
 def test_native_batch_with_forecast_matches_scalar():
     run = reference_run(backend="rust")
     from bus_rl.learning.forecasting import HistoricalForecaster

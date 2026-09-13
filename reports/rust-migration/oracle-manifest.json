@@ -1031,7 +1031,7 @@
     "version": "3.11.14"
   },
   "reference_checkpoint": {
-    "checkpoint": "fixtures/reference/diagnose-after/last.zip",
+    "checkpoint": "runs/diagnose-after/last.zip",
     "checkpoint_sha256": "98f99ebf151cdf6dde914df95ea780c25f4856e6a36f90e30ccd7a9f5906501e",
     "config": "configs/experiments/core.toml",
     "days": 10,
@@ -1109,5 +1109,5 @@
       "validation": 2001
     }
   },
-  "self_hash": "3dfb65a790d6f33b423c1df7db0964cecd13a27e5cf31005ebfd89ea633f916a"
+  "self_hash": "155c4cbc95d83af453e1bb30a946311d0fcd7bc4818ae1e7718c08d5b2c93bf7"
 }

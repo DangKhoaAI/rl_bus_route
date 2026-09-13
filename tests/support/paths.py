@@ -11,9 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 CONFIGS = ROOT / "configs"
 
-# Frozen test data lives outside `tests/` so that `tests/` holds only test code.
-DATA = ROOT / "fixtures"
-GOLDEN = DATA / "golden"
-REFERENCE_DIR = DATA / "reference"
-REFERENCE = REFERENCE_DIR / "diagnose-after" / "last.zip"
-REFERENCE_JSON = REFERENCE_DIR / "reference.json"
+# The historical checkpoint lives in the git-ignored `runs/` tree; tests that
+# need it skip when it has not been produced locally.
+REFERENCE_DIR = ROOT / "runs" / "diagnose-after"
+REFERENCE = REFERENCE_DIR / "last.zip"

@@ -16,11 +16,10 @@ from bus_rl.execution.environments.factory import make_env_for_run
 from bus_rl.execution.environments.python.environment import BusDispatchEnv
 from bus_rl.execution.scenarios.generation import generate_scenario
 from bus_sim.oracle.domain import SimConfig, StepCosts
-from bus_sim.parity.fixtures import load_fixture
-from bus_sim.parity.scenarios import CONTROL_FLAGS
+from bus_sim.parity.scenarios import CATALOG, CONTROL_FLAGS
 from tests.support.compare import assert_obs, assert_value
-from tests.support.paths import GOLDEN, ROOT
-from tests.support.rust_bridge import cached_scenario
+from tests.support.paths import ROOT
+from tests.support.scenarios import cached_scenario
 
 pytest.importorskip("bus_sim_native")
 
@@ -63,9 +62,9 @@ def test_native_env_contract_and_masked_rejection():
     ["zero_m3", "normal_m3", "capacity_m3", "abandon_m3", "burst_m3", "traffic_m3"],
 )
 def test_native_env_matches_python_env_at_every_boundary(name):
-    payload, _, _ = load_fixture(GOLDEN / name)
-    scenario = cached_scenario(payload["spec"])
-    control = _control(payload["spec"])
+    spec = CATALOG[name]
+    scenario = cached_scenario(spec)
+    control = _control(spec)
     oracle = BusDispatchEnv([scenario], scenario.config, control=control)
     native = NativeBusDispatchEnv([scenario], scenario.config, control=control)
 
@@ -74,9 +73,14 @@ def test_native_env_matches_python_env_at_every_boundary(name):
     assert_obs(observation_py, observation_rs)
     assert np.array_equal(oracle.action_masks(), native.action_masks())
 
-    for action in payload["actions"]:
-        step_py = oracle.step(int(action))
-        step_rs = native.step(int(action))
+    # Drive both envs with the same deterministic valid-action sequence derived
+    # from the oracle mask, and compare every boundary.
+    step = 0
+    while True:
+        valid = np.flatnonzero(oracle.action_masks())
+        action = int(valid[step % len(valid)])
+        step_py = oracle.step(action)
+        step_rs = native.step(action)
         assert_obs(step_py[0], step_rs[0])
         np.testing.assert_allclose(step_py[1], step_rs[1], rtol=1e-9, atol=1e-9)
         assert step_py[2] == step_rs[2]
@@ -88,6 +92,7 @@ def test_native_env_matches_python_env_at_every_boundary(name):
                 field,
             )
         assert np.array_equal(oracle.action_masks(), native.action_masks())
+        step += 1
         if step_py[2]:
             break
 

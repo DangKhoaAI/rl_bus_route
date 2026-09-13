@@ -5,9 +5,9 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from bus_sim.parity.fixtures import new_env
 from bus_sim.parity.scenarios import CATALOG
 from bus_sim.parity.snapshot import numpy_state_snapshot
+from tests.support.scenarios import new_env
 
 CASES = ["zero_m3", "normal_m3", "burst_m3", "traffic_m3"]
 

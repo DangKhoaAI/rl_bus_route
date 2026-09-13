@@ -44,7 +44,7 @@ from bus_sim.parity.controllers import CoverageController
 from bus_sim.parity.scenarios import CATALOG, build_scenario, run_config
 
 REPORT_DIR = ROOT / "reports" / "rust-migration"
-REFERENCE = ROOT / "fixtures" / "reference" / "diagnose-after" / "last.zip"
+REFERENCE = ROOT / "runs" / "diagnose-after" / "last.zip"
 SIM_WORKLOADS = ["zero_m3", "normal_m3", "peak_m3", "burst_m3", "traffic_m3"]
 TICKS_PER_DECISION = 4
 
@@ -284,12 +284,10 @@ def main() -> None:
         "peak_rss_kb": _rss_kb(),
         "wall_total_s": perf_counter() - started,
         "commands": {
-            "build_fixtures": "python scripts/export_oracle.py build",
             "benchmark": (
                 f"python scripts/benchmark_python.py --repetitions {args.repetitions} "
                 f"--transitions {args.transitions}"
             ),
-            "verify": "python scripts/export_oracle.py verify",
         },
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)

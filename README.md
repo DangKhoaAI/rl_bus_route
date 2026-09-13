@@ -33,7 +33,6 @@ tests/
 ├── unit/                # Python unit tests (sim/, rl/)
 ├── integration/         # CLI and training workflow tests
 └── parity/              # oracle/ (Python-only) and native/ (Rust) parity tests
-fixtures/                # Frozen test data (golden scenarios, reference checkpoint)
 configs/                 # Run and experiment configurations
 scripts/                 # Build, benchmark, and profiling utilities
 docs/                    # Specifications, plans, and research notes
@@ -94,11 +93,12 @@ recreated. Selected reports live in `reports/`.
 ## Native kernel (Rust)
 
 The Rust migration (`docs/spec/rust_improve.md`, `docs/plan/rust_improve.md`)
-ports the simulator kernel. R0 (Python oracle + golden fixtures), R1 (domain,
-passenger/vehicle lifecycle, actions/guards, tick order, costs), R2
-(observation tensors + mask cache) and R3 (native Gym wrapper, shared evaluator
-interface, `runtime.backend` selection) are accepted; the Python CLI and
-backend remain the default and the oracle.
+is complete: R0-R4 ported the kernel and the native backend is accepted, while
+Python remains the default reference. The one-off R0 golden fixtures were
+retired after acceptance (their evidence is archived under
+`reports/rust-migration/`); the remaining native parity tests compare the live
+Python oracle against the native kernel and skip when the historical
+`runs/diagnose-after` checkpoint is absent.
 
 ```bash
 python scripts/build_native.py       # build and install src/bus_sim_native.so
@@ -120,22 +120,15 @@ See `crates/README.md` and `reports/rust-migration.md`.
 
 ### Fast development loop
 
-Defaults are the fast path; the full oracle checks are opt-in flags.
-
 ```bash
-python scripts/export_oracle.py build            # manifest + summary (~1 s)
-python scripts/export_oracle.py verify --hashes-only  # hash check (~1 s)
-python -m pytest -q                              # parallel -n 4 (~15 s)
+python -m pytest -q                              # parallel -n 4 (~20 s)
+python -m pytest -q -n 0                         # serial, for debugging
 ```
 
 `pytest` runs 4 xdist workers by default (2 torch threads each, catalog
-scenarios cached per worker); use `python -m pytest -q -n 0` for a serial run
-when debugging.
-
-Run the slower checks only when needed: `build --fixtures` replays the 11
-golden fixtures (~8 s), `verify` adds fixture + reference parity (~13 s), and
-`verify --deep` (or `BUS_RL_DEEP=1 pytest tests/parity/oracle/test_manifest.py`)
-regenerates the 1,200 scenario seeds (~35 s).
+scenarios cached per worker). Native tests are marked `native`; tests that need
+the historical `runs/diagnose-after` checkpoint skip automatically when it has
+not been produced locally.
 
 ## What is in the observation
 

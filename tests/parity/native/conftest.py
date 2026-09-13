@@ -14,6 +14,8 @@ from tests.support.reference import reference_run
 
 @pytest.fixture(scope="module")
 def reference_bundle():
+    if not REFERENCE.exists():
+        pytest.skip("reference checkpoint absent; produce runs/diagnose-after first")
     run = reference_run(backend="rust")
     scenarios = generate_manifest("validation", 10)
     load_env = make_env_for_run(scenarios[:1], run)

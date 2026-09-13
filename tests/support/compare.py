@@ -79,7 +79,7 @@ def first_action_divergence(left_traces: dict, right_traces: dict) -> dict | Non
                     "actual_kind": right.get("action"),
                     "reproducer": (
                         "evaluate_scenarios(..., trace_all=True) on "
-                        f"fixtures/reference/diagnose-after day {index} step {step}"
+                        f"runs/diagnose-after day {index} step {step}"
                     ),
                 }
     return None

@@ -3,7 +3,7 @@
 The heavy interleaved speed benchmark lives in
 ``scripts/benchmark_backends.py``; this file covers the correctness gate: a
 2048-transition MaskablePPO smoke with finite obs/reward/loss, masked-action
-safety, checkpoint save/load, and fixed-checkpoint per-day parity.
+safety and checkpoint save/load.
 """
 
 from __future__ import annotations
@@ -15,14 +15,11 @@ import pytest
 from stable_baselines3.common.vec_env import DummyVecEnv
 
 from bus_rl.config import RuntimeConfig, load_run_config
-from bus_rl.evaluation.runner import make_controller, rollout
-from bus_rl.execution.environments.factory import make_env_for_run
 from bus_rl.execution.environments.rust.environment import NativeBusDispatchEnv
-from bus_rl.execution.scenarios.generation import generate_manifest, generate_scenario
+from bus_rl.execution.scenarios.generation import generate_scenario
 from bus_rl.learning.training.checkpoint import load_model, run_metadata, write_metadata
 from bus_rl.learning.training.train import fit_algorithm, make_env, make_model
-from tests.support.paths import REFERENCE, ROOT
-from tests.support.reference import reference_run
+from tests.support.paths import ROOT
 
 pytest.importorskip("bus_sim_native")
 
@@ -77,34 +74,3 @@ def test_smoke_metadata_records_backend_and_native_build():
     assert metadata["backend_parity_verified"] is True
     assert metadata["torch_threads"] == run.algorithm.torch_threads
     assert metadata["validate_observation"] is True
-
-
-def test_fixed_checkpoint_per_day_parity():
-    run = reference_run("experiments/core.toml")
-    scenarios = generate_manifest("validation", 10)
-    load_env = make_env_for_run(scenarios[:1], run)
-    model, metadata = load_model(REFERENCE, load_env, run.physical)
-    controller = make_controller("ppo", model=model, seed=metadata.get("seed", 11))
-
-    costs: dict[str, list[float]] = {}
-    traces: dict[str, list[list[dict]]] = {}
-    for backend in ("python", "rust"):
-        env = make_env_for_run(scenarios, replace(run, runtime=RuntimeConfig(backend=backend)))
-        backend_costs = []
-        backend_traces = []
-        for index in range(len(scenarios)):
-            metrics, rows = rollout(env, controller, index, trace=True)
-            backend_costs.append(metrics["total_cost"])
-            backend_traces.append(rows)
-        costs[backend] = backend_costs
-        traces[backend] = backend_traces
-    np.testing.assert_allclose(costs["python"], costs["rust"], rtol=1e-9, atol=1e-9)
-    for py_day, rs_day in zip(traces["python"], traces["rust"], strict=True):
-        assert len(py_day) == len(rs_day)
-        for left, right in zip(py_day, rs_day, strict=True):
-            assert left["action"] == right["action"]
-            assert left["time_s"] == right["time_s"]
-            assert list(left["queues"]) == list(right["queues"])
-            assert left["buses"] == right["buses"]
-            for key in ("waiting", "onboard", "generated", "abandoned", "completed"):
-                assert left[key] == right[key]

@@ -1,14 +1,13 @@
-"""Self-contained scenario catalog for oracle fixtures.
+"""Self-contained scenario catalog.
 
-Fixtures must be reproducible from a fresh checkout, so every scenario here is
-built from ``generate_scenario`` using only a seed/variant/physical override --
-no dependence on the (git-ignored) ``data/generated`` manifests.
+Scenarios must be reproducible from a fresh checkout, so every one is built
+from ``generate_scenario`` using only a seed/variant/physical override -- no
+dependence on the (git-ignored) ``data/generated`` manifests.
 """
 
 from __future__ import annotations
 
 from dataclasses import asdict, replace
-from pathlib import Path
 
 import numpy as np
 
@@ -71,7 +70,7 @@ def build_scenario(spec: dict) -> Scenario:
     raise ValueError(f"unknown scenario kind: {kind}")
 
 
-# Named fixtures: each descriptor is part of the oracle contract and is hashed
+# Named scenarios: each descriptor is part of the oracle contract and is hashed
 # into the manifest. ``control`` selects the M1/M2/M3 feature flags.
 CATALOG: dict[str, dict] = {
     "zero_m3": {"kind": "empty", "seed": 2001, "control": "M3", "controller": "coverage"},
@@ -133,7 +132,3 @@ def run_config(
         forecast=ForecastConfig(enabled=False),
         source=f"oracle:{spec.get('control', 'M3')}",
     )
-
-
-def catalog_path(root: Path | None = None) -> Path:
-    return (root or Path.cwd()) / "fixtures" / "golden"

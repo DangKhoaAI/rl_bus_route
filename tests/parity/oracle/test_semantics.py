@@ -1,31 +1,20 @@
-"""R0.2 targeted coverage: guards, capacity, abandonment, channels, settlement."""
+"""Targeted coverage: guards, capacity, abandonment, channels, settlement."""
 
 from __future__ import annotations
 
 import numpy as np
 import pytest
 
-from bus_sim.oracle.actions import ACTION_TABLE, action_id
+from bus_sim.oracle.actions import action_id
 from bus_sim.oracle.dispatcher import apply_action
 from bus_sim.oracle.domain import Action, PassengerCohort, Phase, initial_state
 from bus_sim.oracle.guards import valid_action_mask
 from bus_sim.oracle.observation import observe
 from bus_sim.oracle.passengers import abandon_expired, alight_visit, board_visit
-from bus_sim.parity.fixtures import load_fixture, new_env
 from bus_sim.parity.scenarios import CATALOG, build_scenario
 from bus_sim.parity.snapshot import numpy_state_snapshot
 from tests.support.factories import empty_scenario, waiting_state
-from tests.support.paths import GOLDEN
-
-ALL_FAMILIES = {"NOOP", "DISPATCH", "REASSIGN", "SHORT_TURN", "RECALL", "SET_HEADWAY"}
-
-
-def test_every_action_family_is_exercised_by_the_catalog():
-    seen = set()
-    for name in CATALOG:
-        payload, _, _ = load_fixture(GOLDEN / name)
-        seen.update(ACTION_TABLE[action].kind for action in payload["actions"])
-    assert seen == ALL_FAMILIES
+from tests.support.scenarios import new_env
 
 
 def test_invalid_action_is_rejected_without_mutating_state():
@@ -101,17 +90,6 @@ def test_cooldown_blocks_retargeting_a_bus():
     # The bus is now deadheading and on cooldown.
     assert not valid_action_mask(state, scenario)[dispatch]
     assert not valid_action_mask(state, scenario)[action_id("REASSIGN", bus_id=reserve, route_id=1)]
-
-
-def test_terminal_settlement_is_charged_once_with_unfinished_backlog():
-    _, expected, _ = load_fixture(GOLDEN / "backlog_m3")
-    terminal = expected["costs__terminal_unfinished_count"]
-    counters = expected["counters"]
-    settled = expected["terminal_settled"]
-    assert terminal[:-1].sum() == 0.0
-    assert terminal[-1] > 0.0
-    assert terminal[-1] == counters[-1][1] + counters[-1][2]
-    assert settled[:-1].sum() == 0 and settled[-1] == 1
 
 
 def test_completed_passengers_remain_in_arrival_history_but_not_boarded_channel():

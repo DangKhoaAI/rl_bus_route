@@ -22,7 +22,7 @@ from bus_rl.learning.training.checkpoint import assert_backend_compatible, run_m
 from bus_sim.parity.scenarios import CATALOG
 from tests.support.compare import assert_frames, assert_obs
 from tests.support.paths import ROOT
-from tests.support.rust_bridge import cached_scenario
+from tests.support.scenarios import cached_scenario
 
 pytest.importorskip("bus_sim_native")
 

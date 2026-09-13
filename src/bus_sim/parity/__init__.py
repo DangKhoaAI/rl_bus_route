@@ -1,4 +1,4 @@
-"""Differential-testing primitives for the Rust migration (R0 fixtures)."""
+"""Runtime parity primitives: scenario catalog, state snapshots, controllers."""
 
 from bus_sim.parity.snapshot import (
     COHORT_FIELDS,

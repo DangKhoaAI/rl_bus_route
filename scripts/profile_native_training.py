@@ -39,7 +39,7 @@ from bus_sim.oracle.costs import RewardConfig
 
 REPORT_DIR = ROOT / "reports" / "rust-migration"
 PROFILE_RUNS = ROOT / "runs" / "rust-migration" / "profile"
-REFERENCE = ROOT / "fixtures" / "reference" / "diagnose-after" / "last.zip"
+REFERENCE = ROOT / "runs" / "diagnose-after" / "last.zip"
 
 
 def _run_for(backend: str):

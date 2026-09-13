@@ -18,11 +18,11 @@ from bus_rl.execution.scenarios.generation import generate_manifest, generate_sc
 from bus_rl.learning.training.train import make_env, make_model
 from bus_sim.oracle.domain import SimConfig
 from tests.support.contract import OBS_KEYS
-from tests.support.reference import reference_run
+from tests.support.reference import reference_run, requires_reference
 
 pytest.importorskip("bus_sim_native")
 
-pytestmark = pytest.mark.native
+pytestmark = [pytest.mark.native, requires_reference]
 
 
 def test_vecenv_matches_dummyvecenv_for_masked_actions_and_auto_reset():

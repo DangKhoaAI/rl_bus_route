@@ -81,7 +81,7 @@ def main() -> None:
         "platform": platform.platform(),
         "import_ok": hasattr(bus_sim_native, "Kernel"),
         "roles": {
-            "r1": "debug kernel bridge for golden-fixture parity",
+            "r1": "debug kernel bridge for Python-vs-native parity checks",
             "r3": "Gym wrapper is added in Python on top of this module",
         },
     }
