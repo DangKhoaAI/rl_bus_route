@@ -15,7 +15,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 
 from bus_rl.config import RunConfig
 from bus_rl.evaluation.runner import mean_cost
-from bus_rl.runtime import apply_torch_threads
+from bus_rl.runtime import apply_runtime_settings
 from bus_rl.timing import TIMERS
 from bus_rl.training.checkpoint import run_metadata, write_metadata
 from bus_rl.training.train import make_env, make_model
@@ -139,7 +139,7 @@ def diagnose_train(
 ) -> dict:
     output = Path(output)
     output.mkdir(parents=True, exist_ok=False)
-    apply_torch_threads(run.algorithm.torch_threads)
+    apply_runtime_settings(run)
     TIMERS.enabled = True
     TIMERS.reset()
 

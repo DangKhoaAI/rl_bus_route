@@ -59,6 +59,9 @@ class RuntimeConfig:
     # O2 opt-in: step the eval pool and the training VecEnv through one native
     # BatchKernel call per control step. Native backend only.
     native_batch: bool = False
+    # Torch distribution argument validation. On by default (previous behavior);
+    # disabling it is a bit-identical speed opt-in used by the accepted config.
+    validate_distributions: bool = True
 
     def __post_init__(self) -> None:
         if self.backend not in {"python", "rust"}:
@@ -69,6 +72,7 @@ class RuntimeConfig:
         object.__setattr__(self, "eval_batch_size", batch_size)
         object.__setattr__(self, "reuse_eval_pool", bool(self.reuse_eval_pool))
         object.__setattr__(self, "native_batch", bool(self.native_batch))
+        object.__setattr__(self, "validate_distributions", bool(self.validate_distributions))
         if self.native_batch and self.backend != "rust":
             raise ValueError(
                 "runtime.native_batch requires runtime.backend='rust'; the Python oracle "

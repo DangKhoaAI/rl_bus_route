@@ -284,6 +284,7 @@ def test_training_parity_2048_transitions_bit_identical():
     run = _reference_run()
     scenarios = generate_manifest("train", 16)
     algorithm = run.algorithm
+    configure_torch_distributions(True)
 
     def _train(native: bool):
         if native:
@@ -387,9 +388,7 @@ def test_native_eval_pool_reuse_and_invalidations():
 def test_disabling_distribution_validation_is_bit_identical():
     run = _reference_run()
     scenarios = generate_manifest("train", 16)
-    env = DummyVecEnv(
-        [make_env(scenarios, run, run.algorithm.seed + i) for i in range(4)]
-    )
+    env = DummyVecEnv([make_env(scenarios, run, run.algorithm.seed + i) for i in range(4)])
     model = make_model(env, run.algorithm.seed, run.algorithm)
     model.policy.set_training_mode(False)
     observation = env.reset()
@@ -397,27 +396,85 @@ def test_disabling_distribution_validation_is_bit_identical():
     from stable_baselines3.common.utils import obs_as_tensor
 
     obs_tensor = obs_as_tensor(observation, "cpu")
-
-    def sample():
-        import torch
-
-        torch.manual_seed(123)
-        with torch.no_grad():
-            return model.policy(obs_tensor, action_masks=masks)
-
     import torch
 
-    torch.distributions.Distribution.set_default_validate_args(True)
-    actions_on, values_on, logprob_on = sample()
-    configure_torch_distributions()
-    actions_off, values_off, logprob_off = sample()
+    def sample():
+        torch.manual_seed(123)
+        with torch.no_grad():
+            actions, values, logprob = model.policy(obs_tensor, action_masks=masks)
+            argmax = model.policy.get_distribution(
+                obs_tensor, action_masks=masks
+            ).get_actions(deterministic=True)
+        return actions, values, logprob, argmax
+
     try:
-        assert torch.equal(actions_on, actions_off)
-        assert torch.equal(values_on, values_off)
-        assert torch.equal(logprob_on, logprob_off)
+        configure_torch_distributions(True)
+        actions_on, values_on, logprob_on, argmax_on = sample()
+        predict_on, _ = model.predict(observation, action_masks=masks, deterministic=True)
+        configure_torch_distributions(False)
+        actions_off, values_off, logprob_off, argmax_off = sample()
+        predict_off, _ = model.predict(observation, action_masks=masks, deterministic=True)
+        for left, right, label in (
+            (actions_on, actions_off, "actions"),
+            (values_on, values_off, "values"),
+            (logprob_on, logprob_off, "log_prob"),
+            (argmax_on, argmax_off, "argmax"),
+        ):
+            assert torch.equal(left, right), label
+        np.testing.assert_array_equal(np.asarray(predict_on), np.asarray(predict_off))
     finally:
-        torch.distributions.Distribution.set_default_validate_args(True)
+        configure_torch_distributions(True)
         env.close()
+
+
+def test_validate_distributions_off_matches_on_training_2048():
+    run = _reference_run()
+    scenarios = generate_manifest("train", 16)
+    algorithm = run.algorithm
+
+    def _train(enabled: bool):
+        configure_torch_distributions(enabled)
+        env = NativeBatchVecEnv(scenarios, run, algorithm.seed)
+        model = make_model(env, algorithm.seed, algorithm)
+        model.learn(total_timesteps=2048)
+        weights = {
+            key: value.detach().cpu().numpy().copy()
+            for key, value in model.policy.state_dict().items()
+        }
+        optimizer = model.policy.optimizer.state_dict()
+        env.close()
+        return weights, optimizer
+
+    try:
+        weights_on, optimizer_on = _train(True)
+        weights_off, optimizer_off = _train(False)
+    finally:
+        configure_torch_distributions(True)
+    for key in weights_on:
+        np.testing.assert_array_equal(weights_on[key], weights_off[key], err_msg=key)
+    for parameter in optimizer_on["state"]:
+        for field, value in optimizer_on["state"][parameter].items():
+            other = optimizer_off["state"][parameter][field]
+            left = value.cpu().numpy() if hasattr(value, "cpu") else value
+            right = other.cpu().numpy() if hasattr(other, "cpu") else other
+            np.testing.assert_array_equal(left, right, err_msg=f"{parameter}:{field}")
+
+
+def test_metadata_records_effective_distribution_validation():
+    from bus_rl.training.checkpoint import run_metadata
+
+    base = _reference_run()
+    run = replace(base, runtime=replace(base.runtime, validate_distributions=False))
+    configure_torch_distributions(False)
+    try:
+        metadata = run_metadata(run)
+        assert metadata["validate_distributions"] is False
+        assert metadata["torch_distribution_validate_args"] is False
+    finally:
+        configure_torch_distributions(True)
+    metadata = run_metadata(base)
+    assert metadata["validate_distributions"] is True
+    assert metadata["torch_distribution_validate_args"] is True
 
 
 def test_native_batch_with_forecast_matches_scalar():

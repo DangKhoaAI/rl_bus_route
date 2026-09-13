@@ -21,7 +21,7 @@ from bus_rl.env.factory import make_env_for_run
 from bus_rl.evaluation.pool import EvalEnvPool, make_eval_pool
 from bus_rl.evaluation.summary import from_native_payload, from_python_state, summarize_inputs
 from bus_rl.rewards.costs import RewardConfig, add_costs
-from bus_rl.runtime import apply_torch_threads
+from bus_rl.runtime import apply_runtime_settings
 from bus_rl.timing import TIMERS
 
 PPO_METHODS = frozenset({"ppo", "maskable_ppo"})
@@ -445,7 +445,7 @@ def evaluate_scenarios(
     validate_eval_runtime(run, method, forecaster=forecaster)
     snapshot = None
     if model is not None:
-        apply_torch_threads(run.algorithm.torch_threads)
+        apply_runtime_settings(run)
         snapshot = _save_model_rng(model)
     try:
         batch_size = int(run.runtime.eval_batch_size)

@@ -11,7 +11,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 from bus_rl.config import AlgorithmConfig, RunConfig
 from bus_rl.env.factory import make_env_for_run
 from bus_rl.models.features import POLICY_KWARGS
-from bus_rl.runtime import apply_torch_threads
+from bus_rl.runtime import apply_runtime_settings
 from bus_rl.training.callbacks import BestValidationCallback
 from bus_rl.training.checkpoint import run_metadata, write_metadata
 
@@ -113,7 +113,7 @@ def train_run(
 ) -> dict:
     output = Path(output)
     output.mkdir(parents=True, exist_ok=False)
-    apply_torch_threads(run.algorithm.torch_threads)
+    apply_runtime_settings(run)
     algorithm = run.algorithm
     if run.runtime.native_batch:
         from bus_rl.env.native_batch import NativeBatchVecEnv

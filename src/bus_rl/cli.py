@@ -31,6 +31,8 @@ def _run_config(args) -> object:
         runtime_updates["reuse_eval_pool"] = True
     if getattr(args, "native_batch", False):
         runtime_updates["native_batch"] = True
+    if getattr(args, "validate_distributions", None) is not None:
+        runtime_updates["validate_distributions"] = bool(args.validate_distributions)
     if runtime_updates:
         run = replace(run, runtime=replace(run.runtime, **runtime_updates))
     return run
@@ -274,6 +276,13 @@ def _add_runtime_flags(parser: argparse.ArgumentParser) -> None:
         "--native-batch",
         action="store_true",
         help="O2: step eval/train envs through one native BatchKernel call (rust only)",
+    )
+    parser.add_argument(
+        "--validate-distributions",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        dest="validate_distributions",
+        help="Torch distribution argument validation (default from config: on)",
     )
 
 

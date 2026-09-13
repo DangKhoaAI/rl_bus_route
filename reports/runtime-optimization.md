@@ -1,27 +1,28 @@
-# Runtime optimization report (O0–O2)
+# Runtime optimization report (O0–O2, O5 repetitions)
 
 Date: **2026-09-12**. Spec: [docs/spec/runtime_optimize.md](../docs/spec/runtime_optimize.md).
 
 Status: **O0 achieved. O1 achieved (opt-in). O2 achieved (opt-in). O3 deferred.
-PPO update and rollout-forward work are open candidates. O4/O5 not implemented.
-Defaults unchanged.**
+Torch distribution validation is configurable (on by default; opt-in off).
+O5 has paired multi-repetition evidence but defaults are not flipped. PPO
+update and rollout-forward work remain open candidates.**
 
 This report records measured evidence only. The comparison baseline is the Rust
 runtime after R4 and memory M1/M3, at 2 Torch threads
-(`configs/experiments/core-threads2.toml`). Historical full-workflow walls
-597.99 / 156.37 s from [rust-migration.md](rust-migration.md) are **not** the
-denominator for these candidates.
+(`configs/experiments/core-threads2.toml`), i.e. the shipped defaults
+(including distribution validation **on**). Historical walls 597.99 / 156.37 s
+from [rust-migration.md](rust-migration.md) are **not** the denominator.
 
 Machine: Linux x86_64, 24 CPUs, Python 3.11.14, torch 2.14.0+cpu, numpy 2.4.6,
-rustc/cargo 1.97.1, Torch threads=2, TIMERS and profiler off unless a row says
-otherwise. Host speed drifts between sessions; relative numbers inside one
-session are the comparison, absolute walls are not.
+rustc/cargo 1.97.1, Torch threads=2, TIMERS and profiler off unless stated.
+Host speed drifts between (and within) sessions; paired ratios inside a session
+are the comparison, absolute walls are not.
 
 ## 1. O0 — locked 2-thread Rust baseline
 
 | Item | Value |
 |---|---|
-| Git revision | `dff4fc9` + working tree for the forward-toggle work |
+| Git revision | `ae15622` + working tree for the O5/config work |
 | Native library sha256 (frozen R4/O0/O1) | `aedc4faa4c434fd1f9565f08586332da0560e09d6349eef7dfebf961eb75bab2` |
 | Native library sha256 (O2, installed) | `74b3a8fabbbabb5d4b167b92e56ac30af6f0957c180db78b6c501b21c50622ae` |
 | Config | `configs/experiments/core-threads2.toml` + `runtime.backend=rust` |
@@ -29,10 +30,9 @@ session are the comparison, absolute walls are not.
 | Seeds | algorithm 11; validation split seed 2001 |
 
 Provenance: `native_build_info()` hashes `src/bus_sim.so` at run time and names
-the matching build record. Every run below records `74b3a8fa…` and
-`build_record_matches_runtime=["runtime-optimization"]`. The R4 record stays
-frozen; the O2 build is in `native-build-o2.json`. Baseline and candidates all
-ran the same installed binary.
+the matching build record (`build_record_matches_runtime`). The R4 record stays
+frozen; the O2 build is `native-build-o2.json`. Baseline and candidates ran the
+same installed binary.
 
 O0 unprofiled baseline (12,288-transition isolated learn + 100-day validation,
 two launches): learn 3.077 / 3.029 s, validation 3.936 / 3.819 s, peak RSS
@@ -40,25 +40,21 @@ two launches): learn 3.077 / 3.029 s, validation 3.936 / 3.819 s, peak RSS
 
 ## 2. O1 — batched evaluation and pool reuse (opt-in)
 
-Defaults stay scalar (`eval_batch_size=1`, `reuse_eval_pool=false`). Ablation
-(100 days, 5 interleaved reps): scalar 4.19–4.50 s, batch-4 ~1.95, batch-8
-~1.43, batch-16 ~1.15, batch-32 ~1.02. `batch=1` on the batched path is slower
-than scalar (stacking) and exists for compatibility only.
+Ablation (100 days, 5 interleaved reps): scalar ~4.2–4.5 s, batch-4 ~1.95,
+batch-8 ~1.43, batch-16 ~1.15, batch-32 ~1.02. `batch=1` on the batched path is
+slower than scalar (stacking) and exists for compatibility only.
 
-### 2.1 O1 post-batching breakdown — where the wall moved
+### 2.1 O1 post-batching breakdown
 
 `o1-breakdown`, perf_counter segments, TIMERS off, 5 reps, median run 1 / run 2:
 
 | Batch | Wall | Inference | Native step + wrapper | Summary | Infer % | Step % |
 |---:|---:|---:|---:|---:|---:|---:|
-| 1 | 4.151 / 4.159 | 3.158 / 3.192 | 0.562 / 0.561 | 0.271 / 0.270 | 76.1% / 76.7% | 13.5% |
-| 4 | 1.798 / 1.802 | 1.034 / 1.036 | 0.430 / 0.433 | 0.259 / 0.258 | 57.5% | 23.9% |
-| 8 | 1.335 / 1.335 | 0.616 / 0.615 | 0.402 / 0.402 | 0.258 / 0.255 | 46.1% / 46.0% | 30.1% |
-| 16 | 1.081 / 1.079 | 0.391 / 0.393 | 0.383 / 0.383 | 0.254 / 0.250 | 36.2% / 36.4% | 35.4% |
-| 32 | 0.954 / 0.953 | 0.279 / 0.281 | 0.374 / 0.372 | 0.253 / 0.250 | 29.3% / 29.5% | 39.1% |
-
-After batching, inference stops dominating; native step and the episode summary
-grow in share. That chose O2.
+| 1 | 4.274 / 4.405 | 3.296 / 3.370 | 0.582 / 0.602 | 0.283 / 0.288 | 77.1% / 76.5% | 13.6% |
+| 4 | 1.895 / 1.915 | 1.075 / 1.103 | 0.445 / 0.459 | 0.272 / 0.275 | 56.7% / 57.6% | 23.5% |
+| 8 | 1.375 / 1.437 | 0.638 / 0.660 | 0.413 / 0.427 | 0.266 / 0.275 | 46.4% / 45.9% | 30.0% |
+| 16 | 1.135 / 1.155 | 0.416 / 0.422 | 0.402 / 0.407 | 0.259 / 0.271 | 36.6% / 36.5% | 35.4% |
+| 32 | 0.987 / 1.022 | 0.293 / 0.303 | 0.387 / 0.397 | 0.263 / 0.269 | 29.7% / 29.6% | 39.2% |
 
 ## 3. O2 — native batch step (opt-in)
 
@@ -68,200 +64,190 @@ grow in share. That chose O2.
 (`reset_batch`, `mask_batch`, `step_batch`, `current_time_s_batch`,
 `summary_inputs_batch`, `trace_snapshot_slot`). One `step_batch` advances one
 control interval per active slot and returns `(N, *single_env_shape)` arrays.
-Shapes, slot ids and all actions/masks are validated before mutation; an
-invalid batch raises `ValueError` and leaves every slot unchanged; a mid-batch
-internal error poisons the kernel until reset (no partial success).
+Shapes, slot ids and all actions/masks are validated before mutation; an invalid
+batch raises `ValueError` and leaves every slot unchanged; a mid-batch internal
+error poisons the kernel until reset (no partial success).
 
-Python: `NativeBatchVecEnv` (SB3 `VecEnv`, mirrors `DummyVecEnv` auto-reset,
-seeding and terminal info), `NativeBatchEvalPool` (shares `eval_pool_key` so the
-Python and native pools cannot be mixed), and
+Python: `NativeBatchVecEnv`, `NativeBatchEvalPool`, and
 `evaluation/runner.py::_evaluate_batched_native`. Opt-in via
 `runtime.native_batch` / `--native-batch`; recorded in metadata.
 
 ### 3.2 Correctness
 
-`tests/backend_parity/test_runtime_o2.py`: scalar `Kernel` vs `BatchKernel`
-exact replay (4 scenarios × 60 steps); mixed horizons; retained outputs;
-invalid batch rejected before mutation; partial reset; `VecEnv` vs `DummyVecEnv`
-over 300 masked-action steps incl. terminal info; `VecEnv.seed` scenario parity;
-**2048-transition training parity (policy + optimizer tensors bit-identical)**;
-native eval vs scalar frames (rtol 1e-12) and traces; pool invalidation; native
-batch + forecast; and the forward validation toggle bit-identical. `pytest -q`
-→ **179 passed, 1 skipped**.
+`tests/backend_parity/test_runtime_o2.py` (15 passed): scalar `Kernel` vs
+`BatchKernel` exact replay (4 scenarios × 60 steps); mixed horizons; retained
+outputs; invalid batch rejected before mutation; partial reset; `VecEnv` vs
+`DummyVecEnv` over 300 masked-action steps incl. terminal info; `VecEnv.seed`
+scenario parity; 2048-transition training parity (policy + optimizer tensors
+bit-identical); native eval vs scalar frames (rtol 1e-12) and traces; pool
+invalidation; native batch + forecast; distribution-validation on/off
+(actions, values, log-probs, deterministic argmax and `model.predict` all
+bit-identical); 2048-transition training parity on vs off; metadata records the
+effective setting. `pytest -q` → **181 passed, 1 skipped**.
 
 ### 3.3 Ablation (100 validation days, TIMERS off)
 
 Warm-up 1; 5 interleaved repetitions; two launches. Median run 1 / run 2 (s):
 
-| Variant | Wall | Inference | Step | Summary | Infer % | Step % |
-|---|---:|---:|---:|---:|---:|---:|
-| o1-batch-8 | 1.332 / 1.331 | 0.613 / 0.612 | 0.404 / 0.404 | 0.254 / 0.255 | 46% | 30% |
-| o2-native-8 | 1.168 / 1.165 | 0.594 / 0.596 | **0.186 / 0.187** | 0.315 / 0.316 | 51% | 16% |
-| o1-batch-16 | 1.089 / 1.132 | 0.394 / 0.391 | 0.386 / 0.386 | 0.253 / 0.274 | 36% | 35% |
-| o2-native-16 | 0.878 / 0.929 | 0.380 / 0.382 | **0.175 / 0.177** | 0.255 / 0.275 | 43% | 20% |
-| o1-batch-32 | 0.953 / 1.010 | 0.280 / 0.281 | 0.372 / 0.377 | 0.250 / 0.271 | 29% | 38% |
-| o2-native-32 | 0.807 / 0.805 | 0.272 / 0.271 | **0.172 / 0.172** | 0.306 / 0.308 | 34% | 21% |
-
-Native step drops ~2.2× (0.386 → 0.175 s at batch 16). The full workflow uses
-batch 16, where eval is inference ~43%, summary ~29%, step ~20%.
-
-**Summary split** (`summary_export_s` = native `summary_inputs_batch`;
-`summary_convert_s` = `from_native_payload`; `summary_metrics_s` =
-`summarize_inputs`), native-16 run 1 / run 2:
-
-| Part | Seconds | Share of summary |
-|---|---:|---:|
-| native export | 0.0051 / 0.0053 | ~2% |
-| `from_native_payload` | 0.1787 / 0.1929 | ~70% |
-| `summarize_inputs` | 0.0709 / 0.0713 | ~27% |
-| total | 0.255 / 0.275 | ~5–6 s/run |
-
-The native export is negligible; the cost is the per-cohort Python dataclass
-loop in `from_native_payload`. The whole summary is only ~5–6 s of the run.
-
-Training (isolated learn 12,288 transitions, one env-side change):
-
-| Variant | Learn wall | Rollout | PPO update | Transitions |
+| Variant | Wall | Inference | Step | Summary |
 |---|---:|---:|---:|---:|
-| `DummyVecEnv` | 2.967 / 2.950 s | 1.913 / 1.902 s | 1.055 / 1.046 s | 12,288 |
-| `NativeBatchVecEnv` | 2.780 / 2.613 s | 1.665 / 1.566 s | 1.120 / 1.045 s | 12,288 |
+| o1-batch-8 | 1.329 / 1.385 | 0.615 / 0.637 | 0.398 / 0.421 | 0.255 / 0.262 |
+| o2-native-8 | 1.216 / 1.211 | 0.624 / 0.620 | **0.193 / 0.194** | 0.314 / 0.323 |
+| o1-batch-16 | 1.123 / 1.131 | 0.400 / 0.408 | 0.386 / 0.402 | 0.259 / 0.261 |
+| o2-native-16 | 0.897 / 0.916 | 0.378 / 0.395 | **0.172 / 0.182** | 0.258 / 0.265 |
+| o1-batch-32 | 0.948 / 0.994 | 0.281 / 0.291 | 0.369 / 0.390 | 0.248 / 0.260 |
+| o2-native-32 | 0.758 / 0.834 | 0.271 / 0.282 | **0.169 / 0.178** | 0.278 / 0.315 |
 
-Rollout drops ~12–18%; update unchanged. O2 is **achieved** as opt-in.
+Native step drops ~2.2×. The full workflow uses batch 16.
 
-## 4. Full-workflow verification (245,760 transitions, 20 × 100 validation)
+**Summary split** (native-16): native export 0.0051 / 0.0054 s (~2%),
+`from_native_payload` 0.1813 / 0.1850 s (~70%), `summarize_inputs`
+0.0693 / 0.0740 s (~27%). The native export is negligible; the cost is the
+per-cohort Python dataclass loop, and the whole summary is only ~5–6 s/run.
 
-Single sequential session, seed 11, 2 Torch threads, distribution validation
-off. Raw: `o2-full-workflow.json`; logs/checkpoints under
-`runs/runtime-optimization/full/`.
+Training (isolated learn 12,288 transitions): `DummyVecEnv` 3.234 / 3.045 s
+(rollout 2.075 / 1.966, update 1.133 / 1.077); `NativeBatchVecEnv`
+2.783 / 2.755 s (rollout 1.676 / 1.658, update 1.106 / 1.096). Rollout drops
+~15–19%; update unchanged.
 
-| Variant | Flags | Total wall | Learn wall | Peak RSS | Best val cost |
-|---|---|---:|---:|---:|---:|
-| baseline | (defaults) | 139.41 s | 137.38 s | 447,856 KB | 13199.1325 |
-| O1 | `--eval-batch-size 16 --reuse-eval-pool` | 85.89 s | 83.77 s | 452,196 KB | 13199.1325 |
-| O2 | `--native-batch --eval-batch-size 16 --reuse-eval-pool` | 74.94 s | 72.78 s | 450,436 KB | 13199.1325 |
-| O2 batch 32 | `--native-batch --eval-batch-size 32 --reuse-eval-pool` | 73.26 s | 71.20 s | 456,312 KB | 13199.1325 |
+## 4. Full-workflow multi-repetition (O5)
 
-| Gate | Result |
-|---|---|
-| Full workflow ≥10% | O1 **1.623×**, O2 **1.860×**, O2-batch32 **1.903×** |
-| Memory ≤1.20× baseline | 1.010× / 1.006× / 1.019× |
-| Validation curve | 20 points, schedule identical, max abs cost diff **0.0** (all) |
-| Policy/optimizer tensors | `last.zip`/`best.zip` max abs diff **0.0** (all) |
+`scripts/benchmark_full_workflow.py`: each run is a separate process, the
+variant order rotates every repetition, seed 11, 2 Torch threads, 245,760
+transitions with 20×100 validation. Raw: `full-workflow-reps.json`.
 
-**Batch 32 vs 16:** this session 74.94 vs 73.26 s (**1.023×**, ~1.7 s); the
-previous session showed 1.001×. Isolated eval predicts up to ~2 s/run. That is
-≤2.7% and inside run-to-run noise, far below the 10% component gate; the spec
-tie rule keeps the smaller **batch 16**.
+`baseline` uses the shipped defaults (distribution validation **on**). The
+opt-in variants use `--no-validate-distributions`; `o2b16-on` reruns the accepted
+O2 config with validation on to isolate that toggle.
 
-`learn_wall_s` includes validation and finalize/checkpoint. Approximate O2
-component budget (from component benchmarks, not a direct breakdown of 74.94 s):
-rollout **~32–34 s**, PPO update **~21 s**, validation **~17–18 s**, setup +
-other + unmeasured overhead **~6–8 s**. Ordering: **rollout → PPO update →
-validation**.
+Per-run total wall (s):
+
+| Variant | r0 | r1 | r2 | median | paired ratio vs baseline (r0/r1/r2) |
+|---|---:|---:|---:|---:|---|
+| baseline | 145.71 | 183.86 | 179.60 | 179.60 | 1.00 |
+| o2b16 | 74.45 | 85.04 | 83.92 | 83.92 | 1.957 / 2.162 / 2.140 |
+| o2b32 | 71.84 | 85.67 | 87.18 | 85.67 | 2.028 / 2.146 / 2.060 |
+| o2b16-on | 87.49 | — | — | 87.49 | 1.666 |
+
+The host drifted upward during the session (baseline r0 145.7 s vs r1/r2
+~180 s; candidates also slowed), so **paired per-repetition ratios are the
+primary number**: O2-off is 1.96–2.16× faster than the shipped defaults, and
+O2-on (validation enabled) is 1.67×. Even the most conservative paired estimate
+clears the 10% gate. The median-based ratios (2.10–2.14×) are inflated by the
+baseline running later and longer.
+
+**Batch 16 vs 32**, paired: 1.036× / 0.993× / 0.963× (32/16 wall). The sign
+flips across repetitions, so the difference is noise; the tie rule keeps
+**batch 16** (also the smaller memory footprint). This confirms the earlier
+single-session 1.001×.
+
+Peak RSS medians: baseline 447,196 KB; o2b16 450,516 (1.007×); o2b32 455,684
+(1.019×); o2b16-on 453,412 (1.014×). Memory gate (≤1.20×) passes.
+
+**Parity**: every one of the 10 runs has validation curve max abs diff **0.0**
+and last/best tensor max abs diff **0.0** vs baseline-r0. Because `o2b16-on`
+(validation on) and `o2b16` (off) are each bit-identical to the same baseline,
+the toggle is bit-identical at the full seed — the direct `o2b16-on` vs
+`o2b16` tensor diff is also 0.0. Best validation cost is 13199.1325 in every run.
+
+An earlier single-repetition session (`o2-full-workflow.json`, validation off
+for every variant) measured baseline 139.41 s, O1 85.89 s, O2 74.94 s,
+O2-batch32 73.26 s; it is superseded by the paired multi-repetition evidence
+above, but matches its ordering.
 
 ## 5. Re-profile and decisions
 
-### 5.1 Policy-forward overhead — a cheap win adopted (priority 1)
+### 5.1 Policy-forward overhead — a configurable, bit-identical win
 
-The rollout profile (§5.2) showed the policy forward is the largest single
-block. Profiling the forward at the sub-method level (batch 4, action dim 221,
-native path) attributes ~254–260 µs/call:
+Sub-method profile of one `policy(obs, action_masks)` (batch 4, 221 actions):
+~254–260 µs, of which `extract_features` 73 µs (28%), `mlp_extractor` 23 µs
+(9%), first distribution construction 59 µs (23%), `apply_masking` 34 µs (13%),
+`sample` 40 µs (15%), `log_prob` 26 µs (10%), `value_net` 3 µs. So ~60% is
+maskable-distribution bookkeeping, and Torch constructs the categorical twice
+per forward with `validate_args=True`.
 
-| Part | µs/call | Share |
-|---|---:|---:|
-| `extract_features` (9-key flatten + MLP) | 73.0 | 28% |
-| `mlp_extractor` | 23.0 | 9% |
-| first action-distribution construction | 59.0 | 23% |
-| `apply_masking` (second construction) | 33.6 | 13% |
-| `sample` | 39.9 | 15% |
-| `log_prob` | 25.6 | 10% |
-| `value_net` | 3.2 | 1% |
+`runtime.validate_distributions` (default **true**) controls the Torch
+distribution argument validation. It is applied in
+`bus_rl.runtime.apply_runtime_settings`, exposed as
+`--validate-distributions/--no-validate-distributions`, and recorded in
+metadata as both the requested value and the effective
+`torch_distribution_validate_args`. The accepted opt-in config sets it **off**.
 
-So ~60% of the forward is **maskable-distribution bookkeeping**, not the MLP.
-Torch's `Distribution._validate_args` defaults to `True`, and
-`MaskableCategorical` constructs `Categorical` **twice per forward**
-(`proba_distribution` then `apply_masking`), each running simplex `all`/`eq`
-validation. Disabling validation only (it checks inputs and raises; it does not
-change math) gives:
+Controlled A/B (`distribution-validation.json`, same process/model/observations):
 
-| Measurement | Validation on | off | Speedup |
+| Measurement | on | off | Speedup |
 |---|---:|---:|---:|
-| policy forward (µs/call) | 253.6 | 206.8 | 1.227× |
-| rollout (s) | 0.143 | 0.133 | 1.11× |
-| eval inference (native-16, s) | 0.421 | 0.388 | 1.08× |
-| PPO update (native, s) | 1.085 | 1.048 | 1.03× |
+| forward (µs/call) | 258.86 | 208.12 | **1.24×** |
+| rollout (s) | 0.1568 | 0.1410 | 1.112× (10.1% less) |
 
-Outputs are **bit-identical**: sampled actions, values, log-probs and
-deterministic argmax all compare equal (new test
-`test_disabling_distribution_validation_is_bit_identical`). The toggle lives in
-`bus_rl.runtime.apply_torch_threads` / `configure_torch_distributions`, so
-train/eval/bench share it.
+`bit_identical = {actions, values, log_prob, argmax: true}` in the artifact, and
+the unit tests add `model.predict` and 2048-transition training parity.
 
-Also tested and rejected: a **pre-made tensor mask** (0.6% — `as_tensor` is
-cheap), **`torch.set_flush_denormal(True)`** (no effect), **`torch_threads=1`**
-(slower, 271.9 µs; 2 threads is faster and resulting logits are equal),
-**`torch.inference_mode()`** (~8% but inference tensors are unsafe to reuse in
-the later PPO update).
+**Caveat, stated explicitly:** a valid action mask does **not** guarantee finite
+logits/probabilities. Disabling validation does not change the math on valid
+inputs, but it can surface arithmetic problems later or silently instead of
+raising. That is why the toggle is configurable and defaults on; the fast path
+is an explicit opt-in, not a hidden default.
 
-Left on the table: eliminating the **double distribution construction** (single
-`MaskableCategorical(logits=..., masks=...)`) is bit-identical in a micro-test
-(sample/log-prob equal) and ~19% of the distribution work, i.e. ~13% of the
-forward. It needs a custom maskable distribution/policy class plus
-checkpoint-compatibility and parity handling, so it is **deferred** as a
-follow-up, not adopted now.
+Tested and rejected (no gain): pre-made tensor mask (0.6%), `flush_denormal`
+(none), `torch_threads=1` (slower; 2 threads faster, equal logits),
+`torch.inference_mode()` (~8% but unsafe tensors for the later PPO update).
+Deferred: eliminating the double distribution construction (~13% of forward)
+needs a custom policy + checkpoint handling.
 
 ### 5.2 Rollout profile (explanatory)
 
-One rollout = 1024 transitions (4 envs × n_steps 256), 3 reps, median:
+One rollout = 1024 transitions, 3 reps, median:
 
 | Sub-step | Native O2 (s) | Share | Dummy (s) |
 |---|---:|---:|---:|
-| policy forward (total) | 0.0747 | 56.0% | 0.0758 |
-| ↳ feature extraction | 0.0398 | 29.8% | 0.0384 |
-| ↳ action distribution | 0.0172 | 12.9% | — |
-| ↳ sampling | 0.0144 | 10.8% | — |
-| ↳ forward other | 0.0033 | 2.5% | — |
-| env step | 0.0361 | 27.1% | 0.0585 |
-| buffer add | 0.0071 | 5.3% | — |
-| `obs_as_tensor` + mask | 0.0068 | 5.1% | — |
-| GAE | 0.0008 | 0.6% | — |
-| other | 0.0078 | 5.9% | — |
-| **rollout total** | **0.1335** | 100% | 0.1584 |
+| policy forward (total) | 0.0837 | 55.8% | 0.0825 |
+| ↳ feature extraction | 0.0445 | 29.7% | 0.0431 |
+| ↳ action distribution | 0.0194 | 12.9% | — |
+| ↳ sampling | 0.0159 | 10.6% | — |
+| ↳ forward other | 0.0040 | 2.6% | — |
+| env step | 0.0407 | 27.1% | 0.0641 |
+| buffer add | 0.0082 | 5.4% | — |
+| `obs_as_tensor` + mask | 0.0079 | 5.3% | — |
+| GAE | 0.0009 | 0.6% | — |
+| other | 0.0087 | 5.8% | — |
+| **rollout total** | **0.1501** | 100% | 0.1729 |
 
-After the §5.1 toggle, the forward share fell from ~60% to 56% and the
-distribution part from 0.0256 to 0.0172 s; env step is now the clear second
-block at 27%. Native batch already cut env step from 0.0585 (dummy) to 0.0361.
+Rollout is forward-bound; native batch already cut env step from 0.0641 (dummy)
+to 0.0407. Buffer, tensor conversion and GAE are small.
 
 ### 5.3 PPO update profile (explanatory)
 
 One update = 1024 transitions, 4 epochs, 16 minibatches, median of 3: total
-0.0882 s; forward 0.0293 (33%), backward 0.0305 (35%), Adam 0.0157 (18%), clip
-0.0038 (4%), other 0.0089 (10%). Forward + backward ≈ 68%. The update is ~21 s
-of the run and is **kept as an open candidate**.
+0.0981 s; forward 0.0329 (33.5%), backward 0.0343 (35.0%), Adam 0.0172 (17.5%),
+clip 0.0041 (4.2%), other 0.0096 (9.8%). Forward + backward ≈ 68%. The update
+is ~21 s/run and is **kept as an open candidate**.
 
 ### 5.4 Decisions
 
 | Item | Decision | Evidence |
 |---|---|---|
-| Skip Torch distribution validation | **adopted** | forward 1.23×, rollout 1.11×, eval infer 1.08×, bit-identical |
-| O3 parallel native workers | **deferred** | native step 0.17 s/eval; rollout is forward-bound, workers do not fix it |
-| Full-run eval batch 32 | **not adopted** | 1.023× (≤2.7%, in noise); tie rule keeps batch 16 |
-| Fast maskable distribution (no double construction) | **deferred** | bit-identical, ~13% of forward; needs custom policy + checkpoint handling |
+| Skip Torch distribution validation (configurable) | **adopted, opt-in** | forward 1.24×, rollout 1.11×, bit-identical; default stays on |
+| O3 parallel native workers | **deferred** | native step 0.17 s/eval; rollout is forward-bound |
+| Full-run eval batch 32 | **not adopted** | paired 1.036/0.993/0.963 (sign flips); keep 16 |
+| Fast maskable distribution (no double construction) | **deferred** | bit-identical, ~13% of forward; needs custom policy |
 | `from_native_payload` fast path | **candidate** | ~70% of a ~5–6 s/run summary |
 | PPO update optimization | **open candidate** | ~21 s/run; forward+backward ~68% |
+| Flip defaults to the opt-in config | **not yet** | O5 repetitions done, but one seed and one host; keep opt-in |
 
 ## 6. What was not done
 
 - O3 native workers / `SubprocVecEnv`
 - O4 extra caches, prefetch, multi-seed launcher
-- O5 multi-repetition full-workflow protocol, default flips
-- Fast maskable-distribution / policy-forward optimization (deferred, §5.1)
+- O5 default flip (multi-rep evidence exists; more seeds/hosts and a decision
+  on the accepted config are still open)
+- Fast maskable-distribution / policy-forward optimization (deferred)
 - `from_native_payload` fast path; PPO update optimization
 - R0–R4 / M1 / M3 rewrites; deferred M2/M4/M5; hyperparameter changes
 
 ## 7. How to use O1 and O2
 
-Defaults stay scalar. TOML:
+Defaults stay scalar with distribution validation on. Accepted opt-in config:
 
 ```toml
 [runtime]
@@ -269,6 +255,7 @@ backend = "rust"
 eval_batch_size = 16
 reuse_eval_pool = true
 native_batch = true
+validate_distributions = false
 ```
 
 CLI:
@@ -277,26 +264,29 @@ CLI:
 python -m bus_rl.cli train --config configs/experiments/core-threads2.toml \
   --manifest data/generated/base/manifest.json --seed 11 \
   --output runs/<name> --backend rust --torch-threads 2 --eval-limit 100 \
-  --native-batch --eval-batch-size 16 --reuse-eval-pool
+  --native-batch --eval-batch-size 16 --reuse-eval-pool \
+  --no-validate-distributions
 ```
 
-Invalid combinations raise `ValueError`. Rollback: omit the fields (scalar
-evaluator + `DummyVecEnv`).
+Debug/rollback: drop `--native-batch` / set `eval_batch_size=1` /
+`reuse_eval_pool=false`, and use `--validate-distributions` to restore the
+argument checks. Unsupported combinations raise `ValueError`.
 
 ## 8. Commands and artifacts
 
 | Command | Exit | Artifact |
 |---|---:|---|
-| `python -m pytest -q` | 0 | 179 passed, 1 skipped |
+| `python -m pytest -q` | 0 | 181 passed, 1 skipped |
 | `python scripts/build_native.py --output reports/runtime-optimization/native-build-o2.json` | 0 | O2 kernel sha256 `74b3a8fa…` |
 | `python scripts/benchmark_runtime.py --mode o1-breakdown …` | 0 | §2.1 |
 | `python scripts/benchmark_runtime.py --mode o2-ablation …` | 0 | §3.3 eval + training + summary split |
 | `python scripts/benchmark_runtime.py --mode rollout-profile …` | 0 | §5.2 |
 | `python scripts/benchmark_runtime.py --mode ppo-update-profile …` | 0 | §5.3 |
-| `python -m bus_rl.cli train …` (4 variants) | 0 | §4 |
+| `python scripts/benchmark_runtime.py --mode distribution-validation …` | 0 | §5.1 A/B |
+| `python scripts/benchmark_full_workflow.py --repetitions 3` | 0 | §4 paired multi-rep |
 
 Exact argv: `reports/runtime-optimization/commands.json`. Code:
-`evaluation/runner.py`, `evaluation/pool.py`, `env/native_batch.py`,
-`training/{train,callbacks,checkpoint}.py`, `backend/native.py`, `runtime.py`,
-`config.py`, `cli.py`, `crates/bus-sim-py/src/lib.rs`,
-`scripts/{benchmark_runtime,build_native}.py`.
+`evaluation/{runner,pool}.py`, `env/native_batch.py`,
+`training/{train,callbacks,checkpoint,diagnose}.py`, `backend/native.py`,
+`runtime.py`, `config.py`, `cli.py`, `crates/bus-sim-py/src/lib.rs`,
+`scripts/{benchmark_runtime,benchmark_full_workflow,build_native}.py`.

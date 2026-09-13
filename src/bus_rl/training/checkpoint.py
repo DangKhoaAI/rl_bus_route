@@ -48,6 +48,10 @@ def run_metadata(run: RunConfig, extra: dict | None = None) -> dict:
         "torch_threads": int(run.algorithm.torch_threads),
         "torch_threads_actual": int(torch.get_num_threads()),
         "validate_observation": bool(run.runtime.validate_observation),
+        "validate_distributions": bool(run.runtime.validate_distributions),
+        "torch_distribution_validate_args": bool(
+            torch.distributions.Distribution._validate_args
+        ),
         "eval_batch_size": int(run.runtime.eval_batch_size),
         "reuse_eval_pool": bool(run.runtime.reuse_eval_pool),
         "native_batch": bool(run.runtime.native_batch),

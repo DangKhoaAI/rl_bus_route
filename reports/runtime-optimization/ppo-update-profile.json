@@ -6,120 +6,120 @@
     "role": "explanatory-only",
     "summary": {
       "dummy": {
-        "backward": 0.030419438029639423,
+        "backward": 0.0353526409890037,
         "calls": {
           "backward": 16,
           "clip": 16,
           "forward": 16,
           "optimizer": 16
         },
-        "clip": 0.0038228910270845518,
-        "forward": 0.029269452003063634,
-        "optimizer": 0.015706941980170086,
-        "other_s": 0.008770139960688539,
+        "clip": 0.004652523013646714,
+        "forward": 0.0340099180029938,
+        "optimizer": 0.018457603044225834,
+        "other_s": 0.010450142959598452,
         "raw": [
           {
-            "backward": 0.030419438029639423,
+            "backward": 0.032282744024996646,
             "calls": {
               "backward": 16,
               "clip": 16,
               "forward": 16,
               "optimizer": 16
             },
-            "clip": 0.0038228910270845518,
-            "forward": 0.029269452003063634,
-            "optimizer": 0.015706941980170086,
-            "other_s": 0.008770139960688539,
-            "total_s": 0.08798886300064623
+            "clip": 0.003986888987128623,
+            "forward": 0.031054881983436644,
+            "optimizer": 0.01664964899828192,
+            "other_s": 0.00934400899859611,
+            "total_s": 0.09331817299243994
           },
           {
-            "backward": 0.030354602000443265,
+            "backward": 0.0353526409890037,
             "calls": {
               "backward": 16,
               "clip": 16,
               "forward": 16,
               "optimizer": 16
             },
-            "clip": 0.003686864976771176,
-            "forward": 0.02901612395362463,
-            "optimizer": 0.015308710018871352,
-            "other_s": 0.008552602041163482,
-            "total_s": 0.0869189029908739
+            "clip": 0.004652523013646714,
+            "forward": 0.0340099180029938,
+            "optimizer": 0.018457603044225834,
+            "other_s": 0.010450142959598452,
+            "total_s": 0.1029228280094685
           },
           {
-            "backward": 0.03080019701155834,
+            "backward": 0.03730471499147825,
             "calls": {
               "backward": 16,
               "clip": 16,
               "forward": 16,
               "optimizer": 16
             },
-            "clip": 0.003941190007026307,
-            "forward": 0.0295473270380171,
-            "optimizer": 0.01612403198669199,
-            "other_s": 0.009104307959205471,
-            "total_s": 0.08951705400249921
+            "clip": 0.004786175006302074,
+            "forward": 0.03596113897219766,
+            "optimizer": 0.019212878032703884,
+            "other_s": 0.010739821998868138,
+            "total_s": 0.10800472900155
           }
         ],
-        "total_s": 0.08798886300064623
+        "total_s": 0.1029228280094685
       },
       "native": {
-        "backward": 0.0305416200280888,
+        "backward": 0.034307950976653956,
         "calls": {
           "backward": 16,
           "clip": 16,
           "forward": 16,
           "optimizer": 16
         },
-        "clip": 0.0037868910148972645,
-        "forward": 0.029310864993021823,
-        "optimizer": 0.0156699409999419,
-        "other_s": 0.008860676971380599,
+        "clip": 0.004103786021005362,
+        "forward": 0.03287522301252466,
+        "optimizer": 0.017245263064978644,
+        "other_s": 0.009601644924259745,
         "raw": [
           {
-            "backward": 0.03067916202417109,
+            "backward": 0.032179779023863375,
             "calls": {
               "backward": 16,
               "clip": 16,
               "forward": 16,
               "optimizer": 16
             },
-            "clip": 0.0039019690302666277,
-            "forward": 0.029467100015608594,
-            "optimizer": 0.016098783002234995,
-            "other_s": 0.008946314934291877,
-            "total_s": 0.08909332900657319
+            "clip": 0.003907073973095976,
+            "forward": 0.030977774993516505,
+            "optimizer": 0.016362618989660405,
+            "other_s": 0.009323531019617803,
+            "total_s": 0.09275077799975406
           },
           {
-            "backward": 0.0305416200280888,
+            "backward": 0.034307950976653956,
             "calls": {
               "backward": 16,
               "clip": 16,
               "forward": 16,
               "optimizer": 16
             },
-            "clip": 0.0037868910148972645,
-            "forward": 0.029310864993021823,
-            "optimizer": 0.0156699409999419,
-            "other_s": 0.008860676971380599,
-            "total_s": 0.08816999400733039
+            "clip": 0.004103786021005362,
+            "forward": 0.03287522301252466,
+            "optimizer": 0.017245263064978644,
+            "other_s": 0.009601644924259745,
+            "total_s": 0.09813386799942236
           },
           {
-            "backward": 0.030277429017587565,
+            "backward": 0.04547807500057388,
             "calls": {
               "backward": 16,
               "clip": 16,
               "forward": 16,
               "optimizer": 16
             },
-            "clip": 0.003664992007543333,
-            "forward": 0.029018710018135607,
-            "optimizer": 0.015274081990355626,
-            "other_s": 0.008542073977878317,
-            "total_s": 0.08677728701150045
+            "clip": 0.006373901036567986,
+            "forward": 0.04434832793776877,
+            "optimizer": 0.023963635991094634,
+            "other_s": 0.013835948033374734,
+            "total_s": 0.13399988799938
           }
         ],
-        "total_s": 0.08816999400733039
+        "total_s": 0.09813386799942236
       }
     },
     "transitions_per_update": 1024
@@ -135,13 +135,14 @@
       "note": "explanatory; sub-step timers on",
       "timers": true,
       "trace": false,
+      "validate_distributions": false,
       "validate_observation": true
     },
     "git": {
-      "diff_stat": ".../runtime-optimization/o1-breakdown-run1.json    | 440 ++++++++++-----------\n .../runtime-optimization/o1-breakdown-run2.json    | 440 ++++++++++-----------\n reports/runtime-optimization/rollout-profile.json  | 214 +++++-----\n src/bus_rl/runtime.py                              |  19 +-\n tests/backend_parity/test_runtime_o2.py            |  37 ++\n 5 files changed, 602 insertions(+), 548 deletions(-)",
+      "diff_stat": ".../runtime-optimization/o1-breakdown-run1.json    | 439 ++++++-------\n .../runtime-optimization/o1-breakdown-run2.json    | 439 ++++++-------\n reports/runtime-optimization/o2-ablation-run1.json | 723 ++++++++++----------\n reports/runtime-optimization/o2-ablation-run2.json | 725 +++++++++++----------\n .../runtime-optimization/ppo-update-profile.json   | 103 +--\n reports/runtime-optimization/rollout-profile.json  | 215 +++---\n scripts/benchmark_runtime.py                       | 150 ++++-\n src/bus_rl/cli.py                                  |   9 +\n src/bus_rl/config.py                               |   4 +\n src/bus_rl/evaluation/runner.py                    |   4 +-\n src/bus_rl/runtime.py                              |  53 +-\n src/bus_rl/training/checkpoint.py                  |   4 +\n src/bus_rl/training/diagnose.py                    |   4 +-\n src/bus_rl/training/train.py                       |   4 +-\n tests/backend_parity/test_runtime_o2.py            |  89 ++-\n 15 files changed, 1598 insertions(+), 1367 deletions(-)",
       "dirty": true,
-      "porcelain": "M reports/runtime-optimization/o1-breakdown-run1.json\n M reports/runtime-optimization/o1-breakdown-run2.json\n M reports/runtime-optimization/rollout-profile.json\n M src/bus_rl/runtime.py\n M tests/backend_parity/test_runtime_o2.py",
-      "sha": "dff4fc92190be6fce9306708822cf5f0f4144c87"
+      "porcelain": "M reports/runtime-optimization/o1-breakdown-run1.json\n M reports/runtime-optimization/o1-breakdown-run2.json\n M reports/runtime-optimization/o2-ablation-run1.json\n M reports/runtime-optimization/o2-ablation-run2.json\n M reports/runtime-optimization/ppo-update-profile.json\n M reports/runtime-optimization/rollout-profile.json\n M scripts/benchmark_runtime.py\n M src/bus_rl/cli.py\n M src/bus_rl/config.py\n M src/bus_rl/evaluation/runner.py\n M src/bus_rl/runtime.py\n M src/bus_rl/training/checkpoint.py\n M src/bus_rl/training/diagnose.py\n M src/bus_rl/training/train.py\n M tests/backend_parity/test_runtime_o2.py\n?? reports/runtime-optimization/distribution-validation.json\n?? reports/runtime-optimization/full-workflow-reps.json\n?? scripts/benchmark_full_workflow.py",
+      "sha": "ae15622ce18f5a34e474804ac1008d7a5131ec37"
     },
     "library_sha256": "74b3a8fabbbabb5d4b167b92e56ac30af6f0957c180db78b6c501b21c50622ae",
     "lock_hash": "5ed56349910166b5fe6232c3d79c8421c6714e8cc8504cc5ac785d68f4ddb530",

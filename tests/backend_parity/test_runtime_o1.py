@@ -144,6 +144,7 @@ def test_runtime_defaults_keep_scalar_and_training_hyperparameters():
     assert run.runtime.eval_batch_size == 1
     assert run.runtime.reuse_eval_pool is False
     assert run.runtime.native_batch is False
+    assert run.runtime.validate_distributions is True
     assert run.runtime.backend == "python"
     assert run.algorithm.n_envs == 4
     assert run.algorithm.n_steps == 256

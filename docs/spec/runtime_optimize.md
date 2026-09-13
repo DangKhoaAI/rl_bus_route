@@ -1,7 +1,8 @@
 # Tối ưu runtime sau Rust: batching, caching và parallelism
 
 Ngày: **2026-09-12**. Trạng thái: **Đề xuất; O0–O2 đã triển khai/nghiệm thu (opt-in);
-O3 hoãn theo số đo; O4–O5 chưa**. Kết quả: [reports/runtime-optimization.md](../../reports/runtime-optimization.md).**
+O3 hoãn theo số đo; O5 đã có protocol nhiều repetition nhưng chưa đổi default; O4 chưa.**
+Kết quả: [reports/runtime-optimization.md](../../reports/runtime-optimization.md).**
 
 Tài liệu kế thừa [rust_improve.md](rust_improve.md),
 [memory_optimize.md](memory_optimize.md) và
@@ -258,7 +259,7 @@ bằng rejected/deferred có evidence; không hạ ngưỡng sau benchmark.
 
 Các field sau **đề xuất, chưa tồn tại**: `runtime.eval_batch_size` (1),
 `runtime.reuse_eval_pool` (false), `runtime.native_batch` (false),
-`runtime.native_workers` (1). Prefetch/launcher chỉ thêm cấu hình nếu stage
+`runtime.validate_distributions` (true), `runtime.native_workers` (1). Prefetch/launcher chỉ thêm cấu hình nếu stage
 đó được mở. Validate tổ hợp không hỗ trợ và ghi requested/effective values
 vào metadata; không silent fallback. Các giá trị mặc định ban đầu giữ đường
 hiện tại, chỉ đổi sau O5 accepted.
@@ -277,8 +278,8 @@ Checklist ban đầu:
 - [x] O2: native batch sequential và ownership/VecEnv đạt (opt-in).
 - [ ] O3: native parallel — hoãn; số đo O2 cho thấy native step không còn trội.
 - [ ] O4: cache/prefetch/concurrent seeds có quyết định riêng; được phép deferred.
-- [ ] O5: full workflow gates đạt (O1 1.64×, O2 1.85×) nhưng chưa chạy đủ protocol
-  nhiều repetition và chưa đổi default.
+- [ ] O5: full workflow gates đạt với protocol nhiều repetition (O2 1.96–2.16× paired,
+  batch 16 vs 32 là nhiễu) nhưng chưa chạy nhiều seed/host và chưa đổi default.
 
 ## 12. Nguồn triển khai cần đối chiếu
 

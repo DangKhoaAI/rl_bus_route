@@ -39,7 +39,7 @@ from bus_rl.evaluation.runner import PPOController, evaluate_scenarios, make_con
 from bus_rl.evaluation.summary import from_native_payload, summarize_inputs
 from bus_rl.provenance import file_hash, git_status, lock_hash
 from bus_rl.rewards.costs import RewardConfig, add_costs
-from bus_rl.runtime import apply_torch_threads
+from bus_rl.runtime import apply_runtime_settings, configure_torch_distributions
 from bus_rl.timing import TIMERS
 from bus_rl.training.checkpoint import load_metadata, load_model
 from bus_rl.training.train import make_env, make_model
@@ -111,7 +111,12 @@ def _run(command: list[str]) -> str:
 
 def rust_run():
     core = load_run_config(CORE, ROOT)
-    return replace(core, runtime=replace(core.runtime, backend="rust"))
+    # Component benchmarks measure the accepted opt-in config, which disables
+    # Torch distribution validation; the on/off A/B is its own artifact.
+    return replace(
+        core,
+        runtime=replace(core.runtime, backend="rust", validate_distributions=False),
+    )
 
 
 def _reference_run():
@@ -176,6 +181,9 @@ def collect_provenance(threads_actual: int) -> dict:
             "cprofile": False,
             "conservation_checks": bool(domain.CONSERVATION_CHECKS),
             "validate_observation": True,
+            "validate_distributions": bool(
+                torch.distributions.Distribution._validate_args
+            ),
             "trace": False,
             "logging": "quiet",
         },
@@ -195,7 +203,7 @@ def _load_model_and_scenarios(days: int):
 def measure_unprofiled(repetitions: int, transitions: int, eval_days: int) -> dict:
     assert TIMERS.enabled is False
     run = rust_run()
-    apply_torch_threads(run.algorithm.torch_threads)
+    apply_runtime_settings(run)
     train_scenarios = generate_manifest("train", 16)
 
     load_times = []
@@ -369,7 +377,7 @@ def measure_profile(transitions: int, eval_days: int) -> dict:
     TIMERS.enabled = True
     TIMERS.reset()
     run = rust_run()
-    apply_torch_threads(run.algorithm.torch_threads)
+    apply_runtime_settings(run)
     train_scenarios = generate_manifest("train", 16)
     vec = DummyVecEnv(
         [make_env(train_scenarios, run, run.algorithm.seed + i) for i in range(4)]
@@ -449,7 +457,7 @@ def _eval_once(run, scenarios, model, *, pool=None) -> tuple[float, float, int]:
 def measure_ablation(repetitions: int, warmup: int, eval_days: int) -> dict:
     assert TIMERS.enabled is False
     run = _reference_run()
-    apply_torch_threads(run.algorithm.torch_threads)
+    apply_runtime_settings(run)
     scenarios = generate_manifest("validation", 100)[:eval_days]
     load_env = make_env_for_run(scenarios[:1], run)
     model, _ = load_model(REFERENCE, load_env, run.physical)
@@ -615,7 +623,7 @@ def measure_o1_breakdown(repetitions: int, warmup: int, eval_days: int, batch_si
     """Where the wall moved after O1 batching (TIMERS/profiler off)."""
     assert TIMERS.enabled is False
     run = _reference_run()
-    apply_torch_threads(run.algorithm.torch_threads)
+    apply_runtime_settings(run)
     scenarios = generate_manifest("validation", 100)[:eval_days]
     load_env = make_env_for_run(scenarios[:1], run)
     model, _ = load_model(REFERENCE, load_env, run.physical)
@@ -775,7 +783,7 @@ def _native_segments(pool, controller, scenarios) -> dict:
 
 def _learn_segments(native_batch: bool, transitions: int, repetitions: int) -> dict:
     run = rust_run()
-    apply_torch_threads(run.algorithm.torch_threads)
+    apply_runtime_settings(run)
     train_scenarios = generate_manifest("train", 16)
 
     def _learn_once() -> tuple[dict, int]:
@@ -824,7 +832,7 @@ def measure_o2_ablation(repetitions: int, warmup: int, eval_days: int) -> dict:
     """O1 batched (Python step) vs O2 native batch, plus training VecEnv."""
     assert TIMERS.enabled is False
     run = _reference_run()
-    apply_torch_threads(run.algorithm.torch_threads)
+    apply_runtime_settings(run)
     scenarios = generate_manifest("validation", 100)[:eval_days]
     load_env = make_env_for_run(scenarios[:1], run)
     model, _ = load_model(REFERENCE, load_env, run.physical)
@@ -931,7 +939,7 @@ def measure_ppo_update_profile(repetitions: int) -> dict:
     number. One update is 1024 transitions (4 envs x n_steps=256, 4 epochs).
     """
     run = rust_run()
-    apply_torch_threads(run.algorithm.torch_threads)
+    apply_runtime_settings(run)
     train_scenarios = generate_manifest("train", 16)
 
     def _profile_once(native_batch: bool) -> dict:
@@ -1020,7 +1028,7 @@ def measure_rollout_profile(repetitions: int) -> dict:
     from sb3_contrib.ppo_mask import ppo_mask
 
     run = rust_run()
-    apply_torch_threads(run.algorithm.torch_threads)
+    apply_runtime_settings(run)
     train_scenarios = generate_manifest("train", 16)
     names = (
         "obs_to_tensor",
@@ -1136,6 +1144,116 @@ def measure_rollout_profile(repetitions: int) -> dict:
     }
 
 
+def measure_distribution_validation(repetitions: int) -> dict:
+    """Controlled A/B for Torch distribution validation on the policy forward.
+
+    Same process, same model, same observations/masks; only the validation
+    setting changes. Also runs one rollout per setting and checks that sampled
+    actions/values/log-probs and deterministic argmax are bit-identical.
+    """
+    from sb3_contrib.common.maskable.utils import get_action_masks
+    from stable_baselines3.common.utils import obs_as_tensor
+
+    run = rust_run()
+    apply_runtime_settings(run)
+    train_scenarios = generate_manifest("train", 16)
+    vec = DummyVecEnv(
+        [
+            make_env(train_scenarios, run, run.algorithm.seed + index)
+            for index in range(run.algorithm.n_envs)
+        ]
+    )
+    model = make_model(vec, run.algorithm.seed, run.algorithm)
+    model.policy.set_training_mode(False)
+    observation = vec.reset()
+    masks = get_action_masks(vec)
+    obs_tensor = obs_as_tensor(observation, "cpu")
+    calls = 2000
+
+    def forward_wall(validate: bool) -> float:
+        configure_torch_distributions(validate)
+        with torch.no_grad():
+            for _ in range(50):
+                model.policy(obs_tensor, action_masks=masks)
+            started = perf_counter()
+            for _ in range(calls):
+                model.policy(obs_tensor, action_masks=masks)
+            return perf_counter() - started
+
+    def sample(validate: bool):
+        configure_torch_distributions(validate)
+        torch.manual_seed(123)
+        with torch.no_grad():
+            actions, values, log_prob = model.policy(obs_tensor, action_masks=masks)
+            argmax = model.policy.get_distribution(
+                obs_tensor, action_masks=masks
+            ).get_actions(deterministic=True)
+        return actions, values, log_prob, argmax
+
+    def rollout_once(validate: bool) -> dict:
+        configure_torch_distributions(validate)
+        callback = _SegmentCallback()
+        env = DummyVecEnv(
+            [
+                make_env(train_scenarios, run, run.algorithm.seed + index)
+                for index in range(run.algorithm.n_envs)
+            ]
+        )
+        probe = make_model(env, run.algorithm.seed, run.algorithm)
+        started = perf_counter()
+        probe.learn(
+            total_timesteps=run.algorithm.n_steps * run.algorithm.n_envs, callback=callback
+        )
+        wall = perf_counter() - started
+        env.close()
+        return {
+            "wall_s": wall,
+            "rollout_s": callback.rollout_s,
+            "update_s": callback.update_s,
+        }
+
+    sample(True)
+    forward_wall(True)
+    forward_times = {"on": [], "off": []}
+    for _ in range(max(1, repetitions)):
+        forward_times["on"].append(forward_wall(True) / calls * 1e6)
+        forward_times["off"].append(forward_wall(False) / calls * 1e6)
+
+    actions_on, values_on, logprob_on, argmax_on = sample(True)
+    actions_off, values_off, logprob_off, argmax_off = sample(False)
+    bit_identical = {
+        "actions": bool(torch.equal(actions_on, actions_off)),
+        "values": bool(torch.equal(values_on, values_off)),
+        "log_prob": bool(torch.equal(logprob_on, logprob_off)),
+        "argmax": bool(torch.equal(argmax_on, argmax_off)),
+    }
+
+    rollout = {"on": [], "off": []}
+    for _ in range(max(1, repetitions)):
+        rollout["on"].append(rollout_once(True))
+        rollout["off"].append(rollout_once(False))
+    configure_torch_distributions(True)
+    vec.close()
+
+    on_us = statistics.median(forward_times["on"])
+    off_us = statistics.median(forward_times["off"])
+    on_roll = statistics.median(row["rollout_s"] for row in rollout["on"])
+    off_roll = statistics.median(row["rollout_s"] for row in rollout["off"])
+    return {
+        "batch": run.algorithm.n_envs,
+        "forward_calls_per_measure": calls,
+        "forward_us": {"on": on_us, "off": off_us, "speedup": on_us / off_us},
+        "bit_identical": bit_identical,
+        "rollout_s": {
+            "on": on_roll,
+            "off": off_roll,
+            "speedup": on_roll / off_roll,
+            "reduction": 1.0 - off_roll / on_roll,
+        },
+        "raw": {"forward_us": forward_times, "rollout": rollout},
+    }
+
+
 def _write(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True))
@@ -1154,6 +1272,7 @@ def main() -> None:
             "o2-ablation",
             "ppo-update-profile",
             "rollout-profile",
+            "distribution-validation",
         ),
         required=True,
     )
@@ -1168,7 +1287,7 @@ def main() -> None:
     TIMERS.enabled = False
     TIMERS.reset()
     run = rust_run()
-    threads = apply_torch_threads(run.algorithm.torch_threads)
+    threads = apply_runtime_settings(run)["torch_threads_actual"]
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
 
     if args.mode == "o0-unprofiled":
@@ -1200,6 +1319,15 @@ def main() -> None:
             ),
         }
         output = args.output or REPORT_DIR / "o1-breakdown.json"
+        _write(output, payload)
+        return
+    if args.mode == "distribution-validation":
+        payload = {
+            "role": "distribution-validation-ab",
+            "provenance": collect_provenance(threads),
+            "ab": measure_distribution_validation(args.repetitions),
+        }
+        output = args.output or REPORT_DIR / "distribution-validation.json"
         _write(output, payload)
         return
     if args.mode == "rollout-profile":

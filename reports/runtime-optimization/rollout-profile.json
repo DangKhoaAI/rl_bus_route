@@ -7,8 +7,8 @@
     "role": "explanatory-only",
     "summary": {
       "dummy": {
-        "action_masks": 0.004711448957095854,
-        "buffer_add": 0.007381830000667833,
+        "action_masks": 0.005221152023295872,
+        "buffer_add": 0.008248511890997179,
         "counts": {
           "action_masks": 256,
           "buffer_add": 256,
@@ -20,17 +20,17 @@
           "policy_forward": 256,
           "sample": 256
         },
-        "distribution": 0.017477311004768126,
-        "env_step": 0.05853318206209224,
-        "features": 0.04018440400250256,
-        "forward_other_s": 0.0035795648291241378,
-        "gae": 0.0008268090023193508,
-        "obs_to_tensor": 0.0038246648473432288,
-        "policy_forward": 0.07577586504339706,
+        "distribution": 0.01931743479508441,
+        "env_step": 0.06408686902432237,
+        "features": 0.043063043034635484,
+        "forward_other_s": 0.004426688014063984,
+        "gae": 0.0008624589972896501,
+        "obs_to_tensor": 0.004163980163866654,
+        "policy_forward": 0.0824501859024167,
         "raw": [
           {
-            "action_masks": 0.004581843066262081,
-            "buffer_add": 0.007296490992303006,
+            "action_masks": 0.0047549809532938525,
+            "buffer_add": 0.007562379949376918,
             "counts": {
               "action_masks": 256,
               "buffer_add": 256,
@@ -42,21 +42,21 @@
               "policy_forward": 256,
               "sample": 256
             },
-            "distribution": 0.01738751602533739,
-            "env_step": 0.05738242906227242,
-            "features": 0.03998315196076874,
-            "forward_other_s": 0.0030159299058141187,
-            "gae": 0.0008268090023193508,
-            "obs_to_tensor": 0.0037302419514162466,
-            "policy_forward": 0.07454071201209445,
-            "rollout_other_s": 0.007149164914153516,
-            "rollout_s": 0.15550769100082107,
-            "sample": 0.0141541141201742,
-            "update_s": 0.08772127900738269
+            "distribution": 0.017685556958895177,
+            "env_step": 0.05920266492466908,
+            "features": 0.040706299914745614,
+            "forward_other_s": 0.0033282913209404796,
+            "gae": 0.0008624589972896501,
+            "obs_to_tensor": 0.0038488460413645953,
+            "policy_forward": 0.07609692608821206,
+            "rollout_other_s": 0.007401376045891084,
+            "rollout_s": 0.15972963300009724,
+            "sample": 0.014376777893630788,
+            "update_s": 0.09088876598980278
           },
           {
-            "action_masks": 0.004711448957095854,
-            "buffer_add": 0.007381830000667833,
+            "action_masks": 0.005221152023295872,
+            "buffer_add": 0.008248511890997179,
             "counts": {
               "action_masks": 256,
               "buffer_add": 256,
@@ -68,21 +68,21 @@
               "policy_forward": 256,
               "sample": 256
             },
-            "distribution": 0.017477311004768126,
-            "env_step": 0.05853318206209224,
-            "features": 0.04018440400250256,
-            "forward_other_s": 0.0035795648291241378,
-            "gae": 0.0008252209954662248,
-            "obs_to_tensor": 0.0038246648473432288,
-            "policy_forward": 0.07577586504339706,
-            "rollout_other_s": 0.007392626095679589,
-            "rollout_s": 0.15844483800174203,
-            "sample": 0.014534585207002237,
-            "update_s": 0.08718038898950908
+            "distribution": 0.01931743479508441,
+            "env_step": 0.06408686902432237,
+            "features": 0.043063043034635484,
+            "forward_other_s": 0.004426688014063984,
+            "gae": 0.0008494500070810318,
+            "obs_to_tensor": 0.004163980163866654,
+            "policy_forward": 0.0824501859024167,
+            "rollout_other_s": 0.00787648098776117,
+            "rollout_s": 0.17289662999974098,
+            "sample": 0.01564302005863283,
+            "update_s": 0.09509664098732173
           },
           {
-            "action_masks": 0.004811411941773258,
-            "buffer_add": 0.007526889909058809,
+            "action_masks": 0.005515599012142047,
+            "buffer_add": 0.008714556024642661,
             "counts": {
               "action_masks": 256,
               "buffer_add": 256,
@@ -94,27 +94,27 @@
               "policy_forward": 256,
               "sample": 256
             },
-            "distribution": 0.017622600877075456,
-            "env_step": 0.05913249084551353,
-            "features": 0.0405125919933198,
-            "forward_other_s": 0.003949467165512033,
-            "gae": 0.0008348639967152849,
-            "obs_to_tensor": 0.003954735002480447,
-            "policy_forward": 0.07670791902637575,
-            "rollout_other_s": 0.007531483279308304,
-            "rollout_s": 0.16049979400122538,
-            "sample": 0.014623258990468457,
-            "update_s": 0.0866291020065546
+            "distribution": 0.02005635399837047,
+            "env_step": 0.06799039996985812,
+            "features": 0.045692534098634496,
+            "forward_other_s": 0.004663326850277372,
+            "gae": 0.0010471459972904995,
+            "obs_to_tensor": 0.004539175060926937,
+            "policy_forward": 0.08665033387660515,
+            "rollout_other_s": 0.008570013058488257,
+            "rollout_s": 0.18302722299995366,
+            "sample": 0.01623811892932281,
+            "update_s": 0.10078996999072842
           }
         ],
-        "rollout_other_s": 0.007392626095679589,
-        "rollout_s": 0.15844483800174203,
-        "sample": 0.014534585207002237,
-        "update_s": 0.08718038898950908
+        "rollout_other_s": 0.00787648098776117,
+        "rollout_s": 0.17289662999974098,
+        "sample": 0.01564302005863283,
+        "update_s": 0.09509664098732173
       },
       "native": {
-        "action_masks": 0.003337616115459241,
-        "buffer_add": 0.007056124988594092,
+        "action_masks": 0.003688473967486061,
+        "buffer_add": 0.008181634068023413,
         "counts": {
           "action_masks": 256,
           "buffer_add": 256,
@@ -126,17 +126,17 @@
           "policy_forward": 256,
           "sample": 256
         },
-        "distribution": 0.017151551001006737,
-        "env_step": 0.03611944992735516,
-        "features": 0.03979012394847814,
-        "forward_other_s": 0.003314932153443806,
-        "gae": 0.0008356509933946654,
-        "obs_to_tensor": 0.0035283079923829064,
-        "policy_forward": 0.0747377061197767,
+        "distribution": 0.019360861100722104,
+        "env_step": 0.040705766921746545,
+        "features": 0.044545100929099135,
+        "forward_other_s": 0.0039562559250043705,
+        "gae": 0.0008988899935502559,
+        "obs_to_tensor": 0.004203433942166157,
+        "policy_forward": 0.08373775094514713,
         "raw": [
           {
-            "action_masks": 0.003267472973675467,
-            "buffer_add": 0.0069482889521168545,
+            "action_masks": 0.003533165858243592,
+            "buffer_add": 0.007435426115989685,
             "counts": {
               "action_masks": 256,
               "buffer_add": 256,
@@ -148,21 +148,21 @@
               "policy_forward": 256,
               "sample": 256
             },
-            "distribution": 0.016910315098357387,
-            "env_step": 0.0357064390409505,
-            "features": 0.03974166707484983,
-            "forward_other_s": 0.0028552287840284407,
-            "gae": 0.0008356509933946654,
-            "obs_to_tensor": 0.0035124778805766255,
-            "policy_forward": 0.07365693198516965,
-            "rollout_other_s": 0.007597709176479839,
-            "rollout_s": 0.1315249710023636,
-            "sample": 0.014149721027933992,
-            "update_s": 0.08843029401032254
+            "distribution": 0.017879235951113515,
+            "env_step": 0.037294820038368925,
+            "features": 0.04156401091313455,
+            "forward_other_s": 0.0030553032411262393,
+            "gae": 0.0008652440010337159,
+            "obs_to_tensor": 0.0036716210015583783,
+            "policy_forward": 0.07741023611743003,
+            "rollout_other_s": 0.007961282870383002,
+            "rollout_s": 0.13817179600300733,
+            "sample": 0.014911686012055725,
+            "update_s": 0.09319933000369929
           },
           {
-            "action_masks": 0.003338013921165839,
-            "buffer_add": 0.007072090214933269,
+            "action_masks": 0.003688473967486061,
+            "buffer_add": 0.008181634068023413,
             "counts": {
               "action_masks": 256,
               "buffer_add": 256,
@@ -174,21 +174,21 @@
               "policy_forward": 256,
               "sample": 256
             },
-            "distribution": 0.017247367024538107,
-            "env_step": 0.03611944992735516,
-            "features": 0.03979012394847814,
-            "forward_other_s": 0.003314932153443806,
-            "gae": 0.0008524170116288587,
-            "obs_to_tensor": 0.0035283079923829064,
-            "policy_forward": 0.0747377061197767,
-            "rollout_other_s": 0.007841921804356389,
-            "rollout_s": 0.13348990699159913,
-            "sample": 0.01438528299331665,
-            "update_s": 0.08927085599862039
+            "distribution": 0.019360861100722104,
+            "env_step": 0.040705766921746545,
+            "features": 0.044545100929099135,
+            "forward_other_s": 0.0039562559250043705,
+            "gae": 0.0008988899935502559,
+            "obs_to_tensor": 0.004203433942166157,
+            "policy_forward": 0.08373775094514713,
+            "rollout_other_s": 0.008706301159691066,
+            "rollout_s": 0.15012225099781062,
+            "sample": 0.015875532990321517,
+            "update_s": 0.0990153519960586
           },
           {
-            "action_masks": 0.003337616115459241,
-            "buffer_add": 0.007056124988594092,
+            "action_masks": 0.0039628080412512645,
+            "buffer_add": 0.008613833007984795,
             "counts": {
               "action_masks": 256,
               "buffer_add": 256,
@@ -200,23 +200,23 @@
               "policy_forward": 256,
               "sample": 256
             },
-            "distribution": 0.017151551001006737,
-            "env_step": 0.03657233697595075,
-            "features": 0.03993035398889333,
-            "forward_other_s": 0.0033837880473583937,
-            "gae": 0.0008332319994224235,
-            "obs_to_tensor": 0.003602259006584063,
-            "policy_forward": 0.07487935305107385,
-            "rollout_other_s": 0.007839948870241642,
-            "rollout_s": 0.13412087100732606,
-            "sample": 0.014413660013815388,
-            "update_s": 0.08717630099272355
+            "distribution": 0.02067159305443056,
+            "env_step": 0.04269750791718252,
+            "features": 0.046716445867787115,
+            "forward_other_s": 0.0045024999271845445,
+            "gae": 0.0010090960131492466,
+            "obs_to_tensor": 0.004315271929954179,
+            "policy_forward": 0.08864301984431222,
+            "rollout_other_s": 0.009229153249179944,
+            "rollout_s": 0.15847069000301417,
+            "sample": 0.016752480994910002,
+            "update_s": 0.1043673160020262
           }
         ],
-        "rollout_other_s": 0.007839948870241642,
-        "rollout_s": 0.13348990699159913,
-        "sample": 0.01438528299331665,
-        "update_s": 0.08843029401032254
+        "rollout_other_s": 0.008706301159691066,
+        "rollout_s": 0.15012225099781062,
+        "sample": 0.015875532990321517,
+        "update_s": 0.0990153519960586
       }
     },
     "transitions_per_rollout": 1024
@@ -232,13 +232,14 @@
       "note": "explanatory; sub-step timers on",
       "timers": true,
       "trace": false,
+      "validate_distributions": false,
       "validate_observation": true
     },
     "git": {
-      "diff_stat": ".../runtime-optimization/o1-breakdown-run1.json    | 440 ++++++++++-----------\n .../runtime-optimization/o1-breakdown-run2.json    | 440 ++++++++++-----------\n src/bus_rl/runtime.py                              |  19 +-\n tests/backend_parity/test_runtime_o2.py            |  37 ++\n 4 files changed, 495 insertions(+), 441 deletions(-)",
+      "diff_stat": ".../runtime-optimization/o1-breakdown-run1.json    | 439 ++++++-------\n .../runtime-optimization/o1-breakdown-run2.json    | 439 ++++++-------\n reports/runtime-optimization/o2-ablation-run1.json | 723 ++++++++++----------\n reports/runtime-optimization/o2-ablation-run2.json | 725 +++++++++++----------\n .../runtime-optimization/ppo-update-profile.json   | 103 +--\n reports/runtime-optimization/rollout-profile.json  | 215 +++---\n scripts/benchmark_runtime.py                       | 150 ++++-\n src/bus_rl/cli.py                                  |   9 +\n src/bus_rl/config.py                               |   4 +\n src/bus_rl/evaluation/runner.py                    |   4 +-\n src/bus_rl/runtime.py                              |  53 +-\n src/bus_rl/training/checkpoint.py                  |   4 +\n src/bus_rl/training/diagnose.py                    |   4 +-\n src/bus_rl/training/train.py                       |   4 +-\n tests/backend_parity/test_runtime_o2.py            |  89 ++-\n 15 files changed, 1598 insertions(+), 1367 deletions(-)",
       "dirty": true,
-      "porcelain": "M reports/runtime-optimization/o1-breakdown-run1.json\n M reports/runtime-optimization/o1-breakdown-run2.json\n M src/bus_rl/runtime.py\n M tests/backend_parity/test_runtime_o2.py",
-      "sha": "dff4fc92190be6fce9306708822cf5f0f4144c87"
+      "porcelain": "M reports/runtime-optimization/o1-breakdown-run1.json\n M reports/runtime-optimization/o1-breakdown-run2.json\n M reports/runtime-optimization/o2-ablation-run1.json\n M reports/runtime-optimization/o2-ablation-run2.json\n M reports/runtime-optimization/ppo-update-profile.json\n M reports/runtime-optimization/rollout-profile.json\n M scripts/benchmark_runtime.py\n M src/bus_rl/cli.py\n M src/bus_rl/config.py\n M src/bus_rl/evaluation/runner.py\n M src/bus_rl/runtime.py\n M src/bus_rl/training/checkpoint.py\n M src/bus_rl/training/diagnose.py\n M src/bus_rl/training/train.py\n M tests/backend_parity/test_runtime_o2.py\n?? reports/runtime-optimization/distribution-validation.json\n?? reports/runtime-optimization/full-workflow-reps.json\n?? scripts/benchmark_full_workflow.py",
+      "sha": "ae15622ce18f5a34e474804ac1008d7a5131ec37"
     },
     "library_sha256": "74b3a8fabbbabb5d4b167b92e56ac30af6f0957c180db78b6c501b21c50622ae",
     "lock_hash": "5ed56349910166b5fe6232c3d79c8421c6714e8cc8504cc5ac785d68f4ddb530",
