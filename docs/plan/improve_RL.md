@@ -32,6 +32,16 @@ R4 requires equivalent behavior, at least **2x simulation and isolated learn spe
 
 Task completion requires evidence, not an improved score. A negative result may satisfy research acceptance; missing runs, leakage, or incomparable experiments do not. Record task ID, source/build revision, commands, configs, seeds, hashes, artifact paths, status, and limitations in `reports/rl-improvement.md`. All proposed artifacts below are future outputs.
 
+### 1.1 Current code, test and report conventions
+
+Follow [repository layout](../../README.md), [test conventions](../../tests/README.md), [reports convention](../../reports/README.md) and [spec §9.1](../spec/improve_RL.md#91-convention-code-và-tests-khi-triển-khai-l0l3). Rust is the default maintained backend. Python oracle/wrapper are deprecated, require explicit `--backend python --legacy-python`, and receive no fixes. Archived R0–R4 parity is historical evidence; do not restore the retired golden/parity suite or require current Python/Rust numerical lockstep.
+
+Place code by ownership: `src/bus_rl/learning/` for policy/forecast/training, `execution/` for runtime/environment/scenarios, `evaluation/` for metrics/statistics/plots. New candidate modules are conditional on selection. Keep core physics in `crates/bus-sim-core/` and bridge changes in `crates/bus-sim-python/`; do not implement L2 objectives by changing deprecated Python simulator code.
+
+Unit tests use `tests/unit/<src path>/test_<module>.py`, one module plus stubs/data/utilities. Integration directories mirror the entry point; filenames use `test_<subject>[_<aspect>].py`, with optional aspect from `contract`, `payload`, `lifecycle`, `mapping`, `determinism`, `flow`. Cross-subsystem checks belong in integration. Shared builders go in `tests/support/`; `conftest.py` is for fixtures/collection only. Tests hold code, not committed data; regenerate fixtures or reference indexed report evidence.
+
+For implementation changes run relevant checks, then the required gates: `uv run ruff check .`, `uv run ruff format --check .`, `uv run pytest -q` (4 workers, legacy skipped; `-n 0` for serial debugging). Native/FFI changes also require a current extension build, `cargo test -p bus-sim-core`, and `uv run pytest -m native -q`. Write new build provenance with `uv run python scripts/build_native.py --output runs/rl-improvement/<experiment>/<seed>/<run-id>/native-build.json`; preserve archived build records. Mark extension-dependent tests `native`; missing-extension skips are not native acceptance. Historical `--legacy-python` checks are not required study gates. Record commands, exit codes and pass/skip counts separately from multi-seed quality evidence.
+
 ## 2. Dependencies and deliverables
 
 | Task | Depends on | Deliverable |
@@ -83,7 +93,7 @@ Optional L2 tasks are independent research choices, not a requirement to impleme
 - [ ] Add observation/reward/return distribution summaries and reproducible failure-trace selection criteria.
 - [ ] Keep instrumentation settings consistent across compared candidates and record their overhead.
 
-**Implementation surface (repo-relative):** `src/bus_rl/learning/training/{train,callbacks,checkpoint}.py`, `src/bus_rl/evaluation/{runner,summary}.py`, experiment logging; proposed `tests/unit/rl/test_training_diagnostics.py` where behavior is new. See [spec §9](../spec/improve_RL.md#9-nguồn-và-điểm-bắt-đầu-triển-khai) for the current code map after refactoring.
+**Implementation surface (repo-relative):** `src/bus_rl/learning/training/{train,callbacks,checkpoint}.py`, `src/bus_rl/evaluation/{runner,summary}.py`, experiment logging. Isolated tests mirror each module under `tests/unit/bus_rl/`; if a new `learning/training/diagnostics.py` is justified, its proposed unit test is `tests/unit/bus_rl/learning/training/test_diagnostics.py`. Cross-module telemetry/checkpoint checks extend `tests/integration/bus_rl/learning/training/test_training_flow.py`. See [spec §9](../spec/improve_RL.md#9-nguồn-và-điểm-bắt-đầu-triển-khai) for the current code map after refactoring.
 
 **Verification:** short smoke confirms records join correctly by run/seed/timestep; fixture checks for invalid-value detection, absent action opportunities, K=1, masked zero probabilities, nonfinite logits with a valid mask, and elapsed-time ordering; save/load retains metadata.
 
@@ -96,7 +106,7 @@ Optional L2 tasks are independent research choices, not a requirement to impleme
 - [ ] Tune heuristic parameters only on validation, with a recorded search budget, then freeze them before held-out testing.
 - [ ] Produce per-day raw metrics and learning curves using all 100 validation days.
 
-**Outputs:** `runs/rl-improvement/core/<seed>/`, validation CSVs, proposed `reports/rl-improvement/baseline.md`.
+**Outputs:** raw validation CSVs, metadata and checkpoints in `runs/rl-improvement/core/<seed>/<run-id>/`; curated tables/plots under `reports/rl-improvement/`, with analysis in proposed `reports/rl-improvement/baseline.md`.
 
 **Verification:** inspect actual transitions, model/backend hashes, day IDs, checkpoint selection, and controller inputs; reject duplicates, missing days, and privileged future inputs.
 
@@ -129,7 +139,7 @@ Optional L2 tasks are independent research choices, not a requirement to impleme
 
 **Outputs:** candidate configs and proposed `reports/rl-improvement/experiments.csv` entries created before execution.
 
-**Verification:** test nullable target_kl round-trip/wiring and expected update-stop logging if selected; algorithm candidates need correctness and multi-seed quality evidence, not identical weights to core. Runtime-only changes still require parity. Compare config hashes/diffs; ensure minibatch size divides rollout size; check budget and validation schedules across candidates.
+**Verification:** test nullable target_kl round-trip/wiring and expected update-stop logging if selected; algorithm candidates need correctness and multi-seed quality evidence, not identical weights to core. Runtime-only changes require equivalence against the frozen native control, not the retired Python parity suite. Compare config hashes/diffs; ensure minibatch size divides rollout size; check budget and validation schedules across candidates.
 
 **Acceptance:** candidates are bounded and interpretable; no Cartesian sweep or unrecorded objective change; extended-budget runs are a separately labeled comparison.
 
@@ -167,7 +177,7 @@ Use the research shortlist and primary sources in spec §6.5–6.6. Select at mo
 - [ ] Verify past-equivalent tapes produce identical predictions regardless of future demand or scenario identity.
 - [ ] Report forecast error alongside policy cost, unfinished share, and service outcomes.
 
-**Verification:** existing forecast causality tests plus backend integration tests; matched three-seed validation comparison.
+**Verification:** `tests/unit/bus_rl/learning/test_forecasting.py` for isolated causality plus native environment/training integration under the entry-point path; matched three-seed validation comparison.
 
 **Acceptance:** no future information leaks; control and candidate differ only in forecast availability; report does not treat improved MAE alone as policy improvement.
 
@@ -191,7 +201,7 @@ Use the research shortlist and primary sources in spec §6.5–6.6. Select at mo
 - [ ] Retain raw cost components and recompute `total_cost_core` using original weights for the primary comparison.
 - [ ] Report completion, abandonment, wait/P95, route fairness, and operating cost alongside the scalar score.
 
-**Verification:** reward-component tests and a fixture showing both objectives evaluated on identical components; matched three-seed validation.
+**Verification:** tests for the selected maintained reward/shaping module and native integration showing both objectives evaluated on identical raw components; do not extend deprecated oracle tests to implement the candidate; matched three-seed validation.
 
 **Acceptance:** the effect is separated from metric redefinition; no unsupported claim of policy invariance; any service regression is visible.
 
@@ -262,13 +272,19 @@ Use the research shortlist and primary sources in spec §6.5–6.6. Select at mo
 ## 7. Artifact layout and completion rules
 
 ```text
-reports/rl-improvement.md                  # final status, evidence, conclusions
+reports/rl-improvement.md                  # study status, decisions, final analysis
+reports/rl-improvement/README.md           # curated artifact index and reproduction
 reports/rl-improvement/protocol.json       # frozen protocol and thresholds
 reports/rl-improvement/baseline.md          # L0 diagnosis
-reports/rl-improvement/experiments.csv      # all candidates and statuses
-reports/rl-improvement/                    # paired tables, statistics, plots
-runs/rl-improvement/<experiment>/<seed>/   # raw logs, configs, checkpoints
+reports/rl-improvement/experiments.csv      # candidate ledger, decisions and run links
+reports/rl-improvement/tables/             # aggregated paired results and statistics
+reports/rl-improvement/plots/              # selected rendered figures
+reports/rl-improvement/evidence/           # only raw evidence justified for commit
+runs/rl-improvement/<experiment>/<seed>/<run-id>/
+                                          # raw per-invocation data; gitignored
 ```
+
+Raw per-day/per-seed CSVs, telemetry, failure traces, profiler dumps, build records, metadata and checkpoints belong in the run directory. Register stable run IDs before execution and use a new ID for reruns. Curated reports link to their source run/config/hash and reproduction command. If a raw artifact must be committed as evidence, retain the selected copy under `reports/rl-improvement/evidence/`, explain why in the index and avoid duplicate copies. Do not store fixture data in `tests/` or expand the archived oracle manifest hash scope to include this study. Update `reports/README.md` when actual curated outputs are created, not to claim planned results exist.
 
 Keep pilot, Python diagnosis, and earlier study artifacts unchanged. Use stable run IDs and retain failed-trial evidence. Proposed filenames may be refined during implementation, but the report must index every output and preserve the protocol/evidence contract.
 

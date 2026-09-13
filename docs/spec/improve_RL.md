@@ -80,13 +80,13 @@ R0 bao gồm đóng băng Python oracle và đo baseline không profiler; không
 
 Không mở lại migration hoặc chờ các tối ưu deferred để bắt đầu L0. Xác minh build đang dùng khớp evidence; regression mới phải giải quyết trước nghiên cứu. Full-seed kiểm định runtime không tự trở thành thực nghiệm cải thiện thuật toán.
 
-Sau acceptance, đóng băng Rust revision, manifests và dependency versions cho mỗi loạt nghiên cứu. Python là reference/fallback; mọi kết quả loạt mới phải ghi backend, build, hashes và compute thực tế.
+Sau acceptance, đóng băng Rust revision, manifests và dependency versions cho mỗi loạt nghiên cứu. Rust là backend mặc định và được duy trì. Python oracle và Gym wrapper Python đã deprecated, không nhận sửa lỗi và không là fallback tự động; chạy tham chiếu lịch sử cần `--backend python --legacy-python`. Parity Python/Rust ở R0–R4 là evidence đã đóng băng, không phải yêu cầu duy trì numerical lockstep cho code mới. Bộ golden/parity Python-level một lần đã được retired; kiểm chứng hiện tại dùng Rust unit tests, FFI contract và native training/evaluation integration (xem §9.1). Mọi kết quả loạt mới phải ghi backend, build, hashes và compute thực tế.
 
 ## 4. L0 — Thiết lập baseline RL đáng tin
 
 ### 4.1 Chạy core trước, không đổi thuật toán
 
-Tạo **config nghiên cứu mới** dự kiến `configs/experiments/rl-improvement/core.toml`, kế thừa learning settings của core và cấu hình CPU 2 threads của `core-threads2.toml`; không sửa config lịch sử. Dùng seeds **11, 22, 33**, mỗi seed **245,760 transitions**. Giữ MaskablePPO, feature extractor hiện tại, 221 actions, reward/physics/guards và tensors như oracle.
+Tạo **config nghiên cứu mới** dự kiến `configs/experiments/rl-improvement/core.toml`, kế thừa learning settings của core và cấu hình CPU 2 threads của `core-threads2.toml`; không sửa config lịch sử. Dùng seeds **11, 22, 33**, mỗi seed **245,760 transitions**. Giữ MaskablePPO, feature extractor hiện tại, 221 actions, reward/physics/guards và obs/action contract của native baseline được khóa cho loạt nghiên cứu.
 
 Cấu hình đối chứng hiện tại: CPU, n_envs=4, n_steps=256, batch_size=256, n_epochs=4, learning_rate=3e-4, ent_coef=0.01, gamma=1.0, gae_lambda=0.95, clip_range=0.2. Eval mỗi 12,288 transitions; chọn best checkpoint theo validation cost, tie chọn checkpoint sớm nhất như callback hiện tại.
 
@@ -242,19 +242,21 @@ Forecast so với no-forecast có cùng learning config. Tách hiệu ứng tuni
 
 **Gate L3:** protocol, đủ artifacts đã cam kết, paired results/uncertainty, ID/OOD/service metrics, compute thực tế và failure analysis tái lập được. Gate không yêu cầu RL thắng baseline; kết luận âm hoặc chưa đủ bằng chứng là kết quả hợp lệ.
 
-Runtime parity và algorithm acceptance là hai việc khác nhau: thay backend/packing/runtime phải giữ hành vi theo spec tối ưu; thay λ, LR, entropy hoặc architecture được phép tạo weights/actions khác core. Candidate thuật toán phải qua correctness, masks, finite/checkpoint tests rồi so chất lượng đa seed; không yêu cầu bit-identical với thuật toán đối chứng. Giữ runtime cố định trong một contrast để không quy lợi ích batching cho algorithm.
+Runtime equivalence và algorithm acceptance là hai việc khác nhau: thay packing/runtime phải giữ hành vi so với native control cùng revision theo spec tối ưu, không khôi phục bộ parity với Python đã retired; thay λ, LR, entropy hoặc architecture được phép tạo weights/actions khác core. Candidate thuật toán phải qua correctness, masks, finite/checkpoint tests rồi so chất lượng đa seed; không yêu cầu bit-identical với thuật toán đối chứng. Giữ runtime cố định trong một contrast để không quy lợi ích batching cho algorithm.
 
 ## 8. Artifacts và checklist thực thi
 
-Paths sau là đề xuất đầu ra, chưa phải artifacts đã tồn tại:
+Theo [reports convention](../../reports/README.md), `reports/` chứa phân tích, bảng tổng hợp và figures được chọn để commit; raw artifacts từng lần chạy thuộc `runs/` (gitignored). R0–R4 bên dưới là archive đã tồn tại; các paths L0–L3 là đề xuất, chưa phải evidence đã có:
 
 | Giai đoạn | Đầu ra |
 |---|---|
 | R0–R4 | `reports/rust-migration.md`, `reports/rust-migration/`, raw `runs/rust-migration/` theo Rust spec |
-| L0 | `reports/rl-improvement/baseline.md`, paired metrics/curves, run metadata |
+| L0 | `reports/rl-improvement/baseline.md`, bảng tổng hợp trong `reports/rl-improvement/tables/`, figures trong `reports/rl-improvement/plots/`; metadata gốc ở `runs/` |
 | L1/L2 | `reports/rl-improvement/experiments.csv`, mỗi trial có config, hypothesis, seeds, B, elapsed, status và checkpoint links |
-| L3 | `reports/rl-improvement.md`, paired ID/OOD tables, CIs, service trade-offs, learning curves và failure traces |
-| Raw mới | `runs/rl-improvement/<experiment>/<seed>/`; không ghi đè pilot hoặc full runs cũ |
+| L3 | `reports/rl-improvement.md`, paired ID/OOD tables, CIs, service trade-offs, learning curves và phân tích failure cases; traces gốc ở `runs/` |
+| Raw mới | `runs/rl-improvement/<experiment>/<seed>/<run-id>/`; không ghi đè pilot hoặc full runs cũ |
+
+Protocol đã khóa lưu ở `reports/rl-improvement/protocol.json`; ledger `experiments.csv` dẫn tới config, run ID và artifact inventory. Raw per-day CSV, telemetry, traces, profiler dumps, build records và checkpoints lưu trong `runs/rl-improvement/<experiment>/<seed>/<run-id>/` để rerun không ghi đè. Chỉ khi raw artifact cần được commit làm evidence, chọn bản cần thiết vào `reports/rl-improvement/evidence/`, ghi lý do, nguồn run/hash và lệnh tái tạo; không giữ hai bản trùng. Fixtures trong tests phải sinh bằng code hoặc đọc evidence được chỉ mục, không commit data vào `tests/`. Không thêm study mới vào hash scope của oracle manifest lịch sử.
 
 Manifest experiment ghi backend/build và actual library hash, torch_threads requested/effective, eval_batch_size, native_batch, reuse_eval_pool, validate_distributions requested/effective, instrumentation/finite-check settings, data/config/obs/action/physical/reward hashes, algorithm settings, actual transitions/episodes, validation protocol, checkpoint hash, candidate search budget và service thresholds. Thêm normalization/forecast artifacts nếu dùng.
 
@@ -271,11 +273,29 @@ Manifest experiment ghi backend/build và actual library hash, torch_threads req
 - [Runtime optimization spec](runtime_optimize.md), [runtime results](../../reports/runtime-optimization.md), [memory spec](memory_optimize.md).
 - [Rust migration spec](rust_improve.md), [spec nền](spec_v1.0.md), [plan T9–T11](../plan/plan_v1.0.md).
 - [Pilot report](../../reports/pilot.md), [Python after](../../reports/training-diagnosis-v1.1-python-improve.md), [forecast diagnostic](../../reports/forecast.md).
+- Convention: [repository layout](../../README.md), [native crates](../../crates/README.md), [tests](../../tests/README.md), [reports](../../reports/README.md).
 - Code hiện tại sau refactor (đường dẫn tính từ repo root):
   - Training/model factory, validation callback, diagnostics và checkpoint metadata: `src/bus_rl/learning/training/{train,callbacks,diagnose,checkpoint}.py`.
   - Feature extractor `SharedMLPExtractor` và `POLICY_KWARGS`: [policy.py](../../src/bus_rl/learning/policy.py).
   - Algorithm/runtime config: [config.py](../../src/bus_rl/config.py); áp dụng runtime flags: [runtime.py](../../src/bus_rl/execution/runtime.py); tạo environment: [factory.py](../../src/bus_rl/execution/environments/factory.py).
-  - Reward weights và Python oracle cost: [costs.py](../../src/bus_sim/oracle/costs.py); Rust cost implementation: [costs.rs](../../crates/bus-sim-core/src/costs.rs).
+  - Reward config/types còn được code hiện tại import từ module legacy (không sửa oracle để triển khai candidate): [costs.py](../../src/bus_sim/oracle/costs.py); Rust cost implementation: [costs.rs](../../crates/bus-sim-core/src/costs.rs).
   - Evaluation và pool: `src/bus_rl/evaluation/{runner,pool}.py`; raw service metrics và `total_cost_core`: [summary.py](../../src/bus_rl/evaluation/summary.py); paired statistics: [statistics.py](../../src/bus_rl/evaluation/statistics.py).
   - Forecast: [forecasting.py](../../src/bus_rl/learning/forecasting.py); heuristics: `src/bus_rl/learning/baselines/`; configs: `configs/experiments/`.
 - [SB3 RL Tips](https://stable-baselines3.readthedocs.io/en/master/guide/rl_tips.html): đánh giá môi trường riêng, nhiều runs và tuning có kiểm soát. Các candidates trong tài liệu này là đề xuất cho project, không phải kết quả đã xác nhận từ tài liệu SB3.
+
+### 9.1 Convention code và tests khi triển khai L0–L3
+
+Đặt thay đổi trong module sở hữu hành vi: PPO/extractor/forecast ở `src/bus_rl/learning/`, runtime/environment/scenarios ở `src/bus_rl/execution/`, metric/statistics/plots ở `src/bus_rl/evaluation/`. Candidate mới chỉ thêm module khi được chọn, không tạo trước một framework cho mọi hướng L2. Physics native thuộc `crates/bus-sim-core/`, FFI thuộc `crates/bus-sim-python/`; L1 không sửa physics. Nếu L2 đổi reward, giữ raw components và objective core trong evaluation, không sửa simulator deprecated.
+
+| Phạm vi | Vị trí test theo convention |
+|---|---|
+| Một module độc lập | `tests/unit/<src path>/test_<module>.py`; ví dụ statistics đã có tại `tests/unit/bus_rl/evaluation/test_statistics.py` |
+| Config/policy/diagnostics mới | Mirror đúng module được sửa hoặc thêm; ví dụ nếu thêm `learning/training/diagnostics.py` thì test là `tests/unit/bus_rl/learning/training/test_diagnostics.py` (cả hai là đề xuất) |
+| PPO + callback + checkpoint + evaluation | Entry point training: `tests/integration/bus_rl/learning/training/test_training_flow.py`; mở rộng coverage native ở đây |
+| Forecast causal | Unit hiện có: `tests/unit/bus_rl/learning/test_forecasting.py`; kiểm chứng forecast xuyên environment/training thuộc integration theo entry point |
+| Rust FFI | `tests/integration/bus_rl/execution/environments/rust/` (kernel/batch/evaluator payload, shape/dtype, ownership, errors, lifecycle) |
+| CLI toàn pipeline | `tests/integration/test_cli_pipeline.py` |
+
+Unit là một module cùng stubs/data/utils, không gọi nhiều subsystem. Integration mirror thư mục entry point, tên `test_<subject>[_<aspect>].py`; aspect mới chỉ dùng `contract`, `payload`, `lifecycle`, `mapping`, `determinism`, `flow`. Shared builders ở `tests/support/`; `conftest.py` chỉ fixtures/collection hooks. Không thêm tests yêu cầu sửa Python oracle deprecated. Test cần extension dùng marker `native`; skip do thiếu `.so` không được tính là pass native gate.
+
+Lệnh kiểm chứng khi có implementation (không phải yêu cầu chạy training khi chỉ sửa tài liệu): `uv run ruff check .`, `uv run ruff format --check .`, `uv run pytest -q` (mặc định 4 workers, legacy skipped). Khi sửa Rust/FFI: build extension bằng `uv run python scripts/build_native.py --output runs/rl-improvement/<experiment>/<seed>/<run-id>/native-build.json`, chạy `cargo test -p bus-sim-core` và `uv run pytest -m native -q`; build record mới không ghi đè provenance archive. Dùng `-n 0` khi debug serial. `--legacy-python` chỉ dành cho kiểm tra reference lịch sử, không là gate L0–L3 mặc định. Ghi command, exit code, pass/skip và artifact paths; các kiểm tra này chứng minh correctness, không thay evidence chất lượng đa seed.
