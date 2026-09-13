@@ -13,13 +13,13 @@ not a city deployment or a new-route design tool.
 ```text
 src/
 ├── bus_sim/
-│   ├── oracle/          # Reference Python simulator
-│   └── parity/          # Python/Rust fixtures, snapshots, and contracts
+│   ├── oracle/          # DEPRECATED reference Python simulator
+│   └── parity/          # Scenario catalog, snapshots, controllers
 └── bus_rl/
     ├── execution/
     │   ├── environments/
-    │   │   ├── python/  # Gym wrapper for `bus_sim.oracle`
-    │   │   └── rust/    # Gym wrappers and bridge for `bus_sim_native`
+    │   │   ├── python/  # DEPRECATED Gym wrapper for `bus_sim.oracle`
+    │   │   └── rust/    # Gym wrappers and bridge for `bus_sim_native` (default)
     │   ├── scenarios/   # Scenario generation and persistence
     │   ├── runtime.py   # Runtime and thread settings
     │   └── timing.py    # Runtime timing instrumentation
@@ -30,8 +30,9 @@ crates/
 └── bus-sim-python/      # PyO3 bridge (`bus_sim_native`)
 tests/
 ├── support/             # Shared factories, paths and comparison helpers
-├── unit/                # Python unit tests (sim/, rl/)
-└── integration/         # CLI and training workflow tests
+├── unit/                # Isolated tests, mirroring `src` (`bus_sim/oracle`, `bus_rl/…`)
+└── integration/         # Cross-module tests, mirroring `src/bus_rl` (Python env,
+                         # Rust FFI gate, RL) plus the CLI pipeline
 configs/                 # Run and experiment configurations
 scripts/                 # Build, benchmark, and profiling utilities
 docs/                    # Specifications, plans, and research notes
@@ -39,18 +40,25 @@ reports/                 # Selected reproducible results and evidence
 ```
 
 Python packages follow the standard `src/` layout, while Rust packages follow
-the Cargo workspace convention under `crates/`. Historical PPO checkpoints
-that reference `bus_rl.models.features` are translated transparently by the
-checkpoint loader; the obsolete package is not retained in the source tree.
+the Cargo workspace convention under `crates/`. The Rust kernel is the default
+and maintained simulator; `src/bus_sim/oracle/` and
+`src/bus_rl/execution/environments/python/` are deprecated and kept only as a
+reference. Historical PPO checkpoints that reference `bus_rl.models.features`
+are translated transparently by the checkpoint loader; the obsolete package is
+not retained in the source tree.
 
 ## Setup
 
 ```bash
 uv sync --locked --extra dev
+python scripts/build_native.py       # required: the Rust backend is the default
 uv run ruff check .
 uv run ruff format --check .
 uv run pytest -q
 ```
+
+`pytest` runs the native backend by default and skips deprecated Python tests;
+pass `--legacy-python` to include them.
 
 Tiny smoke (2 train / 1 val / 1 test days, 32 PPO steps) lives in
 `tests/integration/test_cli_pipeline.py`.
@@ -92,33 +100,47 @@ recreated. Selected reports live in `reports/`.
 ## Native kernel (Rust)
 
 The Rust migration (`docs/spec/rust_improve.md`, `docs/plan/rust_improve.md`)
-is complete: R0-R4 ported the kernel and the native backend is accepted, while
-Python remains the default reference. The one-off R0 golden fixtures and the
-native Python-level parity suite were retired after acceptance; their evidence
-is archived under `reports/rust-migration/`, and the Rust core keeps its own
-`cargo test` coverage.
+is complete: R0-R4 ported the kernel and the native backend is accepted. The
+native Rust kernel is now the **default and maintained** backend; the Python
+oracle is deprecated and receives no further fixes. The one-off R0 golden
+fixtures and the native Python-level parity suite were retired after
+acceptance; their evidence is archived under `reports/rust-migration/`, and the
+Rust core keeps its own `cargo test` coverage. The Python↔Rust **interface** is
+still enforced by the Rust FFI suite in
+`tests/integration/bus_rl/execution/environments/rust/` (payload schema, array
+shapes/dtypes, error mapping, ownership, batch lifecycle); it skips when the
+extension is not built.
 
 ```bash
 python scripts/build_native.py       # build and install src/bus_sim_native.so
 cargo test -p bus-sim-core           # native unit tests
+uv run pytest -m native -q           # Python↔Rust interface contract
 ```
 
-Select the backend per run (default `python`, configurable via `[runtime]
-backend` or `--backend`):
+`backend` defaults to `rust` (via `[runtime] backend` or `--backend`):
 
 ```bash
 uv run bus-rl evaluate --config configs/eval.toml --manifest data/generated/base/manifest.json \
-  --split validation --method threshold --output runs/eval-rust --backend rust
+  --split validation --method threshold --output runs/eval-rust
 ```
 
-Requesting `--backend rust` without the extension fails loudly; Python is kept
-as an explicit fallback. Run metadata records the backend and native build hash.
+Running without the extension fails loudly. The deprecated Python oracle needs
+an explicit opt-in and warns when used:
+
+```bash
+uv run bus-rl evaluate --config configs/eval.toml --manifest data/generated/base/manifest.json \
+  --split validation --method threshold --output runs/eval-py \
+  --backend python --legacy-python
+```
+
+Run metadata records the backend and native build hash.
 See `crates/README.md` and `reports/rust-migration.md`.
 
 ### Fast development loop
 
 ```bash
-python -m pytest -q                              # parallel -n 4 (~20 s)
+python -m pytest -q                              # native default, parallel -n 4 (~20 s)
+python -m pytest -q --legacy-python              # also run the deprecated oracle tests
 python -m pytest -q -n 0                         # serial, for debugging
 ```
 
