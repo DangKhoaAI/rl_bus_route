@@ -2,10 +2,30 @@
 
 CPU simulator and MaskablePPO controllers for dynamic bus fleet control
 (reserve dispatch, headway targets, reassign, short-turn) on a fixed 3-route
-network. Specification: `docs/spec.md`. Plan: `docs/plan.md`.
+network. Specification: `docs/spec/spec_v1.0.md`. Plan:
+`docs/plan/plan_v1.0.md`.
 
 Python 3.11, Linux, CPU PyTorch. This is a synthetic operational-control study,
 not a city deployment or a new-route design tool.
+
+## Repository layout
+
+```text
+src/bus_rl/             # Installable Python package (Python src layout)
+tests/                  # Pytest suite, including Python/Rust parity tests
+crates/bus-sim/         # Rust simulator core; unit tests live beside the source
+crates/bus-sim-py/      # PyO3 extension exposing the Rust core to Python
+configs/                # Base, evaluation, training, and experiment configs
+scripts/                # Build, benchmark, profiling, and migration utilities
+docs/                   # Specifications, plans, and research notes
+reports/                # Selected reproducible results and evidence
+```
+
+`src/` is the Python package root, not a container for every language in the
+repository. Each Rust workspace member follows Cargo's own layout under
+`crates/<name>/src/`. Rust integration tests, when needed, belong under the
+relevant `crates/<name>/tests/` directory; cross-backend integration tests live
+in `tests/backend_parity/` and run through pytest.
 
 ## Setup
 
