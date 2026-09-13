@@ -21,8 +21,8 @@ Nguồn gốc giữ nguyên:
 
 | Vai trò | Artifacts |
 |---|---|
-| Python trước tối ưu | `reports/training-diagnosis-v1.0.md`, `reports/training-diagnosis/evidence/v1.0/` |
-| Python after, oracle | `reports/training-diagnosis-v1.1-python-improve.md`, `reports/training-diagnosis/evidence/v1.1-python-improve/` |
+| Python trước tối ưu | `reports/training-diagnosis-v1.0.md` (+ raw gitignored `runs/diagnose/`) |
+| Python after, oracle | `reports/training-diagnosis-v1.1-python-improve.md` (+ raw gitignored `runs/diagnose-after/`) |
 
 Năm tối ưu Python đã được báo cáo: counters, cached load, conservation debug-only, waiting-only hot list, IntEnum.
 

@@ -7,9 +7,8 @@ Same command and seed as the baseline trial (2048 transitions, 10-day eval,
 
 | Role | Path |
 |---|---|
-| **Old (before)** | `reports/training-diagnosis/evidence/v1.0/` and `reports/training-diagnosis-v1.0.md` |
-| **New (after)** | `reports/training-diagnosis/evidence/v1.1-python-improve/` and this file |
-| Raw rerun dirs | `runs/diagnose/` (old), `runs/diagnose-after/` (new, gitignored) |
+| **Old (before)** | `runs/diagnose/` (gitignored) and `reports/training-diagnosis-v1.0.md` |
+| **New (after)** | `runs/diagnose-after/` (gitignored) and this file |
 
 ## Wall clock
 

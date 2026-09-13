@@ -4,17 +4,15 @@ Trial: `uv run bus-rl diagnose --config configs/experiments/core.toml --manifest
 
 Same PPO hyperparams as a full seed (`n_envs=4`, `n_steps=256`, `n_epochs=4`, `batch_size=256`, CPU). 2 rollouts + 10-day validation.
 
-Eval data (committed), **before** optimizations — leave this folder unchanged:
+**Before** optimizations:
 
 - `reports/training-diagnosis-v1.0.md` — this summary (baseline)
-- `reports/training-diagnosis/evidence/v1.0/` — `diagnosis.json`, `train_events.jsonl`, `cprofile.txt`, `metadata.json`
+- raw artifacts (gitignored): `runs/diagnose/` — `diagnosis.json`, `train_events.jsonl`, `cprofile.txt`, `metadata.json`
 
 **After** optimizations (compare against the files above):
 
 - `reports/training-diagnosis-v1.1-python-improve.md`
-- `reports/training-diagnosis/evidence/v1.1-python-improve/`
-
-Raw rerun artifacts (gitignored): `runs/diagnose/` (old), `runs/diagnose-after/` (new).
+- raw artifacts (gitignored): `runs/diagnose-after/`
 
 ## Wall clock
 
