@@ -32,12 +32,17 @@ class AlgorithmConfig:
     max_grad_norm: float = 0.5
     gae_lambda: float = 0.95
     clip_range: float = 0.2
+    # Nullable compatibility field; no non-null target-KL arm is registered in L0/L1.
+    target_kl: float | None = None
     total_timesteps: int = 245_760
     eval_freq: int = 12_288
     device: str = "cpu"
     # Torch CPU threads. Kept explicit so train/eval/bench use the same value;
     # the default matches the historical environment default.
     torch_threads: int = 16
+    # L0 study telemetry is opt-in so historical configs retain their behavior.
+    diagnostics_enabled: bool = False
+    diagnostics_interval: int = 256
 
 
 @dataclass(frozen=True)

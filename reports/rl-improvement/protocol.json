@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "study": "rl-improvement",
+  "status": "frozen-before-L0-runs",
+  "frozen_at": "2026-09-13",
+  "source": {
+    "git_sha": "ca586ff6c7fd2dc42284bfc0452a314d3008f70e",
+    "git_dirty": true,
+    "note": "The implementation and protocol are being developed in this working tree; every run records its own metadata and hashes."
+  },
+  "runtime": {
+    "backend_requested": "rust",
+    "backend_required": "rust",
+    "native_library": "src/bus_sim_native.so",
+    "native_library_sha256": "2d5fa9e3d7672966277efbdba9fc179bdfe6cd8e3bd72f3b60e730d65192fe26",
+    "native_build_record": "reports/runtime-optimization/native-build-o2.json",
+    "native_build_record_sha256": "7fa35aa260b8b27b7754146405f576917ec47097a88ed9814152707df2724ae8",
+    "torch_threads_requested": 2,
+    "torch_threads_effective": 2,
+    "eval_batch_size": 16,
+    "reuse_eval_pool": true,
+    "native_batch": true,
+    "validate_distributions_requested": false,
+    "validate_observation": true,
+    "python_backend": "not eligible; requires explicit legacy opt-in"
+  },
+  "research_config": {
+    "path": "configs/experiments/rl-improvement/core.toml",
+    "sha256": "5779ec9e39b266e77c5ef71ff4f2f7d7224175c94fe19b9a465787eca560dc3b",
+    "config_hash": "6438f58743a860ce5d8a2c75adab4e9bacc5d07e3da06d5432608ae3c497399e",
+    "algorithm": {
+      "gamma": 1.0,
+      "learning_rate": 0.0003,
+      "n_steps": 256,
+      "n_envs": 4,
+      "batch_size": 256,
+      "n_epochs": 4,
+      "ent_coef": 0.01,
+      "vf_coef": 0.5,
+      "max_grad_norm": 0.5,
+      "gae_lambda": 0.95,
+      "clip_range": 0.2,
+      "target_kl": null,
+      "device": "cpu",
+      "diagnostics_enabled": true,
+      "diagnostics_interval": 256
+    },
+    "physical_and_reward": "inherited from configs/base.toml; physical_config_hash=fad7a03b35b999d33b672357b439a9bf34899e8bf814bbe98077446ef4a5d4b2"
+  },
+  "data": {
+    "manifest": "data/generated/base/manifest.json",
+    "manifest_sha256": "abecff223150f4fc004f62b30069436f7ea839d999ec5f1c955c1eb884744e61",
+    "manifest_physical_config_hash": "fad7a03b35b999d33b672357b439a9bf34899e8bf814bbe98077446ef4a5d4b2",
+    "splits": {
+      "train": {"count": 500, "seed": 1001, "used_for": "training only"},
+      "validation": {"count": 100, "seed": 2001, "used_for": "checkpoint selection and L0/L1 selection"},
+      "test_id": {"count": 200, "seed": 3001, "used_for": "held out; not opened in L0/L1"},
+      "test_ood_burst": {"count": 200, "seed": 4001, "used_for": "held out; not opened in L0/L1"},
+      "test_ood_traffic": {"count": 200, "seed": 5001, "used_for": "held out; not opened in L0/L1"}
+    },
+    "schema_hashes": {
+      "action": "ff62ae3cfa7478758a5370e575dbfc3c15729c0ea10a3ccbb2bd7a207cab761a",
+      "observation": "fa07e9254e5f5474db32935332bea7a40ddbadf7c6538defdedbdc51322397e2"
+    }
+  },
+  "budget": {
+    "transitions": 245760,
+    "seeds": [11, 22, 33],
+    "validation_interval_transitions": 12288,
+    "validation_days": 100,
+    "fixed_transition_primary": true,
+    "fixed_wall_clock_secondary": "not run before L0/L1 selection; if opened, budget and accounting are registered separately"
+  },
+  "evaluation": {
+    "primary_metric": "total_cost_core",
+    "raw_components_required": true,
+    "checkpoint_selection": "lowest validation total_cost_core; earliest checkpoint on exact tie",
+    "per_day_pairing": "same validation scenario index/hash for all arms",
+    "heuristics": ["fixed", "threshold", "proportional"],
+    "heuristic_tuning": "validation only; search budget and frozen parameters recorded before held-out evaluation",
+    "held_out_selection": false
+  },
+  "diagnostics": {
+    "enabled": true,
+    "sample_interval_transitions": 256,
+    "finite_checks": ["logits", "values", "returns", "losses", "gradients"],
+    "finite_check_cadence": "rollout boundary and after each PPO update",
+    "mask_metrics": ["valid_action_count", "entropy", "normalized_entropy_when_K_gt_1", "family_valid_slots", "family_opportunity", "family_probability_mass", "conditional_selection_rate"],
+    "k_one_rule": "entropy=0; normalized entropy=null",
+    "k_zero_rule": "invalid run; fail explicitly",
+    "failure_trace_selection": "on finite/mask failures, first failing run/timestep; for quality diagnostics, the three highest total_cost_core validation days at each selected best checkpoint, using fixed scenario index order",
+    "instrumentation_rng_or_semantics": "must not change; policy distribution is sampled without RNG at the registered cadence",
+    "artifacts": ["training_diagnostics.jsonl", "evaluations.csv", "validation_metrics.csv"]
+  },
+  "acceptance": {
+    "L0.1": "protocol, hashes, runtime flags, inventory and ledger schema exist before quality runs",
+    "L0.2": "all required diagnostics populated or unavailable with an explicit reason; smoke and save/load checks pass",
+    "L0.3": "three complete core runs plus fixed/threshold/proportional validation on the same 100 days",
+    "L0.4": "baseline diagnosis cites validation data only and records one next-step hypothesis or KEEP CORE/STOP",
+    "L1_confirmation": {
+      "minimum_mean_cost_reduction": 0.02,
+      "paired_validation_ci": "95% day-bootstrap CI for candidate-control delta lies below zero",
+      "seed_rule": "candidate mean cost is lower on at least 2 of 3 seeds",
+      "service_limits": "registered before candidate trials; no post-score thresholds"
+    }
+  },
+  "inventory": {
+    "reusable": [],
+    "historical_only": [
+      "runs/diagnose-after/last.zip (missing L0 telemetry and full budget)",
+      "runs/pilot-11/{best.zip,last.zip} (12,288-transition pilot and old protocol)",
+      "runs/runtime-optimization/full-reps/* (seed-11 runtime comparisons; no L0 telemetry and incompatible runtime defaults)",
+      "runs/rust-migration/full-workflow/rust/* (accepted R4 backend evidence; no L0 telemetry and historical config)"
+    ],
+    "incomplete": [
+      "runs/core-11/best.zip (checkpoint without metadata, config or complete results)"
+    ],
+    "held_out_not_opened": ["test_id", "test_ood_burst", "test_ood_traffic"]
+  },
+  "artifact_layout": {
+    "run_root": "runs/rl-improvement/<experiment>/<seed>/<run-id>/",
+    "curated_root": "reports/rl-improvement/",
+    "ledger": "reports/rl-improvement/experiments.csv"
+  }
+}

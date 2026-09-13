@@ -1,0 +1,15 @@
+{
+  "core_best_mean_across_seeds": 13175.520416666666,
+  "core_seed_std": 53.781056032963946,
+  "heuristic_means": {
+    "fixed": 16016.87375,
+    "threshold": 16641.4425,
+    "proportional": 16195.89625
+  },
+  "validation_days": 100,
+  "core_seeds": [
+    11,
+    22,
+    33
+  ]
+}

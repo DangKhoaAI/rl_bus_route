@@ -14,6 +14,7 @@ from bus_rl.execution.runtime import apply_runtime_settings
 from bus_rl.learning.policy import POLICY_KWARGS
 from bus_rl.learning.training.callbacks import BestValidationCallback
 from bus_rl.learning.training.checkpoint import run_metadata, write_metadata
+from bus_rl.learning.training.diagnostics import TrainingDiagnosticsCallback
 
 
 class ProgressCallback(BaseCallback):
@@ -60,6 +61,7 @@ def make_model(env, seed: int, algorithm: AlgorithmConfig | None = None):
         ent_coef=algorithm.ent_coef,
         vf_coef=algorithm.vf_coef,
         max_grad_norm=algorithm.max_grad_norm,
+        target_kl=algorithm.target_kl,
         seed=seed,
         device=algorithm.device,
         policy_kwargs=POLICY_KWARGS,
@@ -134,10 +136,18 @@ def train_run(
         forecaster=forecaster,
         eval_limit=eval_limit,
     )
+    callbacks = [ProgressCallback(), validation]
+    if algorithm.diagnostics_enabled:
+        callbacks.append(
+            TrainingDiagnosticsCallback(
+                output,
+                sample_interval=algorithm.diagnostics_interval,
+            )
+        )
     started = perf_counter()
     model.learn(
         total_timesteps=algorithm.total_timesteps,
-        callback=CallbackList([ProgressCallback(), validation]),
+        callback=CallbackList(callbacks),
     )
     validation.finalize()
     wall = perf_counter() - started

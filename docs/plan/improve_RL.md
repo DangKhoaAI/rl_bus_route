@@ -1,6 +1,6 @@
 # RL Improvement Implementation Plan
 
-Updated: 2026-09-13. Status: planned; no experiment below is accepted yet.
+Updated: 2026-09-13. Status: L0 and the first bounded L1 round accepted; core retained. See `reports/rl-improvement.md`.
 
 ## 0. Implementer execution contract — read before working
 
@@ -68,14 +68,14 @@ Optional L2 tasks are independent research choices, not a requirement to impleme
 
 ### L0.1 - Freeze protocol and audit available artifacts
 
-- [ ] Verify existing R4/memory/runtime reports and the actual loaded binary hash; freeze backend/build, Python revision, dependencies, manifests and schema/physics/reward hashes. Do not rerun migration just to reopen its completed gates.
-- [ ] Create a new research config, proposed `configs/experiments/rl-improvement/core.toml`, preserving core learning settings and setting CPU Torch threads=2, Rust backend, eval_batch_size=16, reuse_eval_pool=true, native_batch=true, validate_distributions=false. Preserve historical configs and global defaults.
-- [ ] Record requested/effective runtime flags, thread settings and instrumentation. Register scalar Rust evaluation for unsupported heuristic batch combinations; keep physics/tapes/metrics identical and report compute separately. Forecast/new-policy paths require compatibility checks, never silent fallback.
-- [ ] Inventory existing checkpoints and results; classify each as reusable, historical-only, or incomplete with a reason.
-- [ ] Freeze core budget **B=245,760 transitions**, seeds **11,22,33**, validation every **12,288 transitions**, and **100 validation days**.
-- [ ] Preserve the current core PPO config: 4 envs, n_steps=256, batch_size=256, n_epochs=4, LR=3e-4, ent_coef=0.01, gamma=1.0, gae_lambda=0.95, clip_range=0.2, and current MLP/physical/reward settings.
-- [ ] Specify checkpoint selection by lowest validation cost, earliest checkpoint on ties; define fixed-transition and fixed-wall-clock measurement protocols separately.
-- [ ] Register held-out splits and explicitly exclude them from candidate selection.
+- [x] Verify existing R4/memory/runtime reports and the actual loaded binary hash; freeze backend/build, Python revision, dependencies, manifests and schema/physics/reward hashes. Do not rerun migration just to reopen its completed gates.
+- [x] Create `configs/experiments/rl-improvement/core.toml`, preserving core learning settings and setting CPU Torch threads=2, Rust backend, eval_batch_size=16, reuse_eval_pool=true, native_batch=true, validate_distributions=false. Preserve historical configs and global defaults.
+- [x] Record requested/effective runtime flags, thread settings and instrumentation. Register scalar Rust evaluation for unsupported heuristic batch combinations; keep physics/tapes/metrics identical and report compute separately. Forecast/new-policy paths require compatibility checks, never silent fallback.
+- [x] Inventory existing checkpoints and results; classify each as reusable, historical-only, or incomplete with a reason.
+- [x] Freeze core budget **B=245,760 transitions**, seeds **11,22,33**, validation every **12,288 transitions**, and **100 validation days**.
+- [x] Preserve the current core PPO config: 4 envs, n_steps=256, batch_size=256, n_epochs=4, LR=3e-4, ent_coef=0.01, gamma=1.0, gae_lambda=0.95, clip_range=0.2, and current MLP/physical/reward settings.
+- [x] Specify checkpoint selection by lowest validation cost, earliest checkpoint on ties; define fixed-transition and fixed-wall-clock measurement protocols separately.
+- [x] Register held-out splits and explicitly exclude them from candidate selection.
 
 **Outputs:** proposed `reports/rl-improvement/protocol.json`, artifact inventory, and experiment ledger schema.
 
@@ -85,13 +85,13 @@ Optional L2 tasks are independent research choices, not a requirement to impleme
 
 ### L0.2 - Add and verify diagnostics
 
-- [ ] Persist validation cost by transitions and elapsed wall time, best/last checkpoint metrics, and completed episode counts.
-- [ ] Capture PPO entropy, approximate KL, clip fraction, value loss, explained variance, and finite-value failures.
-- [ ] Log valid-action count K, entropy H and H/log(K) only for K>1; mark K=1 separately (H=0), reject K=0. For each action family record valid-slot count, opportunity count (at least one valid slot), probability mass, and conditional selection rate. This is telemetry, not a normalized-entropy loss change.
-- [ ] Register finite checks for logits, values, returns, losses and gradients despite distribution validation being off; record check cadence/overhead and fail explicitly. Preserve RNG/model behavior and use identical instrumentation across arms.
-- [ ] Capture raw cost components, completion/abandonment/unfinished rates, per-route waits, and action frequencies paired with valid action opportunities.
-- [ ] Add observation/reward/return distribution summaries and reproducible failure-trace selection criteria.
-- [ ] Keep instrumentation settings consistent across compared candidates and record their overhead.
+- [x] Persist validation cost by transitions and elapsed wall time, best/last checkpoint metrics, and completed episode counts.
+- [x] Capture PPO entropy, approximate KL, clip fraction, value loss, explained variance, and finite-value failures.
+- [x] Log valid-action count K, entropy H and H/log(K) only for K>1; mark K=1 separately (H=0), reject K=0. For each action family record valid-slot count, opportunity count (at least one valid slot), probability mass, and conditional selection rate. This is telemetry, not a normalized-entropy loss change.
+- [x] Register finite checks for logits, values, returns, losses and gradients despite distribution validation being off; record check cadence/overhead and fail explicitly. Preserve RNG/model behavior and use identical instrumentation across arms.
+- [x] Capture raw cost components, completion/abandonment/unfinished rates, per-route waits, and action frequencies paired with valid action opportunities.
+- [x] Add observation/reward/return distribution summaries and reproducible failure-trace selection criteria.
+- [x] Keep instrumentation settings consistent across compared candidates and record their overhead.
 
 **Implementation surface (repo-relative):** `src/bus_rl/learning/training/{train,callbacks,checkpoint}.py`, `src/bus_rl/evaluation/{runner,summary}.py`, experiment logging. Isolated tests mirror each module under `tests/unit/bus_rl/`; if a new `learning/training/diagnostics.py` is justified, its proposed unit test is `tests/unit/bus_rl/learning/training/test_diagnostics.py`. Cross-module telemetry/checkpoint checks extend `tests/integration/bus_rl/learning/training/test_training_flow.py`. See [spec §9](../spec/improve_RL.md#9-nguồn-và-điểm-bắt-đầu-triển-khai) for the current code map after refactoring.
 
@@ -101,10 +101,10 @@ Optional L2 tasks are independent research choices, not a requirement to impleme
 
 ### L0.3 - Run core and heuristic validation
 
-- [ ] Train core for B transitions for all three seeds on the accepted Rust backend; retain best and last checkpoints and every run status.
-- [ ] Validate fixed, threshold, and proportional controllers on identical tapes and metrics.
-- [ ] Tune heuristic parameters only on validation, with a recorded search budget, then freeze them before held-out testing.
-- [ ] Produce per-day raw metrics and learning curves using all 100 validation days.
+- [x] Train core for B transitions for all three seeds on the accepted Rust backend; retain best and last checkpoints and every run status.
+- [x] Validate fixed, threshold, and proportional controllers on identical tapes and metrics.
+- [x] Tune heuristic parameters only on validation, with a recorded search budget, then freeze them before held-out testing (this round's search budget was zero; defaults were frozen).
+- [x] Produce per-day raw metrics and learning curves using all 100 validation days.
 
 **Outputs:** raw validation CSVs, metadata and checkpoints in `runs/rl-improvement/core/<seed>/<run-id>/`; curated tables/plots under `reports/rl-improvement/`, with analysis in proposed `reports/rl-improvement/baseline.md`.
 
@@ -114,25 +114,25 @@ Optional L2 tasks are independent research choices, not a requirement to impleme
 
 ### L0.4 - Diagnose failures and choose hypotheses
 
-- [ ] Determine whether validation curves are improving, plateauing, or regressing.
-- [ ] Attribute high cost to components and inspect service trade-offs, especially unfinished passengers and terminal cost.
-- [ ] Relate action opportunities, choices, and traces to exploration and credit-assignment hypotheses.
-- [ ] Write one next-step decision with a completed experiment card and spec §0 acceptance thresholds, or STOP/KEEP CORE with a reason. Mark all other directions unselected; do not implement them as prerequisites.
+- [x] Determine whether validation curves are improving, plateauing, or regressing.
+- [x] Attribute high cost to components and inspect service trade-offs, especially unfinished passengers and terminal cost.
+- [x] Relate action opportunities, choices, and traces to exploration and credit-assignment hypotheses.
+- [x] Write one next-step decision with a completed experiment card and spec §0 acceptance thresholds, or STOP/KEEP CORE with a reason. Mark all other directions unselected; do not implement them as prerequisites.
 
 **Verification:** Trace each hypothesis to baseline data and confirm that all cited days belong to train or validation; review whether the proposed test can distinguish competing explanations.
 
 **Acceptance:** baseline report links each proposed hypothesis to actual plots/metrics/traces and states what result would refute it. No held-out test result influences this decision.
 
-**L0 gate:** L0.1-L0.4 accepted; a reproducible three-seed baseline exists.
+**L0 gate:** L0.1-L0.4 accepted; a reproducible three-seed baseline exists (`reports/rl-improvement/baseline.md`).
 
 ## 4. L1: tune PPO while preserving the task
 
 ### L1.1 - Register a bounded candidate set
 
-- [ ] Choose one parameter group per round from the specification: learning rate/update strength, entropy, rollout/minibatch size, GAE lambda, conditional KL early stopping, or evidence-driven value scaling.
-- [ ] If delayed-credit diagnostics justify it, register gae_lambda={0.95,0.98,1.0} with gamma=1, fixed n_steps and other settings; compare advantage variance, critic diagnostics and cost. Do not describe lambda as a hard planning horizon.
-- [ ] If KL/update instability justifies it, wire nullable target_kl through `AlgorithmConfig` in `src/bus_rl/config.py` and `make_model` in `src/bus_rl/learning/training/train.py` (baseline None), verify the pinned MaskablePPO behavior, then test {None,0.01,0.03} separately from LR/clip/epochs. Log actual epochs/minibatches and early stops; retain total transition budget B.
-- [ ] Register at most **six configurations per round including the core control**, with hypothesis, exact config diff, B, validation protocol, and rejection criteria.
+- [x] Choose one parameter group per round from the specification: the first round selected GAE lambda based on L0 diagnostics; other groups remain unselected.
+- [x] Register gae_lambda={0.95,0.98,1.0} with gamma=1, fixed n_steps and other settings; compare advantage variance, critic diagnostics and cost. Lambda is not described as a hard planning horizon.
+- [x] Leave target-KL early stopping unselected because L0 did not show KL/update instability; no target-KL candidate was registered.
+- [x] Register at most **six configurations per round including the core control**, with hypothesis, exact config diff, B, validation protocol, and rejection criteria (`experiments.csv`).
 - [ ] Keep gamma=1.0, physical dynamics, observation/action semantics, reward objective, and backend revision unchanged.
 - [ ] If curves still improve, register a separate budget experiment at 2B and then 4B; do not label it a fixed-B improvement.
 - [ ] For normalization, specify training-only fitting, frozen evaluation statistics, checkpoint persistence, and raw core-cost reporting before running.
@@ -145,9 +145,9 @@ Optional L2 tasks are independent research choices, not a requirement to impleme
 
 ### L1.2 - Screen candidates on seed 11
 
-- [ ] Run the registered candidates on seed 11 with B transitions and identical validation conditions.
-- [ ] Record all failed/divergent runs, consumed compute, and causes; never silently replace an unfavorable seed.
-- [ ] Select at most **two candidates** for confirmation using the registered validation criteria.
+- [x] Run the registered candidates on seed 11 with B transitions and identical validation conditions.
+- [x] Record all failed/divergent runs, consumed compute, and causes; never silently replace an unfavorable seed.
+- [x] Select at most **two candidates** for confirmation using the registered validation criteria (none shortlisted; both were rejected at screening).
 
 **Verification:** reconcile the ledger with run directories, actual timesteps, best/last checkpoints, and diagnostics; investigate nonfinite loss or environment failures.
 
@@ -155,16 +155,16 @@ Optional L2 tasks are independent research choices, not a requirement to impleme
 
 ### L1.3 - Confirm across seeds and freeze the selection
 
-- [ ] Run selected candidates on seeds 22 and 33, combining with seed 11 only when the protocol matches exactly.
-- [ ] Compare against all three core seeds at the same B; report validation cost, service metrics, seed variability, transitions, and wall time.
-- [ ] Apply spec §0 confirmation criteria and assign KEEP/REJECT/INCONCLUSIVE to each shortlisted candidate. Keep the control when no candidate passes; retain all successful components and register the next combination trial; do not silently attribute combined gains to individual components or flip global defaults.
-- [ ] For an extended-budget study, compare against the same core training trajectory at matching budgets and report additional compute separately.
+- [x] Run selected candidates on seeds 22 and 33, combining with seed 11 only when the protocol matches exactly (no candidates were selected, so this was correctly skipped).
+- [x] Compare against all three core seeds at the same B; report validation cost, service metrics, seed variability, transitions, and wall time.
+- [x] Apply spec §0 confirmation criteria and assign KEEP/REJECT/INCONCLUSIVE to each shortlisted candidate. Keep the control when no candidate passes; no candidate passed screening, so no combination or default change was made.
+- [x] For an extended-budget study, compare against the same core training trajectory at matching budgets and report additional compute separately (deferred; not part of this registered first round).
 
 **Verification:** Audit the three-seed result matrix and config hashes; recompute validation summaries from raw per-day metrics and check budget parity.
 
 **Acceptance:** every selected candidate has three-seed evidence; the choice uses validation only; all configs and auxiliary artifacts are frozen. A valid decision to keep core passes this task.
 
-**L1 gate:** L1.1-L1.3 accepted, including a documented no-change decision when appropriate.
+**L1 gate:** L1.1-L1.3 accepted, including the documented no-change decision in `reports/rl-improvement.md`.
 
 ## 5. L2: optional extensions with separate hypotheses
 
@@ -288,9 +288,9 @@ Raw per-day/per-seed CSVs, telemetry, failure traces, profiler dumps, build reco
 
 Keep pilot, Python diagnosis, and earlier study artifacts unchanged. Use stable run IDs and retain failed-trial evidence. Proposed filenames may be refined during implementation, but the report must index every output and preserve the protocol/evidence contract.
 
-- [ ] Existing R4/memory/runtime evidence verified; research config and actual loaded binary frozen.
-- [ ] L0 baseline and diagnostics accepted.
-- [ ] L1 bounded search and multi-seed decision accepted.
+- [x] Existing R4/memory/runtime evidence verified; research config and actual loaded binary frozen.
+- [x] L0 baseline and diagnostics accepted.
+- [x] L1 bounded search and multi-seed decision accepted (no candidate shortlisted; core retained).
 - [ ] Selected L2 experiments accepted; others explicitly skipped.
 - [ ] L3 full paired matrix, statistics, service metrics, and report accepted.
 - [ ] Throughput, sample efficiency, and wall-clock efficiency are reported separately.

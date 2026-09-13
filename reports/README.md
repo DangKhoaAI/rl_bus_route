@@ -19,6 +19,8 @@ report must say why; do not keep duplicate copies in two places.
 | `forecast.md` | Forecast diagnostic (Task 10). |
 | `training-diagnosis-v1.0.md` | Python training-time diagnosis before hot-path work. |
 | `training-diagnosis-v1.1-python-improve.md` | Python training-time diagnosis after hot-path work. |
+| `rl-improvement.md` | L0/L1 study status, decisions and reproduction evidence links. |
+| `rl-improvement/` | Frozen L0/L1 protocol, experiment ledger and curated RL-improvement evidence. |
 
 The diagnosis runs' raw artifacts live in the git-ignored `runs/diagnose/`
 and `runs/diagnose-after/`; the two `training-diagnosis-*.md` summaries keep the

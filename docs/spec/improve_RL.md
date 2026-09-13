@@ -1,6 +1,6 @@
 # Cải thiện RL sau khi tăng tốc bằng Rust
 
-Ngày cập nhật: **2026-09-13**. Trạng thái: **đề xuất thực nghiệm; chưa triển khai theo tài liệu này**.
+Ngày cập nhật: **2026-09-13**. Trạng thái: **L0 và vòng L1 đầu tiên đã có evidence; core được giữ làm incumbent**. Chi tiết trong [reports/rl-improvement.md](../../reports/rl-improvement.md).
 Implementation plan (English): [improve_RL.md](../plan/improve_RL.md).
 
 
@@ -260,10 +260,10 @@ Protocol đã khóa lưu ở `reports/rl-improvement/protocol.json`; ledger `exp
 
 Manifest experiment ghi backend/build và actual library hash, torch_threads requested/effective, eval_batch_size, native_batch, reuse_eval_pool, validate_distributions requested/effective, instrumentation/finite-check settings, data/config/obs/action/physical/reward hashes, algorithm settings, actual transitions/episodes, validation protocol, checkpoint hash, candidate search budget và service thresholds. Thêm normalization/forecast artifacts nếu dùng.
 
-- [ ] Xác minh evidence R4 + memory/runtime hiện có và khóa runtime/config/build cho loạt L0 (không chạy lại migration).
-- [ ] L0 core 3 seeds và heuristics có validation evidence.
-- [ ] Chọn hướng L1 theo diagnostics, không sweep vô hạn.
-- [ ] Xác nhận tối đa 2 candidates đa seed, giữ cả kết quả âm.
+- [x] Xác minh evidence R4 + memory/runtime hiện có và khóa runtime/config/build cho loạt L0 (không chạy lại migration).
+- [x] L0 core 3 seeds và heuristics có validation evidence.
+- [x] Chọn hướng L1 theo diagnostics, không sweep vô hạn (GAE lambda round).
+- [x] Xác nhận tối đa 2 candidates đa seed, giữ cả kết quả âm (không candidate qua screening; core retained).
 - [ ] Chọn L2 nếu có giả thuyết cần kiểm chứng; không bắt buộc.
 - [ ] Freeze trước held-out test; paired statistics đúng đơn vị ngày.
 - [ ] L3 báo throughput, sample efficiency và wall-clock efficiency riêng.

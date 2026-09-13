@@ -41,6 +41,7 @@ def run_metadata(run: RunConfig, extra: dict | None = None) -> dict:
         "reward_hash": run.reward_hash,
         "forecast_enabled": run.forecast.enabled,
         "algorithm": asdict(run.algorithm),
+        "runtime": asdict(run.runtime),
         "git_sha": sha,
         "git_dirty": dirty,
         "lock_hash": lock_hash(),

@@ -1,0 +1,109 @@
+{
+  "protocol": "reports/rl-improvement/protocol.json",
+  "expected_native_hash": "2d5fa9e3d7672966277efbdba9fc179bdfe6cd8e3bd72f3b60e730d65192fe26",
+  "checks": [
+    {
+      "arm": "core",
+      "seed": 11,
+      "actual_timesteps": 245760,
+      "episodes": 2048,
+      "eval_points": 20,
+      "eval_days_per_point": [
+        100
+      ],
+      "unique_days": 100,
+      "native_hash": "2d5fa9e3d7672966277efbdba9fc179bdfe6cd8e3bd72f3b60e730d65192fe26",
+      "finite_failures": 0,
+      "best_zip_sha256": "2e7e927c45928cd84ca670e6bef61f8c377568a7cd7a94f9ed9297084575c529",
+      "last_zip_sha256": "dbde36abda8534bcee56a7d8da9281621c3469ed5f176aded86bb3755c278bb0",
+      "diagnostic_rows": 1442,
+      "wall_time_s": 108.93005553199328
+    },
+    {
+      "arm": "core",
+      "seed": 22,
+      "actual_timesteps": 245760,
+      "episodes": 2048,
+      "eval_points": 20,
+      "eval_days_per_point": [
+        100
+      ],
+      "unique_days": 100,
+      "native_hash": "2d5fa9e3d7672966277efbdba9fc179bdfe6cd8e3bd72f3b60e730d65192fe26",
+      "finite_failures": 0,
+      "best_zip_sha256": "b93103d43d778c59d3afdbb08476eda4f411c2706574dc047d0800106c16eb80",
+      "last_zip_sha256": "12ac801eb2eb1c89332c9d4b54d86c4b65b898020eae8031e0410f41d467c0b3",
+      "diagnostic_rows": 1442,
+      "wall_time_s": 109.09586805499566
+    },
+    {
+      "arm": "core",
+      "seed": 33,
+      "actual_timesteps": 245760,
+      "episodes": 2048,
+      "eval_points": 20,
+      "eval_days_per_point": [
+        100
+      ],
+      "unique_days": 100,
+      "native_hash": "2d5fa9e3d7672966277efbdba9fc179bdfe6cd8e3bd72f3b60e730d65192fe26",
+      "finite_failures": 0,
+      "best_zip_sha256": "1e46ab6a14c13f884a83669efde265118ec71b1dc39e38806ad3853c97a0cb60",
+      "last_zip_sha256": "3163df26fcf5fc7a335ef0d1b8b0b66557012193f2eb010e2638da7002d1fcdc",
+      "diagnostic_rows": 1442,
+      "wall_time_s": 109.56994424499862
+    },
+    {
+      "arm": "l1-gae-098",
+      "seed": 11,
+      "actual_timesteps": 245760,
+      "episodes": 2048,
+      "eval_points": 20,
+      "eval_days_per_point": [
+        100
+      ],
+      "unique_days": 100,
+      "native_hash": "2d5fa9e3d7672966277efbdba9fc179bdfe6cd8e3bd72f3b60e730d65192fe26",
+      "finite_failures": 0,
+      "best_zip_sha256": "008360e9ec852dd113130a0ab5e58b627f32bc95aea5a7ef45d3ded7be749543",
+      "last_zip_sha256": "b6d8e8e207d285ae5b72ce274c6e4ce0ae8626a3e82a11dd63a25f4ee78be8d2",
+      "diagnostic_rows": 1442,
+      "wall_time_s": 91.7097706929926
+    },
+    {
+      "arm": "l1-gae-100",
+      "seed": 11,
+      "actual_timesteps": 245760,
+      "episodes": 2048,
+      "eval_points": 20,
+      "eval_days_per_point": [
+        100
+      ],
+      "unique_days": 100,
+      "native_hash": "2d5fa9e3d7672966277efbdba9fc179bdfe6cd8e3bd72f3b60e730d65192fe26",
+      "finite_failures": 0,
+      "best_zip_sha256": "0f7454b17f3d938fad9d837d29772275f4c8c5b4d2860c4bd7e8195b0c54c739",
+      "last_zip_sha256": "3d27a2ec2567766f7de3211740a78c1ce06764e3628d763e63a4cc1c7424c498",
+      "diagnostic_rows": 1442,
+      "wall_time_s": 92.25518723999267
+    },
+    {
+      "arm": "heuristics",
+      "seed": "n/a",
+      "methods": [
+        "fixed",
+        "proportional",
+        "threshold"
+      ],
+      "rows": 300,
+      "days_per_method": {
+        "fixed": 100,
+        "proportional": 100,
+        "threshold": 100
+      },
+      "native_hash": "not in CLI output",
+      "finite_failures": 0
+    }
+  ],
+  "all_full_runs_valid": true
+}
