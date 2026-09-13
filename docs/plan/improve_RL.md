@@ -83,7 +83,7 @@ Optional L2 tasks are independent research choices, not a requirement to impleme
 - [ ] Add observation/reward/return distribution summaries and reproducible failure-trace selection criteria.
 - [ ] Keep instrumentation settings consistent across compared candidates and record their overhead.
 
-**Implementation surface:** `training/train.py`, `training/callbacks.py`, `evaluation/runner.py`, experiment logging; proposed `tests/test_training_diagnostics.py` where behavior is new.
+**Implementation surface (repo-relative):** `src/bus_rl/learning/training/{train,callbacks,checkpoint}.py`, `src/bus_rl/evaluation/{runner,summary}.py`, experiment logging; proposed `tests/unit/rl/test_training_diagnostics.py` where behavior is new. See [spec §9](../spec/improve_RL.md#9-nguồn-và-điểm-bắt-đầu-triển-khai) for the current code map after refactoring.
 
 **Verification:** short smoke confirms records join correctly by run/seed/timestep; fixture checks for invalid-value detection, absent action opportunities, K=1, masked zero probabilities, nonfinite logits with a valid mask, and elapsed-time ordering; save/load retains metadata.
 
@@ -121,7 +121,7 @@ Optional L2 tasks are independent research choices, not a requirement to impleme
 
 - [ ] Choose one parameter group per round from the specification: learning rate/update strength, entropy, rollout/minibatch size, GAE lambda, conditional KL early stopping, or evidence-driven value scaling.
 - [ ] If delayed-credit diagnostics justify it, register gae_lambda={0.95,0.98,1.0} with gamma=1, fixed n_steps and other settings; compare advantage variance, critic diagnostics and cost. Do not describe lambda as a hard planning horizon.
-- [ ] If KL/update instability justifies it, wire nullable target_kl through AlgorithmConfig and make_model (baseline None), verify the pinned MaskablePPO behavior, then test {None,0.01,0.03} separately from LR/clip/epochs. Log actual epochs/minibatches and early stops; retain total transition budget B.
+- [ ] If KL/update instability justifies it, wire nullable target_kl through `AlgorithmConfig` in `src/bus_rl/config.py` and `make_model` in `src/bus_rl/learning/training/train.py` (baseline None), verify the pinned MaskablePPO behavior, then test {None,0.01,0.03} separately from LR/clip/epochs. Log actual epochs/minibatches and early stops; retain total transition budget B.
 - [ ] Register at most **six configurations per round including the core control**, with hypothesis, exact config diff, B, validation protocol, and rejection criteria.
 - [ ] Keep gamma=1.0, physical dynamics, observation/action semantics, reward objective, and backend revision unchanged.
 - [ ] If curves still improve, register a separate budget experiment at 2B and then 4B; do not label it a fixed-B improvement.

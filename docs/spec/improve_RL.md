@@ -271,5 +271,11 @@ Manifest experiment ghi backend/build và actual library hash, torch_threads req
 - [Runtime optimization spec](runtime_optimize.md), [runtime results](../../reports/runtime-optimization.md), [memory spec](memory_optimize.md).
 - [Rust migration spec](rust_improve.md), [spec nền](spec_v1.0.md), [plan T9–T11](../plan/plan_v1.0.md).
 - [Pilot report](../../reports/pilot.md), [Python after](../../reports/training-diagnosis-v1.1-python-improve.md), [forecast diagnostic](../../reports/forecast.md).
-- Code: `src/bus_rl/learning/training/{train,callbacks,diagnose}.py`, `models/features.py`, `rewards/costs.py`, `evaluation/{runner,statistics}.py`, `configs/experiments/`.
+- Code hiện tại sau refactor (đường dẫn tính từ repo root):
+  - Training/model factory, validation callback, diagnostics và checkpoint metadata: `src/bus_rl/learning/training/{train,callbacks,diagnose,checkpoint}.py`.
+  - Feature extractor `SharedMLPExtractor` và `POLICY_KWARGS`: [policy.py](../../src/bus_rl/learning/policy.py).
+  - Algorithm/runtime config: [config.py](../../src/bus_rl/config.py); áp dụng runtime flags: [runtime.py](../../src/bus_rl/execution/runtime.py); tạo environment: [factory.py](../../src/bus_rl/execution/environments/factory.py).
+  - Reward weights và Python oracle cost: [costs.py](../../src/bus_sim/oracle/costs.py); Rust cost implementation: [costs.rs](../../crates/bus-sim-core/src/costs.rs).
+  - Evaluation và pool: `src/bus_rl/evaluation/{runner,pool}.py`; raw service metrics và `total_cost_core`: [summary.py](../../src/bus_rl/evaluation/summary.py); paired statistics: [statistics.py](../../src/bus_rl/evaluation/statistics.py).
+  - Forecast: [forecasting.py](../../src/bus_rl/learning/forecasting.py); heuristics: `src/bus_rl/learning/baselines/`; configs: `configs/experiments/`.
 - [SB3 RL Tips](https://stable-baselines3.readthedocs.io/en/master/guide/rl_tips.html): đánh giá môi trường riêng, nhiều runs và tuning có kiểm soát. Các candidates trong tài liệu này là đề xuất cho project, không phải kết quả đã xác nhận từ tài liệu SB3.
