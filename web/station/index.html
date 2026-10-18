@@ -165,6 +165,25 @@ button:active { transform: scale(.98); }
 .stack { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--line); }
 .foot { font-size: 11px; color: var(--muted); line-height: 1.45; border-top: 1px solid var(--line); padding-top: 10px; }
 
+/* Sidebar motion. The enter class is set only when the shown entity changes (see renderSide). */
+@keyframes side-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes bar-in { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.side.enter > * { animation: side-in .32s var(--ease) backwards; }
+.side.enter > :nth-child(2) { animation-delay: 40ms; }
+.side.enter > :nth-child(3) { animation-delay: 80ms; }
+.side.enter > :nth-child(4) { animation-delay: 120ms; }
+.side.enter > :nth-child(5) { animation-delay: 160ms; }
+.side.enter > :nth-child(n+6) { animation-delay: 200ms; }
+.side.enter .bar i, .side.enter .stack > * { transform-origin: left; animation: bar-in .4s var(--ease) backwards; }
+.side .row:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; background: var(--panel-2); }
+.side .row .dot, .side .row .chip { transition: transform .2s var(--ease); }
+.side .row:hover .dot, .side .row:hover .chip, .side .row:focus-visible .dot, .side .row:focus-visible .chip { transform: translateX(2px); }
+.side-head .x:hover { background: var(--panel-2); border-color: var(--line-strong); color: var(--ink); }
+.side-head .x:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.side { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+.side::-webkit-scrollbar { width: 6px; }
+.side::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 3px; }
+
 .trip { position: absolute; left: var(--gutter-l); bottom: 14px; right: calc(var(--gutter-r) + 320px + 12px); max-width: 620px; padding: 14px 16px; z-index: 3; display: flex; gap: 16px; align-items: stretch; }
 .trip-main { flex: 1; min-width: 0; }
 .trip-head { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; }
@@ -247,7 +266,7 @@ button:active { transform: scale(.98); }
   .step b { font-size: 10.5px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .live i { animation: none; }
+  .live i, .side.enter > *, .side.enter .bar i, .side.enter .stack > * { animation: none; }
   *, *::before, *::after { transition: none !important; }
   button:active { transform: none; }
 }
@@ -1254,10 +1273,18 @@ function sideRoute(r) {
     <div class="rows">${buses.map(busRow).join('')}</div>`;
 }
 
+// The panel re-renders every 500 ms with new DOM, so CSS animations on its children would
+// replay each tick. The enter class is therefore set only when the shown entity changes,
+// and cleared on every other re-render so the tick's fresh nodes do not animate.
+let sideShown = null;
 function renderSide() {
   const s = selection;
   const html = s.kind === 'stop' ? sideStop(s.ref) : s.kind === 'bus' ? sideBus(s.ref) : s.kind === 'depot' ? sideDepot() : s.kind === 'route' ? sideRoute(s.ref) : sideNet();
-  patch($('#side'), html);
+  const changed = !sideShown || s.kind !== sideShown.kind || s.ref !== sideShown.ref;
+  sideShown = s;
+  const el = $('#side');
+  el.classList.toggle('enter', changed);
+  patch(el, html);
 }
 
 function renderTrip() {
