@@ -32,8 +32,10 @@
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   /* scene */
   --s-sky: #f7f6f3; --s-ground: #efede8; --s-grass: #e3eadb; --s-road: #dcd9d2; --s-mark: #ffffff;
-  --s-curb: #e2c372; --s-building: #ffffff; --s-roof: #e9e6e0; --s-water: #c8dbe8; --s-tree: #9cb898;
+  --s-curb: #e2c372; --s-roof: #e9e6e0; --s-water: #c8dbe8; --s-tree: #9cb898;
   --s-field: #d8e4cf; --s-concrete: #d3d0c9;
+  /* Building tints by use; hues avoid the route blue/orange/green so façades never read as a route. */
+  --s-bld-uni: #d3c9e8; --s-bld-dorm: #efc6b8; --s-bld-admin: #c7cfd7; --s-bld-civic: #ecd996; --s-bld-transit: #b8d8de;
   /* Be Vietnam Pro keeps Vietnamese diacritics crisp; Newsreader ships a Vietnamese subset. */
   --font-ui: "Be Vietnam Pro", "SF Pro Display", "Helvetica Neue", sans-serif;
   --font-display: "Newsreader", "Instrument Serif", Georgia, serif;
@@ -234,11 +236,30 @@ button:active { transform: scale(.98); }
 .lbl { position: absolute; left: 0; top: 0; transform: translate(-50%, -100%); white-space: nowrap; will-change: transform; }
 .lbl-bld { font-size: .8rem; font-weight: 500; color: var(--fg); background: color-mix(in srgb, var(--panel) 90%, transparent); border: 1px solid var(--line); padding: .1875rem .5rem; border-radius: .375rem; box-shadow: var(--shadow); }
 .lbl-bld.big { font-family: var(--font-display); font-size: 1rem; font-style: italic; letter-spacing: -.01em; color: var(--muted); background: transparent; border: 0; box-shadow: none; font-weight: 500; }
-.lbl-stop { pointer-events: auto; cursor: pointer; display: flex; align-items: center; gap: .25rem; font-size: .8rem; font-weight: 700; border-radius: 999px; padding: .125rem .4375rem .125rem .1875rem; background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow); color: var(--fg); transition: background-color .2s var(--ease), border-color .2s var(--ease), color .2s var(--ease), box-shadow .2s var(--ease); }
-.lbl-stop i { width: 1.25rem; height: 1.25rem; border-radius: 50%; display: grid; place-items: center; color: #fff; font-style: normal; font-size: .8rem; }
+/* Three tiers: depot (ink pill) > terminal (square route badge, name always shown) > intermediate stop (small faded dot). */
+.lbl-stop { pointer-events: auto; cursor: pointer; display: flex; align-items: center; gap: .25rem; font-size: .75rem; font-weight: 700; border-radius: 999px; padding: .0625rem .375rem .0625rem .125rem; background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow); color: var(--fg); opacity: .78; transition: background-color .2s var(--ease), border-color .2s var(--ease), color .2s var(--ease), box-shadow .2s var(--ease), opacity .2s var(--ease); }
+.lbl-stop i { width: 1rem; height: 1rem; border-radius: 50%; display: grid; place-items: center; color: #fff; background: var(--rc); font-style: normal; font-size: .6875rem; }
 .lbl-stop span.n { font-variant-numeric: tabular-nums; }
+.lbl-stop span.n:empty { display: none; }
 .lbl-stop .nm { display: none; font-weight: 600; }
+.lbl-stop:hover, .lbl-stop.sel, .lbl-stop.warn, .lbl-stop.bad { opacity: 1; }
 .lbl-stop:hover .nm, .lbl-stop.sel .nm { display: inline; }
+.lbl-stop.end { opacity: 1; z-index: 1; font-size: .8125rem; gap: .375rem; border-radius: .375rem; padding: .1875rem .5rem .1875rem .1875rem; border: 2px solid var(--rc); }
+.lbl-stop.end i { width: auto; min-width: 1.75rem; height: 1.375rem; padding: 0 .3125rem; border-radius: .25rem; font: 700 .75rem var(--font-mono); }
+.lbl-stop.end .nm { display: inline; }
+.lbl-depot { pointer-events: auto; cursor: pointer; z-index: 2; display: flex; align-items: center; gap: .5rem; padding: .3125rem .75rem .3125rem .3125rem; border: 0; border-radius: .5rem; background: var(--ink); color: #fff; box-shadow: var(--shadow-hover); text-align: left; line-height: 1.2; }
+.lbl-depot i { width: 1.75rem; height: 1.75rem; border-radius: .375rem; display: grid; place-items: center; background: var(--s-curb); color: var(--ink); font: 700 .875rem var(--font-mono); font-style: normal; }
+.lbl-depot b { display: block; font-size: .875rem; }
+.lbl-depot small { display: block; font-size: .75rem; color: rgba(255, 255, 255, .72); }
+.lbl-depot.sel { outline: 2px solid var(--accent); outline-offset: 2px; }
+.map-key { position: absolute; left: var(--gutter-l); top: 10.25rem; z-index: 2; padding: .75rem .875rem; display: grid; grid-template-columns: auto 1fr; gap: .375rem .625rem; align-items: center; font-size: .8rem; }
+.map-key h3 { grid-column: 1 / -1; margin: .25rem 0 0; font-size: .6875rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.map-key h3:first-child { margin-top: 0; }
+.map-key .sw { width: 1rem; height: .75rem; border-radius: .1875rem; border: 1px solid var(--line-strong); }
+.map-key .sym { justify-self: center; display: grid; place-items: center; color: #fff; font: 700 .625rem var(--font-mono); }
+.map-key .sym.dp { width: 1.25rem; height: 1.25rem; border-radius: .3125rem; background: var(--ink); color: var(--s-curb); }
+.map-key .sym.end { width: 1.375rem; height: 1rem; border-radius: .1875rem; background: var(--fg); }
+.map-key .sym.mid { width: .875rem; height: .875rem; border-radius: 50%; background: var(--muted); opacity: .78; }
 .lbl-stop.warn { border-color: var(--warn); } .lbl-stop.bad { border-color: var(--bad); background: var(--bad-soft); }
 .lbl-stop.sel { outline: 2px solid var(--ink); }
 .lbl-bus { font: 600 .8rem var(--font-mono); color: #fff; padding: .125rem .375rem; border-radius: .25rem; display: flex; gap: .3125rem; align-items: center; box-shadow: var(--shadow); }
@@ -340,6 +361,7 @@ button:active { transform: scale(.98); }
       </div>
     </div>
     <div class="legend-note" id="note">Bố cục minh họa, không theo tỉ lệ · dữ liệu mô phỏng</div>
+    <div class="card map-key" id="map-key" aria-label="Chú giải bản đồ"></div>
 
     <div class="card mapctl" role="group" aria-label="Điều khiển bản đồ">
       <button id="zoom-in" aria-label="Phóng to"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
@@ -510,20 +532,25 @@ const ROUTE_DEFS = [
   },
 ];
 
-// [x, z, w, d, h, label?] — label shown once per campus
+// Building use drives the façade tint (--s-bld-<kind>) and the map key.
+const BUILDING_KINDS = [
+  ['uni', 'Trường đại học'], ['dorm', 'Ký túc xá'], ['admin', 'Hành chính · công nghệ'],
+  ['civic', 'Thư viện · văn hóa'], ['transit', 'Metro'],
+];
+// [x, z, w, d, h, kind, label?] — label shown once per campus
 const BUILDINGS = [
-  [-92, 26, 14, 14, 14, 'ĐH Quốc tế'], [-76, 26, 9, 14, 10], [-85, 42, 24, 8, 8],
-  [-85, -25, 22, 22, 12, 'Nhà văn hóa Sinh viên'],
-  [-40, -32, 12, 20, 16, 'ĐH Khoa học Tự nhiên'], [-40, -13, 12, 9, 10], [-20, -25, 10, 24, 18, 'Nhà điều hành ĐHQG'],
-  [-40, 22, 16, 10, 14, 'ĐH Bách Khoa'], [-18, 22, 10, 10, 11, 'ĐH KHXH&NV'],
-  [26, 42, 26, 9, 9, 'TT Giáo dục Quốc phòng'],
-  [22, -30, 14, 18, 15, 'ĐH Kinh tế – Luật'], [38, -14, 9, 10, 10],
-  [68, -36, 6, 14, 22], [78, -36, 6, 14, 22, 'KTX khu A'], [88, -36, 6, 14, 22], [68, -15, 6, 12, 18], [78, -15, 6, 12, 18], [88, -15, 6, 12, 18],
-  [80, 32, 22, 18, 12, 'Thư viện Trung tâm'],
-  [124, 16, 14, 18, 14, 'ĐH Khoa học Sức khỏe'], [124, -33, 14, 16, 18, 'Khu Công nghệ Phần mềm'],
-  [-98, -82, 6, 22, 24], [-88, -82, 6, 22, 24, 'KTX khu B'], [-78, -82, 6, 22, 24], [-68, -82, 6, 22, 20],
-  [27, -80, 22, 14, 18, 'ĐH Công nghệ Thông tin'], [13, -88, 6, 8, 10],
-  [-98, 96, 26, 8, 4, 'Ga Metro Suối Tiên'],
+  [-92, 26, 14, 14, 14, 'uni', 'ĐH Quốc tế'], [-76, 26, 9, 14, 10, 'uni'], [-85, 42, 24, 8, 8, 'uni'],
+  [-85, -25, 22, 22, 12, 'civic', 'Nhà văn hóa Sinh viên'],
+  [-40, -32, 12, 20, 16, 'uni', 'ĐH Khoa học Tự nhiên'], [-40, -13, 12, 9, 10, 'uni'], [-20, -25, 10, 24, 18, 'admin', 'Nhà điều hành ĐHQG'],
+  [-40, 22, 16, 10, 14, 'uni', 'ĐH Bách Khoa'], [-18, 22, 10, 10, 11, 'uni', 'ĐH KHXH&NV'],
+  [26, 42, 26, 9, 9, 'admin', 'TT Giáo dục Quốc phòng'],
+  [22, -30, 14, 18, 15, 'uni', 'ĐH Kinh tế – Luật'], [38, -14, 9, 10, 10, 'uni'],
+  [68, -36, 6, 14, 22, 'dorm'], [78, -36, 6, 14, 22, 'dorm', 'KTX khu A'], [88, -36, 6, 14, 22, 'dorm'], [68, -15, 6, 12, 18, 'dorm'], [78, -15, 6, 12, 18, 'dorm'], [88, -15, 6, 12, 18, 'dorm'],
+  [80, 32, 22, 18, 12, 'civic', 'Thư viện Trung tâm'],
+  [124, 16, 14, 18, 14, 'uni', 'ĐH Khoa học Sức khỏe'], [124, -33, 14, 16, 18, 'admin', 'Khu Công nghệ Phần mềm'],
+  [-98, -82, 6, 22, 24, 'dorm'], [-88, -82, 6, 22, 24, 'dorm', 'KTX khu B'], [-78, -82, 6, 22, 24, 'dorm'], [-68, -82, 6, 22, 20, 'dorm'],
+  [27, -80, 22, 14, 18, 'uni', 'ĐH Công nghệ Thông tin'], [13, -88, 6, 8, 10, 'uni'],
+  [-98, 96, 26, 8, 4, 'transit', 'Ga Metro Suối Tiên'],
 ];
 const LAKE = { x: -30, z: -80, w: 40, d: 26 };
 const FIELD = { x: 27, z: 22, w: 30, d: 14 };
@@ -897,10 +924,11 @@ plane(0.3, FIELD.d - 2, MAT.mark, FIELD.x, FIELD.z, 0.03);
 
 // buildings
 const LABELS = [];
-BUILDINGS.forEach(([x, z, w, d, h, label]) => {
+BUILDINGS.forEach(([x, z, w, d, h, kind, label]) => {
   const tex = winTex.clone(); tex.needsUpdate = true;
   tex.repeat.set(Math.max(1, Math.round(Math.max(w, d) / 4)), Math.max(1, Math.round(h / 3.4)));
   const side = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85 });
+  side.userData.kind = kind;
   buildingMats.push(side);
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), [side, side, MAT.roof, MAT.roof, side, side]);
   mesh.position.set(x, h / 2, z); mesh.castShadow = true; mesh.receiveShadow = true;
@@ -991,8 +1019,11 @@ ALL_STOPS.forEach((s) => {
   box(6, 1.9, 0.12, MAT.shelterGlass, 0, 1.45, 0.95, g);
   [-2.8, 2.8].forEach((x) => box(0.16, 2.6, 0.16, MAT.wheel, x, 1.35, 0.95, g));
   box(3.2, 0.25, 0.6, MAT.roof, 0, 0.55, 0.5, g);
-  box(0.14, 3.6, 0.14, MAT.wheel, -3.6, 1.8, -0.9, g);
-  box(1.1, 1.1, 0.12, rm, -3.6, 3.4, -0.9, g);
+  // Terminal poles stand taller with a bigger sign so they read from the overview camera.
+  const end = s.k === 0 || s.k === ROUTE_DEFS[s.r].stops.length - 1;
+  const pole = end ? 5.6 : 3.6, sign = end ? 1.9 : 1.1;
+  box(0.14, pole, 0.14, MAT.wheel, -3.6, pole / 2, -0.9, g);
+  box(sign, sign, 0.12, rm, -3.6, pole - sign / 2 + 0.2, -0.9, g);
   g.userData = { kind: 'stop', ref: s };
   g.traverse((o) => { o.userData = g.userData; });
   scene.add(g);
@@ -1042,7 +1073,7 @@ function applyPalette() {
   MAT.reserve.color = c('--reserve'); MAT.ring.color = c('--accent');
   ['r1', 'r2', 'r3'].forEach((k) => { MAT[k].color = c('--' + k); });
   routeLineMats.forEach((m, i) => { m.color = c(ROUTES[i].color); });
-  buildingMats.forEach((m) => { m.color = c('--s-building'); });
+  buildingMats.forEach((m) => { m.color = c('--s-bld-' + m.userData.kind); });
 }
 applyPalette();
 
@@ -1054,15 +1085,32 @@ LABELS.forEach((l) => {
   l.el.textContent = l.text;
   labelsEl.appendChild(l.el);
 });
+// Terminals are where the controller acts (reserve dispatch, layover, short-turn), so they
+// outrank the intermediate stops; the depot yard gets its own marker above both.
 ALL_STOPS.forEach((s) => {
   const el = document.createElement('button');
-  el.className = 'lbl lbl-stop';
-  el.innerHTML = `<i style="background:var(${ROUTES[s.r].color})">${s.k + 1}</i><span class="n">0</span><span class="nm">${esc(s.name)}</span>`;
-  el.setAttribute('aria-label', `Trạm ${s.name}, tuyến ${ROUTES[s.r].code}`);
+  const end = s.k === 0 || s.k === ROUTES[s.r].stops.length - 1;
+  el.className = 'lbl lbl-stop' + (end ? ' end' : '');
+  el.style.setProperty('--rc', `var(${ROUTES[s.r].color})`);
+  el.innerHTML = `<i>${end ? ROUTES[s.r].code : s.k + 1}</i><span class="n">0</span><span class="nm">${esc(s.name)}</span>`;
+  el.setAttribute('aria-label', `${end ? 'Trạm đầu cuối' : 'Trạm'} ${s.name}, tuyến ${ROUTES[s.r].code}`);
   el.addEventListener('click', () => select({ kind: 'stop', ref: s }, true));
   labelsEl.appendChild(el);
   s.el = el; s.lblPos = new THREE.Vector3(s.center.x, 4.4, s.center.z);
 });
+$('#map-key').innerHTML = '<h3>Điểm dừng</h3>'
+  + '<span class="sym dp">D</span><span>Bến trung tâm · xe dự phòng</span>'
+  + '<span class="sym end">T1</span><span>Trạm đầu cuối · điều phối</span>'
+  + '<span class="sym mid"></span><span>Trạm dọc tuyến</span>'
+  + '<h3>Tòa nhà</h3>'
+  + BUILDING_KINDS.map(([kind, name]) => `<span class="sw" style="background:var(--s-bld-${kind})"></span><span>${name}</span>`).join('');
+const depotLbl = document.createElement('button');
+depotLbl.className = 'lbl lbl-depot';
+depotLbl.innerHTML = `<i>D</i><span><b>Bến trung tâm</b><small id="depot-lbl-sub">depot · dự phòng</small></span>`;
+depotLbl.setAttribute('aria-label', 'Bãi đỗ Bến xe buýt ĐHQG, xe dự phòng');
+depotLbl.addEventListener('click', () => select({ kind: 'depot' }, true));
+labelsEl.appendChild(depotLbl);
+const depotLblPos = new THREE.Vector3(-30, 7, 42);
 BUSES.forEach((b) => {
   const el = document.createElement('div');
   el.className = 'lbl lbl-bus';
@@ -1381,6 +1429,8 @@ function renderKPIs() {
     $('#k-age-sub').textContent = `p95 khi lên xe ${p95.toFixed(1)} phút`;
   }
   $('#depot-sub').textContent = `${res}/5 bãi đang dùng`;
+  $('#depot-lbl-sub').textContent = `${res} xe dự phòng`;
+  depotLbl.classList.toggle('sel', selection.kind === 'depot');
   $('#clock').textContent = LIVE ? `${LIVE.finished ? 'Hết ca' : 'API'} ${clock(SIM.t)}` : `Mô phỏng ${clock(SIM.t)}`;
 }
 
@@ -1748,6 +1798,7 @@ function frame(now) {
   const w = vp.clientWidth, h = vp.clientHeight;
   LABELS.forEach((l) => place(l.el, l.pos, w, h));
   ALL_STOPS.forEach((s) => place(s.el, s.lblPos, w, h));
+  place(depotLbl, depotLblPos, w, h);
   const bp = new THREE.Vector3();
   BUSES.forEach((b) => { const p = busPose(b); bp.set(p.x, 4.2, p.z); place(b.el, bp, w, h); });
 
