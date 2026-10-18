@@ -336,7 +336,7 @@ button:active { transform: scale(.98); }
       </div>
       <div class="card kpi">
         <span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
-        <span><small>Chờ trung bình</small><span class="v num" id="k-age">0</span><small id="k-age-sub">p95 khi lên xe</small></span>
+        <span><small id="k-age-label">Chờ trung bình</small><span class="v num" id="k-age">0</span><small id="k-age-sub">p95 khi lên xe</small></span>
       </div>
     </div>
     <div class="legend-note" id="note">Bố cục minh họa, không theo tỉ lệ · dữ liệu mô phỏng</div>
@@ -556,6 +556,8 @@ const ROUTES = ROUTE_DEFS.map((d, ri) => {
 const ALL_STOPS = ROUTES.flatMap((r) => r.stops);
 
 const SIM = {};
+// Set once the station API answers; null means the in-browser simulation drives the view.
+let LIVE = null;
 const BUSES = Array.from({ length: 12 }, (_, i) => ({ i, id: 'XE-' + String(i + 1).padStart(2, '0') }));
 
 function resetSim(seed) {
@@ -685,11 +687,13 @@ function stepBus(b, dt) {
 }
 
 function committed(ri) { return BUSES.filter((b) => b.route === ri && !(b.mode === 'dead' && b.deadTo === 'bay')).length; }
-function routeQueue(r) { return r.stops.reduce((n, s) => n + s.queue.length, 0); }
+// The API reports waiting passengers per route only, so per-stop queues stay empty in live mode.
+function routeQueue(r) { return LIVE ? r.liveWaiting : r.stops.reduce((n, s) => n + s.queue.length, 0); }
+const totalWaiting = () => ROUTES.reduce((n, r) => n + routeQueue(r), 0);
 function freeBay() { const used = new Set(BUSES.filter((b) => b.bay !== null && (b.mode === 'reserve' || b.mode === 'dead' || b.recall)).map((b) => b.bay)); return [0, 1, 2, 3, 4].find((i) => !used.has(i)); }
 
-function logDecision(code, text, kind) {
-  SIM.log.unshift({ t: SIM.t, code, text, kind });
+function logDecision(code, text, kind, t = SIM.t) {
+  SIM.log.unshift({ t, code, text, kind });
   if (SIM.log.length > 60) SIM.log.pop();
 }
 
@@ -1185,7 +1189,7 @@ function headwayChips(r) {
 }
 
 function sideNet() {
-  const waiting = ALL_STOPS.reduce((n, s) => n + s.queue.length, 0);
+  const waiting = totalWaiting();
   const onRoute = BUSES.filter((b) => b.mode !== 'reserve' && !(b.mode === 'dead' && b.deadTo === 'bay')).length;
   const k = SIM.lastK;
   const top = ALL_STOPS.slice().sort((a, b) => b.queue.length - a.queue.length).slice(0, 4);
@@ -1210,13 +1214,16 @@ function sideNet() {
     }).join('')}</div>
     <div class="sec-title">Thành phần cost c<sub>k</sub><small>2 phút gần nhất</small></div>
     ${costRow}
-    <div class="sec-title">Trạm đông nhất<small>khách</small></div>
-    <div class="rows">${top.map((s) => stopRow(s)).join('')}</div>
-    <div class="foot">Bố cục Làng Đại học vẽ minh họa, không theo tỉ lệ. Luồng khách và quyết định chạy trong trình duyệt bằng bộ điều phối threshold, theo thông số <span class="mono">configs/base.toml</span>: 12 xe, sức chứa 40, khoảng điều khiển 2 phút, ca 4 giờ.</div>`;
+    ${LIVE ? '' : `<div class="sec-title">Trạm đông nhất<small>khách</small></div>
+    <div class="rows">${top.map((s) => stopRow(s)).join('')}</div>`}
+    <div class="foot">Bố cục Làng Đại học vẽ minh họa, không theo tỉ lệ. ${LIVE
+      ? `Vị trí xe, tải và cost lấy trực tiếp từ station API (kernel Rust, bộ điều phối <span class="mono">${esc(LIVE.controller)}</span>); API chỉ báo khách chờ theo tuyến nên số khách từng trạm để trống`
+      : 'Luồng khách và quyết định chạy trong trình duyệt bằng bộ điều phối threshold'}, theo thông số <span class="mono">configs/base.toml</span>: 12 xe, sức chứa 40, khoảng điều khiển 2 phút, ca 4 giờ.</div>`;
 }
 function stopRow(s) {
   const n = s.queue.length, [lab, cls] = stopLevel(n), r = ROUTES[s.r];
-  return `<button class="row" data-key="stop-${s.r}-${s.k}" data-sel="stop:${s.r}:${s.k}"><span class="dot" style="background:var(${r.color})"></span><span class="grow"><span class="name">${esc(s.name)}</span><span class="sub">${r.code} · trạm ${s.k + 1} · chờ lâu nhất ${oldestAge(s).toFixed(0)} phút</span></span><b class="num">${n}</b><span class="pill ${cls}">${lab}</span></button>`;
+  const tail = LIVE ? '' : `<b class="num">${n}</b><span class="pill ${cls}">${lab}</span>`;
+  return `<button class="row" data-key="stop-${s.r}-${s.k}" data-sel="stop:${s.r}:${s.k}"><span class="dot" style="background:var(${r.color})"></span><span class="grow"><span class="name">${esc(s.name)}</span><span class="sub">${r.code} · trạm ${s.k + 1}${LIVE ? '' : ` · chờ lâu nhất ${oldestAge(s).toFixed(0)} phút`}</span></span>${tail}</button>`;
 }
 function busRow(b) {
   const [lab, cls] = statusOf(b);
@@ -1233,19 +1240,19 @@ function sideStop(s) {
   const denied = s.queue.filter((p) => p.denied).length;
   return `
     <div class="side-head"><span class="ic">${ICON.stop}</span><div><div class="eyebrow">Trạm ${s.k + 1} · ${r.code}</div><h2>${esc(s.name)}</h2></div><button class="x" data-sel="net" aria-label="Đóng">${ICON.x}</button></div>
-    <div class="statusrow"><span class="pill ${cls}">${lab}</span><span>${esc(r.name)}</span></div>
-    <div class="tiles">
+    <div class="statusrow">${LIVE ? '' : `<span class="pill ${cls}">${lab}</span>`}<span>${esc(r.name)}</span></div>
+    ${LIVE ? `<div class="tiles"><div class="tile"><small>Khách chờ cả tuyến ${r.code}</small><b class="num">${routeQueue(r)}</b></div></div>` : `<div class="tiles">
       <div class="tile"><small>Khách chờ</small><b class="num">${n}</b><div class="bar ${lvl(n / 30)}"><i style="width:${pct(n, 30)}"></i></div></div>
       <div class="tile"><small>Chờ TB / lâu nhất</small><b class="num">${mean.toFixed(1)}<em> / ${oldestAge(s).toFixed(0)} phút</em></b></div>
       <div class="tile"><small>Hướng đi ${esc(r.stops[5].name)}</small><b class="num">${fwd}</b></div>
       <div class="tile"><small>Hướng về ${esc(r.stops[0].name)}</small><b class="num">${back}</b></div>
-    </div>
+    </div>`}
     <div class="sec-title">Xe sắp tới</div>
     <div class="rows">${nb ? `<button class="row" data-key="nb" data-sel="bus:${nb.bus.i}"><span class="chip" style="background:var(${r.color})">${r.code}</span><span class="grow"><span class="name">${nb.bus.id}</span><span class="sub">khoảng ${Math.max(1, Math.round(nb.eta / 60))} phút · tải ${nb.bus.pax.length}/${CAPACITY}</span></span><span class="pill info">${clock(SIM.t + nb.eta)}</span></button>` : '<span class="muted">Không có xe trên tuyến.</span>'}</div>
-    <div class="tiles">
+    ${LIVE ? '' : `<div class="tiles">
       <div class="tile"><small>Đã bị từ chối vì đầy xe</small><b class="num">${denied}</b></div>
       <div class="tile"><small>Xe ghé gần nhất</small><b class="num">${s.lastBus > 0 ? clock(s.lastBus) : '—'}</b></div>
-    </div>
+    </div>`}
     <div class="foot">Khách bỏ cuộc sau 45 phút chờ. Chờ quá 15 phút được tính thêm vào thành phần X của cost.</div>`;
 }
 
@@ -1351,7 +1358,7 @@ function renderList() {
 }
 
 function renderKPIs() {
-  const waiting = ALL_STOPS.reduce((n, s) => n + s.queue.length, 0);
+  const waiting = totalWaiting();
   const ago = SIM.history.length > 5 ? SIM.history[SIM.history.length - 6].waiting : null;
   const delta = ago === null ? '' : waiting - ago;
   $('#k-wait').innerHTML = `${waiting}${delta === '' ? '' : `<span class="delta ${delta > 0 ? 'up' : 'down'}">${delta > 0 ? '↑' : '↓'} ${Math.abs(delta)}</span>`}`;
@@ -1364,10 +1371,17 @@ function renderKPIs() {
   const mean = allAges.length ? allAges.reduce((a, b) => a + b, 0) / allAges.length / 60 : 0;
   const w = SIM.waits.slice().sort((a, b) => a - b);
   const p95 = w.length ? w[Math.floor(w.length * 0.95)] / 60 : 0;
-  $('#k-age').innerHTML = `${mean.toFixed(1)}<em> phút</em>`;
-  $('#k-age-sub').textContent = `p95 khi lên xe ${p95.toFixed(1)} phút`;
+  if (LIVE) {
+    // Passenger ages are not in the API; show the reward-weighted cost of the last interval instead.
+    $('#k-age-label').textContent = 'Cost khoảng gần nhất';
+    $('#k-age').innerHTML = SIM.lastK ? `${SIM.lastK.total.toFixed(0)}` : '—';
+    $('#k-age-sub').textContent = `tích lũy ${Math.round(SIM.total).toLocaleString('vi-VN')}`;
+  } else {
+    $('#k-age').innerHTML = `${mean.toFixed(1)}<em> phút</em>`;
+    $('#k-age-sub').textContent = `p95 khi lên xe ${p95.toFixed(1)} phút`;
+  }
   $('#depot-sub').textContent = `${res}/5 bãi đang dùng`;
-  $('#clock').textContent = `Mô phỏng ${clock(SIM.t)}`;
+  $('#clock').textContent = LIVE ? `${LIVE.finished ? 'Hết ca' : 'API'} ${clock(SIM.t)}` : `Mô phỏng ${clock(SIM.t)}`;
 }
 
 function renderFigures() {
@@ -1406,7 +1420,7 @@ function renderPanels(force) {
   renderKPIs(); renderSide(); renderTrip(); renderList(); renderFigures();
   ALL_STOPS.forEach((s) => {
     const n = s.queue.length;
-    s.el.querySelector('.n').textContent = n;
+    s.el.querySelector('.n').textContent = LIVE ? '' : n;
     s.el.classList.toggle('warn', n >= 10 && n < 22);
     s.el.classList.toggle('bad', n >= 22);
     s.el.classList.toggle('sel', selection.kind === 'stop' && selection.ref === s);
@@ -1463,7 +1477,7 @@ let speed = REDUCED ? 15 : 40;
 function setSpeed(v) {
   speed = v;
   document.querySelectorAll('.speed button').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.speed === v)));
-  $('#live').classList.toggle('paused', v === 0);
+  $('#live').classList.toggle('paused', v === 0 || !!(LIVE && LIVE.finished));
 }
 document.querySelectorAll('.speed button').forEach((b) => b.addEventListener('click', () => setSpeed(+b.dataset.speed)));
 setSpeed(speed);
@@ -1497,6 +1511,178 @@ document.addEventListener('keydown', (e) => {
 });
 document.addEventListener('pointerdown', (e) => { if (!e.target.closest('.search')) results.hidden = true; });
 
+/* ---------- live data from the station API ---------- */
+// The page drives one API simulation: GET /station, POST /simulations, then one
+// POST /simulations/{id}/steps per tick. Each step is one 120 s control interval,
+// so the speed selector sets the real-time gap between ticks.
+async function api(method, path, body) {
+  const res = await fetch(path, {
+    method,
+    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) throw new Error(`${method} ${path} → ${res.status}`);
+  return res.status === 204 ? null : res.json();
+}
+
+async function connectLive() {
+  const layout = await api('GET', '/station');
+  // The map draws a fixed campus; a different network shape cannot be placed on it.
+  if (layout.routes.length !== ROUTES.length || layout.fleet_size > BUSES.length || layout.routes.some((r) => r.stop_count !== 6)) {
+    throw new Error('station layout does not match the drawn campus');
+  }
+  const controller = layout.controllers.includes('threshold') ? 'threshold' : layout.controllers[0];
+  const snap = await api('POST', '/simulations', { controller, scenario_index: 0 });
+  resetSim(SIM.seed);
+  LIVE = { id: snap.simulation_id, controller, stopCount: 6, finished: false, tickAt: performance.now(), tickMs: 1 };
+  applySnapshot(snap, []);
+  tracked = BUSES.find((b) => b.route === 0 && b.mode !== 'dead') || BUSES[0];
+  $('#note').textContent = 'Bố cục minh họa, không theo tỉ lệ · dữ liệu trực tiếp từ station API';
+  renderPanels(true);
+  setTimeout(pollLive, tickMs());
+}
+
+const tickMs = () => (CONTROL_S * 1000) / Math.max(speed, 1);
+
+async function pollLive() {
+  if (!LIVE || LIVE.finished) return;
+  if (speed > 0) {
+    try {
+      const res = await api('POST', `/simulations/${LIVE.id}/steps`, { decisions: 1 });
+      applySnapshot(res.snapshot, res.decisions);
+    } catch (err) {
+      console.warn('Station API step failed, switching to the in-browser simulation:', err.message);
+      startLocal();
+      return;
+    }
+  }
+  if (!LIVE.finished) setTimeout(pollLive, speed > 0 ? tickMs() : 250);
+}
+
+function applySnapshot(snap, decisions) {
+  SIM.t = snap.time_s;
+  snap.routes.forEach((rs) => {
+    const r = ROUTES[rs.route_id];
+    r.headway = rs.headway_s;
+    r.liveWaiting = rs.waiting;
+    rs.buses.forEach((bus) => placeLiveBus(BUSES[bus.bus_id], bus, rs.route_id, 0));
+  });
+  snap.reserve_queue.forEach((bus, j) => placeLiveBus(BUSES[bus.bus_id], bus, null, j));
+  LIVE.tickAt = performance.now();
+  LIVE.tickMs = tickMs();
+  if (decisions.length) {
+    const c = snap.interval_cost;
+    // Weights mirror RewardConfig defaults so the cost bar matches the local view; `total` is the API's own.
+    SIM.lastK = {
+      W: c.waiting_pm, V: 0.25 * c.onboard_pm, O: 0.5 * c.crowding_pm, C: 0.5 * c.active_bus_min, CD: 0.5 * c.deadhead_bus_min,
+      X: c.excessive_wait_pm, U: 5 * c.first_denied_count, E: 60 * c.abandoned_count, M: 2 * c.mission_changes, total: c.total,
+    };
+    SIM.kIndex += decisions.length;
+    SIM.total += c.total;
+    SIM.abandonedTotal += c.abandoned_count;
+    SIM.history.push({ t: SIM.t, waiting: totalWaiting() });
+    if (SIM.history.length > 200) SIM.history.shift();
+  }
+  decisions.forEach((d) => {
+    if (d.kind === 'NOOP') { SIM.noop++; return; }
+    const [code, text, kind] = describeAction(d.action_index);
+    logDecision(code, text, kind, d.time_s);
+  });
+  if (snap.finished) {
+    LIVE.finished = true;
+    logDecision('END', `Kết thúc ca lúc ${clock(SIM.t)}: tổng cost ${Math.round(SIM.total).toLocaleString('vi-VN')}`, 'mute');
+    $('#live').classList.add('paused');
+    api('DELETE', `/simulations/${LIVE.id}`).catch((err) => console.warn('Could not delete the finished simulation:', err.message));
+  }
+  renderPanels(true);
+}
+
+// Kernel nodes are numbered route * stopCount + stop index; direction 1 runs stop 0 → 5.
+function placeLiveBus(b, bus, ri, queueIndex) {
+  if (!b) return;
+  b.pax = Array.from({ length: bus.load }, () => ({ dest: -1 }));
+  b.cooldown = bus.cooldown_until_s;
+  b.recall = false;
+  if (ri === null) {
+    b.bay = queueIndex % BAYS.length;
+    if (bus.status === 'deadhead') {
+      startDeadhead(b, 'bay', b.route ?? 0);
+      b.deadS = b.dead.len / 2;
+    } else {
+      b.mode = 'reserve'; b.route = null; b.dead = null;
+    }
+    return;
+  }
+  if (bus.status === 'deadhead') {
+    b.bay = b.bay ?? 0;
+    startDeadhead(b, 'route', ri);
+    b.deadS = b.dead.len / 2;
+    return;
+  }
+  const r = ROUTES[ri], dir = bus.direction > 0 ? 1 : -1;
+  const k = bus.node % LIVE.stopCount;
+  const sAt = (stop) => (dir > 0 ? stop.sF : stop.sB);
+  const eventIndex = (stopK) => Math.max(0, r.events.findIndex((e) => e.k === stopK && e.dir === dir));
+  let s, mode, ev;
+  if (bus.status === 'moving' || bus.status === 'crowded') {
+    // Only the last visited node is known, so a moving bus is drawn halfway to the next stop.
+    const next = clamp(k + dir, 0, LIVE.stopCount - 1);
+    const from = sAt(r.stops[k]), to = sAt(r.stops[next]);
+    s = (from + ((to - from + r.path.len) % r.path.len) / 2) % r.path.len;
+    mode = 'run'; ev = eventIndex(next);
+  } else {
+    s = sAt(r.stops[k]);
+    mode = bus.status === 'dwell' ? 'dwell' : 'hold';
+    ev = eventIndex(k);
+  }
+  const glide = b.route === ri && (b.mode === 'run' || b.mode === 'dwell' || b.mode === 'hold');
+  b.fromS = glide ? b.s : s;
+  b.toS = s;
+  b.route = ri; b.mode = mode; b.ev = ev; b.until = SIM.t; b.dead = null;
+}
+
+// Glide route buses forward from their previous to their new position over one tick.
+function animateLive(now) {
+  const p = clamp((now - LIVE.tickAt) / LIVE.tickMs, 0, 1);
+  BUSES.forEach((b) => {
+    if (b.route === null || b.mode === 'dead' || b.mode === 'reserve') return;
+    const len = ROUTES[b.route].path.len;
+    const d = (b.toS - b.fromS + len) % len;
+    b.s = d > len / 2 ? b.toS : (b.fromS + d * p) % len;
+  });
+}
+
+// Slot layout of the fixed 221-action table (bus_sim/oracle/actions.py).
+function describeAction(i) {
+  const bus = (n) => (BUSES[n] ? BUSES[n].id : `#${n}`);
+  const route = (n) => (ROUTES[n] ? ROUTES[n].code : `R${n}`);
+  if (i >= 209) {
+    const r = Math.floor((i - 209) / 3), h = HEADWAYS[(i - 209) % 3];
+    return [`SET_HEADWAY(${r},${h})`, `${route(r)} xuất bến mỗi ${h} phút`, h < 15 ? 'warn' : 'ok'];
+  }
+  if (i >= 193) return [`RECALL(${i - 193})`, `Gọi ${bus(i - 193)} về bãi`, 'mute'];
+  const kind = i >= 129 ? 'SHORT_TURN' : i >= 65 ? 'REASSIGN' : 'DISPATCH';
+  const j = i - (i >= 129 ? 129 : i >= 65 ? 65 : 1), b = Math.floor(j / 4), r = j % 4;
+  const text = { DISPATCH: `Đưa ${bus(b)} từ bãi vào ${route(r)}`, REASSIGN: `Chuyển ${bus(b)} sang ${route(r)}`, SHORT_TURN: `${bus(b)} quay đầu sớm trên ${route(r)}` }[kind];
+  return [`${kind}(${b},${r})`, text, 'info'];
+}
+
+let localRunning = false;
+function startLocal() {
+  LIVE = null;
+  resetSim(20261018);
+  // warm up so the first frame shows a working morning peak
+  for (let i = 0; i < 3000; i++) step(1);
+  tracked = BUSES.find((b) => b.route === 0 && b.mode === 'run') || BUSES[0];
+  localRunning = true;
+  $('#live').classList.toggle('paused', speed === 0);
+  renderPanels(true);
+}
+
+addEventListener('pagehide', () => {
+  if (LIVE && !LIVE.finished) fetch(`/simulations/${LIVE.id}`, { method: 'DELETE', keepalive: true });
+});
+
 /* ---------- loop ---------- */
 function resize() {
   const w = vp.clientWidth, h = vp.clientHeight;
@@ -1507,16 +1693,25 @@ new ResizeObserver(resize).observe(vp);
 resize();
 
 resetSim(20261018);
-// warm up so the first frame shows a working morning peak
-for (let i = 0; i < 3000; i++) step(1);
-tracked = BUSES.find((b) => b.route === 0 && b.mode === 'run') || BUSES[0];
+// A page opened as a file, or a server without the API, falls back to the in-browser simulation.
+if (location.protocol.startsWith('http')) {
+  connectLive().catch((err) => {
+    console.info('Station API unavailable, using the in-browser simulation:', err.message);
+    startLocal();
+  });
+} else {
+  startLocal();
+}
 
 let last = performance.now(), acc = 0, trainX = -110, trainV = 9, trainWait = 0;
 function frame(now) {
   const real = Math.min(0.1, (now - last) / 1000); last = now;
-  acc += real * speed;
-  let guard = 0;
-  while (acc > 0 && guard++ < 400) { const dt = Math.min(1, acc); step(dt); acc -= dt; }
+  if (LIVE) animateLive(now);
+  else if (localRunning) {
+    acc += real * speed;
+    let guard = 0;
+    while (acc > 0 && guard++ < 400) { const dt = Math.min(1, acc); step(dt); acc -= dt; }
+  }
   if (camAnim) {
     const k = clamp((now - camAnim.t0) / camAnim.dur, 0, 1), e = 1 - (1 - k) ** 3;
     camera.position.lerpVectors(camAnim.fromP, camAnim.toP, e);
