@@ -8,3 +8,4 @@ runs/
 target/
 src/bus_sim_native.so
 crates/**/target/
+.env

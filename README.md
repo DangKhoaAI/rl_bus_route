@@ -98,6 +98,20 @@ Large artifacts (`data/generated/`, `runs/*.zip`) are gitignored and must be
 recreated. Start at `reports/README.md`; the final result is
 `reports/README.md`.
 
+## Station API
+
+`src/bus_rl/station/` serves live native simulations of one held-out day over
+HTTP for the 3D dashboard (`web/station/`, served at `/` when present). Each
+`POST /simulations/{id}/steps` advances N control intervals with a baseline
+controller and returns per-route buses, the depot reserve queue and interval
+costs. Settings come from `.env` (see `.env.example`); the manifest is required.
+
+```bash
+uv sync --locked --extra dev --extra server
+SIMULATION__MANIFEST_PATH=data/generated/base/manifest.json \
+  uv run uvicorn bus_rl.main:app --host 127.0.0.1 --port 8000
+```
+
 ## Native kernel (Rust)
 
 The Rust migration (`docs/spec/rust_improve.md`, `docs/plan/rust_improve.md`)
