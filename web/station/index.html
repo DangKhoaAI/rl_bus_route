@@ -54,48 +54,50 @@ button:active { transform: scale(.98); }
 
 /* Top bar */
 .topbar {
-  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-  padding-block: 10px; padding-left: var(--gutter-l); padding-right: var(--gutter-r);
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding-block: 12px 14px; padding-left: var(--gutter-l); padding-right: var(--gutter-r);
   background: color-mix(in srgb, var(--panel) 86%, transparent); backdrop-filter: saturate(1.4) blur(12px); -webkit-backdrop-filter: saturate(1.4) blur(12px);
   border-bottom: 1px solid var(--line); position: relative; z-index: 10;
 }
-.back { width: 32px; height: 32px; border-radius: 8px; border: 0; background: transparent; cursor: pointer; display: grid; place-items: center; }
+.back { width: 36px; height: 36px; border-radius: 8px; border: 0; background: transparent; cursor: pointer; display: grid; place-items: center; flex: none; }
 .back:hover { background: var(--panel-2); }
 .brand { font-family: var(--font-display); font-weight: 600; font-size: 21px; letter-spacing: -.02em; line-height: 1; color: var(--ink); white-space: nowrap; }
-.search { position: relative; flex: 1 1 260px; max-width: 380px; min-width: 0; }
+.search { position: relative; flex: 1 1 200px; max-width: 380px; min-width: 0; }
 .search input {
   width: 100%; height: 36px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); transition: border-color .2s var(--ease), background-color .2s var(--ease);
   padding: 0 34px 0 34px; font: inherit; color: var(--fg);
 }
 .search input::placeholder { color: var(--muted); }
-.search input:focus { outline: none; border-color: var(--line-strong); background: var(--panel); }
-.search svg { position: absolute; left: 11px; top: 10px; color: var(--muted); }
-.search kbd { position: absolute; right: 8px; top: 8px; font: 11px var(--font-mono); color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; background: var(--bg); }
-.results { position: absolute; top: 42px; left: 0; right: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 6px; z-index: 20; max-height: 300px; overflow: auto; }
+.search input:hover { border-color: var(--line-strong); }
+.search input:focus { outline: 2px solid var(--ink); outline-offset: 1px; background: var(--panel); }
+.search svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.search kbd { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font: 11px var(--font-mono); line-height: 1.4; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 6px; background: var(--bg); }
+.results { position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 6px; z-index: 20; max-height: 300px; overflow: auto; }
 .results button { display: flex; width: 100%; gap: 10px; align-items: center; text-align: left; border: 0; background: transparent; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
 .results button:hover, .results button.on { background: var(--panel-2); }
 .results small { color: var(--muted); margin-left: auto; }
-.depot { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 10px; padding: 5px 10px 5px 6px; background: var(--panel); cursor: pointer; text-align: left; }
+.depot { display: flex; align-items: center; gap: 10px; min-height: 36px; line-height: 1.25; border: 1px solid var(--line); border-radius: 8px; padding: 0 12px 0 6px; background: var(--panel); cursor: pointer; text-align: left; }
 .depot:hover { border-color: var(--line-strong); box-shadow: var(--shadow); }
-.tagbox { background: var(--ink); color: #fff; font: 600 10px var(--font-mono); letter-spacing: .06em; padding: 5px 7px; border-radius: 4px; }
-.depot b { display: block; font-size: 13px; }
+.tagbox { background: var(--ink); color: #fff; font: 600 10px var(--font-mono); padding: 5px 7px; border-radius: 4px; }
+.depot b { display: block; font-size: 13px; line-height: 1.25; }
 .depot small { color: var(--muted); font-size: 11px; }
-.toplinks { display: flex; gap: 4px; margin-left: auto; align-items: center; }
-.link { border: 0; background: transparent; color: var(--muted); font-weight: 500; padding: 6px 8px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+.toplinks { display: flex; gap: 8px; margin-left: auto; align-items: center; }
+.link { height: 36px; border: 0; background: transparent; color: var(--muted); font-weight: 500; padding: 0 12px; border-radius: 8px; cursor: pointer; font-size: 13px; white-space: nowrap; }
 .link:hover { color: var(--ink); background: var(--panel-2); }
-.link[aria-pressed="true"] { color: var(--ink); background: var(--panel-2); font-weight: 600; }
-.live { display: inline-flex; align-items: center; gap: 7px; background: var(--ok-soft); color: var(--ok); font: 600 12px var(--font-mono); font-variant-numeric: tabular-nums; padding: 6px 11px; border-radius: 999px; white-space: nowrap; }
+.link[aria-pressed="true"] { color: var(--ink); background: var(--panel-2); }
+.playback { display: inline-flex; align-items: center; height: 36px; padding: 2px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); margin-left: auto; }
+.live { display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border-radius: 6px; background: var(--ok-soft); color: var(--ok); font: 600 12px var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .live i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 0 currentColor; animation: pulse 1.8s infinite; }
 .live.paused { background: var(--warn-soft); color: var(--warn); }
 .live.paused i { animation: none; }
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 60%, transparent); } 100% { box-shadow: 0 0 0 7px transparent; } }
-.speed { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; padding: 2px; background: var(--panel-2); }
-.speed button { border: 0; background: transparent; padding: 4px 9px; border-radius: 6px; cursor: pointer; font: 600 11.5px var(--font-mono); color: var(--muted); }
-.speed button:hover { color: var(--ink); }
+.speed { display: inline-flex; gap: 2px; margin-left: 4px; }
+.speed button { display: inline-flex; align-items: center; justify-content: center; height: 30px; min-width: 36px; padding: 0 8px; border: 0; border-radius: 6px; background: transparent; cursor: pointer; font: 600 11.5px var(--font-mono); color: var(--muted); }
+.speed button:hover { color: var(--ink); background: var(--panel-2); }
 .speed button[aria-pressed="true"] { background: var(--ink); color: #fff; }
 .who { display: flex; align-items: center; gap: 8px; }
-.avatar { width: 32px; height: 32px; border-radius: 9px; background: var(--ink); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 12px; }
-.who b { display: block; font-size: 13px; }
+.avatar { width: 36px; height: 36px; border-radius: 10px; background: var(--ink); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 12px; }
+.who b { display: block; font-size: 13px; line-height: 1.3; }
 .who small { color: var(--muted); font-size: 11px; }
 
 /* Stage */
@@ -109,14 +111,14 @@ button:active { transform: scale(.98); }
 .eyebrow { font: 500 11px var(--font-mono); letter-spacing: .02em; color: var(--muted); }
 .muted { color: var(--muted); }
 
-.kpis { position: absolute; top: 14px; left: var(--gutter-l); display: flex; gap: 10px; z-index: 3; }
-.kpi { display: flex; gap: 12px; align-items: center; padding: 14px 18px 14px 14px; min-width: 160px; transition: box-shadow .2s var(--ease); }
+.kpis { position: absolute; top: 14px; left: var(--gutter-l); display: flex; align-items: stretch; gap: 8px; z-index: 3; }
+.kpi { display: flex; gap: 12px; align-items: center; padding: 14px 16px 16px 14px; min-width: 160px; transition: box-shadow .2s var(--ease); }
 .kpi:hover { box-shadow: var(--shadow-hover); }
-.kpi .ic { width: 38px; height: 38px; border-radius: 8px; background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); display: grid; place-items: center; flex: none; }
-.kpi small { display: block; color: var(--muted); font-size: 11.5px; }
-.kpi .v { font-size: 24px; font-weight: 600; letter-spacing: -.03em; line-height: 1.15; color: var(--ink); }
-.kpi .v em { font-style: normal; font-size: 13px; font-weight: 600; color: var(--muted); }
-.delta { font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 6px; margin-left: 6px; vertical-align: 3px; }
+.kpi .ic { width: 40px; height: 40px; border-radius: 8px; background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); display: grid; place-items: center; flex: none; }
+.kpi small { display: block; color: var(--muted); font-size: 11.5px; line-height: 1.3; }
+.kpi .v { display: block; margin: 4px 0 2px; font-size: 24px; font-weight: 600; letter-spacing: -.03em; line-height: 1.15; color: var(--ink); }
+.kpi .v em { font-style: normal; font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: 0; }
+.delta { font-size: 11px; font-weight: 600; line-height: 1; padding: 3px 6px; border-radius: 6px; margin-left: 8px; font-variant-numeric: tabular-nums; }
 .delta.up { background: var(--bad-soft); color: var(--bad); }
 .delta.down { background: var(--ok-soft); color: var(--ok); }
 
@@ -207,16 +209,23 @@ button:active { transform: scale(.98); }
 .lbl-bus u b { display: block; height: 100%; background: #fff; }
 .lbl-bus.sel { outline: 2px solid var(--fg); }
 
-.legend-note { position: absolute; left: var(--gutter-l); top: 100px; font: 500 10.5px var(--font-mono); color: var(--muted); z-index: 2; background: color-mix(in srgb, var(--panel) 80%, transparent); border: 1px solid var(--line); padding: 4px 8px; border-radius: 6px; }
+.legend-note { position: absolute; left: var(--gutter-l); top: 118px; font: 500 10.5px var(--font-mono); color: var(--muted); z-index: 2; background: color-mix(in srgb, var(--panel) 80%, transparent); border: 1px solid var(--line); padding: 4px 8px; border-radius: 6px; }
 
-@media (max-width: 1180px) {
+@media (max-width: 1400px) {
   .who { display: none; }
+}
+@media (max-width: 1180px) {
   .kpi { min-width: 0; padding-right: 12px; }
+  .search { max-width: none; }
+  .toplinks { flex-basis: 100%; margin-left: 0; }
 }
 @media (max-width: 900px) {
   body { overflow: auto; }
   .app { height: auto; min-height: 100%; }
-  .toplinks { margin-left: 0; width: 100%; justify-content: space-between; flex-wrap: wrap; }
+  .topbar { row-gap: 8px; }
+  .toplinks { flex-wrap: wrap; }
+  .playback { flex: 1 1 100%; justify-content: space-between; }
+  .depot { flex: 1 1 100%; }
   .search { max-width: none; order: 3; flex-basis: 100%; }
   .stage { display: flex; flex-direction: column; gap: 12px; padding-bottom: 16px; }
   .viewport { position: relative; inset: auto; height: 62vh; min-height: 360px; }
@@ -234,8 +243,7 @@ button:active { transform: scale(.98); }
   .legend-note { align-self: flex-start; }
 }
 @media (max-width: 480px) {
-  .depot small, .brand { font-size: 15px; }
-  .speed button { padding: 4px 7px; }
+  .depot b, .brand { font-size: 15px; }
   .step b { font-size: 10.5px; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -258,18 +266,20 @@ button:active { transform: scale(.98); }
       <div class="results" id="results" hidden></div>
     </div>
     <button class="depot" id="btn-depot" aria-label="Xem bãi đỗ Bến xe buýt ĐHQG">
-      <span class="tagbox">DEPOT</span>
+      <span class="tagbox">Depot</span>
       <span><b>Bến xe buýt ĐHQG</b><small id="depot-sub">3/5 bãi đang dùng</small></span>
     </button>
     <div class="toplinks">
       <button class="link" id="btn-buses">Lượt xe</button>
       <button class="link" id="btn-routes" aria-pressed="true">Sơ đồ tuyến</button>
-      <span class="live" id="live"><i></i><span id="clock">Mô phỏng 06:00</span></span>
-      <div class="speed" role="group" aria-label="Tốc độ mô phỏng">
-        <button data-speed="0" aria-pressed="false" aria-label="Tạm dừng">❚❚</button>
-        <button data-speed="15" aria-pressed="false">15×</button>
-        <button data-speed="40" aria-pressed="true">40×</button>
-        <button data-speed="120" aria-pressed="false">120×</button>
+      <div class="playback">
+        <span class="live" id="live"><i></i><span id="clock">Mô phỏng 06:00</span></span>
+        <div class="speed" role="group" aria-label="Tốc độ mô phỏng">
+          <button data-speed="0" aria-pressed="false" aria-label="Tạm dừng"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M9 5v14M15 5v14"/></svg></button>
+          <button data-speed="15" aria-pressed="false">15×</button>
+          <button data-speed="40" aria-pressed="true">40×</button>
+          <button data-speed="120" aria-pressed="false">120×</button>
+        </div>
       </div>
       <div class="who"><span class="avatar">RL</span><span><b>Team RL Bus</b><small>Bộ điều phối threshold</small></span></div>
     </div>
