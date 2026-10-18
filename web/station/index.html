@@ -1,0 +1,1522 @@
+<!doctype html>
+<html lang="vi">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Làng Đại học 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: full-bleed 3D campus map with floating control-room cards (KPIs top-left, detail right, trip + lists bottom). */
+:root {
+  --bg: #eef1f6;
+  --panel: #ffffff;
+  --panel-2: #f4f6fa;
+  --line: #e2e6ee;
+  --fg: #141a2a;
+  --muted: #6a7387;
+  --accent: #2457f5;
+  --accent-soft: #e8eeff;
+  --ok: #12895a; --ok-soft: #e2f5eb;
+  --warn: #b86e00; --warn-soft: #fff1d9;
+  --bad: #cf2f47; --bad-soft: #fde7ea;
+  --r1: #2f6bff; --r2: #ef8a1f; --r3: #13a06a;
+  --reserve: #9aa3b5;
+  --pax: #5d6b8a;
+  --shadow: 0 6px 20px rgba(28, 40, 74, .08), 0 1px 2px rgba(28, 40, 74, .06);
+  /* scene */
+  --s-sky: #eef1f6; --s-ground: #e8ecf2; --s-grass: #dbe9d6; --s-road: #d0d6e0; --s-mark: #ffffff;
+  --s-curb: #f2c230; --s-building: #f6f7fa; --s-roof: #dfe4ee; --s-water: #9cc6ee; --s-tree: #7cb37b;
+  --s-field: #c7e2bf; --s-concrete: #c9ced8;
+  --font-ui: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --gutter-l: max(16px, env(safe-area-inset-left, 0px));
+  --gutter-r: max(16px, env(safe-area-inset-right, 0px));
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e131c; --panel: #161d2a; --panel-2: #1c2433; --line: #283246; --fg: #e7ebf3; --muted: #8e98ac;
+    --accent: #7090ff; --accent-soft: #1f2a4c;
+    --ok: #3fcf8f; --ok-soft: #12322a; --warn: #f3ab3c; --warn-soft: #382910; --bad: #ff6d80; --bad-soft: #3c1822;
+    --r1: #5b8bff; --r2: #f59a3a; --r3: #2fc287; --reserve: #6c7589; --pax: #9aa8c6;
+    --shadow: 0 8px 24px rgba(0, 0, 0, .35), 0 1px 2px rgba(0, 0, 0, .3);
+    --s-sky: #0e131c; --s-ground: #171e2b; --s-grass: #1b2d24; --s-road: #2a3343; --s-mark: #59657c;
+    --s-curb: #8c7430; --s-building: #2a3243; --s-roof: #333d52; --s-water: #1d4266; --s-tree: #2e5a3c;
+    --s-field: #22402c; --s-concrete: #3a4356;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e131c; --panel: #161d2a; --panel-2: #1c2433; --line: #283246; --fg: #e7ebf3; --muted: #8e98ac;
+  --accent: #7090ff; --accent-soft: #1f2a4c;
+  --ok: #3fcf8f; --ok-soft: #12322a; --warn: #f3ab3c; --warn-soft: #382910; --bad: #ff6d80; --bad-soft: #3c1822;
+  --r1: #5b8bff; --r2: #f59a3a; --r3: #2fc287; --reserve: #6c7589; --pax: #9aa8c6;
+  --shadow: 0 8px 24px rgba(0, 0, 0, .35), 0 1px 2px rgba(0, 0, 0, .3);
+  --s-sky: #0e131c; --s-ground: #171e2b; --s-grass: #1b2d24; --s-road: #2a3343; --s-mark: #59657c;
+  --s-curb: #8c7430; --s-building: #2a3243; --s-roof: #333d52; --s-water: #1d4266; --s-tree: #2e5a3c;
+  --s-field: #22402c; --s-concrete: #3a4356;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); font-size: 14px; overflow: hidden; }
+* { box-sizing: border-box; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+.mono { font-family: var(--font-mono); font-size: 12px; }
+
+.app { height: 100%; display: flex; flex-direction: column; }
+
+/* Top bar */
+.topbar {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding-block: 10px; padding-left: var(--gutter-l); padding-right: var(--gutter-r);
+  background: var(--panel); border-bottom: 1px solid var(--line); position: relative; z-index: 10;
+}
+.back { width: 32px; height: 32px; border-radius: 8px; border: 0; background: transparent; cursor: pointer; display: grid; place-items: center; }
+.back:hover { background: var(--panel-2); }
+.brand { font-weight: 700; font-size: 17px; letter-spacing: -.01em; white-space: nowrap; }
+.search { position: relative; flex: 1 1 260px; max-width: 380px; min-width: 0; }
+.search input {
+  width: 100%; height: 36px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2);
+  padding: 0 34px 0 34px; font: inherit; color: var(--fg);
+}
+.search input::placeholder { color: var(--muted); }
+.search svg { position: absolute; left: 11px; top: 10px; color: var(--muted); }
+.search kbd { position: absolute; right: 8px; top: 8px; font: 11px var(--font-mono); color: var(--muted); border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; background: var(--panel); }
+.results { position: absolute; top: 42px; left: 0; right: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 6px; z-index: 20; max-height: 300px; overflow: auto; }
+.results button { display: flex; width: 100%; gap: 10px; align-items: center; text-align: left; border: 0; background: transparent; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+.results button:hover, .results button.on { background: var(--accent-soft); }
+.results small { color: var(--muted); margin-left: auto; }
+.depot { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 12px; padding: 5px 10px 5px 6px; background: var(--panel); cursor: pointer; text-align: left; }
+.depot:hover { border-color: var(--accent); }
+.tagbox { background: var(--accent); color: #fff; font-size: 10px; font-weight: 700; letter-spacing: .06em; padding: 5px 7px; border-radius: 7px; }
+.depot b { display: block; font-size: 13px; }
+.depot small { color: var(--muted); font-size: 11px; }
+.toplinks { display: flex; gap: 4px; margin-left: auto; align-items: center; }
+.link { border: 0; background: transparent; color: var(--accent); font-weight: 600; padding: 6px 8px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+.link:hover, .link[aria-pressed="true"] { background: var(--accent-soft); }
+.live { display: inline-flex; align-items: center; gap: 7px; background: var(--ok-soft); color: var(--ok); font-weight: 600; font-size: 12.5px; padding: 6px 11px; border-radius: 999px; white-space: nowrap; }
+.live i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 0 currentColor; animation: pulse 1.8s infinite; }
+.live.paused { background: var(--warn-soft); color: var(--warn); }
+.live.paused i { animation: none; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 60%, transparent); } 100% { box-shadow: 0 0 0 7px transparent; } }
+.speed { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; padding: 2px; background: var(--panel-2); }
+.speed button { border: 0; background: transparent; padding: 4px 9px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--muted); }
+.speed button[aria-pressed="true"] { background: var(--panel); color: var(--fg); box-shadow: var(--shadow); }
+.who { display: flex; align-items: center; gap: 8px; }
+.avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 12px; }
+.who b { display: block; font-size: 13px; }
+.who small { color: var(--muted); font-size: 11px; }
+
+/* Stage */
+.stage { position: relative; flex: 1; min-height: 0; }
+.viewport { position: absolute; inset: 0; }
+.viewport canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+.viewport canvas:active { cursor: grabbing; }
+.labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
+.eyebrow { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.muted { color: var(--muted); }
+
+.kpis { position: absolute; top: 14px; left: var(--gutter-l); display: flex; gap: 10px; z-index: 3; }
+.kpi { display: flex; gap: 12px; align-items: center; padding: 12px 16px 12px 12px; min-width: 150px; }
+.kpi .ic { width: 38px; height: 38px; border-radius: 10px; background: var(--accent); color: #fff; display: grid; place-items: center; flex: none; }
+.kpi small { display: block; color: var(--muted); font-size: 11.5px; }
+.kpi .v { font-size: 22px; font-weight: 700; letter-spacing: -.02em; line-height: 1.15; }
+.kpi .v em { font-style: normal; font-size: 13px; font-weight: 600; color: var(--muted); }
+.delta { font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 6px; margin-left: 6px; vertical-align: 3px; }
+.delta.up { background: var(--bad-soft); color: var(--bad); }
+.delta.down { background: var(--ok-soft); color: var(--ok); }
+
+.mapctl { position: absolute; top: 14px; right: calc(var(--gutter-r) + 320px + 12px); display: flex; flex-direction: column; padding: 4px; gap: 2px; z-index: 3; }
+.mapctl button { width: 34px; height: 34px; border: 0; background: transparent; border-radius: 9px; cursor: pointer; display: grid; place-items: center; color: var(--fg); }
+.mapctl button:hover { background: var(--panel-2); }
+.mapctl hr { border: 0; border-top: 1px solid var(--line); margin: 3px 4px; }
+
+.side { position: absolute; top: 14px; right: var(--gutter-r); width: 320px; max-height: calc(100% - 14px - 262px - 12px); overflow: auto; padding: 14px; z-index: 3; display: flex; flex-direction: column; gap: 12px; }
+.side-head { display: flex; gap: 10px; align-items: flex-start; }
+.side-head .ic { width: 36px; height: 36px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; flex: none; }
+.side-head h2 { margin: 2px 0 0; font-size: 16px; line-height: 1.25; text-wrap: balance; }
+.side-head .x { margin-left: auto; border: 1px solid var(--line); background: var(--panel); width: 28px; height: 28px; border-radius: 8px; cursor: pointer; display: grid; place-items: center; flex: none; }
+.statusrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tile { background: var(--panel-2); border-radius: 10px; padding: 9px 10px; min-width: 0; }
+.tile small { display: block; color: var(--muted); font-size: 11px; }
+.tile b { font-size: 17px; letter-spacing: -.01em; }
+.tile b em { font-style: normal; font-size: 12px; color: var(--muted); font-weight: 500; }
+.bar { height: 4px; border-radius: 4px; background: var(--line); margin-top: 6px; overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 4px; background: var(--accent); }
+.bar.ok i { background: var(--ok); } .bar.warn i { background: var(--warn); } .bar.bad i { background: var(--bad); }
+.sec-title { display: flex; justify-content: space-between; align-items: baseline; font-weight: 700; font-size: 13px; }
+.sec-title small { font-weight: 500; color: var(--muted); font-size: 11px; }
+.rows { display: flex; flex-direction: column; gap: 2px; }
+.row { display: flex; gap: 10px; align-items: center; padding: 7px 6px; border-radius: 9px; border: 0; background: transparent; width: 100%; text-align: left; cursor: pointer; min-width: 0; }
+.row:hover { background: var(--panel-2); }
+.row .grow { flex: 1; min-width: 0; }
+.row .name { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; font-size: 13px; }
+.row .sub { display: block; color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.chip { display: inline-flex; align-items: center; font-size: 11px; font-weight: 700; color: #fff; border-radius: 6px; padding: 2px 6px; flex: none; }
+.pill { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 7px; white-space: nowrap; flex: none; }
+.pill.ok { background: var(--ok-soft); color: var(--ok); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.bad { background: var(--bad-soft); color: var(--bad); }
+.pill.info { background: var(--accent-soft); color: var(--accent); }
+.pill.mute { background: var(--panel-2); color: var(--muted); }
+.hw { display: inline-flex; gap: 2px; }
+.hw span { font-size: 10.5px; padding: 1px 5px; border-radius: 5px; color: var(--muted); background: var(--panel-2); }
+.hw span.on { background: var(--fg); color: var(--panel); font-weight: 700; }
+.cost-legend { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 8px; align-items: center; font-size: 11.5px; }
+.cost-legend .sw { width: 9px; height: 9px; border-radius: 3px; }
+.stack { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--line); }
+.foot { font-size: 11px; color: var(--muted); line-height: 1.45; border-top: 1px solid var(--line); padding-top: 10px; }
+
+.trip { position: absolute; left: var(--gutter-l); bottom: 14px; right: calc(var(--gutter-r) + 320px + 12px); max-width: 620px; padding: 14px 16px; z-index: 3; display: flex; gap: 16px; align-items: stretch; }
+.trip-main { flex: 1; min-width: 0; }
+.trip-head { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; }
+.trip-head b { font-size: 14px; }
+.trip-head small { margin-left: auto; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.steps { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); position: relative; }
+.step { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 5px; position: relative; min-width: 0; }
+.step::before { content: ""; position: absolute; top: 13px; left: -50%; width: 100%; height: 3px; background: var(--line); z-index: 0; }
+.step:first-child::before { display: none; }
+.step.done::before, .step.cur::before { background: var(--accent); }
+.step .node { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--line); background: var(--panel); display: grid; place-items: center; z-index: 1; color: var(--muted); }
+.step.done .node { background: var(--accent); border-color: var(--accent); color: #fff; }
+.step.cur .node { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+.step b { font-size: 11.5px; font-weight: 600; line-height: 1.25; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.step small { font-size: 10.5px; color: var(--muted); }
+.trip-card { width: 190px; flex: none; background: var(--panel-2); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.trip-card .id { font-weight: 700; font-size: 16px; }
+.trip-card small { color: var(--muted); font-size: 11.5px; }
+
+.lists { position: absolute; right: var(--gutter-r); bottom: 14px; width: 320px; height: 262px; z-index: 3; display: flex; flex-direction: column; padding: 10px; }
+.tabs { display: flex; gap: 4px; padding-bottom: 8px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+.tabs button { border: 0; background: transparent; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12.5px; color: var(--muted); }
+.tabs button[aria-selected="true"] { background: var(--accent-soft); color: var(--accent); }
+.tabpanel { overflow: auto; flex: 1; min-height: 0; }
+.qbar { width: 46px; flex: none; }
+.log-code { font-family: var(--font-mono); font-size: 11.5px; font-weight: 600; }
+
+/* World labels */
+.lbl { position: absolute; left: 0; top: 0; transform: translate(-50%, -100%); white-space: nowrap; will-change: transform; }
+.lbl-bld { font-size: 11px; font-weight: 600; color: var(--fg); background: color-mix(in srgb, var(--panel) 88%, transparent); border: 1px solid var(--line); padding: 3px 8px; border-radius: 7px; box-shadow: var(--shadow); }
+.lbl-bld.big { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); background: transparent; border: 0; box-shadow: none; font-weight: 700; }
+.lbl-stop { pointer-events: auto; cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 7px 2px 3px; background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow); color: var(--fg); }
+.lbl-stop i { width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-style: normal; font-size: 9px; }
+.lbl-stop span.n { font-variant-numeric: tabular-nums; }
+.lbl-stop .nm { display: none; font-weight: 600; }
+.lbl-stop:hover .nm, .lbl-stop.sel .nm { display: inline; }
+.lbl-stop.warn { border-color: var(--warn); } .lbl-stop.bad { border-color: var(--bad); background: var(--bad-soft); }
+.lbl-stop.sel { outline: 2px solid var(--accent); }
+.lbl-bus { font-size: 10px; font-weight: 700; color: #fff; padding: 2px 6px; border-radius: 6px; display: flex; gap: 5px; align-items: center; box-shadow: var(--shadow); }
+.lbl-bus u { display: block; width: 18px; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, .35); overflow: hidden; text-decoration: none; }
+.lbl-bus u b { display: block; height: 100%; background: #fff; }
+.lbl-bus.sel { outline: 2px solid var(--fg); }
+
+.legend-note { position: absolute; left: var(--gutter-l); top: 96px; font-size: 11px; color: var(--muted); z-index: 2; background: color-mix(in srgb, var(--panel) 80%, transparent); padding: 4px 8px; border-radius: 7px; }
+
+@media (max-width: 1180px) {
+  .who { display: none; }
+  .kpi { min-width: 0; padding-right: 12px; }
+}
+@media (max-width: 900px) {
+  body { overflow: auto; }
+  .app { height: auto; min-height: 100%; }
+  .toplinks { margin-left: 0; width: 100%; justify-content: space-between; flex-wrap: wrap; }
+  .search { max-width: none; order: 3; flex-basis: 100%; }
+  .stage { display: flex; flex-direction: column; gap: 12px; padding-bottom: 16px; }
+  .viewport { position: relative; inset: auto; height: 62vh; min-height: 360px; }
+  .kpis, .side, .trip, .lists, .mapctl, .legend-note { position: static; width: auto; max-height: none; max-width: none; margin-left: var(--gutter-l); margin-right: var(--gutter-r); }
+  .kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; order: -1; margin-top: 12px; }
+  .kpi { flex-direction: column; align-items: flex-start; gap: 6px; padding: 10px; }
+  .kpi .ic { width: 28px; height: 28px; border-radius: 8px; }
+  .kpi .ic svg { width: 16px; height: 16px; }
+  .kpi .v { font-size: 18px; }
+  .mapctl { flex-direction: row; align-self: flex-start; }
+  .mapctl hr { border-top: 0; border-left: 1px solid var(--line); margin: 4px 3px; }
+  .trip { flex-direction: column; }
+  .trip-card { width: auto; }
+  .lists { height: 300px; }
+  .legend-note { align-self: flex-start; }
+}
+@media (max-width: 480px) {
+  .depot small, .brand { font-size: 15px; }
+  .speed button { padding: 4px 7px; }
+  .step b { font-size: 10.5px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .live i { animation: none; }
+}
+</style>
+
+<div class="app">
+  <header class="topbar">
+    <button class="back" id="btn-home" aria-label="Về góc nhìn toàn cảnh">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    </button>
+    <div class="brand">Làng Đại học 3D</div>
+    <div class="search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" autocomplete="off" placeholder="Tìm trạm, xe buýt, tuyến, trường…" aria-label="Tìm trạm, xe buýt, tuyến hoặc trường">
+      <kbd>/</kbd>
+      <div class="results" id="results" hidden></div>
+    </div>
+    <button class="depot" id="btn-depot" aria-label="Xem bãi đỗ Bến xe buýt ĐHQG">
+      <span class="tagbox">DEPOT</span>
+      <span><b>Bến xe buýt ĐHQG</b><small id="depot-sub">3/5 bãi đang dùng</small></span>
+    </button>
+    <div class="toplinks">
+      <button class="link" id="btn-buses">Lượt xe</button>
+      <button class="link" id="btn-routes" aria-pressed="true">Sơ đồ tuyến</button>
+      <span class="live" id="live"><i></i><span id="clock">Mô phỏng 06:00</span></span>
+      <div class="speed" role="group" aria-label="Tốc độ mô phỏng">
+        <button data-speed="0" aria-pressed="false" aria-label="Tạm dừng">❚❚</button>
+        <button data-speed="15" aria-pressed="false">15×</button>
+        <button data-speed="40" aria-pressed="true">40×</button>
+        <button data-speed="120" aria-pressed="false">120×</button>
+      </div>
+      <div class="who"><span class="avatar">RL</span><span><b>Team RL Bus</b><small>Bộ điều phối threshold</small></span></div>
+    </div>
+  </header>
+
+  <main class="stage">
+    <div class="viewport" id="viewport"><div class="labels" id="labels"></div></div>
+
+    <div class="kpis">
+      <div class="card kpi">
+        <span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="7" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14c3 0 5 2.2 5 5"/></svg></span>
+        <span><small>Khách đang chờ</small><span class="v num" id="k-wait">0</span><small id="k-wait-sub">18 trạm · 3 tuyến</small></span>
+      </div>
+      <div class="card kpi">
+        <span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="3" width="16" height="14" rx="3"/><path d="M4 11h16M8 21v-4M16 21v-4"/><circle cx="8" cy="14" r=".6"/><circle cx="16" cy="14" r=".6"/></svg></span>
+        <span><small>Xe trên tuyến</small><span class="v num" id="k-bus">0</span><small id="k-bus-sub">0 dự phòng ở bến</small></span>
+      </div>
+      <div class="card kpi">
+        <span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+        <span><small>Chờ trung bình</small><span class="v num" id="k-age">0</span><small id="k-age-sub">p95 khi lên xe</small></span>
+      </div>
+    </div>
+    <div class="legend-note" id="note">Bố cục minh họa, không theo tỉ lệ · dữ liệu mô phỏng</div>
+
+    <div class="card mapctl" role="group" aria-label="Điều khiển bản đồ">
+      <button id="zoom-in" aria-label="Phóng to"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button id="zoom-out" aria-label="Thu nhỏ"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/></svg></button>
+      <hr>
+      <button id="rot-l" aria-label="Xoay trái"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>
+      <button id="rot-r" aria-label="Xoay phải"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></button>
+      <hr>
+      <button id="reset" aria-label="Góc nhìn toàn cảnh"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-7 9 7"/><path d="M5 10v10h14V10"/></svg></button>
+    </div>
+
+    <aside class="card side" id="side" aria-live="polite"></aside>
+
+    <section class="card trip" id="trip" aria-label="Theo dõi chuyến"></section>
+
+    <section class="card lists">
+      <div class="tabs" role="tablist">
+        <button role="tab" id="tab-stops" aria-selected="true" data-tab="stops">Trạm 18</button>
+        <button role="tab" id="tab-buses" aria-selected="false" data-tab="buses">Xe 12</button>
+        <button role="tab" id="tab-log" aria-selected="false" data-tab="log">Quyết định</button>
+      </div>
+      <div class="tabpanel" id="tabpanel" role="tabpanel"></div>
+    </section>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(() => {
+'use strict';
+
+/* ---------- constants mirroring configs/base.toml and the cost model ---------- */
+const CAPACITY = 40, COMFORT = 30;
+const HORIZON_S = 14400, DEMAND_END_S = 10800, CONTROL_S = 120;
+const ABANDON_S = 2700, EXCESSIVE_WAIT_S = 900;
+const HEADWAYS = [6, 10, 15];
+const BUS_COOLDOWN_S = 1200, ROUTE_COOLDOWN_S = 600, F_MIN = 2;
+const START_HOUR = 6;
+const LANE = 1.8;
+const BASE_SPEED = 0.34; // world units per simulated second
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const $ = (s) => document.querySelector(s);
+const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const V = (x, z) => ({ x, z });
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+let rng = mulberry32(20261018);
+
+/* ---------- path geometry ---------- */
+function offsetPolyline(pts, off) {
+  const n = pts.length;
+  const segN = (i) => {
+    const dx = pts[i + 1].x - pts[i].x, dz = pts[i + 1].z - pts[i].z, L = Math.hypot(dx, dz);
+    return { x: -dz / L, z: dx / L }; // right-hand normal when north is -z
+  };
+  return pts.map((p, i) => {
+    let nx, nz;
+    if (i === 0 || i === n - 1) {
+      const a = segN(i === 0 ? 0 : n - 2); nx = a.x * off; nz = a.z * off;
+    } else {
+      const a = segN(i - 1), b = segN(i);
+      let mx = a.x + b.x, mz = a.z + b.z; const ml = Math.hypot(mx, mz) || 1; mx /= ml; mz /= ml;
+      const d = mx * a.x + mz * a.z; nx = (mx * off) / d; nz = (mz * off) / d;
+    }
+    return V(p.x + nx, p.z + nz);
+  });
+}
+function roundPolyline(pts, r) {
+  const out = [pts[0]];
+  for (let i = 1; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1], p1 = pts[i], p2 = pts[i + 1];
+    const l1 = Math.hypot(p1.x - p0.x, p1.z - p0.z), l2 = Math.hypot(p2.x - p1.x, p2.z - p1.z);
+    const rr = Math.min(r, l1 / 2, l2 / 2);
+    if (rr < 0.01) { out.push(p1); continue; }
+    const a = V(p1.x + ((p0.x - p1.x) * rr) / l1, p1.z + ((p0.z - p1.z) * rr) / l1);
+    const b = V(p1.x + ((p2.x - p1.x) * rr) / l2, p1.z + ((p2.z - p1.z) * rr) / l2);
+    out.push(a);
+    const n = Math.max(4, Math.ceil(rr * 1.4));
+    for (let j = 1; j < n; j++) {
+      const t = j / n, u = 1 - t;
+      out.push(V(u * u * a.x + 2 * u * t * p1.x + t * t * b.x, u * u * a.z + 2 * u * t * p1.z + t * t * b.z));
+    }
+    out.push(b);
+  }
+  out.push(pts[pts.length - 1]);
+  return out;
+}
+function makePath(pts, closed = false) {
+  const P = closed ? pts.concat([pts[0]]) : pts.slice();
+  const cum = [0];
+  for (let i = 1; i < P.length; i++) cum.push(cum[i - 1] + Math.hypot(P[i].x - P[i - 1].x, P[i].z - P[i - 1].z));
+  const len = cum[cum.length - 1];
+  function at(s) {
+    s = closed ? ((s % len) + len) % len : clamp(s, 0, len);
+    let lo = 0, hi = cum.length - 2;
+    while (lo < hi) { const m = (lo + hi + 1) >> 1; if (cum[m] <= s) lo = m; else hi = m - 1; }
+    const segL = cum[lo + 1] - cum[lo] || 1, t = (s - cum[lo]) / segL;
+    const a = P[lo], b = P[lo + 1];
+    return { x: a.x + (b.x - a.x) * t, z: a.z + (b.z - a.z) * t, hx: (b.x - a.x) / segL, hz: (b.z - a.z) / segL };
+  }
+  function nearest(pt, s0 = 0, s1 = len) {
+    let best = Infinity, bestS = s0;
+    for (let i = 0; i < P.length - 1; i++) {
+      if (cum[i + 1] < s0 || cum[i] > s1) continue;
+      const a = P[i], b = P[i + 1], dx = b.x - a.x, dz = b.z - a.z, L2 = dx * dx + dz * dz || 1;
+      const t = clamp(((pt.x - a.x) * dx + (pt.z - a.z) * dz) / L2, 0, 1);
+      const d = Math.hypot(a.x + dx * t - pt.x, a.z + dz * t - pt.z);
+      const s = clamp(cum[i] + t * (cum[i + 1] - cum[i]), s0, s1);
+      if (d < best) { best = d; bestS = s; }
+    }
+    return bestS;
+  }
+  return { pts: P, cum, len, at, nearest, closed };
+}
+function pointAlong(raw, d) {
+  for (let i = 0; i < raw.length - 1; i++) {
+    const a = raw[i], b = raw[i + 1], L = Math.hypot(b.x - a.x, b.z - a.z);
+    if (d <= L || i === raw.length - 2) {
+      const t = clamp(d / L, 0, 1);
+      return { p: V(a.x + (b.x - a.x) * t, a.z + (b.z - a.z) * t), t: V((b.x - a.x) / L, (b.z - a.z) / L) };
+    }
+    d -= L;
+  }
+}
+
+/* ---------- campus layout (stylised, not to scale) ---------- */
+const ROADS = [
+  { a: [-110, 58], b: [105, 58], w: 8 },   // đường nội bộ dọc Xa lộ
+  { a: [-110, 58], b: [-110, -55], w: 10 },
+  { a: [-60, 70], b: [-60, -55], w: 10 },
+  { a: [0, 5], b: [0, -55], w: 9 },
+  { a: [55, 70], b: [55, -55], w: 10 },
+  { a: [105, 58], b: [105, -55], w: 9 },
+  { a: [-110, -55], b: [105, -55], w: 10 },
+  { a: [-110, 5], b: [105, 5], w: 10 },
+];
+const HWY = { z: 78, w: 16 };
+
+const ROUTE_DEFS = [
+  {
+    code: 'T1', name: 'Ga Suối Tiên ⇄ KTX khu B', color: '--r1', base: 180,
+    raw: [[-95, 58], [-110, 58], [-110, 5], [-60, 5], [-60, -55], [-95, -55]],
+    stopD: [0, 40, 90, 140, 185, 213], side: [-1, 1, -1, 1, 1, 1],
+    stops: ['Ga Metro Suối Tiên', 'ĐH Quốc tế', 'Nhà văn hóa Sinh viên', 'ĐH Khoa học Tự nhiên', 'Hồ Đá', 'KTX khu B'],
+  },
+  {
+    code: 'T2', name: 'KTX khu A ⇄ ĐH Bách Khoa', color: '--r2', base: 160,
+    raw: [[95, 5], [55, 5], [55, -55], [0, -55], [0, 5], [-50, 5]],
+    stopD: [0, 70, 125, 185, 235, 265], side: [1, -1, 1, 1, -1, -1],
+    stops: ['KTX khu A', 'ĐH Kinh tế – Luật', 'ĐH Công nghệ Thông tin', 'Nhà điều hành ĐHQG', 'ĐH KHXH&NV', 'ĐH Bách Khoa'],
+  },
+  {
+    code: 'T3', name: 'Bến xe ĐHQG ⇄ KTX A cổng Bắc', color: '--r3', base: 140,
+    raw: [[-40, 58], [105, 58], [105, -55], [55, -55]],
+    stopD: [0, 55, 120, 190, 235, 308], side: [-1, -1, -1, 1, 1, 1],
+    stops: ['Bến xe buýt ĐHQG', 'TT Giáo dục Quốc phòng', 'Thư viện Trung tâm', 'ĐH Khoa học Sức khỏe', 'Khu Công nghệ Phần mềm', 'KTX khu A – cổng Bắc'],
+  },
+];
+
+// [x, z, w, d, h, label?] — label shown once per campus
+const BUILDINGS = [
+  [-92, 26, 14, 14, 14, 'ĐH Quốc tế'], [-76, 26, 9, 14, 10], [-85, 42, 24, 8, 8],
+  [-85, -25, 22, 22, 12, 'Nhà văn hóa Sinh viên'],
+  [-40, -32, 12, 20, 16, 'ĐH Khoa học Tự nhiên'], [-40, -13, 12, 9, 10], [-20, -25, 10, 24, 18, 'Nhà điều hành ĐHQG'],
+  [-40, 22, 16, 10, 14, 'ĐH Bách Khoa'], [-18, 22, 10, 10, 11, 'ĐH KHXH&NV'],
+  [26, 42, 26, 9, 9, 'TT Giáo dục Quốc phòng'],
+  [22, -30, 14, 18, 15, 'ĐH Kinh tế – Luật'], [38, -14, 9, 10, 10],
+  [68, -36, 6, 14, 22], [78, -36, 6, 14, 22, 'KTX khu A'], [88, -36, 6, 14, 22], [68, -15, 6, 12, 18], [78, -15, 6, 12, 18], [88, -15, 6, 12, 18],
+  [80, 32, 22, 18, 12, 'Thư viện Trung tâm'],
+  [124, 16, 14, 18, 14, 'ĐH Khoa học Sức khỏe'], [124, -33, 14, 16, 18, 'Khu Công nghệ Phần mềm'],
+  [-98, -82, 6, 22, 24], [-88, -82, 6, 22, 24, 'KTX khu B'], [-78, -82, 6, 22, 24], [-68, -82, 6, 22, 20],
+  [27, -80, 22, 14, 18, 'ĐH Công nghệ Thông tin'], [13, -88, 6, 8, 10],
+  [-98, 96, 26, 8, 4, 'Ga Metro Suối Tiên'],
+];
+const LAKE = { x: -30, z: -80, w: 40, d: 26 };
+const FIELD = { x: 27, z: 22, w: 30, d: 14 };
+const BAYS = [-42, -36, -30, -24, -18].map((x) => V(x, 42));
+
+/* ---------- simulation model ---------- */
+const ROUTES = ROUTE_DEFS.map((d, ri) => {
+  const raw = d.raw.map(([x, z]) => V(x, z));
+  const fwd = roundPolyline(offsetPolyline(raw, LANE), 7);
+  const back = roundPolyline(offsetPolyline(raw.slice().reverse(), LANE), 7);
+  const path = makePath(fwd.concat(back), true);
+  const fwdLen = path.cum[fwd.length - 1];
+  const stops = d.stops.map((name, k) => {
+    const { p, t } = pointAlong(raw, d.stopD[k]);
+    return {
+      name, k, r: ri, p, t, side: d.side[k], queue: [],
+      sF: path.nearest(p, 0, fwdLen), sB: path.nearest(p, fwdLen, path.len),
+      lastBus: -1e9,
+    };
+  });
+  const events = [];
+  stops.forEach((s) => { if (s.k < 5) events.push({ s: s.sF, k: s.k, dir: 1 }); else events.push({ s: s.sF, k: 5, dir: 1 }); });
+  stops.slice().reverse().forEach((s) => events.push({ s: s.sB, k: s.k, dir: -1 }));
+  events.sort((a, b) => a.s - b.s);
+  return {
+    i: ri, ...d, raw, path, fwdLen, stops, events,
+    headway: 15 * 60, lastDepart: -1e9, hwUntil: 0, dispUntil: 0,
+  };
+});
+const ALL_STOPS = ROUTES.flatMap((r) => r.stops);
+
+const SIM = {};
+const BUSES = Array.from({ length: 12 }, (_, i) => ({ i, id: 'XE-' + String(i + 1).padStart(2, '0') }));
+
+function resetSim(seed) {
+  rng = mulberry32(seed);
+  Object.assign(SIM, {
+    t: 0, seed, nextControl: CONTROL_S, nextAbandon: 30, noop: 0,
+    W: 0, Vp: 0, O: 0, C: 0, CD: 0, X: 0, U: 0, E: 0, M: 0,
+    lastK: null, kIndex: 0, total: 0, completed: 0, abandonedTotal: 0,
+    waits: [], history: [], log: [],
+  });
+  ROUTES.forEach((r) => { r.headway = 15 * 60; r.lastDepart = -1e9; r.hwUntil = 0; r.dispUntil = 0; r.stops.forEach((s) => { s.queue = []; }); });
+  BUSES.forEach((b) => {
+    Object.assign(b, { route: null, s: 0, ev: 0, mode: 'reserve', until: 0, pax: [], bay: null, dead: null, deadS: 0, deadTo: null, recall: false, cooldown: 0 });
+  });
+  ROUTES.forEach((r, ri) => {
+    for (let j = 0; j < 3; j++) {
+      const b = BUSES[ri * 3 + j];
+      b.route = ri; b.mode = 'run'; b.s = (r.path.len * j) / 3 + 1;
+      b.ev = r.events.findIndex((e) => e.s >= b.s); if (b.ev < 0) b.ev = 0;
+    }
+  });
+  BUSES.slice(9).forEach((b, j) => { b.bay = j; });
+}
+
+function demandProfile(t) {
+  const m = t / 60;
+  return 0.55 + 0.95 * Math.exp(-(((m - 70) / 32) ** 2)) + 0.45 * Math.exp(-(((m - 160) / 25) ** 2));
+}
+function traffic(t) {
+  const m = t / 60;
+  return 1 + 0.22 * Math.exp(-(((m - 80) / 35) ** 2)) + 0.06 * Math.sin(m / 9);
+}
+const speedNow = () => BASE_SPEED / traffic(SIM.t);
+
+function spawnPassengers(dt) {
+  if (SIM.t >= DEMAND_END_S) return;
+  for (const r of ROUTES) {
+    const lam = (r.base * demandProfile(SIM.t) / 3600) * dt;
+    if (rng() >= lam) continue;
+    // terminals draw twice the share of an intermediate stop-direction
+    const pairs = [[0, 1, 2], [1, 1, 1], [2, 1, 1], [3, 1, 1], [4, 1, 1], [5, -1, 2], [4, -1, 1], [3, -1, 1], [2, -1, 1], [1, -1, 1]];
+    let u = rng() * 12, pick = pairs[0];
+    for (const p of pairs) { u -= p[2]; if (u <= 0) { pick = p; break; } }
+    const [k, dir] = pick;
+    const dest = dir > 0 ? k + 1 + Math.floor(rng() * (5 - k)) : Math.floor(rng() * k);
+    r.stops[k].queue.push({ t0: SIM.t, dir, dest, denied: false });
+  }
+}
+
+function serve(b, ev) {
+  const r = ROUTES[b.route], stop = r.stops[ev.k];
+  const before = b.pax.length;
+  b.pax = b.pax.filter((p) => p.dest !== ev.k);
+  const alight = before - b.pax.length;
+  SIM.completed += alight;
+  let boarded = 0;
+  const keep = [];
+  for (const p of stop.queue) {
+    if (p.dir === ev.dir && b.pax.length < CAPACITY) {
+      b.pax.push({ dest: p.dest });
+      SIM.waits.push(SIM.t - p.t0); boarded++;
+    } else {
+      if (p.dir === ev.dir && !p.denied) { p.denied = true; SIM.U++; }
+      keep.push(p);
+    }
+  }
+  if (SIM.waits.length > 400) SIM.waits.splice(0, SIM.waits.length - 400);
+  stop.queue = keep;
+  stop.lastBus = SIM.t;
+  b.mode = 'dwell';
+  b.until = SIM.t + 15 + 1.6 * (alight + boarded);
+}
+
+function startDeadhead(b, to, ri) {
+  const route = ROUTES[ri];
+  const bay = BAYS[b.bay];
+  const start = route.raw[0];
+  const legs = {
+    0: [bay, V(bay.x, 58), start],
+    1: [bay, V(bay.x, 58), V(55, 58), V(55, 5), start],
+    2: [bay, V(bay.x, 58), start],
+  }[ri];
+  const raw = to === 'route' ? legs : legs.slice().reverse();
+  b.dead = makePath(roundPolyline(offsetPolyline(raw, LANE), 5));
+  b.deadS = 0; b.deadTo = to; b.mode = 'dead';
+  if (to === 'route') b.route = ri;
+}
+
+function stepBus(b, dt) {
+  if (b.mode === 'reserve') return;
+  if (b.mode === 'dead') {
+    b.deadS += speedNow() * 1.25 * dt;
+    if (b.deadS >= b.dead.len) {
+      if (b.deadTo === 'route') {
+        b.s = 0; b.ev = 0; b.mode = 'hold';
+      } else {
+        b.mode = 'reserve'; b.route = null; b.recall = false;
+      }
+      b.dead = null;
+    }
+    return;
+  }
+  const r = ROUTES[b.route];
+  if (b.mode === 'hold') {
+    if (SIM.t < r.lastDepart + r.headway) return;
+    r.lastDepart = SIM.t;
+    serve(b, r.events[b.ev]);
+    return;
+  }
+  if (b.mode === 'dwell') {
+    if (SIM.t < b.until) return;
+    b.mode = 'run';
+    b.ev = (b.ev + 1) % r.events.length;
+  }
+  const target = r.events[b.ev].s;
+  const dist = (target - b.s + r.path.len) % r.path.len;
+  const ds = speedNow() * dt;
+  if (ds < dist) { b.s = (b.s + ds) % r.path.len; return; }
+  b.s = target;
+  const ev = r.events[b.ev];
+  if (ev.dir === 1 && ev.k === 0) {
+    if (b.recall && b.pax.length === 0) { startDeadhead(b, 'bay', b.route); SIM.M++; return; }
+    b.mode = 'hold';
+  } else {
+    serve(b, ev);
+  }
+}
+
+function committed(ri) { return BUSES.filter((b) => b.route === ri && !(b.mode === 'dead' && b.deadTo === 'bay')).length; }
+function routeQueue(r) { return r.stops.reduce((n, s) => n + s.queue.length, 0); }
+function freeBay() { const used = new Set(BUSES.filter((b) => b.bay !== null && (b.mode === 'reserve' || b.mode === 'dead' || b.recall)).map((b) => b.bay)); return [0, 1, 2, 3, 4].find((i) => !used.has(i)); }
+
+function logDecision(code, text, kind) {
+  SIM.log.unshift({ t: SIM.t, code, text, kind });
+  if (SIM.log.length > 60) SIM.log.pop();
+}
+
+function controller() {
+  // Threshold heuristic shown for the demo; a trained MaskablePPO policy would choose from the same 221 slots.
+  let acted = false;
+  const qs = ROUTES.map(routeQueue);
+  const pressure = ROUTES.map((r, i) => qs[i] / Math.max(1, committed(i)));
+  const reserves = BUSES.filter((b) => b.mode === 'reserve' && b.cooldown <= SIM.t);
+  const order = [0, 1, 2].sort((a, b) => pressure[b] - pressure[a]);
+  const top = order[0];
+  if (reserves.length && qs[top] > 38 && SIM.t < DEMAND_END_S && ROUTES[top].dispUntil <= SIM.t) {
+    const b = reserves[0];
+    startDeadhead(b, 'route', top);
+    b.cooldown = SIM.t + BUS_COOLDOWN_S;
+    ROUTES[top].dispUntil = SIM.t + ROUTE_COOLDOWN_S;
+    SIM.M++; acted = true;
+    logDecision(`DISPATCH(${b.i},${top})`, `Đưa ${b.id} từ bãi vào ${ROUTES[top].code}: ${qs[top]} khách đang chờ`, 'info');
+  }
+  ROUTES.forEach((r, i) => {
+    const want = (qs[i] > 40 ? 6 : qs[i] > 18 ? 10 : 15) * 60;
+    if (!acted && want !== r.headway && r.hwUntil <= SIM.t) {
+      r.headway = want; r.hwUntil = SIM.t + ROUTE_COOLDOWN_S; acted = true;
+      logDecision(`SET_HEADWAY(${i},${want / 60})`, `${r.code} xuất bến mỗi ${want / 60} phút (hàng chờ ${qs[i]})`, want < 900 ? 'warn' : 'ok');
+    }
+  });
+  if (!acted && SIM.t > DEMAND_END_S + 600) {
+    for (const r of ROUTES) {
+      const i = r.i;
+      const cand = BUSES.find((b) => b.route === i && !b.recall && b.mode !== 'dead' && b.pax.length < 4 && b.cooldown <= SIM.t);
+      if (cand && committed(i) > F_MIN && qs[i] < 6 && freeBay() !== undefined) {
+        cand.recall = true; cand.bay = freeBay(); cand.cooldown = SIM.t + BUS_COOLDOWN_S; acted = true;
+        logDecision(`RECALL(${cand.i})`, `Gọi ${cand.id} về bãi sau chuyến này, ${r.code} chỉ còn ${qs[i]} khách chờ`, 'mute');
+        break;
+      }
+    }
+  }
+  if (!acted) SIM.noop++;
+}
+
+function closeInterval() {
+  const c = {
+    W: SIM.W, V: 0.25 * SIM.Vp, O: 0.5 * SIM.O, C: 0.5 * SIM.C, CD: 0.5 * SIM.CD, X: SIM.X, U: 5 * SIM.U, E: 60 * SIM.E, M: 2 * SIM.M,
+  };
+  c.total = Object.values(c).reduce((a, b) => a + b, 0);
+  SIM.lastK = c; SIM.kIndex++; SIM.total += c.total;
+  SIM.W = SIM.Vp = SIM.O = SIM.C = SIM.CD = SIM.X = SIM.U = SIM.E = SIM.M = 0;
+}
+
+function step(dt) {
+  spawnPassengers(dt);
+  BUSES.forEach((b) => stepBus(b, dt));
+  // integrate the per-interval cost terms (passenger- and bus-minutes)
+  let waiting = 0, excessive = 0;
+  for (const s of ALL_STOPS) {
+    waiting += s.queue.length;
+    for (const p of s.queue) if (SIM.t - p.t0 > EXCESSIVE_WAIT_S) excessive++;
+  }
+  let onboard = 0, over = 0, active = 0, dead = 0;
+  for (const b of BUSES) {
+    onboard += b.pax.length; over += Math.max(0, b.pax.length - COMFORT);
+    if (b.mode === 'dead') dead++; else if (b.mode !== 'reserve') active++;
+  }
+  const m = dt / 60;
+  SIM.W += waiting * m; SIM.Vp += onboard * m; SIM.O += over * m; SIM.C += active * m; SIM.CD += dead * m; SIM.X += excessive * m;
+  SIM.t += dt;
+  if (SIM.t >= SIM.nextAbandon) {
+    SIM.nextAbandon += 30;
+    for (const s of ALL_STOPS) {
+      const before = s.queue.length;
+      s.queue = s.queue.filter((p) => SIM.t - p.t0 <= ABANDON_S);
+      const gone = before - s.queue.length; SIM.E += gone; SIM.abandonedTotal += gone;
+    }
+  }
+  if (SIM.t >= SIM.nextControl) {
+    SIM.nextControl += CONTROL_S;
+    closeInterval();
+    controller();
+    SIM.history.push({ t: SIM.t, waiting });
+    if (SIM.history.length > 200) SIM.history.shift();
+  }
+  if (SIM.t >= HORIZON_S) {
+    const nh = waiting + onboard;
+    const total = Math.round(SIM.total + 60 * nh);
+    const seed = SIM.seed + 1;
+    const prevLog = SIM.log;
+    resetSim(seed);
+    SIM.log = prevLog;
+    logDecision('END', `Kết thúc ca: tổng cost ${total.toLocaleString('vi-VN')}, ${nh} khách tồn. Bắt đầu ca mới`, 'mute');
+  }
+}
+
+/* ---------- three.js scene ---------- */
+const vp = $('#viewport');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+vp.prepend(renderer.domElement);
+renderer.domElement.setAttribute('aria-label', 'Bản đồ 3D Làng Đại học với các tuyến xe buýt');
+renderer.domElement.setAttribute('role', 'img');
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0xeef1f6, 300, 620);
+const camera = new THREE.PerspectiveCamera(36, 1, 1, 1500);
+const HOME = { pos: new THREE.Vector3(85, 215, 250), target: new THREE.Vector3(10, 0, 12) };
+camera.position.copy(HOME.pos);
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.target.copy(HOME.target);
+controls.enableDamping = !REDUCED;
+controls.dampingFactor = 0.08;
+controls.maxPolarAngle = Math.PI * 0.44;
+controls.minDistance = 30;
+controls.maxDistance = 420;
+controls.screenSpacePanning = false;
+controls.update();
+
+const hemi = new THREE.HemisphereLight(0xffffff, 0xb8c2d6, 0.75);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xffffff, 0.75);
+sun.position.set(-80, 160, 90);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -170, right: 170, top: 130, bottom: -130, near: 10, far: 420 });
+sun.shadow.bias = -0.0006;
+scene.add(sun);
+
+const MAT = {};
+const mat = (key, opts = {}) => (MAT[key] = new THREE.MeshStandardMaterial({ roughness: 0.9, metalness: 0, ...opts }));
+mat('ground'); mat('grass'); mat('road'); mat('mark'); mat('curb'); mat('roof'); mat('water', { roughness: 0.25 });
+mat('tree'); mat('field'); mat('concrete'); mat('trunk', { color: 0x9b7b5b });
+mat('busBody', { color: 0xffffff, roughness: 0.5 });
+mat('glass', { color: 0x223047, roughness: 0.25, metalness: 0.2 });
+mat('wheel', { color: 0x1d2330 });
+mat('shelterGlass', { color: 0xbfd6f2, transparent: true, opacity: 0.55 });
+mat('reserve');
+['r1', 'r2', 'r3'].forEach((k) => mat(k));
+mat('car1', { color: 0xc8ced9 }); mat('car2', { color: 0x8f9bb3 }); mat('car3', { color: 0xe0b44c });
+mat('pax', { color: 0xffffff });
+mat('ring', { color: 0x2457f5, transparent: true, opacity: 0.85 });
+mat('metro', { color: 0xf5f7fb, roughness: 0.4 });
+
+// window texture shared by buildings (tinted per theme through material colour)
+const winCanvas = document.createElement('canvas');
+winCanvas.width = winCanvas.height = 32;
+{
+  const g = winCanvas.getContext('2d');
+  g.fillStyle = '#ffffff'; g.fillRect(0, 0, 32, 32);
+  g.fillStyle = '#a9b8d0'; g.fillRect(5, 9, 22, 13);
+  g.fillStyle = '#e9edf4'; g.fillRect(0, 29, 32, 3);
+}
+const winTex = new THREE.CanvasTexture(winCanvas);
+winTex.wrapS = winTex.wrapT = THREE.RepeatWrapping;
+const buildingMats = [];
+
+function plane(w, d, m, x, z, y = 0) {
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, d), m);
+  mesh.rotation.x = -Math.PI / 2; mesh.position.set(x, y, z); mesh.receiveShadow = true;
+  scene.add(mesh); return mesh;
+}
+function box(w, h, d, m, x, y, z, parent = scene) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+  mesh.position.set(x, y, z); mesh.castShadow = true; mesh.receiveShadow = true;
+  parent.add(mesh); return mesh;
+}
+
+// ground and campus green blocks
+plane(420, 300, MAT.ground, 0, 0, -0.02);
+[
+  [-110, -60, 5, 58], [-110, -60, -55, 5], [-60, 0, -55, 5], [-60, 0, 5, 58], [0, 55, 5, 58], [0, 55, -55, 5],
+  [55, 105, -55, 5], [55, 105, 5, 58], [105, 140, -55, 58], [-110, 105, -110, -55], [-150, -110, -110, 58],
+].forEach(([x0, x1, z0, z1]) => plane(x1 - x0 - 10, z1 - z0 - 10, MAT.grass, (x0 + x1) / 2, (z0 + z1) / 2, 0.005));
+plane(300, 22, MAT.grass, 0, 98, 0.005);
+
+// roads + dashed centre marks
+ROADS.forEach(({ a, b, w }) => {
+  const dx = b[0] - a[0], dz = b[1] - a[1], L = Math.hypot(dx, dz);
+  const m = plane(dx ? L + w : w, dz ? L + w : w, MAT.road, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, 0.02);
+  m.receiveShadow = true;
+  for (let s = 8; s < L - 8; s += 5) {
+    const t = s / L;
+    plane(dx ? 2.2 : 0.3, dz ? 2.2 : 0.3, MAT.mark, a[0] + dx * t, a[1] + dz * t, 0.035);
+  }
+});
+plane(420, HWY.w, MAT.road, 0, HWY.z, 0.02);
+plane(420, 0.6, MAT.curb, 0, HWY.z, 0.04);
+[-4, 4].forEach((o) => { for (let x = -200; x < 200; x += 6) plane(2.6, 0.3, MAT.mark, x, HWY.z + o, 0.035); });
+
+// depot bays with yellow lines like a yard
+plane(34, 16, MAT.concrete, -30, 42, 0.012);
+BAYS.forEach((p) => {
+  plane(0.35, 10, MAT.curb, p.x - 2.9, p.z, 0.03);
+  if (p === BAYS[BAYS.length - 1]) plane(0.35, 10, MAT.curb, p.x + 2.9, p.z, 0.03);
+});
+plane(29.4, 0.35, MAT.curb, -30, 47, 0.03);
+
+// lake and field
+plane(LAKE.w, LAKE.d, MAT.water, LAKE.x, LAKE.z, 0.03);
+plane(FIELD.w, FIELD.d, MAT.field, FIELD.x, FIELD.z, 0.02);
+plane(0.3, FIELD.d - 2, MAT.mark, FIELD.x, FIELD.z, 0.03);
+
+// buildings
+const LABELS = [];
+BUILDINGS.forEach(([x, z, w, d, h, label]) => {
+  const tex = winTex.clone(); tex.needsUpdate = true;
+  tex.repeat.set(Math.max(1, Math.round(Math.max(w, d) / 4)), Math.max(1, Math.round(h / 3.4)));
+  const side = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85 });
+  buildingMats.push(side);
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), [side, side, MAT.roof, MAT.roof, side, side]);
+  mesh.position.set(x, h / 2, z); mesh.castShadow = true; mesh.receiveShadow = true;
+  scene.add(mesh);
+  box(w + 0.4, 0.5, d + 0.4, MAT.roof, x, h + 0.25, z);
+  if (label) LABELS.push({ kind: 'bld', text: label, pos: new THREE.Vector3(x, h + 3, z) });
+});
+LABELS.push({ kind: 'big', text: 'Xa lộ Hà Nội', pos: new THREE.Vector3(30, 1, HWY.z) });
+LABELS.push({ kind: 'big', text: 'Metro số 1', pos: new THREE.Vector3(60, 14, 95) });
+LABELS.push({ kind: 'bld', text: 'Hồ Đá', pos: new THREE.Vector3(LAKE.x, 2, LAKE.z) });
+
+// elevated metro line along the highway
+const METRO_Z = 95;
+box(440, 1.2, 4.5, MAT.concrete, 0, 9, METRO_Z);
+for (let x = -200; x <= 200; x += 16) box(1.4, 9, 1.4, MAT.concrete, x, 4.5, METRO_Z);
+box(30, 0.6, 9, MAT.concrete, -98, 11.5, METRO_Z);
+const train = new THREE.Group();
+for (let c = 0; c < 3; c++) {
+  box(10.5, 2.6, 3, MAT.metro, c * 11.2, 0, 0, train);
+  box(10.6, 0.5, 3.05, MAT.r1, c * 11.2, -0.5, 0, train);
+  box(10.6, 0.8, 3.08, MAT.glass, c * 11.2, 0.5, 0, train);
+}
+train.position.set(-110, 11, METRO_Z);
+scene.add(train);
+
+// trees as instanced meshes
+const TREE_ZONES = [[-150, -114, -105, 55], [58, 102, -105, -60], [-108, 102, 90, 104], [108, 140, -52, 0], [108, 140, 28, 56], [-56, -4, -105, -95], [-108, -64, 8, 14], [5, 50, -52, -46]];
+const treeSpots = [];
+TREE_ZONES.forEach(([x0, x1, z0, z1]) => {
+  const n = Math.round(((x1 - x0) * (z1 - z0)) / 70);
+  for (let i = 0; i < n; i++) treeSpots.push([x0 + rng() * (x1 - x0), z0 + rng() * (z1 - z0), 0.7 + rng() * 0.7]);
+});
+const crowns = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(2.2, 0), MAT.tree, treeSpots.length);
+const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.3, 0.4, 2.4, 6), MAT.trunk, treeSpots.length);
+const tmp = new THREE.Object3D();
+treeSpots.forEach(([x, z, s], i) => {
+  tmp.position.set(x, 1.2 * s, z); tmp.scale.set(s, s, s); tmp.rotation.set(0, 0, 0); tmp.updateMatrix(); trunks.setMatrixAt(i, tmp.matrix);
+  tmp.position.set(x, 3.6 * s, z); tmp.rotation.set(rng(), rng(), 0); tmp.updateMatrix(); crowns.setMatrixAt(i, tmp.matrix);
+});
+crowns.castShadow = trunks.castShadow = true;
+scene.add(crowns, trunks);
+
+// highway traffic
+const CARS = Array.from({ length: 34 }, (_, i) => {
+  const lane = [-6, -2, 2, 6][i % 4];
+  const m = [MAT.car1, MAT.car2, MAT.car3, MAT.car1][Math.floor(rng() * 4)];
+  const big = rng() < 0.2;
+  const mesh = box(big ? 9 : 4.2, big ? 3 : 1.6, 2, m, 0, big ? 1.5 : 0.8, HWY.z + lane);
+  return { mesh, x: -210 + rng() * 420, v: (lane < 0 ? -1 : 1) * (4 + rng() * 3) };
+});
+
+// route ribbons
+function ribbon(path, width, material, y) {
+  const P = path.pts, pos = [], idx = [];
+  for (let i = 0; i < P.length; i++) {
+    const a = P[Math.max(0, i - 1)], b = P[Math.min(P.length - 1, i + 1)];
+    const dx = b.x - a.x, dz = b.z - a.z, L = Math.hypot(dx, dz) || 1;
+    const nx = -dz / L * width / 2, nz = dx / L * width / 2;
+    pos.push(P[i].x - nx, y, P[i].z - nz, P[i].x + nx, y, P[i].z + nz);
+    if (i < P.length - 1) { const k = i * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx); g.computeVertexNormals();
+  const m = new THREE.Mesh(g, material); m.receiveShadow = true; scene.add(m); return m;
+}
+const routeLineMats = ROUTES.map(() => new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.55, depthWrite: false }));
+const routeRibbons = ROUTES.map((r, i) => ribbon(r.path, 0.9, routeLineMats[i], 0.06));
+
+// stops: shelter + queue figures
+const MAX_FIG = 24;
+const figBody = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.32, 0.38, 1.25, 7), MAT.pax, ALL_STOPS.length * MAX_FIG);
+const figHead = new THREE.InstancedMesh(new THREE.SphereGeometry(0.3, 8, 6), MAT.pax, ALL_STOPS.length * MAX_FIG);
+figBody.castShadow = true;
+scene.add(figBody, figHead);
+const PICKABLE = [];
+ALL_STOPS.forEach((s) => {
+  const t = s.t, rightN = V(-t.z, t.x);
+  const n = V(rightN.x * s.side, rightN.z * s.side);
+  s.n = n;
+  s.center = V(s.p.x + n.x * 6.6, s.p.z + n.z * 6.6);
+  const g = new THREE.Group();
+  g.position.set(s.center.x, 0, s.center.z);
+  g.rotation.y = Math.atan2(-t.z, t.x) + (s.side < 0 ? Math.PI : 0);
+  const rm = MAT['r' + (s.r + 1)];
+  box(6.6, 0.18, 2.8, MAT.concrete, 0, 0.09, 0, g);
+  box(6.2, 0.28, 2.3, rm, 0, 2.75, 0, g);
+  box(6, 1.9, 0.12, MAT.shelterGlass, 0, 1.45, 0.95, g);
+  [-2.8, 2.8].forEach((x) => box(0.16, 2.6, 0.16, MAT.wheel, x, 1.35, 0.95, g));
+  box(3.2, 0.25, 0.6, MAT.roof, 0, 0.55, 0.5, g);
+  box(0.14, 3.6, 0.14, MAT.wheel, -3.6, 1.8, -0.9, g);
+  box(1.1, 1.1, 0.12, rm, -3.6, 3.4, -0.9, g);
+  g.userData = { kind: 'stop', ref: s };
+  g.traverse((o) => { o.userData = g.userData; });
+  scene.add(g);
+  PICKABLE.push(g);
+  s.group = g;
+});
+
+// buses
+function makeBus(b) {
+  const g = new THREE.Group();
+  box(2.3, 2.15, 6.6, MAT.busBody, 0, 1.55, 0, g);
+  b.stripe = box(2.34, 0.55, 6.64, MAT.reserve, 0, 0.85, 0, g);
+  box(2.36, 0.75, 5.4, MAT.glass, 0, 1.95, -0.2, g);
+  box(2.0, 0.95, 0.06, MAT.glass, 0, 1.9, 3.31, g);
+  b.roof = box(2.0, 0.3, 5.8, MAT.reserve, 0, 2.78, 0, g);
+  [[-1.1, 2.2], [1.1, 2.2], [-1.1, -2.2], [1.1, -2.2]].forEach(([x, z]) => {
+    const w = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.48, 0.35, 12), MAT.wheel);
+    w.rotation.z = Math.PI / 2; w.position.set(x, 0.48, z); g.add(w);
+  });
+  g.userData = { kind: 'bus', ref: b };
+  g.traverse((o) => { o.userData = g.userData; });
+  scene.add(g);
+  PICKABLE.push(g);
+  b.mesh = g;
+}
+BUSES.forEach(makeBus);
+
+const ring = new THREE.Mesh(new THREE.RingGeometry(4.2, 5, 48), MAT.ring);
+ring.rotation.x = -Math.PI / 2; ring.position.y = 0.08; ring.visible = false;
+scene.add(ring);
+
+function busPose(b) {
+  if (b.mode === 'reserve') { const p = BAYS[b.bay]; return { x: p.x, z: p.z, hx: 0, hz: -1 }; }
+  if (b.mode === 'dead') return b.dead.at(b.deadS);
+  return ROUTES[b.route].path.at(b.s);
+}
+function routeColor(ri) { return ri === null ? css('--reserve') : css(ROUTES[ri].color); }
+
+/* ---------- theme ---------- */
+function applyPalette() {
+  const c = (n) => new THREE.Color(css(n));
+  const sky = c('--s-sky');
+  renderer.setClearColor(sky); scene.fog.color.copy(sky);
+  MAT.ground.color = c('--s-ground'); MAT.grass.color = c('--s-grass'); MAT.road.color = c('--s-road');
+  MAT.mark.color = c('--s-mark'); MAT.curb.color = c('--s-curb'); MAT.roof.color = c('--s-roof');
+  MAT.water.color = c('--s-water'); MAT.tree.color = c('--s-tree'); MAT.field.color = c('--s-field'); MAT.concrete.color = c('--s-concrete');
+  MAT.reserve.color = c('--reserve'); MAT.ring.color = c('--accent');
+  ['r1', 'r2', 'r3'].forEach((k) => { MAT[k].color = c('--' + k); });
+  routeLineMats.forEach((m, i) => { m.color = c(ROUTES[i].color); });
+  buildingMats.forEach((m) => { m.color = c('--s-building'); });
+  const dark = css('--panel').toLowerCase() !== '#ffffff';
+  hemi.intensity = dark ? 0.55 : 0.75; sun.intensity = dark ? 0.55 : 0.75;
+  MAT.busBody.color = new THREE.Color(dark ? '#d9dee8' : '#ffffff');
+}
+applyPalette();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyPalette);
+new MutationObserver(applyPalette).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+/* ---------- world labels ---------- */
+const labelsEl = $('#labels');
+LABELS.forEach((l) => {
+  l.el = document.createElement('div');
+  l.el.className = 'lbl ' + (l.kind === 'big' ? 'lbl-bld big' : 'lbl-bld');
+  l.el.textContent = l.text;
+  labelsEl.appendChild(l.el);
+});
+ALL_STOPS.forEach((s) => {
+  const el = document.createElement('button');
+  el.className = 'lbl lbl-stop';
+  el.innerHTML = `<i style="background:var(${ROUTES[s.r].color})">${s.k + 1}</i><span class="n">0</span><span class="nm">${esc(s.name)}</span>`;
+  el.setAttribute('aria-label', `Trạm ${s.name}, tuyến ${ROUTES[s.r].code}`);
+  el.addEventListener('click', () => select({ kind: 'stop', ref: s }, true));
+  labelsEl.appendChild(el);
+  s.el = el; s.lblPos = new THREE.Vector3(s.center.x, 4.4, s.center.z);
+});
+BUSES.forEach((b) => {
+  const el = document.createElement('div');
+  el.className = 'lbl lbl-bus';
+  el.innerHTML = `${b.id.slice(3)}<u><b></b></u>`;
+  labelsEl.appendChild(el);
+  b.el = el; b.fill = el.querySelector('b');
+});
+const projV = new THREE.Vector3();
+function place(el, pos, w, h) {
+  projV.copy(pos).project(camera);
+  if (projV.z > 1 || projV.x < -1.2 || projV.x > 1.2 || projV.y < -1.2 || projV.y > 1.2) { el.style.visibility = 'hidden'; return; }
+  el.style.visibility = 'visible';
+  el.style.transform = `translate(${((projV.x + 1) / 2) * w}px, ${((1 - projV.y) / 2) * h}px) translate(-50%, -100%)`;
+}
+
+/* ---------- selection & camera ---------- */
+let selection = { kind: 'net' };
+let tracked = BUSES[0];
+let camAnim = null;
+function select(sel, focus) {
+  selection = sel;
+  if (sel.kind === 'bus') tracked = sel.ref;
+  if (sel.kind === 'stop') {
+    const near = nextBusFor(sel.ref);
+    if (near) tracked = near.bus;
+  }
+  if (focus) {
+    let p;
+    if (sel.kind === 'bus') { const q = busPose(sel.ref); p = new THREE.Vector3(q.x, 0, q.z); }
+    else if (sel.kind === 'stop') p = new THREE.Vector3(sel.ref.center.x, 0, sel.ref.center.z);
+    else if (sel.kind === 'depot') p = new THREE.Vector3(-30, 0, 42);
+    else if (sel.kind === 'route') { const r = sel.ref; const xs = r.raw.map((q) => q.x), zs = r.raw.map((q) => q.z); p = new THREE.Vector3((Math.min(...xs) + Math.max(...xs)) / 2, 0, (Math.min(...zs) + Math.max(...zs)) / 2); }
+    if (p) flyTo(p, sel.kind === 'route' ? 190 : 95);
+  }
+  renderPanels(true);
+}
+function flyTo(target, dist) {
+  const dir = camera.position.clone().sub(controls.target).normalize();
+  const pos = target.clone().add(dir.multiplyScalar(dist));
+  if (REDUCED) { controls.target.copy(target); camera.position.copy(pos); controls.update(); return; }
+  camAnim = { t0: performance.now(), dur: 650, fromP: camera.position.clone(), fromT: controls.target.clone(), toP: pos, toT: target };
+}
+function home() {
+  selection = { kind: 'net' };
+  if (REDUCED) { camera.position.copy(HOME.pos); controls.target.copy(HOME.target); controls.update(); }
+  else camAnim = { t0: performance.now(), dur: 700, fromP: camera.position.clone(), fromT: controls.target.clone(), toP: HOME.pos.clone(), toT: HOME.target.clone() };
+  renderPanels(true);
+}
+
+const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
+let downAt = null;
+renderer.domElement.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) return;
+  const r = renderer.domElement.getBoundingClientRect();
+  mouse.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(mouse, camera);
+  const hit = ray.intersectObjects(PICKABLE, true)[0];
+  if (hit && hit.object.userData.kind) select({ kind: hit.object.userData.kind, ref: hit.object.userData.ref }, false);
+});
+
+/* ---------- derived views ---------- */
+const clock = (t) => {
+  const m = Math.floor(t / 60) + START_HOUR * 60;
+  return `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+};
+const busDir = (b) => (b.s <= ROUTES[b.route].fwdLen + 0.5 ? 1 : -1);
+function statusOf(b) {
+  if (b.mode === 'reserve') return ['Dự phòng', 'mute'];
+  if (b.mode === 'dead') return b.deadTo === 'route' ? ['Chạy rỗng vào tuyến', 'info'] : ['Về bãi', 'mute'];
+  if (b.mode === 'hold') return ['Chờ xuất bến', 'warn'];
+  if (b.mode === 'dwell') return ['Đang đón khách', 'ok'];
+  if (b.pax.length > COMFORT) return ['Quá đông', 'bad'];
+  return ['Đang chạy', 'info'];
+}
+function stopLevel(n) { return n >= 22 ? ['Quá tải', 'bad'] : n >= 10 ? ['Đông', 'warn'] : ['Ổn', 'ok']; }
+function oldestAge(s) { return s.queue.length ? (SIM.t - s.queue[0].t0) / 60 : 0; }
+function etaTo(b, sTarget) {
+  const r = ROUTES[b.route];
+  const d = (sTarget - b.s + r.path.len) % r.path.len;
+  const between = r.events.filter((e) => ((e.s - b.s + r.path.len) % r.path.len) < d).length;
+  return d / speedNow() + between * 30 + (b.mode === 'dwell' ? Math.max(0, b.until - SIM.t) : 0);
+}
+function nextBusFor(stop) {
+  let best = null;
+  for (const b of BUSES) {
+    if (b.route !== stop.r || b.mode === 'dead' || b.mode === 'reserve') continue;
+    for (const s of [stop.sF, stop.sB]) {
+      const eta = etaTo(b, s);
+      if (!best || eta < best.eta) best = { bus: b, eta };
+    }
+  }
+  return best;
+}
+function nextStopOf(b) {
+  const r = ROUTES[b.route]; const ev = r.events[b.ev];
+  return r.stops[ev.k];
+}
+const pct = (v, m) => `${clamp((v / m) * 100, 0, 100).toFixed(0)}%`;
+const lvl = (f) => (f > 0.85 ? 'bad' : f > 0.6 ? 'warn' : 'ok');
+
+/* ---------- panels ---------- */
+const ICON = {
+  net: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><path d="M7 6h10M6 8l5 8M18 8l-5 8"/></svg>',
+  stop: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M6 6v12M18 6v12M9 12h6"/></svg>',
+  bus: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="3" width="16" height="14" rx="3"/><path d="M4 11h16M8 21v-4M16 21v-4"/></svg>',
+  depot: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 10 12 4l9 6v10H3z"/><path d="M8 20v-6h8v6"/></svg>',
+  check: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="m5 12 5 5 9-10"/></svg>',
+  x: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+};
+const COST_TERMS = [
+  ['W', 'Chờ (W)', '--r1'], ['V', 'Trên xe ×0.25', '--pax'], ['O', 'Quá comfort ×0.5', '--warn'], ['C', 'Xe chạy ×0.5', '--muted'],
+  ['CD', 'Chạy rỗng ×0.5', '--reserve'], ['X', 'Chờ >15 phút', '--r2'], ['U', 'Bị từ chối ×5', '--bad'], ['E', 'Bỏ cuộc ×60', '--fg'], ['M', 'Đổi mission ×2', '--r3'],
+];
+
+function patch(el, html) {
+  const key = document.activeElement && el.contains(document.activeElement) ? document.activeElement.dataset.key : null;
+  el.innerHTML = html;
+  if (key) { const f = el.querySelector(`[data-key="${CSS.escape(key)}"]`); if (f) f.focus(); }
+}
+
+function headwayChips(r) {
+  return `<span class="hw">${HEADWAYS.map((h) => `<span class="${r.headway === h * 60 ? 'on' : ''}">${h}′</span>`).join('')}</span>`;
+}
+
+function sideNet() {
+  const waiting = ALL_STOPS.reduce((n, s) => n + s.queue.length, 0);
+  const onRoute = BUSES.filter((b) => b.mode !== 'reserve' && !(b.mode === 'dead' && b.deadTo === 'bay')).length;
+  const k = SIM.lastK;
+  const top = ALL_STOPS.slice().sort((a, b) => b.queue.length - a.queue.length).slice(0, 4);
+  const costRow = k ? (() => {
+    const tot = Math.max(1, k.total);
+    return `<div class="stack" aria-hidden="true">${COST_TERMS.map(([key, , col]) => `<i style="width:${(k[key] / tot) * 100}%;background:var(${col})"></i>`).join('')}</div>
+      <div class="cost-legend">${COST_TERMS.filter(([key]) => k[key] > 0.05).map(([key, name, col]) => `<span class="sw" style="background:var(${col})"></span><span>${name}</span><b class="num">${k[key].toFixed(1)}</b>`).join('')}</div>`;
+  })() : '<span class="muted">Chưa đủ một khoảng điều khiển.</span>';
+  return `
+    <div class="side-head"><span class="ic">${ICON.net}</span><div><div class="eyebrow">Mạng tuyến · ĐHQG-HCM</div><h2>Làng Đại học Dĩ An</h2></div></div>
+    <div class="statusrow"><span class="pill ok">Đang vận hành</span><span>${onRoute}/12 xe trên tuyến · ${12 - onRoute} ở bãi</span></div>
+    <div class="tiles">
+      <div class="tile"><small>Khách chờ</small><b class="num">${waiting}</b><div class="bar ${lvl(waiting / 160)}"><i style="width:${pct(waiting, 160)}"></i></div></div>
+      <div class="tile"><small>Xe hoạt động</small><b class="num">${onRoute}<em> / 12</em></b><div class="bar"><i style="width:${pct(onRoute, 12)}"></i></div></div>
+      <div class="tile"><small>Cost khoảng k=${SIM.kIndex}</small><b class="num">${k ? k.total.toFixed(0) : '—'}</b></div>
+      <div class="tile"><small>Bỏ cuộc trong ca</small><b class="num">${SIM.abandonedTotal}</b></div>
+    </div>
+    <div class="sec-title">Tuyến<small>headway mục tiêu</small></div>
+    <div class="rows">${ROUTES.map((r) => {
+      const q = routeQueue(r), [lab, cls] = stopLevel(q / 3);
+      return `<button class="row" data-key="route-${r.i}" data-sel="route:${r.i}"><span class="chip" style="background:var(${r.color})">${r.code}</span><span class="grow"><span class="name">${esc(r.name)}</span><span class="sub">${committed(r.i)} xe · ${q} khách chờ</span></span>${headwayChips(r)}</button>`;
+    }).join('')}</div>
+    <div class="sec-title">Thành phần cost c<sub>k</sub><small>2 phút gần nhất</small></div>
+    ${costRow}
+    <div class="sec-title">Trạm đông nhất<small>khách</small></div>
+    <div class="rows">${top.map((s) => stopRow(s)).join('')}</div>
+    <div class="foot">Bố cục Làng Đại học vẽ minh họa, không theo tỉ lệ. Luồng khách và quyết định chạy trong trình duyệt bằng bộ điều phối threshold, theo thông số <span class="mono">configs/base.toml</span>: 12 xe, sức chứa 40, khoảng điều khiển 2 phút, ca 4 giờ.</div>`;
+}
+function stopRow(s) {
+  const n = s.queue.length, [lab, cls] = stopLevel(n), r = ROUTES[s.r];
+  return `<button class="row" data-key="stop-${s.r}-${s.k}" data-sel="stop:${s.r}:${s.k}"><span class="dot" style="background:var(${r.color})"></span><span class="grow"><span class="name">${esc(s.name)}</span><span class="sub">${r.code} · trạm ${s.k + 1} · chờ lâu nhất ${oldestAge(s).toFixed(0)} phút</span></span><b class="num">${n}</b><span class="pill ${cls}">${lab}</span></button>`;
+}
+function busRow(b) {
+  const [lab, cls] = statusOf(b);
+  const r = b.route === null ? null : ROUTES[b.route];
+  const where = b.mode === 'reserve' ? `Bãi ${b.bay + 1}` : b.mode === 'dead' ? (b.deadTo === 'route' ? `→ ${r.code}` : 'về bãi') : `→ ${esc(nextStopOf(b).name)}`;
+  return `<button class="row" data-key="bus-${b.i}" data-sel="bus:${b.i}"><span class="chip" style="background:${routeColor(b.route)}">${r ? r.code : 'DP'}</span><span class="grow"><span class="name">${b.id}</span><span class="sub">${where}</span></span><span class="pill ${cls}">${lab}</span><span class="muted num" style="font-size:11px;width:36px;text-align:right">${b.pax.length}/${CAPACITY}</span></button>`;
+}
+
+function sideStop(s) {
+  const r = ROUTES[s.r], n = s.queue.length, [lab, cls] = stopLevel(n);
+  const fwd = s.queue.filter((p) => p.dir > 0).length, back = n - fwd;
+  const mean = n ? s.queue.reduce((a, p) => a + (SIM.t - p.t0), 0) / n / 60 : 0;
+  const nb = nextBusFor(s);
+  const denied = s.queue.filter((p) => p.denied).length;
+  return `
+    <div class="side-head"><span class="ic">${ICON.stop}</span><div><div class="eyebrow">Trạm ${s.k + 1} · ${r.code}</div><h2>${esc(s.name)}</h2></div><button class="x" data-sel="net" aria-label="Đóng">${ICON.x}</button></div>
+    <div class="statusrow"><span class="pill ${cls}">${lab}</span><span>${esc(r.name)}</span></div>
+    <div class="tiles">
+      <div class="tile"><small>Khách chờ</small><b class="num">${n}</b><div class="bar ${lvl(n / 30)}"><i style="width:${pct(n, 30)}"></i></div></div>
+      <div class="tile"><small>Chờ TB / lâu nhất</small><b class="num">${mean.toFixed(1)}<em> / ${oldestAge(s).toFixed(0)} phút</em></b></div>
+      <div class="tile"><small>Hướng đi ${esc(r.stops[5].name)}</small><b class="num">${fwd}</b></div>
+      <div class="tile"><small>Hướng về ${esc(r.stops[0].name)}</small><b class="num">${back}</b></div>
+    </div>
+    <div class="sec-title">Xe sắp tới</div>
+    <div class="rows">${nb ? `<button class="row" data-key="nb" data-sel="bus:${nb.bus.i}"><span class="chip" style="background:var(${r.color})">${r.code}</span><span class="grow"><span class="name">${nb.bus.id}</span><span class="sub">khoảng ${Math.max(1, Math.round(nb.eta / 60))} phút · tải ${nb.bus.pax.length}/${CAPACITY}</span></span><span class="pill info">${clock(SIM.t + nb.eta)}</span></button>` : '<span class="muted">Không có xe trên tuyến.</span>'}</div>
+    <div class="tiles">
+      <div class="tile"><small>Đã bị từ chối vì đầy xe</small><b class="num">${denied}</b></div>
+      <div class="tile"><small>Xe ghé gần nhất</small><b class="num">${s.lastBus > 0 ? clock(s.lastBus) : '—'}</b></div>
+    </div>
+    <div class="foot">Khách bỏ cuộc sau 45 phút chờ. Chờ quá 15 phút được tính thêm vào thành phần X của cost.</div>`;
+}
+
+function sideBus(b) {
+  const [lab, cls] = statusOf(b);
+  const r = b.route === null ? null : ROUTES[b.route];
+  const load = b.pax.length;
+  const next = r && b.mode !== 'dead' ? nextStopOf(b) : null;
+  const dest = r && b.mode !== 'dead' ? (busDir(b) > 0 ? r.stops[5] : r.stops[0]) : null;
+  return `
+    <div class="side-head"><span class="ic">${ICON.bus}</span><div><div class="eyebrow">${r ? `${r.code} · ${esc(r.name)}` : 'Xe dự phòng'}</div><h2>${b.id}</h2></div><button class="x" data-sel="net" aria-label="Đóng">${ICON.x}</button></div>
+    <div class="statusrow"><span class="pill ${cls}">${lab}</span>${dest ? `<span>Đến ${esc(dest.name)}</span>` : ''}</div>
+    <div class="tiles">
+      <div class="tile"><small>Tải</small><b class="num">${load}<em> / ${CAPACITY}</em></b><div class="bar ${lvl(load / CAPACITY)}"><i style="width:${pct(load, CAPACITY)}"></i></div></div>
+      <div class="tile"><small>Ngưỡng thoải mái</small><b class="num">${COMFORT}</b><div class="bar ${load > COMFORT ? 'bad' : 'ok'}"><i style="width:${pct(load, COMFORT)}"></i></div></div>
+      <div class="tile"><small>Trạm kế</small><b style="font-size:13px">${next ? esc(next.name) : '—'}</b></div>
+      <div class="tile"><small>Cooldown điều xe</small><b class="num">${b.cooldown > SIM.t ? Math.ceil((b.cooldown - SIM.t) / 60) + ' phút' : 'Sẵn sàng'}</b></div>
+    </div>
+    ${b.recall ? '<div class="pill warn" style="align-self:flex-start">Sẽ về bãi khi hết khách ở đầu tuyến</div>' : ''}
+    <div class="foot">Chỉ xe rỗng đủ điều kiện mới được chuyển tuyến hoặc gọi về. Mỗi tuyến luôn giữ ít nhất ${F_MIN} xe.</div>`;
+}
+
+function sideDepot() {
+  const res = BUSES.filter((b) => b.mode === 'reserve');
+  const moving = BUSES.filter((b) => b.mode === 'dead');
+  return `
+    <div class="side-head"><span class="ic">${ICON.depot}</span><div><div class="eyebrow">Depot · dự phòng</div><h2>Bãi đỗ Bến xe buýt ĐHQG</h2></div><button class="x" data-sel="net" aria-label="Đóng">${ICON.x}</button></div>
+    <div class="tiles">
+      <div class="tile"><small>Xe ở bãi</small><b class="num">${res.length}<em> / 5 bãi</em></b><div class="bar"><i style="width:${pct(res.length, 5)}"></i></div></div>
+      <div class="tile"><small>Đang chạy rỗng</small><b class="num">${moving.length}</b></div>
+    </div>
+    <div class="rows">${res.concat(moving).map(busRow).join('') || '<span class="muted">Không còn xe dự phòng.</span>'}</div>
+    <div class="foot">DISPATCH đưa xe dự phòng vào tuyến, chịu cooldown 20 phút cho xe và 10 phút cho tuyến. Thời gian chạy rỗng tính vào C<sub>D</sub>.</div>`;
+}
+
+function sideRoute(r) {
+  const buses = BUSES.filter((b) => b.route === r.i);
+  return `
+    <div class="side-head"><span class="ic" style="background:var(${r.color});color:#fff">${ICON.net}</span><div><div class="eyebrow">Tuyến ${r.code} · ${r.base} khách/giờ cơ sở</div><h2>${esc(r.name)}</h2></div><button class="x" data-sel="net" aria-label="Đóng">${ICON.x}</button></div>
+    <div class="statusrow"><span>Headway</span>${headwayChips(r)}<span>· ${committed(r.i)} xe</span></div>
+    <div class="rows">${r.stops.map(stopRow).join('')}</div>
+    <div class="sec-title">Xe trên tuyến</div>
+    <div class="rows">${buses.map(busRow).join('')}</div>`;
+}
+
+function renderSide() {
+  const s = selection;
+  const html = s.kind === 'stop' ? sideStop(s.ref) : s.kind === 'bus' ? sideBus(s.ref) : s.kind === 'depot' ? sideDepot() : s.kind === 'route' ? sideRoute(s.ref) : sideNet();
+  patch($('#side'), html);
+}
+
+function renderTrip() {
+  let b = tracked;
+  if (!b || b.mode === 'reserve' || b.mode === 'dead') b = BUSES.find((x) => x.mode !== 'reserve' && x.mode !== 'dead');
+  const el = $('#trip');
+  if (!b) { patch(el, '<div class="trip-main muted">Chưa có xe trên tuyến.</div>'); return; }
+  const r = ROUTES[b.route], dir = busDir(b);
+  const order = dir > 0 ? [0, 1, 2, 3, 4, 5] : [5, 4, 3, 2, 1, 0];
+  const cur = nextStopOf(b);
+  const curIdx = order.indexOf(cur.k);
+  const steps = order.map((k, i) => {
+    const s = r.stops[k];
+    const state = i < curIdx ? 'done' : i === curIdx ? 'cur' : '';
+    const target = dir > 0 ? s.sF : s.sB;
+    let when;
+    if (state === 'done') when = 'Đã qua';
+    else if (state === 'cur' && (b.mode === 'dwell' || b.mode === 'hold')) when = b.mode === 'hold' ? 'Chờ xuất bến' : 'Đang đón';
+    else when = 'ETA ' + clock(SIM.t + etaTo(b, target));
+    const node = state === 'done' ? ICON.check : `<span class="num" style="font-size:11px;font-weight:700">${k + 1}</span>`;
+    return `<div class="step ${state}"><span class="node">${node}</span><b>${esc(s.name)}</b><small>${when}</small></div>`;
+  }).join('');
+  const [lab, cls] = statusOf(b);
+  const dest = dir > 0 ? r.stops[5] : r.stops[0];
+  const eta = etaTo(b, dir > 0 ? cur.sF : cur.sB);
+  patch(el, `
+    <div class="trip-main">
+      <div class="trip-head"><span style="color:var(--accent)">${ICON.bus}</span><b>Theo dõi chuyến</b><small>${b.id} · ${r.code} ${esc(r.name)}</small></div>
+      <div class="steps">${steps}</div>
+    </div>
+    <button class="trip-card row" data-key="trip" data-sel="bus:${b.i}" style="cursor:pointer">
+      <span class="id">#${b.id}</span>
+      <small>Đến: ${esc(dest.name)}</small>
+      <span class="pill ${cls}" style="align-self:flex-start">${lab}</span>
+      <small>Tải ${b.pax.length}/${CAPACITY} · ${b.mode === 'run' ? `${Math.max(1, Math.round(eta / 60))} phút tới ${esc(cur.name)}` : esc(cur.name)}</small>
+    </button>`);
+}
+
+let tab = 'stops';
+function renderList() {
+  let html;
+  if (tab === 'stops') html = ALL_STOPS.slice().sort((a, b) => b.queue.length - a.queue.length).map(stopRow).join('');
+  else if (tab === 'buses') html = BUSES.map(busRow).join('');
+  else html = SIM.log.length ? SIM.log.map((l, i) => `<div class="row" style="cursor:default"><span class="muted num" style="font-size:11px;width:36px">${clock(l.t)}</span><span class="grow"><span class="log-code">${esc(l.code)}</span><span class="sub" style="white-space:normal">${esc(l.text)}</span></span></div>`).join('') + `<div class="row muted" style="cursor:default;font-size:11px">${SIM.noop} khoảng gần đây chọn NOOP</div>` : `<span class="muted">Chưa có quyết định nào ngoài NOOP.</span>`;
+  patch($('#tabpanel'), html);
+}
+
+function renderKPIs() {
+  const waiting = ALL_STOPS.reduce((n, s) => n + s.queue.length, 0);
+  const ago = SIM.history.length > 5 ? SIM.history[SIM.history.length - 6].waiting : null;
+  const delta = ago === null ? '' : waiting - ago;
+  $('#k-wait').innerHTML = `${waiting}${delta === '' ? '' : `<span class="delta ${delta > 0 ? 'up' : 'down'}">${delta > 0 ? '↑' : '↓'} ${Math.abs(delta)}</span>`}`;
+  $('#k-wait-sub').textContent = ago === null ? '18 trạm · 3 tuyến' : 'so với 10 phút trước';
+  const onRoute = BUSES.filter((b) => b.mode !== 'reserve' && !(b.mode === 'dead' && b.deadTo === 'bay')).length;
+  const res = BUSES.filter((b) => b.mode === 'reserve').length;
+  $('#k-bus').innerHTML = `${onRoute}<em> / 12</em>`;
+  $('#k-bus-sub').textContent = `${res} dự phòng ở bến`;
+  const allAges = ALL_STOPS.flatMap((s) => s.queue.map((p) => SIM.t - p.t0));
+  const mean = allAges.length ? allAges.reduce((a, b) => a + b, 0) / allAges.length / 60 : 0;
+  const w = SIM.waits.slice().sort((a, b) => a - b);
+  const p95 = w.length ? w[Math.floor(w.length * 0.95)] / 60 : 0;
+  $('#k-age').innerHTML = `${mean.toFixed(1)}<em> phút</em>`;
+  $('#k-age-sub').textContent = `p95 khi lên xe ${p95.toFixed(1)} phút`;
+  $('#depot-sub').textContent = `${res}/5 bãi đang dùng`;
+  $('#clock').textContent = `Mô phỏng ${clock(SIM.t)}`;
+}
+
+function renderFigures() {
+  const col = { ok: new THREE.Color(css('--pax')), warn: new THREE.Color(css('--warn')), bad: new THREE.Color(css('--bad')) };
+  let i = 0;
+  ALL_STOPS.forEach((s) => {
+    const n = Math.min(MAX_FIG, s.queue.length);
+    const t = s.t, nn = s.n;
+    for (let j = 0; j < MAX_FIG; j++, i++) {
+      if (j < n) {
+        const row = Math.floor(j / 6), c = j % 6;
+        const along = (c - 2.5) * 1.05 + (row % 2) * 0.4;
+        const out = 1.7 + row * 1.0;
+        const x = s.center.x + t.x * along + nn.x * out, z = s.center.z + t.z * along + nn.z * out;
+        tmp.position.set(x, 0.75, z); tmp.scale.set(1, 1, 1); tmp.rotation.set(0, 0, 0); tmp.updateMatrix();
+        figBody.setMatrixAt(i, tmp.matrix);
+        tmp.position.y = 1.65; tmp.updateMatrix(); figHead.setMatrixAt(i, tmp.matrix);
+        const age = (SIM.t - s.queue[j].t0) / 60;
+        const cc = age > 20 ? col.bad : age > 10 ? col.warn : col.ok;
+        figBody.setColorAt(i, cc); figHead.setColorAt(i, cc);
+      } else {
+        tmp.position.set(0, -50, 0); tmp.scale.set(0.001, 0.001, 0.001); tmp.updateMatrix();
+        figBody.setMatrixAt(i, tmp.matrix); figHead.setMatrixAt(i, tmp.matrix);
+      }
+    }
+  });
+  figBody.instanceMatrix.needsUpdate = figHead.instanceMatrix.needsUpdate = true;
+  if (figBody.instanceColor) figBody.instanceColor.needsUpdate = figHead.instanceColor.needsUpdate = true;
+}
+
+let lastSlow = 0;
+function renderPanels(force) {
+  const now = performance.now();
+  if (!force && now - lastSlow < 500) return;
+  lastSlow = now;
+  renderKPIs(); renderSide(); renderTrip(); renderList(); renderFigures();
+  ALL_STOPS.forEach((s) => {
+    const n = s.queue.length;
+    s.el.querySelector('.n').textContent = n;
+    s.el.classList.toggle('warn', n >= 10 && n < 22);
+    s.el.classList.toggle('bad', n >= 22);
+    s.el.classList.toggle('sel', selection.kind === 'stop' && selection.ref === s);
+  });
+  BUSES.forEach((b) => {
+    b.el.style.background = routeColor(b.route);
+    b.fill.style.width = pct(b.pax.length, CAPACITY);
+    b.el.classList.toggle('sel', selection.kind === 'bus' && selection.ref === b);
+    const m = b.route === null ? MAT.reserve : MAT['r' + (b.route + 1)];
+    b.stripe.material = m; b.roof.material = m;
+  });
+}
+
+/* ---------- UI wiring ---------- */
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-sel]');
+  if (!t) return;
+  const [kind, a, b] = t.dataset.sel.split(':');
+  if (kind === 'net') home();
+  else if (kind === 'route') select({ kind, ref: ROUTES[+a] }, true);
+  else if (kind === 'stop') select({ kind, ref: ROUTES[+a].stops[+b] }, true);
+  else if (kind === 'bus') select({ kind, ref: BUSES[+a] }, true);
+});
+document.querySelectorAll('.tabs button').forEach((btn) => btn.addEventListener('click', () => {
+  tab = btn.dataset.tab;
+  document.querySelectorAll('.tabs button').forEach((x) => x.setAttribute('aria-selected', String(x === btn)));
+  renderList();
+}));
+$('#btn-buses').addEventListener('click', () => $('#tab-buses').click());
+$('#btn-routes').addEventListener('click', (e) => {
+  const on = e.currentTarget.getAttribute('aria-pressed') !== 'true';
+  e.currentTarget.setAttribute('aria-pressed', String(on));
+  routeRibbons.forEach((m) => { m.visible = on; });
+});
+$('#btn-depot').addEventListener('click', () => select({ kind: 'depot' }, true));
+$('#btn-home').addEventListener('click', home);
+$('#reset').addEventListener('click', home);
+const dolly = (f) => {
+  const off = camera.position.clone().sub(controls.target);
+  const len = clamp(off.length() * f, controls.minDistance, controls.maxDistance);
+  camera.position.copy(controls.target).add(off.setLength(len)); controls.update();
+};
+$('#zoom-in').addEventListener('click', () => dolly(0.8));
+$('#zoom-out').addEventListener('click', () => dolly(1.25));
+const rotate = (a) => {
+  const off = camera.position.clone().sub(controls.target);
+  off.applyAxisAngle(new THREE.Vector3(0, 1, 0), a);
+  camera.position.copy(controls.target).add(off); controls.update();
+};
+$('#rot-l').addEventListener('click', () => rotate(Math.PI / 6));
+$('#rot-r').addEventListener('click', () => rotate(-Math.PI / 6));
+
+let speed = REDUCED ? 15 : 40;
+function setSpeed(v) {
+  speed = v;
+  document.querySelectorAll('.speed button').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.speed === v)));
+  $('#live').classList.toggle('paused', v === 0);
+}
+document.querySelectorAll('.speed button').forEach((b) => b.addEventListener('click', () => setSpeed(+b.dataset.speed)));
+setSpeed(speed);
+
+// search
+const q = $('#q'), results = $('#results');
+const INDEX = [
+  ...ROUTES.map((r) => ({ label: `${r.code} · ${r.name}`, sub: 'Tuyến', sel: `route:${r.i}` })),
+  ...ALL_STOPS.map((s) => ({ label: s.name, sub: `Trạm · ${ROUTES[s.r].code}`, sel: `stop:${s.r}:${s.k}` })),
+  ...BUSES.map((b) => ({ label: b.id, sub: 'Xe buýt', sel: `bus:${b.i}` })),
+];
+const MARKS = new RegExp('[' + String.fromCharCode(0x300) + '-' + String.fromCharCode(0x36f) + ']', 'g');
+const fold = (s) => s.normalize('NFD').replace(MARKS, '').replace(new RegExp(String.fromCharCode(0x111) + '|' + String.fromCharCode(0x110), 'g'), 'd').toLowerCase();
+function showResults() {
+  const term = fold(q.value.trim());
+  if (!term) { results.hidden = true; return; }
+  const hits = INDEX.filter((x) => fold(x.label).includes(term)).slice(0, 8);
+  results.innerHTML = hits.length
+    ? hits.map((h, i) => `<button class="${i === 0 ? 'on' : ''}" data-sel="${h.sel}">${esc(h.label)}<small>${h.sub}</small></button>`).join('')
+    : '<div class="muted" style="padding:8px 10px">Không tìm thấy. Thử tên trạm, tên trường hoặc mã xe như XE-04.</div>';
+  results.hidden = false;
+}
+q.addEventListener('input', showResults);
+q.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { const first = results.querySelector('button'); if (first) { first.click(); q.blur(); } }
+  if (e.key === 'Escape') { q.value = ''; results.hidden = true; q.blur(); }
+});
+results.addEventListener('click', () => { results.hidden = true; q.value = ''; });
+document.addEventListener('keydown', (e) => {
+  if (e.key === '/' && document.activeElement !== q) { e.preventDefault(); q.focus(); }
+});
+document.addEventListener('pointerdown', (e) => { if (!e.target.closest('.search')) results.hidden = true; });
+
+/* ---------- loop ---------- */
+function resize() {
+  const w = vp.clientWidth, h = vp.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / Math.max(1, h); camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(vp);
+resize();
+
+resetSim(20261018);
+// warm up so the first frame shows a working morning peak
+for (let i = 0; i < 3000; i++) step(1);
+tracked = BUSES.find((b) => b.route === 0 && b.mode === 'run') || BUSES[0];
+
+let last = performance.now(), acc = 0, trainX = -110, trainV = 9, trainWait = 0;
+function frame(now) {
+  const real = Math.min(0.1, (now - last) / 1000); last = now;
+  acc += real * speed;
+  let guard = 0;
+  while (acc > 0 && guard++ < 400) { const dt = Math.min(1, acc); step(dt); acc -= dt; }
+  if (camAnim) {
+    const k = clamp((now - camAnim.t0) / camAnim.dur, 0, 1), e = 1 - (1 - k) ** 3;
+    camera.position.lerpVectors(camAnim.fromP, camAnim.toP, e);
+    controls.target.lerpVectors(camAnim.fromT, camAnim.toT, e);
+    if (k >= 1) camAnim = null;
+  }
+  controls.update();
+
+  BUSES.forEach((b) => {
+    const p = busPose(b);
+    b.mesh.position.set(p.x, 0, p.z);
+    b.mesh.rotation.y = Math.atan2(p.hx, p.hz);
+  });
+  if (speed > 0) {
+    CARS.forEach((c) => { c.x += c.v * real * 4; if (c.x > 210) c.x = -210; if (c.x < -210) c.x = 210; c.mesh.position.x = c.x; });
+    if (trainWait > 0) trainWait -= real;
+    else {
+      trainX += trainV * real * 3;
+      if (trainX > 150) { trainX = 150; trainV = -9; }
+      if (trainX < -110) { trainX = -110; trainV = 9; trainWait = 3; }
+    }
+    train.position.x = trainX;
+  }
+
+  const sel = selection.kind === 'bus' ? busPose(selection.ref) : selection.kind === 'stop' ? selection.ref.center : null;
+  ring.visible = !!sel;
+  if (sel) {
+    ring.position.x = sel.x; ring.position.z = sel.z;
+    const s = REDUCED ? 1 : 1 + 0.08 * Math.sin(now / 250); ring.scale.set(s, s, s);
+  }
+
+  renderer.render(scene, camera);
+
+  const w = vp.clientWidth, h = vp.clientHeight;
+  LABELS.forEach((l) => place(l.el, l.pos, w, h));
+  ALL_STOPS.forEach((s) => place(s.el, s.lblPos, w, h));
+  const bp = new THREE.Vector3();
+  BUSES.forEach((b) => { const p = busPose(b); bp.set(p.x, 4.2, p.z); place(b.el, bp, w, h); });
+
+  renderPanels(false);
+  requestAnimationFrame(frame);
+}
+renderPanels(true);
+requestAnimationFrame(frame);
+})();
+</script>
