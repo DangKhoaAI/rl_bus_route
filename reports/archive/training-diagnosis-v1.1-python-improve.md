@@ -7,7 +7,7 @@ Same command and seed as the baseline trial (2048 transitions, 10-day eval,
 
 | Role | Path |
 |---|---|
-| **Old (before)** | `runs/diagnose/` (gitignored) and `reports/training-diagnosis-v1.0.md` |
+| **Old (before)** | `runs/diagnose/` (gitignored) and `reports/archive/training-diagnosis-v1.0.md` |
 | **New (after)** | `runs/diagnose-after/` (gitignored) and this file |
 
 ## Wall clock

@@ -2,7 +2,7 @@
 
 Ngày cập nhật: **2026-09-12**. Trạng thái: **R0–R4 đã đạt; Rust là backend của loạt thực nghiệm L0**.
 Implementation plan (English): [rust_improve.md](../plan/rust_improve.md).
-Bằng chứng đo được: [reports/rust-migration.md](../reports/rust-migration.md).
+Bằng chứng đo được: [reports/rust-migration.md](../../reports/rust-migration.md).
 
 
 ## 1. Quyết định và quan hệ với kế hoạch RL
@@ -21,8 +21,8 @@ Nguồn gốc giữ nguyên:
 
 | Vai trò | Artifacts |
 |---|---|
-| Python trước tối ưu | `reports/training-diagnosis-v1.0.md` (+ raw gitignored `runs/diagnose/`) |
-| Python after, oracle | `reports/training-diagnosis-v1.1-python-improve.md` (+ raw gitignored `runs/diagnose-after/`) |
+| Python trước tối ưu | `reports/archive/training-diagnosis-v1.0.md` (+ raw gitignored `runs/diagnose/`) |
+| Python after, oracle | `reports/archive/training-diagnosis-v1.1-python-improve.md` (+ raw gitignored `runs/diagnose-after/`) |
 
 Năm tối ưu Python đã được báo cáo: counters, cached load, conservation debug-only, waiting-only hot list, IntEnum.
 

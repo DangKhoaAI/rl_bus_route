@@ -43,7 +43,7 @@ tests/                   # see tests/README.md for the naming rules
 configs/                 # TOML runs; `base.toml` is merged under every other config
 scripts/                 # build_native, benchmarks, profiling, tune
 docs/                    # specs, plans, research
-reports/                 # frozen reproducible evidence — do not rewrite
+reports/                 # curated evidence; start at reports/README.md
 ```
 
 **Live-path caveat:** the Rust wrapper still imports a few oracle modules as the
@@ -106,7 +106,10 @@ Targeted runs while iterating, full `uv run pytest -q` before declaring done.
   marked verified (`checkpoint.py`).
 - **Conservation checks** (`bus_sim.oracle.domain.CONSERVATION_CHECKS`) are on in
   tests and must be off for speed references.
-- **`reports/` is evidence.** Add new reports; do not edit accepted ones.
+- **`reports/` is evidence.** Add new studies under `reports/studies/`; do not
+  edit accepted L3 tables or the frozen `reports/rust-migration*` files. The
+  final claim lives in `reports/FINAL.md`, the change table in
+  `reports/LEDGER.md`.
 - **No new tests for deprecated code** expecting fixes. Follow `tests/README.md`:
   unit mirrors `src` as `test_<module>.py`; integration uses
   `test_<subject>[_<aspect>].py` under the entry-point path.

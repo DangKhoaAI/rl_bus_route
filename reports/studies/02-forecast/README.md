@@ -1,5 +1,9 @@
 # Forecast diagnostic (Task 10)
 
+> **Status: historical diagnostic.** This report only measures forecast error. The
+> later policy comparison was run as L2.1 and rejected; see
+> [`../03-rl-improvement/l2-forecast/`](../03-rl-improvement/l2-forecast/).
+
 Historical forecaster: time-bin mean of next-15-minute arrivals on **train-day
 arrival logs**, times a recent-10-minute correction
 `clip((recent+1)/(historical+1), 0.5, 2.0)`. Fit once on the 500 train days,

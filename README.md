@@ -36,7 +36,7 @@ tests/
 configs/                 # Run and experiment configurations
 scripts/                 # Build, benchmark, and profiling utilities
 docs/                    # Specifications, plans, and research notes
-reports/                 # Selected reproducible results and evidence
+reports/                 # Curated evidence; start at reports/README.md
 ```
 
 Python packages follow the standard `src/` layout, while Rust packages follow
@@ -95,7 +95,8 @@ with the same tapes, 221-slot table, and compute. Forecast experiment:
 correction; no future tape).
 
 Large artifacts (`data/generated/`, `runs/*.zip`) are gitignored and must be
-recreated. Selected reports live in `reports/`.
+recreated. Start at `reports/README.md`; the final result is
+`reports/FINAL.md`.
 
 ## Native kernel (Rust)
 

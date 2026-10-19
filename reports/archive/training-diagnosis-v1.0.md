@@ -6,12 +6,12 @@ Same PPO hyperparams as a full seed (`n_envs=4`, `n_steps=256`, `n_epochs=4`, `b
 
 **Before** optimizations:
 
-- `reports/training-diagnosis-v1.0.md` — this summary (baseline)
+- `reports/archive/training-diagnosis-v1.0.md` — this summary (baseline)
 - raw artifacts (gitignored): `runs/diagnose/` — `diagnosis.json`, `train_events.jsonl`, `cprofile.txt`, `metadata.json`
 
 **After** optimizations (compare against the files above):
 
-- `reports/training-diagnosis-v1.1-python-improve.md`
+- `reports/archive/training-diagnosis-v1.1-python-improve.md`
 - raw artifacts (gitignored): `runs/diagnose-after/`
 
 ## Wall clock

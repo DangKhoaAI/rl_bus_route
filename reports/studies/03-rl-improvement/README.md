@@ -3,31 +3,37 @@
 Status: **L0/L1/L2 complete with core retained; L3 frozen T9 matrix evaluated on
 held-out data — core is the incumbent and every ablation is worse.**
 
-The active study follows [`docs/spec/improve_RL.md`](../docs/spec/improve_RL.md)
-and [`docs/plan/improve_RL.md`](../docs/plan/improve_RL.md). The frozen protocol,
+The active study follows [`docs/spec/improve_RL.md`](../../../docs/spec/improve_RL.md)
+and [`docs/plan/improve_RL.md`](../../../docs/plan/improve_RL.md). The frozen protocol,
 experiment cards and raw-artifact index are under
-[`reports/rl-improvement/`](rl-improvement/).
+[`reports/studies/03-rl-improvement/`](./).
+
+**Decision cards:** [`l0-baseline/`](l0-baseline/) · [`l1-gae/`](l1-gae/) ·
+[`l2-forecast/`](l2-forecast/) · [`l2-pbrs/`](l2-pbrs/) ·
+[`l3-matrix/`](l3-matrix/).
+**Artifact index and reproduction:** [`ARTIFACTS.md`](ARTIFACTS.md).
+**Final summary:** [`../../FINAL.md`](../../FINAL.md).
 
 ## Acceptance evidence
 
-- L0 runtime/protocol: [`rl-improvement/protocol.json`](rl-improvement/protocol.json)
-- L0 diagnosis: [`rl-improvement/baseline.md`](rl-improvement/baseline.md)
-- L0 tables/curve: `rl-improvement/tables/` and `rl-improvement/plots/`
-- L1 ledger and decisions: [`rl-improvement/experiments.csv`](rl-improvement/experiments.csv)
-- L1 screening table: `rl-improvement/tables/l1_screening_summary.csv`
-- L2.1 forecast summary/contrast/audit: `rl-improvement/tables/l2_forecast_summary.csv`,
+- L0 runtime/protocol: [`protocol.json`](./protocol.json)
+- L0 diagnosis: [`baseline.md`](./baseline.md)
+- L0 tables/curve: `./tables/` and `./plots/`
+- L1 ledger and decisions: [`experiments.csv`](./experiments.csv)
+- L1 screening table: `./tables/l1_screening_summary.csv`
+- L2.1 forecast summary/contrast/audit: `./tables/l2_forecast_summary.csv`,
   `l2_forecast_contrast.json`, `l2_forecast_verification.json`
-- L2.3 PBRS summary/contrast/audit/scale probe: `rl-improvement/tables/l2_pbrs_summary.csv`,
+- L2.3 PBRS summary/contrast/audit/scale probe: `./tables/l2_pbrs_summary.csv`,
   `l2_pbrs_contrast.json`, `l2_pbrs_verification.json`, `l2_pbrs_scale_probe.json`
-- L3 frozen protocol and matrix audit: `rl-improvement/l3_protocol.json`,
-  `rl-improvement/tables/l3_config_audit.json`
-- L3 held-out results/statistics: `rl-improvement/tables/l3_held_out_summary.csv`,
+- L3 frozen protocol and matrix audit: `./l3_protocol.json`,
+  `./tables/l3_config_audit.json`
+- L3 held-out results/statistics: `./tables/l3_held_out_summary.csv`,
   `l3_contrasts.csv`, `l3_paired_days.csv`, `l3_baselines_summary.csv`,
   `l3_baseline_contrasts.csv`, `l3_verification.json`
-- L3 figures: `rl-improvement/plots/l3_validation_curves.png`, `l3_held_out_costs.png`,
-  `l3_service_tradeoffs.png`; failure traces: `rl-improvement/evidence/l3_failure_traces.json`
+- L3 figures: `./plots/l3_validation_curves.png`, `l3_held_out_costs.png`,
+  `l3_service_tradeoffs.png`; failure traces: `./evidence/l3_failure_traces.json`
 - Reproduction: `uv run python scripts/l3_analysis.py`
-- Structural run audit: `rl-improvement/tables/verification.json`
+- Structural run audit: `./tables/verification.json`
 
 Three core Rust runs completed at 245,760 transitions and 100 validation days
 for seeds 11/22/33. Each has checkpoints, metadata, 20 learning-curve points,
@@ -58,7 +64,7 @@ registered hypothesis was that a causal 15-minute-ahead arrival forecast would
 let the policy anticipate demand and lower `total_cost_core` without changing
 physics, masks or reward.
 
-Card `L2-FORECAST` in [`rl-improvement/experiments.csv`](rl-improvement/experiments.csv)
+Card `L2-FORECAST` in [`experiments.csv`](./experiments.csv)
 was registered before the runs. Single-group diff vs `L0-CORE`:
 `[forecast] enabled = false -> true`; the forecaster is fit on the 500 train
 arrival tapes only, frozen, and saved as `forecaster.npz` beside each checkpoint
@@ -155,7 +161,7 @@ high), and the first-round limit of two L2 directions is now used.
 
 The T9 matrix (`core`, `no_reassign`, `no_short`, `fairness_zero`; seeds 11/22/33;
 B=245,760; identical runtime, validation schedule and checkpoint rule) was frozen
-in [`rl-improvement/l3_protocol.json`](rl-improvement/l3_protocol.json) before any
+in [`l3_protocol.json`](./l3_protocol.json) before any
 held-out split was read. `tables/l3_config_audit.json` confirms each ablation
 differs from core in exactly one field (`enable_reassign`, `enable_short_turn`,
 `reward.fairness`).
@@ -167,11 +173,11 @@ ablation therefore did not change training. Fix: added
 `Kernel.set_reward`/`BatchKernel.set_reward` in
 `crates/bus-sim-python/src/lib.rs` and wired `run.reward` through
 `bridges`/`environment`/`batch`, rebuilt with new provenance
-(`runs/rl-improvement/l3-t9/native-build-fixed-reward.json`, hash `d6bf1551…`),
+(`runs/./l3-t9/native-build-fixed-reward.json`, hash `d6bf1551…`),
 and added the native regression `test_set_reward_changes_returned_reward`. All 12
 arms were re-run on the single fixed build. Core's best validation costs are
 unchanged (`13,199.132 / 13,113.972 / 13,213.456`), confirming the fix is a no-op
-for the default reward; the earlier buggy `runs/rl-improvement/t9-fairness_zero/*`
+for the default reward; the earlier buggy `runs/./t9-fairness_zero/*`
 runs are retained as invalid evidence and are excluded from the matrix.
 
 ### L3.2 paired held-out evaluation
@@ -184,7 +190,7 @@ days; days and scenario hashes are paired across arms; no missing key values; on
 native hash across the whole matrix; and `fairness_zero` records
 `reward.fairness=0` with `total_cost != total_cost_core`, i.e. the primary metric
 is recomputed with the original core weights. Raw results live under
-`runs/rl-improvement/l3-eval-fixed/`.
+`runs/./l3-eval-fixed/`.
 
 ### L3.3 statistics
 
@@ -232,10 +238,10 @@ threshold +3,586.6 [3,450.7, 3,727.8]; `test_ood_burst` core 25,197.2 vs fixed
 - **Sample efficiency:** at the fixed B=245,760 transition budget, core is best on
   every held-out split; no algorithm change from L1/L2 improved it.
 - **Throughput:** the Rust backend speedup is infrastructure evidence reported
-  once in [`rust-migration.md`](rust-migration.md) and
-  [`runtime-optimization.md`](runtime-optimization.md), with the retained
+  once in [`rust-migration.md`](../../rust-migration.md) and
+  [`runtime-optimization.md`](../../runtime-optimization.md), with the retained
   sparse-store/lazy-kernel memory work recorded in
-  [`memory_optimize.md`](../docs/spec/memory_optimize.md); it is not multiplied
+  [`memory_optimize.md`](../../../docs/spec/memory_optimize.md); it is not multiplied
   into any algorithm claim here.
 - **Wall clock:** observed full-run training walls on this host were core 78.0 s,
   `no_reassign` 86.4 s, `no_short` 80.5 s, `fairness_zero` 80.4 s (3 seeds each).
@@ -247,7 +253,7 @@ Failure traces: `evidence/l3_failure_traces.json` wraps the decision rows for th
 three highest-cost core held-out days at each seed/checkpoint, selected by cost
 before tracing (ties by ascending `scenario_index`). It is a 15 KB digest
 (decisions, action-family counts, peak queue) keyed to full raw traces under the
-gitignored `runs/rl-improvement/l3-failure-traces/` tree; regenerate both with
+gitignored `runs/./l3-failure-traces/` tree; regenerate both with
 `uv run python scripts/l3_failure_traces.py`. On the 27 selected worst-case days
 the policy takes 3,069 NOOP, 81 SET_HEADWAY, 63 DISPATCH, 18 SHORT_TURN and 9
 REASSIGN decisions out of 3,240 — i.e. the highest-cost days are dominated by

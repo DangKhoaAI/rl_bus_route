@@ -119,7 +119,7 @@
   },
   "artifact_layout": {
     "run_root": "runs/rl-improvement/<experiment>/<seed>/<run-id>/",
-    "curated_root": "reports/rl-improvement/",
-    "ledger": "reports/rl-improvement/experiments.csv"
+    "curated_root": "reports/studies/03-rl-improvement/",
+    "ledger": "reports/studies/03-rl-improvement/experiments.csv"
   }
 }

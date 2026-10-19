@@ -1,6 +1,9 @@
 # Pilot report (Task 8)
 
-Plumbing gate for reproducible training, not a claim that PPO beats heuristics.
+> **Status: historical.** Plumbing gate for reproducible training, not a claim
+> that PPO beats heuristics. The full study is in
+> [`../03-rl-improvement/`](../03-rl-improvement/).
+
 
 ## Setup
 
@@ -56,7 +59,7 @@ PPO has **not** beaten the heuristics after 12,288 transitions. Waiting is sligh
 
 Event trace of validation day 0 includes a `DISPATCH` (reserve). Threshold used reassign and short-turn on the 100-day average; the pilot policy used reassign rarely and no short-turn.
 
-Plots: `reports/pilot/plots/`.
+Plots: `plots/`.
 
 ## Lineage
 

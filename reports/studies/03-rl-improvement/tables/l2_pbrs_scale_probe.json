@@ -1,6 +1,6 @@
 {
   "purpose": "fixed PBRS scale for L2-PBRS, chosen on train tapes before trials",
-  "command": "5 train scenarios, first-mask-valid action, core.toml; see reports/rl-improvement.md",
+  "command": "5 train scenarios, first-mask-valid action, core.toml; see reports/studies/03-rl-improvement/README.md",
   "steps": 600,
   "queue_weight": 2.0,
   "excess_weight": 5.0,

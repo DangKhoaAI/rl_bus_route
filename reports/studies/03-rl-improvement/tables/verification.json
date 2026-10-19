@@ -1,5 +1,5 @@
 {
-  "protocol": "reports/rl-improvement/protocol.json",
+  "protocol": "reports/studies/03-rl-improvement/protocol.json",
   "expected_native_hash": "2d5fa9e3d7672966277efbdba9fc179bdfe6cd8e3bd72f3b60e730d65192fe26",
   "checks": [
     {

@@ -76,7 +76,7 @@ Each task starts unchecked. Mark it complete only after its acceptance criteria 
 **R0 gate:** R0.1-R0.3 accepted. Freeze the oracle before native implementation.
 
 **Evidence (2026-09-12, accepted):** revision `1c34457`; commands and raw
-results in [reports/rust-migration.md](../reports/rust-migration.md) and
+results in [reports/rust-migration.md](../../reports/rust-migration.md) and
 `reports/rust-migration/`. `python scripts/export_oracle.py verify` reproduces
 11 golden fixtures and the fixed-checkpoint mean `15471.25`;
 `python scripts/benchmark_python.py` records the unprofiled reference
@@ -126,7 +126,7 @@ kernel with zero divergences on state/counters/IDs/lineage, every cost
 component, per-tick state, departure/action events and terminal settlement;
 `cargo test -p bus-sim-core` (7 tests) and
 `python -m pytest tests/parity/test_rust_kernel.py` (26 tests) pass.
-Details in [reports/rust-migration.md](../reports/rust-migration.md) and
+Details in [reports/rust-migration.md](../../reports/rust-migration.md) and
 `reports/rust-migration/native-build.json`. Observation/mask parity remains R2.
 
 ## 5. R2: observations and masks
@@ -160,7 +160,7 @@ computed at reset and after each step and returns copies. All 11 fixtures match
 every observation channel within `rtol=atol=1e-6` and all 221 mask bits
 exactly at reset and after every step (15 tests in
 `tests/parity/test_rust_observation.py`), plus 12 native unit tests.
-Details in [reports/rust-migration.md](../reports/rust-migration.md).
+Details in [reports/rust-migration.md](../../reports/rust-migration.md).
 
 ## 6. R3: integrate the backend
 
@@ -209,7 +209,7 @@ fails loudly when Rust is missing. 21 integration tests
 auto-reset, output ownership, interleaved envs, evaluator/trace parity for four
 controllers, forecast on/off, zero-demand censoring, plotting, backend
 selection, metadata and cross-backend checkpoint rules. Details in
-[reports/rust-migration.md](../reports/rust-migration.md).
+[reports/rust-migration.md](../../reports/rust-migration.md).
 
 ## 7. R4: acceptance and handoff
 

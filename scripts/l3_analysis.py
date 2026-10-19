@@ -5,8 +5,8 @@ Raw inputs (gitignored):
   runs/rl-improvement/l3-t9/<arm>/<seed>/train-20260913-r2/   training runs
   runs/rl-improvement/l3-eval-fixed/<arm>/<seed>/<split>/     held-out evals
 Curated outputs:
-  reports/rl-improvement/tables/l3_*.csv|json
-  reports/rl-improvement/plots/l3_*.png
+  reports/studies/03-rl-improvement/tables/l3_*.csv|json
+  reports/studies/03-rl-improvement/plots/l3_*.png
 
 Failure-trace decision rows are produced separately by
 ``scripts/l3_failure_traces.py`` (they require loading checkpoints).
@@ -27,8 +27,8 @@ from bus_rl.evaluation.statistics import paired_bootstrap
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNS = ROOT / "runs" / "rl-improvement"
-TABLES = ROOT / "reports" / "rl-improvement" / "tables"
-PLOTS = ROOT / "reports" / "rl-improvement" / "plots"
+TABLES = ROOT / "reports" / "studies" / "03-rl-improvement" / "tables"
+PLOTS = ROOT / "reports" / "studies" / "03-rl-improvement" / "plots"
 CONFIGS = ROOT / "configs" / "experiments" / "rl-improvement"
 
 ARMS = ["core", "no_reassign", "no_short", "fairness_zero"]

@@ -30,7 +30,7 @@ from bus_sim.oracle.costs import RewardConfig
 ROOT = Path(__file__).resolve().parents[1]
 RUNS = ROOT / "runs" / "rl-improvement"
 RAW = RUNS / "l3-failure-traces"
-EVIDENCE = ROOT / "reports" / "rl-improvement" / "evidence"
+EVIDENCE = ROOT / "reports" / "studies" / "03-rl-improvement" / "evidence"
 MANIFEST = ROOT / "data" / "generated" / "base" / "manifest.json"
 CONFIG = ROOT / "configs" / "experiments" / "rl-improvement" / "core.toml"
 

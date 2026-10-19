@@ -2,7 +2,7 @@
 
 Ngày cập nhật: **2026-09-12**. Trạng thái: **M1 và M3 đã làm; M2/M4/M5 là kế hoạch**.
 Liên quan: [rust_improve.md](rust_improve.md), [plan/rust_improve.md](../plan/rust_improve.md),
-[reports/rust-migration.md](../reports/rust-migration.md).
+[reports/rust-migration.md](../../reports/rust-migration.md).
 
 Tài liệu này chỉ bàn **bộ nhớ**. Tốc độ đã đạt gate R4 (Rust nhanh ~3.7×) và
 không nằm trong phạm vi ở đây.
