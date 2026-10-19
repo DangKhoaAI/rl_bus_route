@@ -61,7 +61,7 @@ uv run python scripts/build_native.py    # required: builds src/bus_sim_native.s
 
 `scripts/build_native.py` runs `cargo build -p bus-sim-python --release`, copies
 `target/release/libbus_sim_native.so` to `src/bus_sim_native.so`, verifies import,
-and writes provenance to `reports/rust-migration/native-build.json`.
+and writes provenance to `reports/archive/infrastructure/rust-migration/artifacts/native-build.json`.
 
 `src/bus_sim_native.so`, `data/generated/`, `runs/`, `target/`, `.venv/` are
 gitignored — never commit them.
@@ -98,7 +98,7 @@ Targeted runs while iterating, full `uv run pytest -q` before declaring done.
 - **Physics/semantics changes need evidence.** Keep the action table (221 slots),
   NOOP validity, masks/guards, cost terms, and conservation intact unless the
   change is intended; speed work must not alter semantics. Accepted parity/speed
-  evidence is frozen in `reports/rust-migration/`.
+  evidence is frozen in `reports/archive/infrastructure/rust-migration/`.
 - **Determinism matters.** Scenario/seed/order affect results; config and
   provenance hashes are recorded in checkpoints and run metadata. Do not add
   nondeterministic iteration order.
@@ -106,10 +106,11 @@ Targeted runs while iterating, full `uv run pytest -q` before declaring done.
   marked verified (`checkpoint.py`).
 - **Conservation checks** (`bus_sim.oracle.domain.CONSERVATION_CHECKS`) are on in
   tests and must be off for speed references.
-- **`reports/` is evidence.** Add new studies under `reports/studies/`; do not
-  edit accepted L3 tables or the frozen `reports/rust-migration*` files. The
-  final claim lives in `reports/FINAL.md`, the change table in
-  `reports/LEDGER.md`.
+- **`reports/` is evidence.** Final claim: `reports/FINAL_REPORT.md`; tables:
+  `reports/tables/`; provenance: `reports/provenance/`; non-final/historical:
+  `reports/archive/`. Do not edit accepted benchmark tables or the frozen
+  `reports/archive/infrastructure/rust-migration*` files. The change table is
+  `reports/provenance/experiments-ledger.md`.
 - **No new tests for deprecated code** expecting fixes. Follow `tests/README.md`:
   unit mirrors `src` as `test_<module>.py`; integration uses
   `test_<subject>[_<aspect>].py` under the entry-point path.
@@ -134,4 +135,4 @@ Targeted runs while iterating, full `uv run pytest -q` before declaring done.
 - Batch stepping: `.../environments/rust/batch.py` + `BatchKernel` in `lib.rs`
 - Training entry: `src/bus_rl/learning/training/train.py`
 - Evaluator/metrics: `src/bus_rl/evaluation/runner.py`, `summary.py`
-- Native tests: `reports/rust-migration/` (frozen), `crates/README.md`
+- Native tests: `reports/archive/infrastructure/rust-migration/` (frozen), `crates/README.md`

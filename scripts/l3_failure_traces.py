@@ -30,7 +30,7 @@ from bus_sim.oracle.costs import RewardConfig
 ROOT = Path(__file__).resolve().parents[1]
 RUNS = ROOT / "runs" / "rl-improvement"
 RAW = RUNS / "l3-failure-traces"
-EVIDENCE = ROOT / "reports" / "studies" / "03-rl-improvement" / "evidence"
+EVIDENCE = ROOT / "reports" / "provenance"
 MANIFEST = ROOT / "data" / "generated" / "base" / "manifest.json"
 CONFIG = ROOT / "configs" / "experiments" / "rl-improvement" / "core.toml"
 
@@ -111,7 +111,7 @@ def main() -> None:
     for split in SPLITS:
         for seed in SEEDS:
             payload["traces"].append(trace_seed(split, seed))
-    (EVIDENCE / "l3_failure_traces.json").write_text(json.dumps(payload, indent=2))
+    (EVIDENCE / "l3-failure-traces.json").write_text(json.dumps(payload, indent=2))
     total = sum(len(entry["days"]) for entry in payload["traces"])
     print(f"traced {total} days across {len(payload['traces'])} checkpoints -> {EVIDENCE}")
 

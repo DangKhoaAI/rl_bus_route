@@ -5,8 +5,9 @@ Raw inputs (gitignored):
   runs/rl-improvement/l3-t9/<arm>/<seed>/train-20260913-r2/   training runs
   runs/rl-improvement/l3-eval-fixed/<arm>/<seed>/<split>/     held-out evals
 Curated outputs:
-  reports/studies/03-rl-improvement/tables/l3_*.csv|json
-  reports/studies/03-rl-improvement/plots/l3_*.png
+  reports/tables/*.csv
+  reports/figures/*.png
+  reports/provenance/l3-verification.json
 
 Failure-trace decision rows are produced separately by
 ``scripts/l3_failure_traces.py`` (they require loading checkpoints).
@@ -27,8 +28,9 @@ from bus_rl.evaluation.statistics import paired_bootstrap
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNS = ROOT / "runs" / "rl-improvement"
-TABLES = ROOT / "reports" / "studies" / "03-rl-improvement" / "tables"
-PLOTS = ROOT / "reports" / "studies" / "03-rl-improvement" / "plots"
+TABLES = ROOT / "reports" / "tables"
+PLOTS = ROOT / "reports" / "figures"
+PROVENANCE = ROOT / "reports" / "provenance"
 CONFIGS = ROOT / "configs" / "experiments" / "rl-improvement"
 
 ARMS = ["core", "no_reassign", "no_short", "fairness_zero"]
@@ -283,7 +285,7 @@ def make_plots(curves: pd.DataFrame, held: pd.DataFrame, tables: dict) -> None:
         ax.grid(alpha=0.3)
         ax.legend(fontsize=8)
     fig.tight_layout()
-    fig.savefig(PLOTS / "l3_validation_curves.png", dpi=140)
+    fig.savefig(PLOTS / "validation_curves.png", dpi=140)
     plt.close(fig)
 
     # held-out cost per split with per-seed points
@@ -308,7 +310,7 @@ def make_plots(curves: pd.DataFrame, held: pd.DataFrame, tables: dict) -> None:
     axes[0].set_ylabel("held-out total_cost_core")
     fig.suptitle("Frozen T9 matrix: held-out cost (bars = seed mean, dots = seeds)")
     fig.tight_layout()
-    fig.savefig(PLOTS / "l3_held_out_costs.png", dpi=140)
+    fig.savefig(PLOTS / "held_out_costs.png", dpi=140)
     plt.close(fig)
 
     # service trade-off: cost delta vs p95-wait delta
@@ -332,7 +334,7 @@ def make_plots(curves: pd.DataFrame, held: pd.DataFrame, tables: dict) -> None:
     ax.grid(alpha=0.3)
     ax.legend(fontsize=6, ncol=2)
     fig.tight_layout()
-    fig.savefig(PLOTS / "l3_service_tradeoffs.png", dpi=140)
+    fig.savefig(PLOTS / "service_tradeoffs.png", dpi=140)
     plt.close(fig)
 
 
@@ -356,12 +358,20 @@ def main() -> None:
     held = load_held_out()
     tables = build_tables(held)
     assert_plot_inputs(held, tables)
+    names = {
+        "l3_held_out_summary": "held_out_per_seed.csv",
+        "l3_contrasts": "ablation_contrasts.csv",
+        "l3_paired_days": "paired_days.csv",
+        "l3_baselines_summary": "baselines_summary.csv",
+        "l3_baseline_contrasts": "baseline_contrasts.csv",
+    }
     for name, frame in tables.items():
-        frame.to_csv(TABLES / f"{name}.csv", index=False)
+        frame.to_csv(TABLES / names[name], index=False)
     verification = build_verification(held)
-    (TABLES / "l3_verification.json").write_text(json.dumps(verification, indent=2))
+    PROVENANCE.mkdir(parents=True, exist_ok=True)
+    (PROVENANCE / "l3-verification.json").write_text(json.dumps(verification, indent=2))
     make_plots(curves, held, tables)
-    for path in ("l3_validation_curves.png", "l3_held_out_costs.png", "l3_service_tradeoffs.png"):
+    for path in ("validation_curves.png", "held_out_costs.png", "service_tradeoffs.png"):
         assert (PLOTS / path).stat().st_size > 10_000, path
     print(json.dumps({k: v for k, v in verification.items() if k != "checks"}, indent=2))
     print(tables["l3_contrasts"].round(4).to_string(index=False))

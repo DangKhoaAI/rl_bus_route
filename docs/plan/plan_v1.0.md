@@ -312,7 +312,7 @@ def test_short_turn_does_not_strand_long_distance_passenger():
 
 ## Task 8: CLI, provenance, evaluation và pilot
 
-**Files:** `src/bus_rl/cli.py`, `training/checkpoint.py`, `evaluation/{runner,statistics,profile}.py`, `configs/{train,eval}.toml`, `tests/test_pipeline.py`, `reports/studies/01-pilot/README.md`.
+**Files:** `src/bus_rl/cli.py`, `training/checkpoint.py`, `evaluation/{runner,statistics,profile}.py`, `configs/{train,eval}.toml`, `tests/test_pipeline.py`, `reports/archive/pilot-study/README.md`.
 
 **Consumes:** M3 core.
 
@@ -382,7 +382,7 @@ uv run bus-rl train --config configs/experiments/core.toml --seed 33 --output ru
 
 ## Task 11: Report, visualization và acceptance
 
-**Files:** `src/bus_rl/evaluation/plots.py`, bổ sung CLI report, `README.md`, `reports/FINAL.md`, selected PNG/SVG; cập nhật checkboxes.
+**Files:** `src/bus_rl/evaluation/plots.py`, bổ sung CLI report, `README.md`, `reports/FINAL_REPORT.md`, selected PNG/SVG; cập nhật checkboxes.
 
 **Consumes:** raw CSV/events/configs từ T9 và T10 nếu có.
 

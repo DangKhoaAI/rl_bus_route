@@ -2,7 +2,7 @@
 
 Ngày: **2026-09-12**. Trạng thái: **Đề xuất; O0–O2 đã triển khai/nghiệm thu (opt-in);
 O3 hoãn theo số đo; O5 đã có protocol nhiều repetition nhưng chưa đổi default; O4 chưa.**
-Kết quả: [reports/runtime-optimization.md](../../reports/runtime-optimization.md).**
+Kết quả: [reports/archive/infrastructure/runtime-optimization/README.md](../../reports/archive/infrastructure/runtime-optimization/README.md).**
 
 Tài liệu kế thừa [rust_improve.md](rust_improve.md),
 [memory_optimize.md](memory_optimize.md) và
@@ -265,9 +265,9 @@ vào metadata; không silent fallback. Các giá trị mặc định ban đầu 
 hiện tại, chỉ đổi sau O5 accepted.
 
 Artifacts mới dự kiến:
-- `reports/runtime-optimization.md`: baseline, parity matrix, ablations,
+- `reports/archive/infrastructure/runtime-optimization/README.md`: baseline, parity matrix, ablations,
   benchmark, accepted/rejected/deferred và giới hạn.
-- `reports/runtime-optimization/`: manifests, profile, raw timing/RSS,
+- `reports/archive/infrastructure/runtime-optimization/artifacts/`: manifests, profile, raw timing/RSS,
   per-day paired metrics, tensor comparison và commands/exit status.
 - `runs/runtime-optimization/`: logs/checkpoints/traces lớn, được link/hash
   từ report; giữ nguyên evidence Rust/memory cũ.

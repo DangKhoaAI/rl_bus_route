@@ -96,7 +96,7 @@ correction; no future tape).
 
 Large artifacts (`data/generated/`, `runs/*.zip`) are gitignored and must be
 recreated. Start at `reports/README.md`; the final result is
-`reports/FINAL.md`.
+`reports/FINAL_REPORT.md`.
 
 ## Native kernel (Rust)
 
@@ -105,7 +105,7 @@ is complete: R0-R4 ported the kernel and the native backend is accepted. The
 native Rust kernel is now the **default and maintained** backend; the Python
 oracle is deprecated and receives no further fixes. The one-off R0 golden
 fixtures and the native Python-level parity suite were retired after
-acceptance; their evidence is archived under `reports/rust-migration/`, and the
+acceptance; their evidence is archived under `reports/archive/infrastructure/rust-migration/`, and the
 Rust core keeps its own `cargo test` coverage. The Python↔Rust **interface** is
 still enforced by the Rust FFI suite in
 `tests/integration/bus_rl/execution/environments/rust/` (payload schema, array
@@ -135,7 +135,7 @@ uv run bus-rl evaluate --config configs/eval.toml --manifest data/generated/base
 ```
 
 Run metadata records the backend and native build hash.
-See `crates/README.md` and `reports/rust-migration.md`.
+See `crates/README.md` and `reports/archive/infrastructure/rust-migration/README.md`.
 
 ### Fast development loop
 

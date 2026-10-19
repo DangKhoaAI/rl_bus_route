@@ -2,7 +2,7 @@
 
 Ngày cập nhật: **2026-09-12**. Trạng thái: **M1 và M3 đã làm; M2/M4/M5 là kế hoạch**.
 Liên quan: [rust_improve.md](rust_improve.md), [plan/rust_improve.md](../plan/rust_improve.md),
-[reports/rust-migration.md](../../reports/rust-migration.md).
+[reports/archive/infrastructure/rust-migration/README.md](../../reports/archive/infrastructure/rust-migration/README.md).
 
 Tài liệu này chỉ bàn **bộ nhớ**. Tốc độ đã đạt gate R4 (Rust nhanh ~3.7×) và
 không nằm trong phạm vi ở đây.
@@ -19,7 +19,7 @@ days), peak RSS:
 | native `ScenarioStore` (Rust) | 28.8 MB | sparse, chỉ Rust |
 | **Tổng Python / Rust** | **662 / 690 MB** | tỉ lệ 1.04× |
 
-Hai lỗi lưu trữ đã được sửa trước tài liệu này (xem `reports/rust-migration.md`
+Hai lỗi lưu trữ đã được sửa trước tài liệu này (xem `reports/archive/infrastructure/rust-migration/README.md`
 mục R4.3): wrapper tạo sẵn một `Kernel` cho mỗi scenario (~243 KB scratch mỗi
 kernel) và store giữ arrival tape dạng dày. Kết quả: Rust từ 1236 MB xuống
 690 MB, training vẫn bit-identical.
@@ -106,7 +106,7 @@ Mọi hạng mục phải thoả:
 - `python -m pytest -q` xanh (kể cả differential và full-seed parity).
 - Full seed Rust bit-identical với Python (curve 20 điểm, weights, optimizer).
 - `scenario_hash` của mọi scenario không đổi sau thay đổi biểu diễn.
-- Đo lại peak RSS và ghi vào `reports/rust-migration/full-workflow-memory.json`
+- Đo lại peak RSS và ghi vào `reports/archive/infrastructure/rust-migration/full-workflow-memory.json`
   và mục R4.3 của report.
 
 ## 5. Kết quả
@@ -122,8 +122,8 @@ Mọi hạng mục phải thoả:
   full seed bit-identical (curve 20 điểm, weights, optimizer).
 - Tốc độ không đổi: Python 595.35 s vs Rust 161.61 s (3.68×).
 
-Chi tiết số đo: `reports/rust-migration/full-workflow.json` và
-`full-workflow-memory.json`; mục R4.3 của `reports/rust-migration.md`.
+Chi tiết số đo: `reports/archive/infrastructure/rust-migration/full-workflow.json` và
+`full-workflow-memory.json`; mục R4.3 của `reports/archive/infrastructure/rust-migration/README.md`.
 
 ### M3 — Run Rust không giữ `Scenario` Python — ĐÃ LÀM
 

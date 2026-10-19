@@ -4,7 +4,7 @@
 Usage:
     python scripts/build_native.py [--release] [--output PATH]
 
-Writes a provenance record (default `reports/rust-migration/native-build.json`)
+Writes a provenance record (default `reports/archive/infrastructure/rust-migration/artifacts/native-build.json`)
 with toolchain versions, the git revision, the shared-object hash and import
 check used by R1+ evidence. Use `--output` for a new kernel revision so the
 frozen R4 record stays intact.
@@ -23,7 +23,7 @@ import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-REPORT = ROOT / "reports" / "rust-migration" / "native-build.json"
+REPORT = ROOT / "reports" / "archive" / "infrastructure" / "rust-migration" / "artifacts" / "native-build.json"
 
 
 def _run(command: list[str]) -> str:

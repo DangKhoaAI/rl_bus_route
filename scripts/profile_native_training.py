@@ -4,7 +4,7 @@ eval segments and shared-store memory.
 
 Everything here is short (default 4096 transitions, 3 repetitions) and is meant
 to find where the remaining learn/eval time goes, not to replace the R4.2
-acceptance benchmark. Writes ``reports/rust-migration/profile-native.json``.
+acceptance benchmark. Writes ``reports/archive/infrastructure/rust-migration/artifacts/profile-native.json``.
 """
 
 from __future__ import annotations
@@ -37,7 +37,7 @@ from bus_rl.learning.training.diagnose import DiagnoseCallback
 from bus_rl.learning.training.train import fit_algorithm, make_env, make_model
 from bus_sim.oracle.costs import RewardConfig
 
-REPORT_DIR = ROOT / "reports" / "rust-migration"
+REPORT_DIR = ROOT / "reports" / "archive" / "infrastructure" / "rust-migration" / "artifacts"
 PROFILE_RUNS = ROOT / "runs" / "rust-migration" / "profile"
 REFERENCE = ROOT / "runs" / "diagnose-after" / "last.zip"
 

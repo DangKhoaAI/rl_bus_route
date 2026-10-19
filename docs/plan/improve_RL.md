@@ -1,6 +1,6 @@
 # RL Improvement Implementation Plan
 
-Updated: 2026-09-13. Status: L0 and the first bounded L1 round accepted; core retained. See `reports/studies/03-rl-improvement/README.md`.
+Updated: 2026-09-13. Status: L0 and the first bounded L1 round accepted; core retained. See `reports/archive/full-study-narrative.md`.
 
 ## 0. Implementer execution contract — read before working
 
@@ -24,13 +24,13 @@ Each task handoff must state: selected experiment, code/config changed, checks a
 
 ## 1. Scope and prerequisites
 
-Execute the [RL improvement specification](../spec/improve_RL.md) on the accepted Rust runtime. R4 and memory M1/M3 are complete; O1/O2 and the configurable distribution-validation fast path have evidence in [runtime-optimization.md](../../reports/runtime-optimization.md). L0 must verify and freeze that evidence, not reopen migration or wait for deferred optimizations. The [Rust specification](../spec/rust_improve.md) is authoritative for backend parity and speed gates. The [base specification](../spec/spec_v1.0.md) and [original plan](plan_v1.0.md) define the original study and its ablations.
+Execute the [RL improvement specification](../spec/improve_RL.md) on the accepted Rust runtime. R4 and memory M1/M3 are complete; O1/O2 and the configurable distribution-validation fast path have evidence in [runtime-optimization.md](../../reports/archive/infrastructure/runtime-optimization/README.md). L0 must verify and freeze that evidence, not reopen migration or wait for deferred optimizations. The [Rust specification](../spec/rust_improve.md) is authoritative for backend parity and speed gates. The [base specification](../spec/spec_v1.0.md) and [original plan](plan_v1.0.md) define the original study and its ablations.
 
 Sequence: **verify accepted R4 + freeze research runtime -> L0 baseline -> L1 PPO tuning -> optional L2 extensions -> L3 final evaluation/report**.
 
 R4 requires equivalent behavior, at least **2x simulation and isolated learn speedup** under unprofiled measurement, and a faster measured full workflow. **4x is a stretch goal**. A fast but incorrect backend does not unlock RL experiments.
 
-Task completion requires evidence, not an improved score. A negative result may satisfy research acceptance; missing runs, leakage, or incomparable experiments do not. Record task ID, source/build revision, commands, configs, seeds, hashes, artifact paths, status, and limitations in `reports/studies/03-rl-improvement/README.md`. All proposed artifacts below are future outputs.
+Task completion requires evidence, not an improved score. A negative result may satisfy research acceptance; missing runs, leakage, or incomparable experiments do not. Record task ID, source/build revision, commands, configs, seeds, hashes, artifact paths, status, and limitations in `reports/archive/full-study-narrative.md`. All proposed artifacts below are future outputs.
 
 ### 1.1 Current code, test and report conventions
 
@@ -77,7 +77,7 @@ Optional L2 tasks are independent research choices, not a requirement to impleme
 - [x] Specify checkpoint selection by lowest validation cost, earliest checkpoint on ties; define fixed-transition and fixed-wall-clock measurement protocols separately.
 - [x] Register held-out splits and explicitly exclude them from candidate selection.
 
-**Outputs:** proposed `reports/studies/03-rl-improvement/protocol.json`, artifact inventory, and experiment ledger schema.
+**Outputs:** proposed `reports/provenance/protocol.json`, artifact inventory, and experiment ledger schema.
 
 **Verification:** validate all referenced files/hashes; compare any reusable R4 seed against every L0 setting, including validation schedule, model metadata and required L0 diagnostics. Repeated seed-11 runtime runs do not replace seeds 22/33. Missing training telemetry cannot be reconstructed from final weights; rerun if necessary. Re-evaluation may supply missing per-day metrics but not historical training curves. Do not reuse pre-instrumentation timing as an equivalent wall-clock control.
 
@@ -106,7 +106,7 @@ Optional L2 tasks are independent research choices, not a requirement to impleme
 - [x] Tune heuristic parameters only on validation, with a recorded search budget, then freeze them before held-out testing (this round's search budget was zero; defaults were frozen).
 - [x] Produce per-day raw metrics and learning curves using all 100 validation days.
 
-**Outputs:** raw validation CSVs, metadata and checkpoints in `runs/rl-improvement/core/<seed>/<run-id>/`; curated tables/plots under `reports/studies/03-rl-improvement/`, with analysis in proposed `reports/studies/03-rl-improvement/baseline.md`.
+**Outputs:** raw validation CSVs, metadata and checkpoints in `runs/rl-improvement/core/<seed>/<run-id>/`; curated tables/plots under `reports/tables/` and `reports/figures/`, with analysis in proposed `reports/provenance/l0-diagnosis.md`.
 
 **Verification:** inspect actual transitions, model/backend hashes, day IDs, checkpoint selection, and controller inputs; reject duplicates, missing days, and privileged future inputs.
 
@@ -123,7 +123,7 @@ Optional L2 tasks are independent research choices, not a requirement to impleme
 
 **Acceptance:** baseline report links each proposed hypothesis to actual plots/metrics/traces and states what result would refute it. No held-out test result influences this decision.
 
-**L0 gate:** L0.1-L0.4 accepted; a reproducible three-seed baseline exists (`reports/studies/03-rl-improvement/baseline.md`).
+**L0 gate:** L0.1-L0.4 accepted; a reproducible three-seed baseline exists (`reports/provenance/l0-diagnosis.md`).
 
 ## 4. L1: tune PPO while preserving the task
 
@@ -137,7 +137,7 @@ Optional L2 tasks are independent research choices, not a requirement to impleme
 - [ ] If curves still improve, register a separate budget experiment at 2B and then 4B; do not label it a fixed-B improvement.
 - [ ] For normalization, specify training-only fitting, frozen evaluation statistics, checkpoint persistence, and raw core-cost reporting before running.
 
-**Outputs:** candidate configs and proposed `reports/studies/03-rl-improvement/experiments.csv` entries created before execution.
+**Outputs:** candidate configs and proposed `reports/provenance/experiments.csv` entries created before execution.
 
 **Verification:** test nullable target_kl round-trip/wiring and expected update-stop logging if selected; algorithm candidates need correctness and multi-seed quality evidence, not identical weights to core. Runtime-only changes require equivalence against the frozen native control, not the retired Python parity suite. Compare config hashes/diffs; ensure minibatch size divides rollout size; check budget and validation schedules across candidates.
 
@@ -164,7 +164,7 @@ Optional L2 tasks are independent research choices, not a requirement to impleme
 
 **Acceptance:** every selected candidate has three-seed evidence; the choice uses validation only; all configs and auxiliary artifacts are frozen. A valid decision to keep core passes this task.
 
-**L1 gate:** L1.1-L1.3 accepted, including the documented no-change decision in `reports/studies/03-rl-improvement/README.md`.
+**L1 gate:** L1.1-L1.3 accepted, including the documented no-change decision in `reports/archive/full-study-narrative.md`.
 
 ## 5. L2: optional extensions with separate hypotheses
 
@@ -189,9 +189,9 @@ Core is retained. **L2.2 encoder/memory, L2.4 curriculum/warm-start and L2.5
 PopArt are SKIPPED** — L0 diagnostics do not trigger them (flat MLP has no
 measured sample-efficiency failure, PPO already beats heuristics, explained
 variance is high) and the first-round limit of two L2 directions is used.
-Evidence: `reports/studies/03-rl-improvement/README.md`,
-`reports/studies/03-rl-improvement/tables/l2_forecast_*.{csv,json}` and
-`reports/studies/03-rl-improvement/tables/l2_pbrs_*.{csv,json}`.
+Evidence: `reports/archive/full-study-narrative.md`,
+`reports/archive/rejected-experiments/forecast-*.{csv,json}` and
+`reports/archive/rejected-experiments/reward-shaping-*.{csv,json}`.
 
 ### L2.1 - Causal forecast contribution (SELECTED; REJECT)
 
@@ -201,7 +201,7 @@ Evidence: `reports/studies/03-rl-improvement/README.md`,
 - [x] Report forecast error alongside policy cost, unfinished share, and service outcomes.
 
 Outcome: **REJECT** on three-seed confirmation; core control retained. See the
-round decision above and `reports/studies/03-rl-improvement/README.md`.
+round decision above and `reports/archive/full-study-narrative.md`.
 
 **Verification:** `tests/unit/bus_rl/learning/test_forecasting.py` for isolated causality plus native environment/training integration under the entry-point path; matched three-seed validation comparison.
 
@@ -230,7 +230,7 @@ round decision above and `reports/studies/03-rl-improvement/README.md`.
 Outcome: **REJECT** on three-seed confirmation (mean cost +3.59% vs control,
 paired CI entirely above zero, 0/3 seeds lower, P95/worst-route limits violated);
 core control retained. See the round decision above and
-`reports/studies/03-rl-improvement/README.md`.
+`reports/archive/full-study-narrative.md`.
 
 **Verification:** `tests/unit/bus_rl/learning/test_shaping.py` (telescoping, terminal-zero, causality, finite) and native `tests/integration/bus_rl/learning/training/test_shaping_flow.py` (reward accounting on the real kernel), plus matched three-seed validation.
 
@@ -272,8 +272,8 @@ core control retained. See the round decision above and
 - [x] If reporting tuned-policy ablations, register and run a separate coherent matrix; do not combine tuned core with older incompatible ablation arms. (No tuned policy was adopted, so the frozen core matrix is used.)
 - [x] Register the fixed-wall-clock comparison budget and time-accounting rules; report it separately from fixed transitions.
 
-Frozen in `reports/studies/03-rl-improvement/l3_protocol.json`; config audit in
-`reports/studies/03-rl-improvement/tables/l3_config_audit.json`. The L3 audit found that the
+Frozen in `reports/provenance/l3_protocol.json`; config audit in
+`reports/provenance/l3-config-audit.json`. The L3 audit found that the
 native kernel ignored `run.reward`, making the `fairness_zero` arm invalid; the
 reward passthrough was fixed, the extension rebuilt, and all 12 arms re-run on one
 frozen build (`d6bf1551…`).
@@ -287,7 +287,7 @@ frozen build (`d6bf1551…`).
 - [x] Evaluate frozen policies and baselines on **200 test_id + 200 burst + 200 traffic days** using identical day IDs/tapes per comparison.
 - [x] Export raw per-day, per-seed components, core cost, all-demand wait/P95 and censoring, completed/abandoned/unfinished shares, route quality, headways, operating/deadhead time, and denied passengers.
 - [x] Use deterministic evaluation and preserve all failed cases with explanations.
-- [x] Run the registered fixed-wall-clock experiment under identical accounting; report actual transitions and evaluation cost separately. (Registered; because no adopted algorithm change alters per-step compute it reduces to the fixed-transition wall-clock view, reported in `reports/studies/03-rl-improvement/README.md`.)
+- [x] Run the registered fixed-wall-clock experiment under identical accounting; report actual transitions and evaluation cost separately. (Registered; because no adopted algorithm change alters per-step compute it reduces to the fixed-transition wall-clock view, reported in `reports/archive/full-study-narrative.md`.)
 
 **Verification:** check expected row counts, uniqueness, missing values, scenario hashes, checkpoint hashes, and original core-weight recomputation for reward ablations.
 
@@ -311,19 +311,19 @@ Reproduce with `uv run python scripts/l3_analysis.py`.
 ## 7. Artifact layout and completion rules
 
 ```text
-reports/studies/03-rl-improvement/README.md                  # study status, decisions, final analysis
-reports/studies/03-rl-improvement/ARTIFACTS.md        # curated artifact index and reproduction
-reports/studies/03-rl-improvement/protocol.json       # frozen protocol and thresholds
-reports/studies/03-rl-improvement/baseline.md          # L0 diagnosis
-reports/studies/03-rl-improvement/experiments.csv      # candidate ledger, decisions and run links
-reports/studies/03-rl-improvement/tables/             # aggregated paired results and statistics
-reports/studies/03-rl-improvement/plots/              # selected rendered figures
-reports/studies/03-rl-improvement/evidence/           # only raw evidence justified for commit
+reports/FINAL_REPORT.md                  # final claim, config, result, limits
+reports/tables/                          # final benchmark + ablation tables
+reports/figures/                         # final figures
+reports/provenance/                      # protocols, audits, ledger
+reports/archive/full-study-narrative.md  # long historical narrative
+reports/archive/artifact-index.md        # historical artifact index
+reports/archive/rejected-experiments/    # rejected L1/L2 cards + tables
+reports/archive/infrastructure/          # Rust/runtime/memory
 runs/rl-improvement/<experiment>/<seed>/<run-id>/
                                           # raw per-invocation data; gitignored
 ```
 
-Raw per-day/per-seed CSVs, telemetry, failure traces, profiler dumps, build records, metadata and checkpoints belong in the run directory. Register stable run IDs before execution and use a new ID for reruns. Curated reports link to their source run/config/hash and reproduction command. If a raw artifact must be committed as evidence, retain the selected copy under `reports/studies/03-rl-improvement/evidence/`, explain why in the index and avoid duplicate copies. Do not store fixture data in `tests/` or expand the archived oracle manifest hash scope to include this study. Update `reports/README.md` when actual curated outputs are created, not to claim planned results exist.
+Raw per-day/per-seed CSVs, telemetry, failure traces, profiler dumps, build records, metadata and checkpoints belong in the run directory. Register stable run IDs before execution and use a new ID for reruns. Curated reports link to their source run/config/hash and reproduction command. If a raw artifact must be committed as evidence, retain the selected copy under `reports/provenance/`, explain why in the index and avoid duplicate copies. Do not store fixture data in `tests/` or expand the archived oracle manifest hash scope to include this study. Update `reports/README.md` when actual curated outputs are created, not to claim planned results exist.
 
 Keep pilot, Python diagnosis, and earlier study artifacts unchanged. Use stable run IDs and retain failed-trial evidence. Proposed filenames may be refined during implementation, but the report must index every output and preserve the protocol/evidence contract.
 

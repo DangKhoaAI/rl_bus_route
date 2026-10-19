@@ -10,7 +10,7 @@ Sequence: **R0 Oracle -> R1 Kernel -> R2 Observation/masks -> R3 Integration -> 
 
 The specification defines behavior and acceptance thresholds; this plan defines executable work packages. If implementation exposes a contradiction, record it with a reproducer and resolve the contract before accepting dependent work. Do not silently change physics, reward, observation semantics, or acceptance thresholds.
 
-Each task starts unchecked. Mark it complete only after its acceptance criteria pass and evidence is recorded. Record task ID, source revision, exact command, exit status, artifact paths/hashes, and any remaining limitations in `reports/rust-migration.md`. Failed gates remain open. Proposed files and interfaces below are not claims that those files or commands already exist.
+Each task starts unchecked. Mark it complete only after its acceptance criteria pass and evidence is recorded. Record task ID, source revision, exact command, exit status, artifact paths/hashes, and any remaining limitations in `reports/archive/infrastructure/rust-migration/README.md`. Failed gates remain open. Proposed files and interfaces below are not claims that those files or commands already exist.
 
 ## 2. Task dependencies
 
@@ -40,7 +40,7 @@ Each task starts unchecked. Mark it complete only after its acceptance criteria 
 - [x] Document action IDs, observation keys/shapes/dtypes/scales, cost components, terminal behavior, RNG selection, and deterministic iteration order.
 - [x] Record any source/base-spec discrepancy, especially time thresholds, rounding, boarded-channel semantics, and terminal settlement.
 
-**Implementation surface:** `domain.py`, `env/`, `sim/`, `control/`, `rewards/`, `training/checkpoint.py`; proposed `reports/rust-migration/oracle-manifest.json`.
+**Implementation surface:** `domain.py`, `env/`, `sim/`, `control/`, `rewards/`, `training/checkpoint.py`; proposed `reports/archive/infrastructure/rust-migration/oracle-manifest.json`.
 
 **Verification:** resolve every manifest reference and hash; reset identical scenarios repeatedly and compare initial state/observation/mask; review discrepancies against source and base spec.
 
@@ -67,7 +67,7 @@ Each task starts unchecked. Mark it complete only after its acceptance criteria 
 - [x] Warm up separately; collect at least five repetitions, raw wall times, actual transitions, thread settings, and peak RSS.
 - [x] Use at least 12,288 transitions for isolated learn with the core hyperparameters, periodic evaluation disabled, and a reproducible initial model.
 
-**Outputs:** proposed `reports/rust-migration/python-benchmark.json` and exact reproduction commands in the report.
+**Outputs:** proposed `reports/archive/infrastructure/rust-migration/python-benchmark.json` and exact reproduction commands in the report.
 
 **Verification:** Audit benchmark config and profiler flags; recompute median/min/max from raw repetitions and verify actual transition counts.
 
@@ -76,8 +76,8 @@ Each task starts unchecked. Mark it complete only after its acceptance criteria 
 **R0 gate:** R0.1-R0.3 accepted. Freeze the oracle before native implementation.
 
 **Evidence (2026-09-12, accepted):** revision `1c34457`; commands and raw
-results in [reports/rust-migration.md](../../reports/rust-migration.md) and
-`reports/rust-migration/`. `python scripts/export_oracle.py verify` reproduces
+results in [reports/archive/infrastructure/rust-migration/README.md](../../reports/archive/infrastructure/rust-migration/README.md) and
+`reports/archive/infrastructure/rust-migration/`. `python scripts/export_oracle.py verify` reproduces
 11 golden fixtures and the fixed-checkpoint mean `15471.25`;
 `python scripts/benchmark_python.py` records the unprofiled reference
 (simulation total 0.4135 s / 600 decisions; isolated learn 34.05 s / 12,288
@@ -126,8 +126,8 @@ kernel with zero divergences on state/counters/IDs/lineage, every cost
 component, per-tick state, departure/action events and terminal settlement;
 `cargo test -p bus-sim-core` (7 tests) and
 `python -m pytest tests/parity/test_rust_kernel.py` (26 tests) pass.
-Details in [reports/rust-migration.md](../../reports/rust-migration.md) and
-`reports/rust-migration/native-build.json`. Observation/mask parity remains R2.
+Details in [reports/archive/infrastructure/rust-migration/README.md](../../reports/archive/infrastructure/rust-migration/README.md) and
+`reports/archive/infrastructure/rust-migration/artifacts/native-build.json`. Observation/mask parity remains R2.
 
 ## 5. R2: observations and masks
 
@@ -160,7 +160,7 @@ computed at reset and after each step and returns copies. All 11 fixtures match
 every observation channel within `rtol=atol=1e-6` and all 221 mask bits
 exactly at reset and after every step (15 tests in
 `tests/parity/test_rust_observation.py`), plus 12 native unit tests.
-Details in [reports/rust-migration.md](../../reports/rust-migration.md).
+Details in [reports/archive/infrastructure/rust-migration/README.md](../../reports/archive/infrastructure/rust-migration/README.md).
 
 ## 6. R3: integrate the backend
 
@@ -209,7 +209,7 @@ fails loudly when Rust is missing. 21 integration tests
 auto-reset, output ownership, interleaved envs, evaluator/trace parity for four
 controllers, forecast on/off, zero-demand censoring, plotting, backend
 selection, metadata and cross-backend checkpoint rules. Details in
-[reports/rust-migration.md](../../reports/rust-migration.md).
+[reports/archive/infrastructure/rust-migration/README.md](../../reports/archive/infrastructure/rust-migration/README.md).
 
 ## 7. R4: acceptance and handoff
 
@@ -230,7 +230,7 @@ selection, metadata and cross-backend checkpoint rules. Details in
 - [x] Measure simulation-only and isolated learn of at least 12,288 transitions; measure fixed-checkpoint eval separately.
 - [x] Report raw times, median/min/max, per-workload behavior, setup cost, and peak RSS. Investigate unstable measurements before deciding.
 
-**Evidence (light pass, 2026-09-12):** `reports/rust-migration/speed-acceptance.json`,
+**Evidence (light pass, 2026-09-12):** `reports/archive/infrastructure/rust-migration/speed-acceptance.json`,
 `runtime-tuning.json` and `profile-native.json`. At the chosen 2 torch threads
 (same condition both backends) median totals: simulation 0.357 s vs 0.0142 s
 (**25.11x**); isolated learn 12,288 transitions 13.159 s vs 3.153 s (**4.17x**);
@@ -251,7 +251,7 @@ workflow) remains open.
 
 - [x] Run one full 245,760-transition seed on each backend with identical validation/checkpoint schedules, preferably the L0 protocol to permit reuse.
 - [x] Measure actual total wall including validation/checkpoint, with setup reported separately; explain any evaluation or memory regression.
-- [x] Complete `reports/rust-migration.md`, link raw evidence, and freeze the native revision/build used by RL experiments.
+- [x] Complete `reports/archive/infrastructure/rust-migration/README.md`, link raw evidence, and freeze the native revision/build used by RL experiments.
 - [x] Document clean build/install, backend selection, fallback, and reproduction commands.
 
 **Verification:** Compare full-run timing and validation schedules from metadata; reproduce the documented release installation and a saved-checkpoint evaluation.
@@ -261,7 +261,7 @@ workflow) remains open.
 **Evidence (2026-09-12, accepted):** one full L0-protocol seed per backend
 (`configs/experiments/core-threads2.toml`, seed 11, 4 envs, 2 torch threads,
 245,760 transitions, validation every 12,288 on 100 validation days) in
-`reports/rust-migration/full-workflow.json`. Python 595.35 s vs Rust 154.23 s
+`reports/archive/infrastructure/rust-migration/full-workflow.json`. Python 595.35 s vs Rust 154.23 s
 learn+validation (**3.86x**); total wall incl. setup 597.99 s vs 156.37 s
 (**3.82x**, setup 2.6/2.1 s; same-session pair, the host drifts over the session
 so earlier pairs read 3.5-3.9x). All 20 validation costs are bit-identical

@@ -1,18 +1,25 @@
 # Archive
 
-Historical summaries kept for provenance. They are cited by the specs and plans,
-but they are not part of the final L3 claim.
+Everything that is **not part of the final claim**, kept for provenance. Names
+are descriptive so you can tell what a file is without opening it.
 
-| File | What it is | Why archived |
+| Path | What it is | Status |
 |---|---|---|
-| [`training-diagnosis-v1.0.md`](training-diagnosis-v1.0.md) | Python training-time diagnosis before hot-path work | pre-Rust-default measurement |
-| [`training-diagnosis-v1.1-python-improve.md`](training-diagnosis-v1.1-python-improve.md) | Python diagnosis after hot-path work, with cProfile | pre-Rust-default measurement |
+| [`pilot-study/`](pilot-study/) | 12,288-transition pilot: pipeline gate, not a quality claim | `HISTORICAL` |
+| [`forecast-diagnostic/`](forecast-diagnostic/) | Forecast error only; the policy test is in `rejected-experiments/` | `HISTORICAL` |
+| [`rejected-experiments/`](rejected-experiments/) | L1 GAE, L2 causal forecast, L2 reward shaping: cards + tables | `REJECTED` |
+| [`training-diagnosis/`](training-diagnosis/) | Python training-time measurements before/after hot-path work | `HISTORICAL` |
+| [`infrastructure/`](infrastructure/) | Rust migration, runtime batching, memory notes | `ACCEPTED` (infra) |
+| [`full-study-narrative.md`](full-study-narrative.md) | The long L0–L3 study report (superseded by `FINAL_REPORT.md`) | `HISTORICAL` |
+| [`artifact-index.md`](artifact-index.md) | Old artifact index and reproduction commands | `HISTORICAL` |
 
-Raw artifacts for these runs are in the git-ignored `runs/diagnose/` and
-`runs/diagnose-after/` trees.
+## Reading guide
 
-The frozen `reports/rust-migration.md` still mentions the old path
-`reports/training-diagnosis-v1.1-python-improve.md`; use the archive path above.
+- For the final result: [`../FINAL_REPORT.md`](../FINAL_REPORT.md).
+- For rejected changes: start with
+  [`rejected-experiments/README.md`](rejected-experiments/README.md).
+- For Rust/runtime: [`infrastructure/README.md`](infrastructure/README.md).
+- For the old full narrative: [`full-study-narrative.md`](full-study-narrative.md).
 
-For current infrastructure evidence, use [`../infra/README.md`](../infra/README.md).
-For the final result, use [`../FINAL.md`](../FINAL.md).
+Raw artifacts for the historical runs live in the git-ignored `runs/diagnose/`,
+`runs/diagnose-after/`, `runs/rust-migration/` and `runs/rl-improvement/` trees.
