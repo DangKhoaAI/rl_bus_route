@@ -21,8 +21,8 @@ Nguồn gốc giữ nguyên:
 
 | Vai trò | Artifacts |
 |---|---|
-| Python trước tối ưu | `reports/archive/training-diagnosis/python-before-hotpath.md` (+ raw gitignored `runs/diagnose/`) |
-| Python after, oracle | `reports/archive/training-diagnosis/python-after-hotpath.md` (+ raw gitignored `runs/diagnose-after/`) |
+| Python trước tối ưu | `reports/archive/python-training-speed-before-after/before-hotpath.md` (+ raw gitignored `runs/diagnose/`) |
+| Python after, oracle | `reports/archive/python-training-speed-before-after/after-hotpath.md` (+ raw gitignored `runs/diagnose-after/`) |
 
 Năm tối ưu Python đã được báo cáo: counters, cached load, conservation debug-only, waiting-only hot list, IntEnum.
 

@@ -31,4 +31,4 @@ failed”. The cards include the registered threshold and the failed rule.
 The full change ledger is
 [`../../provenance/experiments-ledger.md`](../../provenance/experiments-ledger.md).
 The final controller is described in
-[`../../FINAL_REPORT.md`](../../FINAL_REPORT.md).
+[`../../README.md`](../../README.md).

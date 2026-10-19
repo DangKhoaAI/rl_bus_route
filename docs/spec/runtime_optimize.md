@@ -6,7 +6,7 @@ Kết quả: [reports/archive/infrastructure/runtime-optimization/README.md](../
 
 Tài liệu kế thừa [rust_improve.md](rust_improve.md),
 [memory_optimize.md](memory_optimize.md) và
-[báo cáo migration](../../reports/rust-migration.md).
+[báo cáo migration](../../reports/archive/infrastructure/rust-migration/README.md).
 Spec này xác định phạm vi, contract và acceptance của đợt tối ưu tiếp theo;
 không phải báo cáo kết quả hay implementation plan đã hoàn thành.
 

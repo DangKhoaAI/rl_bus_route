@@ -9,25 +9,19 @@ study.
 | Rust kernel R0–R4 | [`rust-migration/README.md`](rust-migration/README.md) | [`rust-migration/artifacts/`](rust-migration/artifacts/) | accepted |
 | Runtime batching/caching O0–O2 | [`runtime-optimization/README.md`](runtime-optimization/README.md) | [`runtime-optimization/artifacts/`](runtime-optimization/artifacts/) | accepted, opt-in |
 | Memory M1/M3 | [`../../../docs/spec/memory_optimize.md`](../../../docs/spec/memory_optimize.md) | measurements embedded in `rust-migration/artifacts/` | accepted |
-| Training-time diagnosis (legacy) | [`../training-diagnosis/`](../training-diagnosis/) | git-ignored `runs/diagnose*` | historical |
+| Training-time diagnosis (legacy) | [`../python-training-speed-before-after/`](../python-training-speed-before-after/) | git-ignored `runs/diagnose*` | historical |
 
-## Why there are symlinks at the reports root
+## Frozen manifest path
 
-`rust-migration/artifacts/oracle-manifest.json` hashes the migration narrative
-`reports/rust-migration.md` and records paths under `reports/rust-migration/`.
-The archive keeps the real files; the two symlinks at the reports root keep the
-frozen paths resolvable:
-
-```text
-reports/rust-migration.md -> archive/infrastructure/rust-migration/README.md
-reports/rust-migration/   -> archive/infrastructure/rust-migration/artifacts
-```
-
-Do not use the symlinks as reading material. Use this directory.
+`rust-migration/artifacts/oracle-manifest.json` originally recorded the report at
+`reports/rust-migration.md`. That path was rebased to
+`reports/archive/infrastructure/rust-migration/README.md` when the archive was
+created, so the manifest points at the real file. No compatibility symlinks are
+kept at the reports root.
 
 The frozen `rust-migration/README.md` keeps its original content and historical
-relative links for hash compatibility; some of those links are stale. Use the
-artifact files in `rust-migration/artifacts/` directly.
+relative links; some of those links are stale. Use the artifact files in
+`rust-migration/artifacts/` directly.
 
 ## How to verify
 

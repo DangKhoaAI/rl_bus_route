@@ -2,7 +2,7 @@
 
 > **Status: historical diagnostic.** This report only measures forecast error. The
 > later policy comparison was run as L2.1 and rejected; see
-> [`../rejected-experiments/l2-causal-forecast.md`](../rejected-experiments/l2-causal-forecast.md).
+> [`../rejected-experiments/l2-causal-forecast.md`](rejected-experiments/l2-causal-forecast.md).
 
 Historical forecaster: time-bin mean of next-15-minute arrivals on **train-day
 arrival logs**, times a recent-10-minute correction

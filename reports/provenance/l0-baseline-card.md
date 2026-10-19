@@ -1,7 +1,7 @@
 # L0 — Core baseline freeze (accepted control)
 
 **Status:** `ACCEPTED` — this is the control for every later change.
-**Full narrative:** [`../archive/full-study-narrative.md`](../archive/full-study-narrative.md)
+**Full narrative:** [`../archive/l0-l3-full-report.md`](../archive/l0-l3-full-report.md)
 **Diagnosis:** [`l0-diagnosis.md`](l0-diagnosis.md)
 **Protocol:** [`protocol.json`](protocol.json)
 

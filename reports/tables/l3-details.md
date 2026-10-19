@@ -1,8 +1,8 @@
 # L3 ablation details — held-out matrix
 
 **Status:** `ACCEPTED` (core retained as incumbent). All ablations are worse.
-**Full narrative:** [`../archive/full-study-narrative.md`](../archive/full-study-narrative.md)
-**Final summary:** [`../FINAL_REPORT.md`](../FINAL_REPORT.md)
+**Full narrative:** [`../archive/l0-l3-full-report.md`](../archive/l0-l3-full-report.md)
+**Final summary:** [`../README.md`](../README.md)
 **Frozen protocol:** [`../provenance/l3_protocol.json`](../provenance/l3_protocol.json)
 
 ## Question

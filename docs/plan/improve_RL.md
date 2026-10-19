@@ -1,6 +1,6 @@
 # RL Improvement Implementation Plan
 
-Updated: 2026-09-13. Status: L0 and the first bounded L1 round accepted; core retained. See `reports/archive/full-study-narrative.md`.
+Updated: 2026-09-13. Status: L0 and the first bounded L1 round accepted; core retained. See `reports/archive/l0-l3-full-report.md`.
 
 ## 0. Implementer execution contract — read before working
 
@@ -30,7 +30,7 @@ Sequence: **verify accepted R4 + freeze research runtime -> L0 baseline -> L1 PP
 
 R4 requires equivalent behavior, at least **2x simulation and isolated learn speedup** under unprofiled measurement, and a faster measured full workflow. **4x is a stretch goal**. A fast but incorrect backend does not unlock RL experiments.
 
-Task completion requires evidence, not an improved score. A negative result may satisfy research acceptance; missing runs, leakage, or incomparable experiments do not. Record task ID, source/build revision, commands, configs, seeds, hashes, artifact paths, status, and limitations in `reports/archive/full-study-narrative.md`. All proposed artifacts below are future outputs.
+Task completion requires evidence, not an improved score. A negative result may satisfy research acceptance; missing runs, leakage, or incomparable experiments do not. Record task ID, source/build revision, commands, configs, seeds, hashes, artifact paths, status, and limitations in `reports/archive/l0-l3-full-report.md`. All proposed artifacts below are future outputs.
 
 ### 1.1 Current code, test and report conventions
 
@@ -164,7 +164,7 @@ Optional L2 tasks are independent research choices, not a requirement to impleme
 
 **Acceptance:** every selected candidate has three-seed evidence; the choice uses validation only; all configs and auxiliary artifacts are frozen. A valid decision to keep core passes this task.
 
-**L1 gate:** L1.1-L1.3 accepted, including the documented no-change decision in `reports/archive/full-study-narrative.md`.
+**L1 gate:** L1.1-L1.3 accepted, including the documented no-change decision in `reports/archive/l0-l3-full-report.md`.
 
 ## 5. L2: optional extensions with separate hypotheses
 
@@ -189,7 +189,7 @@ Core is retained. **L2.2 encoder/memory, L2.4 curriculum/warm-start and L2.5
 PopArt are SKIPPED** — L0 diagnostics do not trigger them (flat MLP has no
 measured sample-efficiency failure, PPO already beats heuristics, explained
 variance is high) and the first-round limit of two L2 directions is used.
-Evidence: `reports/archive/full-study-narrative.md`,
+Evidence: `reports/archive/l0-l3-full-report.md`,
 `reports/archive/rejected-experiments/forecast-*.{csv,json}` and
 `reports/archive/rejected-experiments/reward-shaping-*.{csv,json}`.
 
@@ -201,7 +201,7 @@ Evidence: `reports/archive/full-study-narrative.md`,
 - [x] Report forecast error alongside policy cost, unfinished share, and service outcomes.
 
 Outcome: **REJECT** on three-seed confirmation; core control retained. See the
-round decision above and `reports/archive/full-study-narrative.md`.
+round decision above and `reports/archive/l0-l3-full-report.md`.
 
 **Verification:** `tests/unit/bus_rl/learning/test_forecasting.py` for isolated causality plus native environment/training integration under the entry-point path; matched three-seed validation comparison.
 
@@ -230,7 +230,7 @@ round decision above and `reports/archive/full-study-narrative.md`.
 Outcome: **REJECT** on three-seed confirmation (mean cost +3.59% vs control,
 paired CI entirely above zero, 0/3 seeds lower, P95/worst-route limits violated);
 core control retained. See the round decision above and
-`reports/archive/full-study-narrative.md`.
+`reports/archive/l0-l3-full-report.md`.
 
 **Verification:** `tests/unit/bus_rl/learning/test_shaping.py` (telescoping, terminal-zero, causality, finite) and native `tests/integration/bus_rl/learning/training/test_shaping_flow.py` (reward accounting on the real kernel), plus matched three-seed validation.
 
@@ -287,7 +287,7 @@ frozen build (`d6bf1551…`).
 - [x] Evaluate frozen policies and baselines on **200 test_id + 200 burst + 200 traffic days** using identical day IDs/tapes per comparison.
 - [x] Export raw per-day, per-seed components, core cost, all-demand wait/P95 and censoring, completed/abandoned/unfinished shares, route quality, headways, operating/deadhead time, and denied passengers.
 - [x] Use deterministic evaluation and preserve all failed cases with explanations.
-- [x] Run the registered fixed-wall-clock experiment under identical accounting; report actual transitions and evaluation cost separately. (Registered; because no adopted algorithm change alters per-step compute it reduces to the fixed-transition wall-clock view, reported in `reports/archive/full-study-narrative.md`.)
+- [x] Run the registered fixed-wall-clock experiment under identical accounting; report actual transitions and evaluation cost separately. (Registered; because no adopted algorithm change alters per-step compute it reduces to the fixed-transition wall-clock view, reported in `reports/archive/l0-l3-full-report.md`.)
 
 **Verification:** check expected row counts, uniqueness, missing values, scenario hashes, checkpoint hashes, and original core-weight recomputation for reward ablations.
 
@@ -311,12 +311,11 @@ Reproduce with `uv run python scripts/l3_analysis.py`.
 ## 7. Artifact layout and completion rules
 
 ```text
-reports/FINAL_REPORT.md                  # final claim, config, result, limits
+reports/README.md                  # final claim, config, result, limits
 reports/tables/                          # final benchmark + ablation tables
 reports/figures/                         # final figures
 reports/provenance/                      # protocols, audits, ledger
-reports/archive/full-study-narrative.md  # long historical narrative
-reports/archive/artifact-index.md        # historical artifact index
+reports/archive/l0-l3-full-report.md  # long historical narrative
 reports/archive/rejected-experiments/    # rejected L1/L2 cards + tables
 reports/archive/infrastructure/          # Rust/runtime/memory
 runs/rl-improvement/<experiment>/<seed>/<run-id>/

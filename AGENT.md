@@ -106,7 +106,7 @@ Targeted runs while iterating, full `uv run pytest -q` before declaring done.
   marked verified (`checkpoint.py`).
 - **Conservation checks** (`bus_sim.oracle.domain.CONSERVATION_CHECKS`) are on in
   tests and must be off for speed references.
-- **`reports/` is evidence.** Final claim: `reports/FINAL_REPORT.md`; tables:
+- **`reports/` is evidence.** Final claim: `reports/README.md`; tables:
   `reports/tables/`; provenance: `reports/provenance/`; non-final/historical:
   `reports/archive/`. Do not edit accepted benchmark tables or the frozen
   `reports/archive/infrastructure/rust-migration*` files. The change table is

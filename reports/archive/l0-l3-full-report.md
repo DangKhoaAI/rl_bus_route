@@ -1,7 +1,7 @@
 # Full study narrative (historical)
 
 > **Historical long report.** The concise final report is
-> [`../FINAL_REPORT.md`](../FINAL_REPORT.md). Use [`../tables/`](../tables/) for
+> [`../README.md`](../README.md). Use [`../tables/`](../tables/) for
 > the benchmark numbers, [`../provenance/`](../provenance/) for protocols and
 > audits, and [`rejected-experiments/`](rejected-experiments/) for the changes
 > that were tested and not adopted.
@@ -16,8 +16,8 @@ full narrative; the frozen artifacts are linked below.
 **Decision cards:** [`../provenance/l0-baseline-card.md`](../provenance/l0-baseline-card.md) · [`rejected-experiments/l1-gae-lambda.md`](rejected-experiments/l1-gae-lambda.md) ·
 [`rejected-experiments/l2-causal-forecast.md`](rejected-experiments/l2-causal-forecast.md) · [`rejected-experiments/l2-reward-shaping.md`](rejected-experiments/l2-reward-shaping.md) ·
 [`../tables/l3-details.md`](../tables/l3-details.md).
-**Artifact index and reproduction:** [`artifact-index.md`](artifact-index.md).
-**Final summary:** [`../FINAL_REPORT.md`](../FINAL_REPORT.md).
+**Artifact index and reproduction:** [`../provenance/README.md`](../provenance/README.md) and the scripts under `scripts/`.
+**Final summary:** [`../README.md`](../README.md).
 
 ## Acceptance evidence
 

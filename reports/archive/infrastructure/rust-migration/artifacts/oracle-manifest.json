@@ -1050,7 +1050,7 @@
   },
   "reports": [
     {
-      "path": "reports/rust-migration.md",
+      "path": "reports/archive/infrastructure/rust-migration/README.md",
       "required": true,
       "sha256": "e7d8777f473b9afa8bdbb195ef4063c18b790c1d4be9729ecc8eec07ae55523e"
     }

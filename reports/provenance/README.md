@@ -1,7 +1,7 @@
 # Provenance
 
 Machine-facing evidence for the final claim. You normally do not need to read
-this directory; use [`../FINAL_REPORT.md`](../FINAL_REPORT.md) and
+this directory; use [`../README.md`](../README.md) and
 [`../tables/`](../tables/) instead.
 
 | File | What it records |
@@ -23,7 +23,7 @@ this directory; use [`../FINAL_REPORT.md`](../FINAL_REPORT.md) and
 
 ## Trust chain
 
-1. `FINAL_REPORT.md` claims are computed from `tables/*.csv`.
+1. `README.md` claims are computed from `tables/*.csv`.
 2. `tables/*.csv` are produced by `scripts/l3_analysis.py` and
    `scripts/build_benchmark_tables.py`.
 3. `l3-verification.json` and `l3-config-audit.json` check the matrix structure.
@@ -40,6 +40,7 @@ this directory; use [`../FINAL_REPORT.md`](../FINAL_REPORT.md) and
 
 ## Frozen migration contract
 
-The Rust migration contract keeps its historical paths for compatibility:
+The Rust migration evidence is under
 [`../archive/infrastructure/rust-migration/`](../archive/infrastructure/rust-migration/).
-Do not move it without updating `oracle-manifest.json`.
+The frozen `oracle-manifest.json` records the report path at
+`../archive/infrastructure/rust-migration/README.md`.

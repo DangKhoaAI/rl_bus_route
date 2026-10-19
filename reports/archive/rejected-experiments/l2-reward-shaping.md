@@ -1,7 +1,7 @@
 # L2.3 — Potential-based reward shaping (rejected)
 
 **Status:** `REJECTED` after three-seed confirmation. Control retained.
-**Full narrative:** [`../full-study-narrative.md`](../full-study-narrative.md)
+**Full narrative:** [`../l0-l3-full-report.md`](../l0-l3-full-report.md)
 **Ledger row:** `L2-PBRS` in [`../../provenance/experiments.csv`](../../provenance/experiments.csv)
 
 ## Question

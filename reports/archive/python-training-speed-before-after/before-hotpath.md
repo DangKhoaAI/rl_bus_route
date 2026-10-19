@@ -6,12 +6,12 @@ Same PPO hyperparams as a full seed (`n_envs=4`, `n_steps=256`, `n_epochs=4`, `b
 
 **Before** optimizations:
 
-- `reports/archive/training-diagnosis/python-before-hotpath.md` — this summary (baseline)
+- `reports/archive/python-training-speed-before-after/before-hotpath.md` — this summary (baseline)
 - raw artifacts (gitignored): `runs/diagnose/` — `diagnosis.json`, `train_events.jsonl`, `cprofile.txt`, `metadata.json`
 
 **After** optimizations (compare against the files above):
 
-- `reports/archive/training-diagnosis/python-after-hotpath.md`
+- `reports/archive/python-training-speed-before-after/after-hotpath.md`
 - raw artifacts (gitignored): `runs/diagnose-after/`
 
 ## Wall clock

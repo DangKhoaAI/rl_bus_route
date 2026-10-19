@@ -1,7 +1,7 @@
 # L1 — GAE lambda round (rejected)
 
 **Status:** `REJECTED` at screening. Control retained.
-**Full narrative:** [`../full-study-narrative.md`](../full-study-narrative.md)
+**Full narrative:** [`../l0-l3-full-report.md`](../l0-l3-full-report.md)
 **Ledger rows:** `L1-GAE-098`, `L1-GAE-100` in [`../../provenance/experiments.csv`](../../provenance/experiments.csv)
 
 ## Question

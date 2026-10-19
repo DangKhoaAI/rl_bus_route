@@ -96,7 +96,7 @@ correction; no future tape).
 
 Large artifacts (`data/generated/`, `runs/*.zip`) are gitignored and must be
 recreated. Start at `reports/README.md`; the final result is
-`reports/FINAL_REPORT.md`.
+`reports/README.md`.
 
 ## Native kernel (Rust)
 

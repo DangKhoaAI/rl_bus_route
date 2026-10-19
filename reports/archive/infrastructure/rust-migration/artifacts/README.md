@@ -16,4 +16,4 @@ checkpoints stay in `runs/rust-migration/`.
 
 The one-off R0 golden fixtures and the Python-level native parity suite were
 retired after acceptance (see the top-level README). This directory is a frozen
-snapshot, indexed by `reports/rust-migration.md`.
+snapshot, indexed by `reports/archive/infrastructure/rust-migration/README.md`.

@@ -2,7 +2,7 @@
 
 > **Status: historical.** Plumbing gate for reproducible training, not a claim
 > that PPO beats heuristics. The full study is in
-> [`../full-study-narrative.md`](../full-study-narrative.md).
+> [`../l0-l3-full-report.md`](../l0-l3-full-report.md).
 
 
 ## Setup
