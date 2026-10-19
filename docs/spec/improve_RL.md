@@ -1,6 +1,6 @@
 # Cải thiện RL sau khi tăng tốc bằng Rust
 
-Ngày cập nhật: **2026-09-13**. Trạng thái: **L0–L2 hoàn tất, core được giữ làm incumbent; L3 đã chạy ma trận T9 trên held-out (200+200+200 ngày), core thấp nhất trên mọi split và mọi ablation đều kém hơn; không có claim cải thiện nào.** Chi tiết trong [reports/archive/l0-l3-full-report.md](../../reports/archive/l0-l3-full-report.md).
+Ngày cập nhật: **2026-09-13**. Trạng thái: **L0–L2 hoàn tất, core được giữ làm incumbent; L3 đã chạy ma trận T9 trên held-out (200+200+200 ngày), core thấp nhất trên mọi split và mọi ablation đều kém hơn; không có claim cải thiện nào.** Chi tiết trong [reports/README.md](../../reports/README.md).
 Implementation plan (English): [improve_RL.md](../plan/improve_RL.md).
 
 
@@ -61,7 +61,7 @@ Không gọi cùng policy chạy nhanh hơn là policy thông minh hơn. Không 
 - `reports/archive/python-training-speed-before-after/after-hotpath.md`: learn 2048 transitions 7.69 s, khoảng 266 decisions/s; learn có cProfile. Khoảng 15 phút/full seed là ngoại suy, không là runtime production đã xác nhận.
 - `reports/archive/pilot-12k-pipeline-gate/README.md`: PPO 12,288 transitions có mean core cost khoảng 18,207 so fixed 16,017 trên 100 validation days; wait thấp hơn nhưng unfinished cao hơn. Chưa phải kết quả full training và chưa chứng minh PPO thắng heuristics.
 - Mean cost 15,471.25 trong trial diagnose chỉ là regression mốc cũ, không phải mục tiêu chất lượng RL. Không so trực tiếp với pilot vì khác checkpoint/budget/bộ ngày.
-- `reports/archive/forecast-error-baseline.md`: đã có diagnostic forecast, không đồng nghĩa đã chứng minh forecast cải thiện policy.
+- `reports/archive/rejected-changes/l2-causal-forecast.md`: đã có diagnostic forecast, không đồng nghĩa đã chứng minh forecast cải thiện policy.
 
 Trước L0, inventory artifacts full runs hiện có; chỉ đánh dấu hoàn thành việc có checkpoint/config/metadata/results tương ứng. Giữ các artifacts lịch sử; không ghi đè để tạo cảm giác cùng backend/revision.
 
@@ -253,7 +253,7 @@ Theo [reports convention](../../reports/README.md), `reports/` chứa phân tíc
 | R0–R4 | `reports/archive/infrastructure/rust-migration/README.md`, `reports/archive/infrastructure/rust-migration/`, raw `runs/rust-migration/` theo Rust spec |
 | L0 | `reports/provenance/l0-diagnosis.md`, bảng tổng hợp trong `reports/tables/`, figures trong `reports/figures/`; metadata gốc ở `runs/` |
 | L1/L2 | `reports/provenance/experiments.csv`, mỗi trial có config, hypothesis, seeds, B, elapsed, status và checkpoint links |
-| L3 | `reports/archive/l0-l3-full-report.md`, paired ID/OOD tables, CIs, service trade-offs, learning curves và phân tích failure cases; traces gốc ở `runs/` |
+| L3 | `reports/README.md`, paired ID/OOD tables, CIs, service trade-offs, learning curves và phân tích failure cases; traces gốc ở `runs/` |
 | Raw mới | `runs/rl-improvement/<experiment>/<seed>/<run-id>/`; không ghi đè pilot hoặc full runs cũ |
 
 Protocol đã khóa lưu ở `reports/provenance/protocol.json`; ledger `experiments.csv` dẫn tới config, run ID và artifact inventory. Raw per-day CSV, telemetry, traces, profiler dumps, build records và checkpoints lưu trong `runs/rl-improvement/<experiment>/<seed>/<run-id>/` để rerun không ghi đè. Chỉ khi raw artifact cần được commit làm evidence, chọn bản cần thiết vào `reports/provenance/`, ghi lý do, nguồn run/hash và lệnh tái tạo; không giữ hai bản trùng. Fixtures trong tests phải sinh bằng code hoặc đọc evidence được chỉ mục, không commit data vào `tests/`. Không thêm study mới vào hash scope của oracle manifest lịch sử.
@@ -266,13 +266,13 @@ Manifest experiment ghi backend/build và actual library hash, torch_threads req
 - [x] Xác nhận tối đa 2 candidates đa seed, giữ cả kết quả âm (không candidate qua screening; core retained).
 - [x] Chọn L2 nếu có giả thuyết cần kiểm chứng; không bắt buộc. (Đã chọn L2.1 causal forecast và L2.3 PBRS, xác nhận 3 seeds, cả hai REJECT; L2.2, L2.4, L2.5 SKIPPED có lý do.)
 - [x] Freeze trước held-out test; paired statistics đúng đơn vị ngày. (Đã khóa `l3_protocol.json` trước khi mở held-out; bootstrap theo ngày, 2000 resamples, seed 6001.)
-- [x] L3 báo throughput, sample efficiency và wall-clock efficiency riêng. (Báo tách trong `reports/archive/l0-l3-full-report.md`; Rust throughput chỉ trích dẫn từ rust-migration/runtime-optimization, không nhân vào claim thuật toán.)
+- [x] L3 báo throughput, sample efficiency và wall-clock efficiency riêng. (Báo tách trong `reports/README.md`; Rust throughput chỉ trích dẫn từ rust-migration/runtime-optimization, không nhân vào claim thuật toán.)
 
 ## 9. Nguồn và điểm bắt đầu triển khai
 
 - [Runtime optimization spec](runtime_optimize.md), [runtime results](../../reports/archive/infrastructure/runtime-optimization/README.md), [memory spec](memory_optimize.md).
 - [Rust migration spec](rust_improve.md), [spec nền](spec_v1.0.md), [plan T9–T11](../plan/plan_v1.0.md).
-- [Pilot report](../../reports/archive/pilot-12k-pipeline-gate/README.md), [Python after](../../reports/archive/python-training-speed-before-after/after-hotpath.md), [forecast diagnostic](../../reports/archive/forecast-error-baseline.md).
+- [Pilot report](../../reports/archive/pilot-12k-pipeline-gate/README.md), [Python after](../../reports/archive/python-training-speed-before-after/after-hotpath.md), [forecast diagnostic](../../reports/archive/rejected-changes/l2-causal-forecast.md).
 - Convention: [repository layout](../../README.md), [native crates](../../crates/README.md), [tests](../../tests/README.md), [reports](../../reports/README.md).
 - Code hiện tại sau refactor (đường dẫn tính từ repo root):
   - Training/model factory, validation callback, diagnostics và checkpoint metadata: `src/bus_rl/learning/training/{train,callbacks,diagnose,checkpoint}.py`.

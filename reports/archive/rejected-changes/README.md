@@ -1,9 +1,9 @@
-# Rejected experiments
+# Rejected changes
 
 Each card records one pre-registered change, the exact config diff, the result,
 and why it was not adopted. None of these changed the final controller.
 
-| Experiment | Card | Result | Status |
+| Change | Card | Result | Status |
 |---|---|---|---|
 | L1: GAE `lambda` 0.98 / 1.0 | [`l1-gae-lambda.md`](l1-gae-lambda.md) | +0.54% / +1.78% validation cost at screening | `REJECTED` |
 | L2.1: causal 15-min arrival forecast | [`l2-causal-forecast.md`](l2-causal-forecast.md) | +2.03% cost, CI above 0, 1/3 seeds lower | `REJECTED` |

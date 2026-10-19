@@ -1,7 +1,7 @@
 # L2.1 — Causal arrival forecast (rejected)
 
 **Status:** `REJECTED` after three-seed confirmation. Control retained.
-**Full narrative:** [`../l0-l3-full-report.md`](../l0-l3-full-report.md)
+**Final report:** [`../../README.md`](../../README.md)
 **Ledger row:** `L2-FORECAST` in [`../../provenance/experiments.csv`](../../provenance/experiments.csv)
 
 ## Question
@@ -19,6 +19,23 @@ and lower `total_cost_core` without changing physics, masks or reward?
   [`forecast-contrast.json`](forecast-contrast.json),
   [`forecast-verification.json`](forecast-verification.json),
   [`forecast-error.json`](forecast-error.json).
+
+
+## Forecast-only baseline (historical)
+
+Before the policy comparison, the forecaster was evaluated on its own against
+train-day arrival logs:
+
+| Split | MAE | Bias | Bins |
+|---|---:|---:|---:|
+| validation (100 days) | 0.01906 | +0.000027 | 1,600 |
+| test_id (200 days) | 0.01913 | +0.000173 | 3,200 |
+
+Raw-passenger MAE is about **0.76 passengers / 15-minute cell**. Units are
+observation-scaled counts (passengers / 40) per (route, direction, stop) cell.
+The forecaster is a time-bin mean of the next 15 minutes times a recent-10-minute
+correction `clip((recent+1)/(historical+1), 0.5, 2.0)`, fit once on the 500 train
+days and frozen.
 
 ## Result
 

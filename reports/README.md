@@ -90,7 +90,7 @@ Figures:
 
 The change ledger is [`provenance/experiments-ledger.md`](provenance/experiments-ledger.md);
 the rejected experiment cards are under
-[`archive/rejected-experiments/`](archive/rejected-experiments/).
+[`archive/rejected-changes/`](archive/rejected-changes/).
 
 ---
 
@@ -124,7 +124,7 @@ the rejected experiment cards are under
 | [`tables/`](tables/) | Final benchmark and ablation tables; see [`tables/README.md`](tables/README.md) |
 | [`figures/`](figures/) | Final figures only |
 | [`provenance/`](provenance/) | Protocols, verification, change ledger, L0 detail |
-| [`archive/`](archive/) | Historical/rejected work, including pilot, forecast baseline, rejected experiments, infrastructure |
+| [`archive/`](archive/) | Historical/rejected work: pilot, forecast baseline, rejected changes, infrastructure |
 | [`../docs/problem_solution_brief.md`](../docs/problem_solution_brief.md) | Problem and RL formulation |
 | [`../docs/spec/spec_v1.0.md`](../docs/spec/spec_v1.0.md) | Full specification |
 
