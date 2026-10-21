@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&family=JetBrains+Mono:wght@500;600&display=swap">
 <style>
-/* Layout: full-bleed 3D campus map with floating control-room cards (KPIs top-left, detail right, trip + lists bottom). */
+/* Layout: full-bleed 3D campus map with floating control-room cards (KPIs top-left, detail right, lists bottom). */
 /* Light-only, warm monochrome palette: colour is reserved for route identity and status. */
 :root {
   color-scheme: light;
@@ -106,7 +106,6 @@ button:active { transform: scale(.98); }
 .speed button:hover { color: var(--ink); background: var(--panel-2); }
 .speed button[aria-pressed="true"] { background: var(--ink); color: #fff; }
 .who { display: flex; align-items: center; gap: .5rem; }
-.avatar { width: 2.25rem; height: 2.25rem; border-radius: .625rem; background: var(--ink); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: .8rem; }
 .who b { display: block; font-size: .8125rem; line-height: 1.3; }
 .who small { color: var(--muted); font-size: .8rem; }
 
@@ -141,7 +140,7 @@ button:active { transform: scale(.98); }
 .side { position: absolute; top: var(--edge); right: var(--gutter-r); width: var(--panel-w); max-height: calc(100% - var(--edge) * 2 - var(--lists-h) - var(--panel-gap)); overflow: auto; padding: 1rem; z-index: 3; display: flex; flex-direction: column; gap: .75rem; }
 .side-head { display: flex; gap: .625rem; align-items: flex-start; }
 .side-head .ic { width: 2.25rem; height: 2.25rem; border-radius: .5rem; background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); display: grid; place-items: center; flex: none; }
-.side-head .ic svg, .trip-head svg { width: 1.125rem; height: 1.125rem; }
+.side-head .ic svg { width: 1.125rem; height: 1.125rem; }
 .side-head h2 { margin: .125rem 0 0; font-family: var(--font-display); font-weight: 600; font-size: 1.625rem; letter-spacing: -.02em; line-height: 1.15; color: var(--ink); text-wrap: balance; }
 .side-head .x { margin-left: auto; border: 1px solid var(--line); background: var(--panel); width: 1.75rem; height: 1.75rem; border-radius: .375rem; cursor: pointer; display: grid; place-items: center; flex: none; }
 .statusrow { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; font-size: .8rem; color: var(--muted); }
@@ -197,27 +196,7 @@ button:active { transform: scale(.98); }
 .side::-webkit-scrollbar { width: .375rem; }
 .side::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: .1875rem; }
 
-.trip { position: absolute; left: var(--gutter-l); bottom: var(--edge); right: calc(var(--gutter-r) + var(--panel-w) + var(--panel-gap)); max-width: 38.75rem; padding: 1rem 1.25rem; z-index: 3; display: flex; gap: 1.25rem; align-items: stretch; }
-.trip-main { flex: 1; min-width: 0; }
-.trip-head { display: flex; gap: .625rem; align-items: center; margin-bottom: 1rem; }
-.trip-head b { font-size: .9375rem; }
-.trip-head small { margin-left: auto; color: var(--muted); font-size: .8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.steps { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); position: relative; }
-.step { display: flex; flex-direction: column; align-items: center; text-align: center; gap: .375rem; position: relative; min-width: 0; }
 /* Connector runs from this node's centre back to the previous node's centre. top = node centre (14px) minus half the 3px line. */
-.step::before { content: ""; position: absolute; top: .78125rem; left: -50%; width: 100%; height: .1875rem; background: var(--line); z-index: 0; transition: background-color .3s var(--ease); }
-.step:first-child::before { display: none; }
-.step.done::before, .step.cur::before { background: var(--ink); }
-.step .node { width: 1.75rem; height: 1.75rem; border-radius: 50%; border: 2px solid var(--line); background: var(--panel); display: grid; place-items: center; z-index: 1; color: var(--muted); transition: background-color .3s var(--ease), border-color .3s var(--ease), color .3s var(--ease), box-shadow .3s var(--ease); }
-.step.done .node { background: var(--ink); border-color: var(--ink); color: #fff; }
-.step.cur .node { border-color: var(--ink); color: var(--ink); box-shadow: 0 0 0 .25rem var(--panel-2); }
-.step-no { font-size: .8rem; font-weight: 700; }
-.step b { font-size: .8rem; font-weight: 600; line-height: 1.25; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-.step small { font-size: .8rem; color: var(--muted); }
-.trip-card { width: 12rem; flex: none; background: var(--panel-2); border-radius: .5rem; padding: .75rem; display: flex; flex-direction: column; align-items: flex-start; gap: .375rem; min-width: 0; }
-.trip-card:hover { background: var(--line); }
-.trip-card .id { font: 600 1rem var(--font-mono); color: var(--ink); }
-.trip-card small { color: var(--muted); font-size: .8rem; }
 
 .lists { position: absolute; right: var(--gutter-r); bottom: var(--edge); width: var(--panel-w); height: var(--lists-h); z-index: 3; display: flex; flex-direction: column; padding: .625rem; }
 .tabs { display: flex; gap: .25rem; padding-bottom: .5rem; border-bottom: 1px solid var(--line); margin-bottom: .25rem; }
@@ -239,10 +218,8 @@ button:active { transform: scale(.98); }
 /* Three tiers: depot (ink pill) > terminal (square route badge, name always shown) > intermediate stop (small faded dot). */
 .lbl-stop { pointer-events: auto; cursor: pointer; display: flex; align-items: center; gap: .25rem; font-size: .75rem; font-weight: 700; border-radius: 999px; padding: .0625rem .375rem .0625rem .125rem; background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow); color: var(--fg); opacity: .78; transition: background-color .2s var(--ease), border-color .2s var(--ease), color .2s var(--ease), box-shadow .2s var(--ease), opacity .2s var(--ease); }
 .lbl-stop i { width: 1rem; height: 1rem; border-radius: 50%; display: grid; place-items: center; color: #fff; background: var(--rc); font-style: normal; font-size: .6875rem; }
-.lbl-stop span.n { font-variant-numeric: tabular-nums; }
-.lbl-stop span.n:empty { display: none; }
 .lbl-stop .nm { display: none; font-weight: 600; }
-.lbl-stop:hover, .lbl-stop.sel, .lbl-stop.warn, .lbl-stop.bad { opacity: 1; }
+.lbl-stop:hover, .lbl-stop.sel { opacity: 1; }
 .lbl-stop:hover .nm, .lbl-stop.sel .nm { display: inline; }
 .lbl-stop.end { opacity: 1; z-index: 1; font-size: .8125rem; gap: .375rem; border-radius: .375rem; padding: .1875rem .5rem .1875rem .1875rem; border: 2px solid var(--rc); }
 .lbl-stop.end i { width: auto; min-width: 1.75rem; height: 1.375rem; padding: 0 .3125rem; border-radius: .25rem; font: 700 .75rem var(--font-mono); }
@@ -260,7 +237,6 @@ button:active { transform: scale(.98); }
 .map-key .sym.dp { width: 1.25rem; height: 1.25rem; border-radius: .3125rem; background: var(--ink); color: var(--s-curb); }
 .map-key .sym.end { width: 1.375rem; height: 1rem; border-radius: .1875rem; background: var(--fg); }
 .map-key .sym.mid { width: .875rem; height: .875rem; border-radius: 50%; background: var(--muted); opacity: .78; }
-.lbl-stop.warn { border-color: var(--warn); } .lbl-stop.bad { border-color: var(--bad); background: var(--bad-soft); }
 .lbl-stop.sel { outline: 2px solid var(--ink); }
 .lbl-bus { font: 600 .8rem var(--font-mono); color: #fff; padding: .125rem .375rem; border-radius: .25rem; display: flex; gap: .3125rem; align-items: center; box-shadow: var(--shadow); }
 .lbl-bus u { display: block; width: 1.125rem; height: .25rem; border-radius: .125rem; background: rgba(255, 255, 255, .35); overflow: hidden; text-decoration: none; }
@@ -287,7 +263,7 @@ button:active { transform: scale(.98); }
   .search { max-width: none; order: 3; flex-basis: 100%; }
   .stage { display: flex; flex-direction: column; gap: 12px; padding-bottom: 16px; }
   .viewport { position: relative; inset: auto; height: 62vh; min-height: 360px; }
-  .kpis, .side, .trip, .lists, .mapctl, .legend-note { position: static; width: auto; max-height: none; max-width: none; margin-left: var(--gutter-l); margin-right: var(--gutter-r); }
+  .kpis, .side, .lists, .mapctl, .legend-note { position: static; width: auto; max-height: none; max-width: none; margin-left: var(--gutter-l); margin-right: var(--gutter-r); }
   .kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; order: -1; margin-top: 12px; }
   .kpi { flex-direction: column; align-items: flex-start; gap: 6px; padding: 10px; }
   .kpi .ic { width: 28px; height: 28px; border-radius: 8px; }
@@ -295,14 +271,11 @@ button:active { transform: scale(.98); }
   .kpi .v { font-size: 18px; }
   .mapctl { flex-direction: row; align-self: flex-start; }
   .mapctl hr { border-top: 0; border-left: 1px solid var(--line); margin: 4px 3px; }
-  .trip { flex-direction: column; }
-  .trip-card { width: auto; }
   .lists { height: 300px; }
   .legend-note { align-self: flex-start; }
 }
 @media (max-width: 480px) {
   .depot b, .brand { font-size: 15px; }
-  .step b { font-size: 10.5px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .live i, .side.enter > *, .side.enter .bar i, .side.enter .stack > * { animation: none; }
@@ -331,7 +304,7 @@ button:active { transform: scale(.98); }
       <button class="link" id="btn-buses">Lượt xe</button>
       <button class="link" id="btn-routes" aria-pressed="true">Sơ đồ tuyến</button>
       <div class="playback">
-        <span class="live" id="live"><i></i><span id="clock">Mô phỏng 06:00</span></span>
+        <span class="live paused" id="live"><i></i><span id="clock">Chưa kết nối</span></span>
         <div class="speed" role="group" aria-label="Tốc độ mô phỏng">
           <button data-speed="0" aria-pressed="false" aria-label="Tạm dừng"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M9 5v14M15 5v14"/></svg></button>
           <button data-speed="15" aria-pressed="false">15×</button>
@@ -339,7 +312,7 @@ button:active { transform: scale(.98); }
           <button data-speed="120" aria-pressed="false">120×</button>
         </div>
       </div>
-      <div class="who"><span class="avatar">RL</span><span><b>Team RL Bus</b><small>Bộ điều phối threshold</small></span></div>
+      <div class="who"><span><b>Bộ điều phối</b><small id="who-controller">—</small></span></div>
     </div>
   </header>
 
@@ -349,7 +322,7 @@ button:active { transform: scale(.98); }
     <div class="kpis">
       <div class="card kpi">
         <span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="7" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14c3 0 5 2.2 5 5"/></svg></span>
-        <span><small>Khách đang chờ</small><span class="v num" id="k-wait">0</span><small id="k-wait-sub">18 trạm · 3 tuyến</small></span>
+        <span><small>Khách đang chờ</small><span class="v num" id="k-wait">0</span><small id="k-wait-sub">3 tuyến</small></span>
       </div>
       <div class="card kpi">
         <span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="3" width="16" height="14" rx="3"/><path d="M4 11h16M8 21v-4M16 21v-4"/><circle cx="8" cy="14" r=".6"/><circle cx="16" cy="14" r=".6"/></svg></span>
@@ -357,10 +330,10 @@ button:active { transform: scale(.98); }
       </div>
       <div class="card kpi">
         <span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
-        <span><small id="k-age-label">Chờ trung bình</small><span class="v num" id="k-age">0</span><small id="k-age-sub">p95 khi lên xe</small></span>
+        <span><small>Cost khoảng gần nhất</small><span class="v num" id="k-age">—</span><small id="k-age-sub">tích lũy 0</small></span>
       </div>
     </div>
-    <div class="legend-note" id="note">Bố cục minh họa, không theo tỉ lệ · dữ liệu mô phỏng</div>
+    <div class="legend-note" id="note">Đang kết nối station API…</div>
     <div class="card map-key" id="map-key" aria-label="Chú giải bản đồ"></div>
 
     <div class="card mapctl" role="group" aria-label="Điều khiển bản đồ">
@@ -375,12 +348,9 @@ button:active { transform: scale(.98); }
 
     <aside class="card side" id="side" aria-live="polite"></aside>
 
-    <section class="card trip" id="trip" aria-label="Theo dõi chuyến"></section>
-
     <section class="card lists">
       <div class="tabs" role="tablist">
-        <button role="tab" id="tab-stops" aria-selected="true" data-tab="stops">Trạm 18</button>
-        <button role="tab" id="tab-buses" aria-selected="false" data-tab="buses">Xe 12</button>
+        <button role="tab" id="tab-buses" aria-selected="true" data-tab="buses">Xe</button>
         <button role="tab" id="tab-log" aria-selected="false" data-tab="log">Quyết định</button>
       </div>
       <div class="tabpanel" id="tabpanel" role="tabpanel"></div>
@@ -394,15 +364,11 @@ button:active { transform: scale(.98); }
 (() => {
 'use strict';
 
-/* ---------- constants mirroring configs/base.toml and the cost model ---------- */
-const CAPACITY = 40, COMFORT = 30;
-const HORIZON_S = 14400, DEMAND_END_S = 10800, CONTROL_S = 120;
-const ABANDON_S = 2700, EXCESSIVE_WAIT_S = 900;
-const HEADWAYS = [6, 10, 15];
-const BUS_COOLDOWN_S = 1200, ROUTE_COOLDOWN_S = 600, F_MIN = 2;
+/* ---------- physical parameters, overwritten from GET /station before the first frame ---------- */
+const PHYS = { capacity: 40, comfort: 30, controlS: 120, fleetSize: 12, headways: [6, 10, 15] };
+const F_MIN = 2;
 const START_HOUR = 6;
 const LANE = 1.8;
-const BASE_SPEED = 0.34; // world units per simulated second
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const $ = (s) => document.querySelector(s);
@@ -419,7 +385,8 @@ function mulberry32(a) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
-let rng = mulberry32(20261018);
+// Seeds scenery placement (trees) only; every bus, queue and cost value comes from the station API.
+const rng = mulberry32(20261018);
 
 /* ---------- path geometry ---------- */
 function offsetPolyline(pts, off) {
@@ -532,11 +499,7 @@ const ROUTE_DEFS = [
   },
 ];
 
-// Building use drives the façade tint (--s-bld-<kind>) and the map key.
-const BUILDING_KINDS = [
-  ['uni', 'Trường đại học'], ['dorm', 'Ký túc xá'], ['admin', 'Hành chính · công nghệ'],
-  ['civic', 'Thư viện · văn hóa'], ['transit', 'Metro'],
-];
+// Building use drives the façade tint (--s-bld-<kind>).
 // [x, z, w, d, h, kind, label?] — label shown once per campus
 const BUILDINGS = [
   [-92, 26, 14, 14, 14, 'uni', 'ĐH Quốc tế'], [-76, 26, 9, 14, 10, 'uni'], [-85, 42, 24, 8, 8, 'uni'],
@@ -556,7 +519,7 @@ const LAKE = { x: -30, z: -80, w: 40, d: 26 };
 const FIELD = { x: 27, z: 22, w: 30, d: 14 };
 const BAYS = [-42, -36, -30, -24, -18].map((x) => V(x, 42));
 
-/* ---------- simulation model ---------- */
+/* ---------- route model (geometry only; state comes from the API) ---------- */
 const ROUTES = ROUTE_DEFS.map((d, ri) => {
   const raw = d.raw.map(([x, z]) => V(x, z));
   const fwd = roundPolyline(offsetPolyline(raw, LANE), 7);
@@ -566,9 +529,8 @@ const ROUTES = ROUTE_DEFS.map((d, ri) => {
   const stops = d.stops.map((name, k) => {
     const { p, t } = pointAlong(raw, d.stopD[k]);
     return {
-      name, k, r: ri, p, t, side: d.side[k], queue: [],
+      name, k, r: ri, p, t, side: d.side[k],
       sF: path.nearest(p, 0, fwdLen), sB: path.nearest(p, fwdLen, path.len),
-      lastBus: -1e9,
     };
   });
   const events = [];
@@ -577,85 +539,23 @@ const ROUTES = ROUTE_DEFS.map((d, ri) => {
   events.sort((a, b) => a.s - b.s);
   return {
     i: ri, ...d, raw, path, fwdLen, stops, events,
-    headway: 15 * 60, lastDepart: -1e9, hwUntil: 0, dispUntil: 0,
+    headway: 15 * 60, liveWaiting: 0,
   };
 });
 const ALL_STOPS = ROUTES.flatMap((r) => r.stops);
 
 const SIM = {};
-// Set once the station API answers; null means the in-browser simulation drives the view.
+// The station API session this page drives; stays null until POST /simulations answers.
 let LIVE = null;
+// The map draws 12 bus models; connectLive() rejects a larger API fleet.
 const BUSES = Array.from({ length: 12 }, (_, i) => ({ i, id: 'XE-' + String(i + 1).padStart(2, '0') }));
 
-function resetSim(seed) {
-  rng = mulberry32(seed);
-  Object.assign(SIM, {
-    t: 0, seed, nextControl: CONTROL_S, nextAbandon: 30, noop: 0,
-    W: 0, Vp: 0, O: 0, C: 0, CD: 0, X: 0, U: 0, E: 0, M: 0,
-    lastK: null, kIndex: 0, total: 0, completed: 0, abandonedTotal: 0,
-    waits: [], history: [], log: [],
-  });
-  ROUTES.forEach((r) => { r.headway = 15 * 60; r.lastDepart = -1e9; r.hwUntil = 0; r.dispUntil = 0; r.stops.forEach((s) => { s.queue = []; }); });
+function resetSim() {
+  Object.assign(SIM, { t: 0, noop: 0, lastK: null, kIndex: 0, total: 0, abandonedTotal: 0, history: [], log: [] });
+  ROUTES.forEach((r) => { r.headway = 15 * 60; r.liveWaiting = 0; });
   BUSES.forEach((b) => {
-    Object.assign(b, { route: null, s: 0, ev: 0, mode: 'reserve', until: 0, pax: [], bay: null, dead: null, deadS: 0, deadTo: null, recall: false, cooldown: 0 });
+    Object.assign(b, { route: null, s: 0, ev: 0, mode: 'reserve', until: 0, pax: [], bay: b.i % BAYS.length, dead: null, deadS: 0, deadTo: null, recall: false, cooldown: 0 });
   });
-  ROUTES.forEach((r, ri) => {
-    for (let j = 0; j < 3; j++) {
-      const b = BUSES[ri * 3 + j];
-      b.route = ri; b.mode = 'run'; b.s = (r.path.len * j) / 3 + 1;
-      b.ev = r.events.findIndex((e) => e.s >= b.s); if (b.ev < 0) b.ev = 0;
-    }
-  });
-  BUSES.slice(9).forEach((b, j) => { b.bay = j; });
-}
-
-function demandProfile(t) {
-  const m = t / 60;
-  return 0.55 + 0.95 * Math.exp(-(((m - 70) / 32) ** 2)) + 0.45 * Math.exp(-(((m - 160) / 25) ** 2));
-}
-function traffic(t) {
-  const m = t / 60;
-  return 1 + 0.22 * Math.exp(-(((m - 80) / 35) ** 2)) + 0.06 * Math.sin(m / 9);
-}
-const speedNow = () => BASE_SPEED / traffic(SIM.t);
-
-function spawnPassengers(dt) {
-  if (SIM.t >= DEMAND_END_S) return;
-  for (const r of ROUTES) {
-    const lam = (r.base * demandProfile(SIM.t) / 3600) * dt;
-    if (rng() >= lam) continue;
-    // terminals draw twice the share of an intermediate stop-direction
-    const pairs = [[0, 1, 2], [1, 1, 1], [2, 1, 1], [3, 1, 1], [4, 1, 1], [5, -1, 2], [4, -1, 1], [3, -1, 1], [2, -1, 1], [1, -1, 1]];
-    let u = rng() * 12, pick = pairs[0];
-    for (const p of pairs) { u -= p[2]; if (u <= 0) { pick = p; break; } }
-    const [k, dir] = pick;
-    const dest = dir > 0 ? k + 1 + Math.floor(rng() * (5 - k)) : Math.floor(rng() * k);
-    r.stops[k].queue.push({ t0: SIM.t, dir, dest, denied: false });
-  }
-}
-
-function serve(b, ev) {
-  const r = ROUTES[b.route], stop = r.stops[ev.k];
-  const before = b.pax.length;
-  b.pax = b.pax.filter((p) => p.dest !== ev.k);
-  const alight = before - b.pax.length;
-  SIM.completed += alight;
-  let boarded = 0;
-  const keep = [];
-  for (const p of stop.queue) {
-    if (p.dir === ev.dir && b.pax.length < CAPACITY) {
-      b.pax.push({ dest: p.dest });
-      SIM.waits.push(SIM.t - p.t0); boarded++;
-    } else {
-      if (p.dir === ev.dir && !p.denied) { p.denied = true; SIM.U++; }
-      keep.push(p);
-    }
-  }
-  if (SIM.waits.length > 400) SIM.waits.splice(0, SIM.waits.length - 400);
-  stop.queue = keep;
-  stop.lastBus = SIM.t;
-  b.mode = 'dwell';
-  b.until = SIM.t + 15 + 1.6 * (alight + boarded);
 }
 
 function startDeadhead(b, to, ri) {
@@ -673,144 +573,14 @@ function startDeadhead(b, to, ri) {
   if (to === 'route') b.route = ri;
 }
 
-function stepBus(b, dt) {
-  if (b.mode === 'reserve') return;
-  if (b.mode === 'dead') {
-    b.deadS += speedNow() * 1.25 * dt;
-    if (b.deadS >= b.dead.len) {
-      if (b.deadTo === 'route') {
-        b.s = 0; b.ev = 0; b.mode = 'hold';
-      } else {
-        b.mode = 'reserve'; b.route = null; b.recall = false;
-      }
-      b.dead = null;
-    }
-    return;
-  }
-  const r = ROUTES[b.route];
-  if (b.mode === 'hold') {
-    if (SIM.t < r.lastDepart + r.headway) return;
-    r.lastDepart = SIM.t;
-    serve(b, r.events[b.ev]);
-    return;
-  }
-  if (b.mode === 'dwell') {
-    if (SIM.t < b.until) return;
-    b.mode = 'run';
-    b.ev = (b.ev + 1) % r.events.length;
-  }
-  const target = r.events[b.ev].s;
-  const dist = (target - b.s + r.path.len) % r.path.len;
-  const ds = speedNow() * dt;
-  if (ds < dist) { b.s = (b.s + ds) % r.path.len; return; }
-  b.s = target;
-  const ev = r.events[b.ev];
-  if (ev.dir === 1 && ev.k === 0) {
-    if (b.recall && b.pax.length === 0) { startDeadhead(b, 'bay', b.route); SIM.M++; return; }
-    b.mode = 'hold';
-  } else {
-    serve(b, ev);
-  }
-}
-
 function committed(ri) { return BUSES.filter((b) => b.route === ri && !(b.mode === 'dead' && b.deadTo === 'bay')).length; }
-// The API reports waiting passengers per route only, so per-stop queues stay empty in live mode.
-function routeQueue(r) { return LIVE ? r.liveWaiting : r.stops.reduce((n, s) => n + s.queue.length, 0); }
+// The API reports waiting passengers per route only; there is no per-stop queue.
+const routeQueue = (r) => r.liveWaiting;
 const totalWaiting = () => ROUTES.reduce((n, r) => n + routeQueue(r), 0);
-function freeBay() { const used = new Set(BUSES.filter((b) => b.bay !== null && (b.mode === 'reserve' || b.mode === 'dead' || b.recall)).map((b) => b.bay)); return [0, 1, 2, 3, 4].find((i) => !used.has(i)); }
 
 function logDecision(code, text, kind, t = SIM.t) {
   SIM.log.unshift({ t, code, text, kind });
   if (SIM.log.length > 60) SIM.log.pop();
-}
-
-function controller() {
-  // Threshold heuristic shown for the demo; a trained MaskablePPO policy would choose from the same 221 slots.
-  let acted = false;
-  const qs = ROUTES.map(routeQueue);
-  const pressure = ROUTES.map((r, i) => qs[i] / Math.max(1, committed(i)));
-  const reserves = BUSES.filter((b) => b.mode === 'reserve' && b.cooldown <= SIM.t);
-  const order = [0, 1, 2].sort((a, b) => pressure[b] - pressure[a]);
-  const top = order[0];
-  if (reserves.length && qs[top] > 38 && SIM.t < DEMAND_END_S && ROUTES[top].dispUntil <= SIM.t) {
-    const b = reserves[0];
-    startDeadhead(b, 'route', top);
-    b.cooldown = SIM.t + BUS_COOLDOWN_S;
-    ROUTES[top].dispUntil = SIM.t + ROUTE_COOLDOWN_S;
-    SIM.M++; acted = true;
-    logDecision(`DISPATCH(${b.i},${top})`, `Đưa ${b.id} từ bãi vào ${ROUTES[top].code}: ${qs[top]} khách đang chờ`, 'info');
-  }
-  ROUTES.forEach((r, i) => {
-    const want = (qs[i] > 40 ? 6 : qs[i] > 18 ? 10 : 15) * 60;
-    if (!acted && want !== r.headway && r.hwUntil <= SIM.t) {
-      r.headway = want; r.hwUntil = SIM.t + ROUTE_COOLDOWN_S; acted = true;
-      logDecision(`SET_HEADWAY(${i},${want / 60})`, `${r.code} xuất bến mỗi ${want / 60} phút (hàng chờ ${qs[i]})`, want < 900 ? 'warn' : 'ok');
-    }
-  });
-  if (!acted && SIM.t > DEMAND_END_S + 600) {
-    for (const r of ROUTES) {
-      const i = r.i;
-      const cand = BUSES.find((b) => b.route === i && !b.recall && b.mode !== 'dead' && b.pax.length < 4 && b.cooldown <= SIM.t);
-      if (cand && committed(i) > F_MIN && qs[i] < 6 && freeBay() !== undefined) {
-        cand.recall = true; cand.bay = freeBay(); cand.cooldown = SIM.t + BUS_COOLDOWN_S; acted = true;
-        logDecision(`RECALL(${cand.i})`, `Gọi ${cand.id} về bãi sau chuyến này, ${r.code} chỉ còn ${qs[i]} khách chờ`, 'mute');
-        break;
-      }
-    }
-  }
-  if (!acted) SIM.noop++;
-}
-
-function closeInterval() {
-  const c = {
-    W: SIM.W, V: 0.25 * SIM.Vp, O: 0.5 * SIM.O, C: 0.5 * SIM.C, CD: 0.5 * SIM.CD, X: SIM.X, U: 5 * SIM.U, E: 60 * SIM.E, M: 2 * SIM.M,
-  };
-  c.total = Object.values(c).reduce((a, b) => a + b, 0);
-  SIM.lastK = c; SIM.kIndex++; SIM.total += c.total;
-  SIM.W = SIM.Vp = SIM.O = SIM.C = SIM.CD = SIM.X = SIM.U = SIM.E = SIM.M = 0;
-}
-
-function step(dt) {
-  spawnPassengers(dt);
-  BUSES.forEach((b) => stepBus(b, dt));
-  // integrate the per-interval cost terms (passenger- and bus-minutes)
-  let waiting = 0, excessive = 0;
-  for (const s of ALL_STOPS) {
-    waiting += s.queue.length;
-    for (const p of s.queue) if (SIM.t - p.t0 > EXCESSIVE_WAIT_S) excessive++;
-  }
-  let onboard = 0, over = 0, active = 0, dead = 0;
-  for (const b of BUSES) {
-    onboard += b.pax.length; over += Math.max(0, b.pax.length - COMFORT);
-    if (b.mode === 'dead') dead++; else if (b.mode !== 'reserve') active++;
-  }
-  const m = dt / 60;
-  SIM.W += waiting * m; SIM.Vp += onboard * m; SIM.O += over * m; SIM.C += active * m; SIM.CD += dead * m; SIM.X += excessive * m;
-  SIM.t += dt;
-  if (SIM.t >= SIM.nextAbandon) {
-    SIM.nextAbandon += 30;
-    for (const s of ALL_STOPS) {
-      const before = s.queue.length;
-      s.queue = s.queue.filter((p) => SIM.t - p.t0 <= ABANDON_S);
-      const gone = before - s.queue.length; SIM.E += gone; SIM.abandonedTotal += gone;
-    }
-  }
-  if (SIM.t >= SIM.nextControl) {
-    SIM.nextControl += CONTROL_S;
-    closeInterval();
-    controller();
-    SIM.history.push({ t: SIM.t, waiting });
-    if (SIM.history.length > 200) SIM.history.shift();
-  }
-  if (SIM.t >= HORIZON_S) {
-    const nh = waiting + onboard;
-    const total = Math.round(SIM.total + 60 * nh);
-    const seed = SIM.seed + 1;
-    const prevLog = SIM.log;
-    resetSim(seed);
-    SIM.log = prevLog;
-    logDecision('END', `Kết thúc ca: tổng cost ${total.toLocaleString('vi-VN')}, ${nh} khách tồn. Bắt đầu ca mới`, 'mute');
-  }
 }
 
 /* ---------- three.js scene ---------- */
@@ -858,10 +628,7 @@ mat('wheel', { color: 0x262626 });
 mat('shelterGlass', { color: 0xd6e3ea, transparent: true, opacity: 0.55 });
 mat('reserve');
 ['r1', 'r2', 'r3'].forEach((k) => mat(k));
-mat('car1', { color: 0xd6d3cc }); mat('car2', { color: 0x9a978f }); mat('car3', { color: 0xd8b15a });
-mat('pax', { color: 0xffffff });
 mat('ring', { color: 0x2457f5, transparent: true, opacity: 0.85 });
-mat('metro', { color: 0xfbfaf7, roughness: 0.4 });
 
 // window texture shared by buildings (tinted per theme through material colour)
 const winCanvas = document.createElement('canvas');
@@ -945,14 +712,6 @@ const METRO_Z = 95;
 box(440, 1.2, 4.5, MAT.concrete, 0, 9, METRO_Z);
 for (let x = -200; x <= 200; x += 16) box(1.4, 9, 1.4, MAT.concrete, x, 4.5, METRO_Z);
 box(30, 0.6, 9, MAT.concrete, -98, 11.5, METRO_Z);
-const train = new THREE.Group();
-for (let c = 0; c < 3; c++) {
-  box(10.5, 2.6, 3, MAT.metro, c * 11.2, 0, 0, train);
-  box(10.6, 0.5, 3.05, MAT.r1, c * 11.2, -0.5, 0, train);
-  box(10.6, 0.8, 3.08, MAT.glass, c * 11.2, 0.5, 0, train);
-}
-train.position.set(-110, 11, METRO_Z);
-scene.add(train);
 
 // trees as instanced meshes
 const TREE_ZONES = [[-150, -114, -105, 55], [58, 102, -105, -60], [-108, 102, 90, 104], [108, 140, -52, 0], [108, 140, 28, 56], [-56, -4, -105, -95], [-108, -64, 8, 14], [5, 50, -52, -46]];
@@ -970,15 +729,6 @@ treeSpots.forEach(([x, z, s], i) => {
 });
 crowns.castShadow = trunks.castShadow = true;
 scene.add(crowns, trunks);
-
-// highway traffic
-const CARS = Array.from({ length: 34 }, (_, i) => {
-  const lane = [-6, -2, 2, 6][i % 4];
-  const m = [MAT.car1, MAT.car2, MAT.car3, MAT.car1][Math.floor(rng() * 4)];
-  const big = rng() < 0.2;
-  const mesh = box(big ? 9 : 4.2, big ? 3 : 1.6, 2, m, 0, big ? 1.5 : 0.8, HWY.z + lane);
-  return { mesh, x: -210 + rng() * 420, v: (lane < 0 ? -1 : 1) * (4 + rng() * 3) };
-});
 
 // route ribbons
 function ribbon(path, width, material, y) {
@@ -998,12 +748,7 @@ function ribbon(path, width, material, y) {
 const routeLineMats = ROUTES.map(() => new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.55, depthWrite: false }));
 const routeRibbons = ROUTES.map((r, i) => ribbon(r.path, 0.9, routeLineMats[i], 0.06));
 
-// stops: shelter + queue figures
-const MAX_FIG = 24;
-const figBody = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.32, 0.38, 1.25, 7), MAT.pax, ALL_STOPS.length * MAX_FIG);
-const figHead = new THREE.InstancedMesh(new THREE.SphereGeometry(0.3, 8, 6), MAT.pax, ALL_STOPS.length * MAX_FIG);
-figBody.castShadow = true;
-scene.add(figBody, figHead);
+// stops: shelters
 const PICKABLE = [];
 ALL_STOPS.forEach((s) => {
   const t = s.t, rightN = V(-t.z, t.x);
@@ -1092,7 +837,7 @@ ALL_STOPS.forEach((s) => {
   const end = s.k === 0 || s.k === ROUTES[s.r].stops.length - 1;
   el.className = 'lbl lbl-stop' + (end ? ' end' : '');
   el.style.setProperty('--rc', `var(${ROUTES[s.r].color})`);
-  el.innerHTML = `<i>${end ? ROUTES[s.r].code : s.k + 1}</i><span class="n">0</span><span class="nm">${esc(s.name)}</span>`;
+  el.innerHTML = `<i>${end ? ROUTES[s.r].code : s.k + 1}</i><span class="nm">${esc(s.name)}</span>`;
   el.setAttribute('aria-label', `${end ? 'Trạm đầu cuối' : 'Trạm'} ${s.name}, tuyến ${ROUTES[s.r].code}`);
   el.addEventListener('click', () => select({ kind: 'stop', ref: s }, true));
   labelsEl.appendChild(el);
@@ -1101,9 +846,7 @@ ALL_STOPS.forEach((s) => {
 $('#map-key').innerHTML = '<h3>Điểm dừng</h3>'
   + '<span class="sym dp">D</span><span>Bến trung tâm · xe dự phòng</span>'
   + '<span class="sym end">T1</span><span>Trạm đầu cuối · điều phối</span>'
-  + '<span class="sym mid"></span><span>Trạm dọc tuyến</span>'
-  + '<h3>Tòa nhà</h3>'
-  + BUILDING_KINDS.map(([kind, name]) => `<span class="sw" style="background:var(--s-bld-${kind})"></span><span>${name}</span>`).join('');
+  + '<span class="sym mid"></span><span>Trạm dọc tuyến</span>';
 const depotLbl = document.createElement('button');
 depotLbl.className = 'lbl lbl-depot';
 depotLbl.innerHTML = `<i>D</i><span><b>Bến trung tâm</b><small id="depot-lbl-sub">depot · dự phòng</small></span>`;
@@ -1128,15 +871,9 @@ function place(el, pos, w, h) {
 
 /* ---------- selection & camera ---------- */
 let selection = { kind: 'net' };
-let tracked = BUSES[0];
 let camAnim = null;
 function select(sel, focus) {
   selection = sel;
-  if (sel.kind === 'bus') tracked = sel.ref;
-  if (sel.kind === 'stop') {
-    const near = nextBusFor(sel.ref);
-    if (near) tracked = near.bus;
-  }
   if (focus) {
     let p;
     if (sel.kind === 'bus') { const q = busPose(sel.ref); p = new THREE.Vector3(q.x, 0, q.z); }
@@ -1183,27 +920,8 @@ function statusOf(b) {
   if (b.mode === 'dead') return b.deadTo === 'route' ? ['Chạy rỗng vào tuyến', 'info'] : ['Về bãi', 'mute'];
   if (b.mode === 'hold') return ['Chờ xuất bến', 'warn'];
   if (b.mode === 'dwell') return ['Đang đón khách', 'ok'];
-  if (b.pax.length > COMFORT) return ['Quá đông', 'bad'];
+  if (b.pax.length > PHYS.comfort) return ['Quá đông', 'bad'];
   return ['Đang chạy', 'info'];
-}
-function stopLevel(n) { return n >= 22 ? ['Quá tải', 'bad'] : n >= 10 ? ['Đông', 'warn'] : ['Ổn', 'ok']; }
-function oldestAge(s) { return s.queue.length ? (SIM.t - s.queue[0].t0) / 60 : 0; }
-function etaTo(b, sTarget) {
-  const r = ROUTES[b.route];
-  const d = (sTarget - b.s + r.path.len) % r.path.len;
-  const between = r.events.filter((e) => ((e.s - b.s + r.path.len) % r.path.len) < d).length;
-  return d / speedNow() + between * 30 + (b.mode === 'dwell' ? Math.max(0, b.until - SIM.t) : 0);
-}
-function nextBusFor(stop) {
-  let best = null;
-  for (const b of BUSES) {
-    if (b.route !== stop.r || b.mode === 'dead' || b.mode === 'reserve') continue;
-    for (const s of [stop.sF, stop.sB]) {
-      const eta = etaTo(b, s);
-      if (!best || eta < best.eta) best = { bus: b, eta };
-    }
-  }
-  return best;
 }
 function nextStopOf(b) {
   const r = ROUTES[b.route]; const ev = r.events[b.ev];
@@ -1233,14 +951,13 @@ function patch(el, html) {
 }
 
 function headwayChips(r) {
-  return `<span class="hw">${HEADWAYS.map((h) => `<span class="${r.headway === h * 60 ? 'on' : ''}">${h}′</span>`).join('')}</span>`;
+  return `<span class="hw">${PHYS.headways.map((h) => `<span class="${r.headway === h * 60 ? 'on' : ''}">${h}′</span>`).join('')}</span>`;
 }
 
 function sideNet() {
   const waiting = totalWaiting();
   const onRoute = BUSES.filter((b) => b.mode !== 'reserve' && !(b.mode === 'dead' && b.deadTo === 'bay')).length;
-  const k = SIM.lastK;
-  const top = ALL_STOPS.slice().sort((a, b) => b.queue.length - a.queue.length).slice(0, 4);
+  const k = SIM.lastK, fleet = PHYS.fleetSize;
   const costRow = k ? (() => {
     const tot = Math.max(1, k.total);
     return `<div class="stack" aria-hidden="true">${COST_TERMS.map(([key, , col]) => `<i style="width:${(k[key] / tot) * 100}%;background:var(${col})"></i>`).join('')}</div>
@@ -1248,60 +965,40 @@ function sideNet() {
   })() : '<span class="muted">Chưa đủ một khoảng điều khiển.</span>';
   return `
     <div class="side-head"><span class="ic">${ICON.net}</span><div><div class="eyebrow">Mạng tuyến · ĐHQG-HCM</div><h2>Làng Đại học Dĩ An</h2></div></div>
-    <div class="statusrow"><span class="pill ok">Đang vận hành</span><span>${onRoute}/12 xe trên tuyến · ${12 - onRoute} ở bãi</span></div>
+    <div class="statusrow"><span class="pill ok">Đang vận hành</span><span>${onRoute}/${fleet} xe trên tuyến · ${fleet - onRoute} ở bãi</span></div>
     <div class="tiles">
       <div class="tile"><small>Khách chờ</small><b class="num">${waiting}</b><div class="bar ${lvl(waiting / 160)}"><i style="width:${pct(waiting, 160)}"></i></div></div>
-      <div class="tile"><small>Xe hoạt động</small><b class="num">${onRoute}<em> / 12</em></b><div class="bar"><i style="width:${pct(onRoute, 12)}"></i></div></div>
+      <div class="tile"><small>Xe hoạt động</small><b class="num">${onRoute}<em> / ${fleet}</em></b><div class="bar"><i style="width:${pct(onRoute, fleet)}"></i></div></div>
       <div class="tile"><small>Cost khoảng k=${SIM.kIndex}</small><b class="num">${k ? k.total.toFixed(0) : '—'}</b></div>
       <div class="tile"><small>Bỏ cuộc trong ca</small><b class="num">${SIM.abandonedTotal}</b></div>
     </div>
     <div class="sec-title">Tuyến<small>headway mục tiêu</small></div>
     <div class="rows">${ROUTES.map((r) => {
-      const q = routeQueue(r), [lab, cls] = stopLevel(q / 3);
+      const q = routeQueue(r);
       return `<button class="row" data-key="route-${r.i}" data-sel="route:${r.i}"><span class="chip" style="background:var(${r.color})">${r.code}</span><span class="grow"><span class="name">${esc(r.name)}</span><span class="sub">${committed(r.i)} xe · ${q} khách chờ</span></span>${headwayChips(r)}</button>`;
     }).join('')}</div>
     <div class="sec-title">Thành phần cost c<sub>k</sub><small>2 phút gần nhất</small></div>
     ${costRow}
-    ${LIVE ? '' : `<div class="sec-title">Trạm đông nhất<small>khách</small></div>
-    <div class="rows">${top.map((s) => stopRow(s)).join('')}</div>`}
-    <div class="foot">Bố cục Làng Đại học vẽ minh họa, không theo tỉ lệ. ${LIVE
-      ? `Vị trí xe, tải và cost lấy trực tiếp từ station API (kernel Rust, bộ điều phối <span class="mono">${esc(LIVE.controller)}</span>); API chỉ báo khách chờ theo tuyến nên số khách từng trạm để trống`
-      : 'Luồng khách và quyết định chạy trong trình duyệt bằng bộ điều phối threshold'}, theo thông số <span class="mono">configs/base.toml</span>: 12 xe, sức chứa 40, khoảng điều khiển 2 phút, ca 4 giờ.</div>`;
+    <div class="foot">Bố cục Làng Đại học vẽ minh họa, không theo tỉ lệ. Vị trí xe, tải, khách chờ và cost lấy từ station API (kernel Rust, bộ điều phối <span class="mono">${esc(LIVE ? LIVE.controller : '—')}</span>): ${fleet} xe, sức chứa ${PHYS.capacity}, khoảng điều khiển ${PHYS.controlS / 60} phút. API chỉ báo khách chờ theo tuyến, không theo trạm.</div>`;
 }
 function stopRow(s) {
-  const n = s.queue.length, [lab, cls] = stopLevel(n), r = ROUTES[s.r];
-  const tail = LIVE ? '' : `<b class="num">${n}</b><span class="pill ${cls}">${lab}</span>`;
-  return `<button class="row" data-key="stop-${s.r}-${s.k}" data-sel="stop:${s.r}:${s.k}"><span class="dot" style="background:var(${r.color})"></span><span class="grow"><span class="name">${esc(s.name)}</span><span class="sub">${r.code} · trạm ${s.k + 1}${LIVE ? '' : ` · chờ lâu nhất ${oldestAge(s).toFixed(0)} phút`}</span></span>${tail}</button>`;
+  const r = ROUTES[s.r];
+  return `<button class="row" data-key="stop-${s.r}-${s.k}" data-sel="stop:${s.r}:${s.k}"><span class="dot" style="background:var(${r.color})"></span><span class="grow"><span class="name">${esc(s.name)}</span><span class="sub">${r.code} · trạm ${s.k + 1}</span></span></button>`;
 }
 function busRow(b) {
   const [lab, cls] = statusOf(b);
   const r = b.route === null ? null : ROUTES[b.route];
   const where = b.mode === 'reserve' ? `Bãi ${b.bay + 1}` : b.mode === 'dead' ? (b.deadTo === 'route' ? `→ ${r.code}` : 'về bãi') : `→ ${esc(nextStopOf(b).name)}`;
-  return `<button class="row" data-key="bus-${b.i}" data-sel="bus:${b.i}"><span class="chip" style="background:${routeColor(b.route)}">${r ? r.code : 'DP'}</span><span class="grow"><span class="name">${b.id}</span><span class="sub">${where}</span></span><span class="pill ${cls}">${lab}</span><span class="muted num" style="font-size:11px;width:36px;text-align:right">${b.pax.length}/${CAPACITY}</span></button>`;
+  return `<button class="row" data-key="bus-${b.i}" data-sel="bus:${b.i}"><span class="chip" style="background:${routeColor(b.route)}">${r ? r.code : 'DP'}</span><span class="grow"><span class="name">${b.id}</span><span class="sub">${where}</span></span><span class="pill ${cls}">${lab}</span><span class="muted num" style="font-size:11px;width:36px;text-align:right">${b.pax.length}/${PHYS.capacity}</span></button>`;
 }
 
 function sideStop(s) {
-  const r = ROUTES[s.r], n = s.queue.length, [lab, cls] = stopLevel(n);
-  const fwd = s.queue.filter((p) => p.dir > 0).length, back = n - fwd;
-  const mean = n ? s.queue.reduce((a, p) => a + (SIM.t - p.t0), 0) / n / 60 : 0;
-  const nb = nextBusFor(s);
-  const denied = s.queue.filter((p) => p.denied).length;
+  const r = ROUTES[s.r];
   return `
     <div class="side-head"><span class="ic">${ICON.stop}</span><div><div class="eyebrow">Trạm ${s.k + 1} · ${r.code}</div><h2>${esc(s.name)}</h2></div><button class="x" data-sel="net" aria-label="Đóng">${ICON.x}</button></div>
-    <div class="statusrow">${LIVE ? '' : `<span class="pill ${cls}">${lab}</span>`}<span>${esc(r.name)}</span></div>
-    ${LIVE ? `<div class="tiles"><div class="tile"><small>Khách chờ cả tuyến ${r.code}</small><b class="num">${routeQueue(r)}</b></div></div>` : `<div class="tiles">
-      <div class="tile"><small>Khách chờ</small><b class="num">${n}</b><div class="bar ${lvl(n / 30)}"><i style="width:${pct(n, 30)}"></i></div></div>
-      <div class="tile"><small>Chờ TB / lâu nhất</small><b class="num">${mean.toFixed(1)}<em> / ${oldestAge(s).toFixed(0)} phút</em></b></div>
-      <div class="tile"><small>Hướng đi ${esc(r.stops[5].name)}</small><b class="num">${fwd}</b></div>
-      <div class="tile"><small>Hướng về ${esc(r.stops[0].name)}</small><b class="num">${back}</b></div>
-    </div>`}
-    <div class="sec-title">Xe sắp tới</div>
-    <div class="rows">${nb ? `<button class="row" data-key="nb" data-sel="bus:${nb.bus.i}"><span class="chip" style="background:var(${r.color})">${r.code}</span><span class="grow"><span class="name">${nb.bus.id}</span><span class="sub">khoảng ${Math.max(1, Math.round(nb.eta / 60))} phút · tải ${nb.bus.pax.length}/${CAPACITY}</span></span><span class="pill info">${clock(SIM.t + nb.eta)}</span></button>` : '<span class="muted">Không có xe trên tuyến.</span>'}</div>
-    ${LIVE ? '' : `<div class="tiles">
-      <div class="tile"><small>Đã bị từ chối vì đầy xe</small><b class="num">${denied}</b></div>
-      <div class="tile"><small>Xe ghé gần nhất</small><b class="num">${s.lastBus > 0 ? clock(s.lastBus) : '—'}</b></div>
-    </div>`}
-    <div class="foot">Khách bỏ cuộc sau 45 phút chờ. Chờ quá 15 phút được tính thêm vào thành phần X của cost.</div>`;
+    <div class="statusrow"><span>${esc(r.name)}</span></div>
+    <div class="tiles"><div class="tile"><small>Khách chờ cả tuyến ${r.code}</small><b class="num">${routeQueue(r)}</b></div><div class="tile"><small>Xe trên tuyến</small><b class="num">${committed(r.i)}</b></div></div>
+    <div class="foot">API chỉ báo khách chờ theo tuyến. Khách bỏ cuộc sau 45 phút chờ; chờ quá 15 phút được tính vào thành phần X của cost.</div>`;
 }
 
 function sideBus(b) {
@@ -1314,8 +1011,8 @@ function sideBus(b) {
     <div class="side-head"><span class="ic">${ICON.bus}</span><div><div class="eyebrow">${r ? `${r.code} · ${esc(r.name)}` : 'Xe dự phòng'}</div><h2>${b.id}</h2></div><button class="x" data-sel="net" aria-label="Đóng">${ICON.x}</button></div>
     <div class="statusrow"><span class="pill ${cls}">${lab}</span>${dest ? `<span>Đến ${esc(dest.name)}</span>` : ''}</div>
     <div class="tiles">
-      <div class="tile"><small>Tải</small><b class="num">${load}<em> / ${CAPACITY}</em></b><div class="bar ${lvl(load / CAPACITY)}"><i style="width:${pct(load, CAPACITY)}"></i></div></div>
-      <div class="tile"><small>Ngưỡng thoải mái</small><b class="num">${COMFORT}</b><div class="bar ${load > COMFORT ? 'bad' : 'ok'}"><i style="width:${pct(load, COMFORT)}"></i></div></div>
+      <div class="tile"><small>Tải</small><b class="num">${load}<em> / ${PHYS.capacity}</em></b><div class="bar ${lvl(load / PHYS.capacity)}"><i style="width:${pct(load, PHYS.capacity)}"></i></div></div>
+      <div class="tile"><small>Ngưỡng thoải mái</small><b class="num">${PHYS.comfort}</b><div class="bar ${load > PHYS.comfort ? 'bad' : 'ok'}"><i style="width:${pct(load, PHYS.comfort)}"></i></div></div>
       <div class="tile"><small>Trạm kế</small><b class="tile-txt">${next ? esc(next.name) : '—'}</b></div>
       <div class="tile"><small>Cooldown điều xe</small><b class="num">${b.cooldown > SIM.t ? Math.ceil((b.cooldown - SIM.t) / 60) + ' phút' : 'Sẵn sàng'}</b></div>
     </div>
@@ -1360,47 +1057,10 @@ function renderSide() {
   patch(el, html);
 }
 
-function renderTrip() {
-  let b = tracked;
-  if (!b || b.mode === 'reserve' || b.mode === 'dead') b = BUSES.find((x) => x.mode !== 'reserve' && x.mode !== 'dead');
-  const el = $('#trip');
-  if (!b) { patch(el, '<div class="trip-main muted">Chưa có xe trên tuyến.</div>'); return; }
-  const r = ROUTES[b.route], dir = busDir(b);
-  const order = dir > 0 ? [0, 1, 2, 3, 4, 5] : [5, 4, 3, 2, 1, 0];
-  const cur = nextStopOf(b);
-  const curIdx = order.indexOf(cur.k);
-  const steps = order.map((k, i) => {
-    const s = r.stops[k];
-    const state = i < curIdx ? 'done' : i === curIdx ? 'cur' : '';
-    const target = dir > 0 ? s.sF : s.sB;
-    let when;
-    if (state === 'done') when = 'Đã qua';
-    else if (state === 'cur' && (b.mode === 'dwell' || b.mode === 'hold')) when = b.mode === 'hold' ? 'Chờ xuất bến' : 'Đang đón';
-    else when = 'ETA ' + clock(SIM.t + etaTo(b, target));
-    const node = state === 'done' ? ICON.check : `<span class="num step-no">${k + 1}</span>`;
-    return `<div class="step ${state}"><span class="node">${node}</span><b>${esc(s.name)}</b><small>${when}</small></div>`;
-  }).join('');
-  const [lab, cls] = statusOf(b);
-  const dest = dir > 0 ? r.stops[5] : r.stops[0];
-  const eta = etaTo(b, dir > 0 ? cur.sF : cur.sB);
-  patch(el, `
-    <div class="trip-main">
-      <div class="trip-head"><span style="color:var(--accent)">${ICON.bus}</span><b>Theo dõi chuyến</b><small>${b.id} · ${r.code} ${esc(r.name)}</small></div>
-      <div class="steps">${steps}</div>
-    </div>
-    <button class="trip-card row" data-key="trip" data-sel="bus:${b.i}" style="cursor:pointer">
-      <span class="id">#${b.id}</span>
-      <small>Đến: ${esc(dest.name)}</small>
-      <span class="pill ${cls}" style="align-self:flex-start">${lab}</span>
-      <small>Tải ${b.pax.length}/${CAPACITY} · ${b.mode === 'run' ? `${Math.max(1, Math.round(eta / 60))} phút tới ${esc(cur.name)}` : esc(cur.name)}</small>
-    </button>`);
-}
-
-let tab = 'stops';
+let tab = 'buses';
 function renderList() {
   let html;
-  if (tab === 'stops') html = ALL_STOPS.slice().sort((a, b) => b.queue.length - a.queue.length).map(stopRow).join('');
-  else if (tab === 'buses') html = BUSES.map(busRow).join('');
+  if (tab === 'buses') html = BUSES.map(busRow).join('');
   else html = SIM.log.length ? SIM.log.map((l, i) => `<div class="row" style="cursor:default"><span class="muted num log-time">${clock(l.t)}</span><span class="grow"><span class="log-code">${esc(l.code)}</span><span class="sub" style="white-space:normal">${esc(l.text)}</span></span></div>`).join('') + `<div class="row muted" style="cursor:default;font-size:11px">${SIM.noop} khoảng gần đây chọn NOOP</div>` : `<span class="muted">Chưa có quyết định nào ngoài NOOP.</span>`;
   patch($('#tabpanel'), html);
 }
@@ -1410,56 +1070,17 @@ function renderKPIs() {
   const ago = SIM.history.length > 5 ? SIM.history[SIM.history.length - 6].waiting : null;
   const delta = ago === null ? '' : waiting - ago;
   $('#k-wait').innerHTML = `${waiting}${delta === '' ? '' : `<span class="delta ${delta > 0 ? 'up' : 'down'}">${delta > 0 ? '↑' : '↓'} ${Math.abs(delta)}</span>`}`;
-  $('#k-wait-sub').textContent = ago === null ? '18 trạm · 3 tuyến' : 'so với 10 phút trước';
+  $('#k-wait-sub').textContent = ago === null ? `${ROUTES.length} tuyến` : `so với ${(5 * PHYS.controlS) / 60} phút trước`;
   const onRoute = BUSES.filter((b) => b.mode !== 'reserve' && !(b.mode === 'dead' && b.deadTo === 'bay')).length;
   const res = BUSES.filter((b) => b.mode === 'reserve').length;
-  $('#k-bus').innerHTML = `${onRoute}<em> / 12</em>`;
+  $('#k-bus').innerHTML = `${onRoute}<em> / ${PHYS.fleetSize}</em>`;
   $('#k-bus-sub').textContent = `${res} dự phòng ở bến`;
-  const allAges = ALL_STOPS.flatMap((s) => s.queue.map((p) => SIM.t - p.t0));
-  const mean = allAges.length ? allAges.reduce((a, b) => a + b, 0) / allAges.length / 60 : 0;
-  const w = SIM.waits.slice().sort((a, b) => a - b);
-  const p95 = w.length ? w[Math.floor(w.length * 0.95)] / 60 : 0;
-  if (LIVE) {
-    // Passenger ages are not in the API; show the reward-weighted cost of the last interval instead.
-    $('#k-age-label').textContent = 'Cost khoảng gần nhất';
-    $('#k-age').innerHTML = SIM.lastK ? `${SIM.lastK.total.toFixed(0)}` : '—';
-    $('#k-age-sub').textContent = `tích lũy ${Math.round(SIM.total).toLocaleString('vi-VN')}`;
-  } else {
-    $('#k-age').innerHTML = `${mean.toFixed(1)}<em> phút</em>`;
-    $('#k-age-sub').textContent = `p95 khi lên xe ${p95.toFixed(1)} phút`;
-  }
-  $('#depot-sub').textContent = `${res}/5 bãi đang dùng`;
+  $('#k-age').innerHTML = SIM.lastK ? `${SIM.lastK.total.toFixed(0)}` : '—';
+  $('#k-age-sub').textContent = `tích lũy ${Math.round(SIM.total).toLocaleString('vi-VN')}`;
+  $('#depot-sub').textContent = `${res}/${BAYS.length} bãi đang dùng`;
   $('#depot-lbl-sub').textContent = `${res} xe dự phòng`;
   depotLbl.classList.toggle('sel', selection.kind === 'depot');
-  $('#clock').textContent = LIVE ? `${LIVE.finished ? 'Hết ca' : 'API'} ${clock(SIM.t)}` : `Mô phỏng ${clock(SIM.t)}`;
-}
-
-function renderFigures() {
-  const col = { ok: new THREE.Color(css('--pax')), warn: new THREE.Color(css('--warn')), bad: new THREE.Color(css('--bad')) };
-  let i = 0;
-  ALL_STOPS.forEach((s) => {
-    const n = Math.min(MAX_FIG, s.queue.length);
-    const t = s.t, nn = s.n;
-    for (let j = 0; j < MAX_FIG; j++, i++) {
-      if (j < n) {
-        const row = Math.floor(j / 6), c = j % 6;
-        const along = (c - 2.5) * 1.05 + (row % 2) * 0.4;
-        const out = 1.7 + row * 1.0;
-        const x = s.center.x + t.x * along + nn.x * out, z = s.center.z + t.z * along + nn.z * out;
-        tmp.position.set(x, 0.75, z); tmp.scale.set(1, 1, 1); tmp.rotation.set(0, 0, 0); tmp.updateMatrix();
-        figBody.setMatrixAt(i, tmp.matrix);
-        tmp.position.y = 1.65; tmp.updateMatrix(); figHead.setMatrixAt(i, tmp.matrix);
-        const age = (SIM.t - s.queue[j].t0) / 60;
-        const cc = age > 20 ? col.bad : age > 10 ? col.warn : col.ok;
-        figBody.setColorAt(i, cc); figHead.setColorAt(i, cc);
-      } else {
-        tmp.position.set(0, -50, 0); tmp.scale.set(0.001, 0.001, 0.001); tmp.updateMatrix();
-        figBody.setMatrixAt(i, tmp.matrix); figHead.setMatrixAt(i, tmp.matrix);
-      }
-    }
-  });
-  figBody.instanceMatrix.needsUpdate = figHead.instanceMatrix.needsUpdate = true;
-  if (figBody.instanceColor) figBody.instanceColor.needsUpdate = figHead.instanceColor.needsUpdate = true;
+  $('#clock').textContent = LIVE ? `${LIVE.finished ? 'Hết ca' : 'API'} ${clock(SIM.t)}` : 'Chưa kết nối';
 }
 
 let lastSlow = 0;
@@ -1467,17 +1088,13 @@ function renderPanels(force) {
   const now = performance.now();
   if (!force && now - lastSlow < 500) return;
   lastSlow = now;
-  renderKPIs(); renderSide(); renderTrip(); renderList(); renderFigures();
+  renderKPIs(); renderSide(); renderList();
   ALL_STOPS.forEach((s) => {
-    const n = s.queue.length;
-    s.el.querySelector('.n').textContent = LIVE ? '' : n;
-    s.el.classList.toggle('warn', n >= 10 && n < 22);
-    s.el.classList.toggle('bad', n >= 22);
     s.el.classList.toggle('sel', selection.kind === 'stop' && selection.ref === s);
   });
   BUSES.forEach((b) => {
     b.el.style.background = routeColor(b.route);
-    b.fill.style.width = pct(b.pax.length, CAPACITY);
+    b.fill.style.width = pct(b.pax.length, PHYS.capacity);
     b.el.classList.toggle('sel', selection.kind === 'bus' && selection.ref === b);
     const m = b.route === null ? MAT.reserve : MAT['r' + (b.route + 1)];
     b.stripe.material = m; b.roof.material = m;
@@ -1527,7 +1144,7 @@ let speed = REDUCED ? 15 : 40;
 function setSpeed(v) {
   speed = v;
   document.querySelectorAll('.speed button').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.speed === v)));
-  $('#live').classList.toggle('paused', v === 0 || !!(LIVE && LIVE.finished));
+  $('#live').classList.toggle('paused', v === 0 || !LIVE || LIVE.finished);
 }
 document.querySelectorAll('.speed button').forEach((b) => b.addEventListener('click', () => setSpeed(+b.dataset.speed)));
 setSpeed(speed);
@@ -1563,16 +1180,43 @@ document.addEventListener('pointerdown', (e) => { if (!e.target.closest('.search
 
 /* ---------- live data from the station API ---------- */
 // The page drives one API simulation: GET /station, POST /simulations, then one
-// POST /simulations/{id}/steps per tick. Each step is one 120 s control interval,
-// so the speed selector sets the real-time gap between ticks.
+// POST /simulations/{id}/steps per tick. Each step is one control interval, so the
+// speed selector sets the real-time gap between ticks. There is no offline fallback:
+// without the API the page shows the error instead of invented data.
+// Every call is traced to the console as `[station-api]` so a reviewer can confirm
+// that each rendered frame follows a real response (DevTools → Console / Network).
 async function api(method, path, body) {
+  const started = performance.now();
   const res = await fetch(path, {
     method,
     headers: body ? { 'Content-Type': 'application/json' } : undefined,
     body: body ? JSON.stringify(body) : undefined,
   });
-  if (!res.ok) throw new Error(`${method} ${path} → ${res.status}`);
-  return res.status === 204 ? null : res.json();
+  const ms = (performance.now() - started).toFixed(0);
+  if (!res.ok) {
+    console.error(`[station-api] ${method} ${path} → ${res.status} in ${ms} ms`, body ?? '');
+    throw new Error(`${method} ${path} → ${res.status}`);
+  }
+  const data = res.status === 204 ? null : await res.json();
+  console.info(`[station-api] ${method} ${path} → ${res.status} in ${ms} ms`, data ? summarize(data) : '');
+  return data;
+}
+
+// One-line view of a response: enough to match a console line to the panel values.
+function summarize(data) {
+  const snap = data.snapshot || data;
+  if (!snap.routes || snap.time_s === undefined) return data;
+  const out = {
+    t: clock(snap.time_s),
+    waiting: snap.routes.map((r) => r.waiting),
+    headway_s: snap.routes.map((r) => r.headway_s),
+    on_route: snap.routes.map((r) => r.buses.length),
+    reserve: snap.reserve_queue.length,
+    cost: snap.interval_cost.total,
+    finished: snap.finished,
+  };
+  if (data.decisions) out.actions = data.decisions.map((d) => `${d.kind}#${d.action_index}`);
+  return out;
 }
 
 async function connectLive() {
@@ -1581,32 +1225,42 @@ async function connectLive() {
   if (layout.routes.length !== ROUTES.length || layout.fleet_size > BUSES.length || layout.routes.some((r) => r.stop_count !== 6)) {
     throw new Error('station layout does not match the drawn campus');
   }
+  Object.assign(PHYS, {
+    capacity: layout.capacity, comfort: layout.comfort_capacity, controlS: layout.control_interval_s,
+    fleetSize: layout.fleet_size, headways: layout.headway_options_s.map((h) => h / 60),
+  });
   const controller = layout.controllers.includes('threshold') ? 'threshold' : layout.controllers[0];
   const snap = await api('POST', '/simulations', { controller, scenario_index: 0 });
-  resetSim(SIM.seed);
-  LIVE = { id: snap.simulation_id, controller, stopCount: 6, finished: false, tickAt: performance.now(), tickMs: 1 };
+  resetSim();
+  LIVE = { id: snap.simulation_id, controller, stopCount: 6, finished: false, steps: 0, tickAt: performance.now(), tickMs: 1 };
+  $('#who-controller').textContent = controller;
+  setSpeed(speed);
   applySnapshot(snap, []);
-  tracked = BUSES.find((b) => b.route === 0 && b.mode !== 'dead') || BUSES[0];
-  $('#note').textContent = 'Bố cục minh họa, không theo tỉ lệ · dữ liệu trực tiếp từ station API';
-  renderPanels(true);
   setTimeout(pollLive, tickMs());
 }
 
-const tickMs = () => (CONTROL_S * 1000) / Math.max(speed, 1);
+const tickMs = () => (PHYS.controlS * 1000) / Math.max(speed, 1);
 
 async function pollLive() {
   if (!LIVE || LIVE.finished) return;
   if (speed > 0) {
     try {
       const res = await api('POST', `/simulations/${LIVE.id}/steps`, { decisions: 1 });
+      LIVE.steps++;
       applySnapshot(res.snapshot, res.decisions);
     } catch (err) {
-      console.warn('Station API step failed, switching to the in-browser simulation:', err.message);
-      startLocal();
+      showOffline(err);
       return;
     }
   }
   if (!LIVE.finished) setTimeout(pollLive, speed > 0 ? tickMs() : 250);
+}
+
+function showOffline(err) {
+  LIVE = null;
+  $('#note').textContent = `Không lấy được dữ liệu từ station API: ${err.message}`;
+  $('#live').classList.add('paused');
+  renderPanels(true);
 }
 
 function applySnapshot(snap, decisions) {
@@ -1638,6 +1292,7 @@ function applySnapshot(snap, decisions) {
     const [code, text, kind] = describeAction(d.action_index);
     logDecision(code, text, kind, d.time_s);
   });
+  $('#note').textContent = `Bố cục minh họa · station API · phiên ${LIVE.id.slice(0, 8)} · ${LIVE.steps} bước · ${clock(SIM.t)}`;
   if (snap.finished) {
     LIVE.finished = true;
     logDecision('END', `Kết thúc ca lúc ${clock(SIM.t)}: tổng cost ${Math.round(SIM.total).toLocaleString('vi-VN')}`, 'mute');
@@ -1707,7 +1362,7 @@ function describeAction(i) {
   const bus = (n) => (BUSES[n] ? BUSES[n].id : `#${n}`);
   const route = (n) => (ROUTES[n] ? ROUTES[n].code : `R${n}`);
   if (i >= 209) {
-    const r = Math.floor((i - 209) / 3), h = HEADWAYS[(i - 209) % 3];
+    const r = Math.floor((i - 209) / 3), h = PHYS.headways[(i - 209) % 3];
     return [`SET_HEADWAY(${r},${h})`, `${route(r)} xuất bến mỗi ${h} phút`, h < 15 ? 'warn' : 'ok'];
   }
   if (i >= 193) return [`RECALL(${i - 193})`, `Gọi ${bus(i - 193)} về bãi`, 'mute'];
@@ -1715,18 +1370,6 @@ function describeAction(i) {
   const j = i - (i >= 129 ? 129 : i >= 65 ? 65 : 1), b = Math.floor(j / 4), r = j % 4;
   const text = { DISPATCH: `Đưa ${bus(b)} từ bãi vào ${route(r)}`, REASSIGN: `Chuyển ${bus(b)} sang ${route(r)}`, SHORT_TURN: `${bus(b)} quay đầu sớm trên ${route(r)}` }[kind];
   return [`${kind}(${b},${r})`, text, 'info'];
-}
-
-let localRunning = false;
-function startLocal() {
-  LIVE = null;
-  resetSim(20261018);
-  // warm up so the first frame shows a working morning peak
-  for (let i = 0; i < 3000; i++) step(1);
-  tracked = BUSES.find((b) => b.route === 0 && b.mode === 'run') || BUSES[0];
-  localRunning = true;
-  $('#live').classList.toggle('paused', speed === 0);
-  renderPanels(true);
 }
 
 addEventListener('pagehide', () => {
@@ -1742,26 +1385,13 @@ function resize() {
 new ResizeObserver(resize).observe(vp);
 resize();
 
-resetSim(20261018);
-// A page opened as a file, or a server without the API, falls back to the in-browser simulation.
-if (location.protocol.startsWith('http')) {
-  connectLive().catch((err) => {
-    console.info('Station API unavailable, using the in-browser simulation:', err.message);
-    startLocal();
-  });
-} else {
-  startLocal();
-}
+resetSim();
+// The page has no data of its own; opened as a file it cannot reach the API.
+if (location.protocol.startsWith('http')) connectLive().catch(showOffline);
+else showOffline(new Error('mở trang qua server station (uvicorn bus_rl.main:app), không mở file trực tiếp'));
 
-let last = performance.now(), acc = 0, trainX = -110, trainV = 9, trainWait = 0;
 function frame(now) {
-  const real = Math.min(0.1, (now - last) / 1000); last = now;
   if (LIVE) animateLive(now);
-  else if (localRunning) {
-    acc += real * speed;
-    let guard = 0;
-    while (acc > 0 && guard++ < 400) { const dt = Math.min(1, acc); step(dt); acc -= dt; }
-  }
   if (camAnim) {
     const k = clamp((now - camAnim.t0) / camAnim.dur, 0, 1), e = 1 - (1 - k) ** 3;
     camera.position.lerpVectors(camAnim.fromP, camAnim.toP, e);
@@ -1775,17 +1405,6 @@ function frame(now) {
     b.mesh.position.set(p.x, 0, p.z);
     b.mesh.rotation.y = Math.atan2(p.hx, p.hz);
   });
-  if (speed > 0) {
-    CARS.forEach((c) => { c.x += c.v * real * 4; if (c.x > 210) c.x = -210; if (c.x < -210) c.x = 210; c.mesh.position.x = c.x; });
-    if (trainWait > 0) trainWait -= real;
-    else {
-      trainX += trainV * real * 3;
-      if (trainX > 150) { trainX = 150; trainV = -9; }
-      if (trainX < -110) { trainX = -110; trainV = 9; trainWait = 3; }
-    }
-    train.position.x = trainX;
-  }
-
   const sel = selection.kind === 'bus' ? busPose(selection.ref) : selection.kind === 'stop' ? selection.ref.center : null;
   ring.visible = !!sel;
   if (sel) {
