@@ -61,6 +61,12 @@ class SimulationService:
 
     def layout(self) -> StationLayout:
         physical = self._run.physical
+        logger.info(
+            "layout served: fleet=%d routes=%d controllers=%s",
+            physical.fleet_size,
+            physical.route_count,
+            sorted(self._controllers),
+        )
         # Every generated day starts from the same fleet assignment (`generation.py`).
         start_routes = [vehicle.route_id for vehicle in self._scenarios[0].fleet]
         return StationLayout(
@@ -128,13 +134,22 @@ class SimulationService:
                 raise RuntimeError("simulation already finished")
             started = perf_counter()
             records = self._advance(simulation, decisions)
+            snapshot = self._snapshot(simulation)
+            # One line per step lets the dashboard's `[station-api]` console trace be matched to the kernel.
             logger.info(
-                "simulation %s stepped %d decisions in %.1f ms",
+                "simulation %s stepped %d decisions in %.1f ms: time_s=%d waiting=%s "
+                "reserve=%d cost=%.1f actions=%s finished=%s",
                 simulation_id,
                 len(records),
                 (perf_counter() - started) * 1000,
+                snapshot.time_s,
+                [route.waiting for route in snapshot.routes],
+                len(snapshot.reserve_queue),
+                snapshot.interval_cost.total,
+                [f"{record.kind}#{record.action_index}" for record in records],
+                snapshot.finished,
             )
-            return StepResponse(snapshot=self._snapshot(simulation), decisions=records)
+            return StepResponse(snapshot=snapshot, decisions=records)
 
     def delete(self, simulation_id: str) -> None:
         with self._simulations_lock:
