@@ -219,6 +219,10 @@ button:active { transform: scale(.98); }
 .lbl-stop { pointer-events: auto; cursor: pointer; display: flex; align-items: center; gap: .25rem; font-size: .75rem; font-weight: 700; border-radius: 999px; padding: .0625rem .375rem .0625rem .125rem; background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow); color: var(--fg); opacity: .78; transition: background-color .2s var(--ease), border-color .2s var(--ease), color .2s var(--ease), box-shadow .2s var(--ease), opacity .2s var(--ease); }
 .lbl-stop i { width: 1rem; height: 1rem; border-radius: 50%; display: grid; place-items: center; color: #fff; background: var(--rc); font-style: normal; font-size: .6875rem; }
 .lbl-stop .nm { display: none; font-weight: 600; }
+/* Intermediate stops are an unnumbered route-colour dot; the name appears on hover or selection. */
+.lbl-stop:not(.end) { padding: .125rem; }
+.lbl-stop:not(.end) i { width: .75rem; height: .75rem; }
+.lbl-stop:not(.end):hover, .lbl-stop:not(.end).sel { padding-right: .375rem; }
 .lbl-stop:hover, .lbl-stop.sel { opacity: 1; }
 .lbl-stop:hover .nm, .lbl-stop.sel .nm { display: inline; }
 .lbl-stop.end { opacity: 1; z-index: 1; font-size: .8125rem; gap: .375rem; border-radius: .375rem; padding: .1875rem .5rem .1875rem .1875rem; border: 2px solid var(--rc); }
@@ -236,6 +240,7 @@ button:active { transform: scale(.98); }
 .map-key .sym { justify-self: center; display: grid; place-items: center; color: #fff; font: 700 .625rem var(--font-mono); }
 .map-key .sym.dp { width: 1.25rem; height: 1.25rem; border-radius: .3125rem; background: var(--ink); color: var(--s-curb); }
 .map-key .sym.end { width: 1.375rem; height: 1rem; border-radius: .1875rem; background: var(--fg); }
+.map-key .sym.bus { width: 1.375rem; height: 1rem; border-radius: .1875rem; background: var(--r2); }
 .map-key .sym.mid { width: .875rem; height: .875rem; border-radius: 50%; background: var(--muted); opacity: .78; }
 .lbl-stop.sel { outline: 2px solid var(--ink); }
 .lbl-bus { font: 600 .8rem var(--font-mono); color: #fff; padding: .125rem .375rem; border-radius: .25rem; display: flex; gap: .3125rem; align-items: center; box-shadow: var(--shadow); }
@@ -478,21 +483,23 @@ const ROADS = [
 ];
 const HWY = { z: 78, w: 16 };
 
+// Route codes borrow the bus numbers students know in Làng Đại học (33 via Suối Tiên,
+// 50 to Bách Khoa, 08 from Bến xe ĐHQG); the three-route network itself is synthetic.
 const ROUTE_DEFS = [
   {
-    code: 'T1', name: 'Ga Suối Tiên ⇄ KTX khu B', color: '--r1', base: 180,
+    code: '33', name: 'Ga Suối Tiên ⇄ KTX khu B', color: '--r1', base: 180,
     raw: [[-95, 58], [-110, 58], [-110, 5], [-60, 5], [-60, -55], [-95, -55]],
     stopD: [0, 40, 90, 140, 185, 213], side: [-1, 1, -1, 1, 1, 1],
     stops: ['Ga Metro Suối Tiên', 'ĐH Quốc tế', 'Nhà văn hóa Sinh viên', 'ĐH Khoa học Tự nhiên', 'Hồ Đá', 'KTX khu B'],
   },
   {
-    code: 'T2', name: 'KTX khu A ⇄ ĐH Bách Khoa', color: '--r2', base: 160,
+    code: '50', name: 'KTX khu A ⇄ ĐH Bách Khoa', color: '--r2', base: 160,
     raw: [[95, 5], [55, 5], [55, -55], [0, -55], [0, 5], [-50, 5]],
     stopD: [0, 70, 125, 185, 235, 265], side: [1, -1, 1, 1, -1, -1],
     stops: ['KTX khu A', 'ĐH Kinh tế – Luật', 'ĐH Công nghệ Thông tin', 'Nhà điều hành ĐHQG', 'ĐH KHXH&NV', 'ĐH Bách Khoa'],
   },
   {
-    code: 'T3', name: 'Bến xe ĐHQG ⇄ KTX A cổng Bắc', color: '--r3', base: 140,
+    code: '08', name: 'Bến xe ĐHQG ⇄ KTX A cổng Bắc', color: '--r3', base: 140,
     raw: [[-40, 58], [105, 58], [105, -55], [55, -55]],
     stopD: [0, 55, 120, 190, 235, 308], side: [-1, -1, -1, 1, 1, 1],
     stops: ['Bến xe buýt ĐHQG', 'TT Giáo dục Quốc phòng', 'Thư viện Trung tâm', 'ĐH Khoa học Sức khỏe', 'Khu Công nghệ Phần mềm', 'KTX khu A – cổng Bắc'],
@@ -838,7 +845,7 @@ ALL_STOPS.forEach((s) => {
   const end = s.k === 0 || s.k === ROUTES[s.r].stops.length - 1;
   el.className = 'lbl lbl-stop' + (end ? ' end' : '');
   el.style.setProperty('--rc', `var(${ROUTES[s.r].color})`);
-  el.innerHTML = `<i>${end ? ROUTES[s.r].code : s.k + 1}</i><span class="nm">${esc(s.name)}</span>`;
+  el.innerHTML = `<i>${end ? ROUTES[s.r].code : ''}</i><span class="nm">${esc(s.name)}</span>`;
   el.setAttribute('aria-label', `${end ? 'Trạm đầu cuối' : 'Trạm'} ${s.name}, tuyến ${ROUTES[s.r].code}`);
   el.addEventListener('click', () => select({ kind: 'stop', ref: s }, true));
   labelsEl.appendChild(el);
@@ -846,8 +853,9 @@ ALL_STOPS.forEach((s) => {
 });
 $('#map-key').innerHTML = '<h3>Điểm dừng</h3>'
   + '<span class="sym dp">D</span><span>Bến trung tâm · xe dự phòng</span>'
-  + '<span class="sym end">T1</span><span>Trạm đầu cuối · điều phối</span>'
-  + '<span class="sym mid"></span><span>Trạm dọc tuyến</span>';
+  + '<span class="sym end">33</span><span>Trạm đầu cuối · số tuyến</span>'
+  + '<span class="sym mid"></span><span>Trạm dọc tuyến</span>'
+  + '<span class="sym bus">50</span><span>Xe buýt · số tuyến đang chạy</span>';
 const depotLbl = document.createElement('button');
 depotLbl.className = 'lbl lbl-depot';
 depotLbl.innerHTML = `<i>D</i><span><b>Bến trung tâm</b><small id="depot-lbl-sub">depot · dự phòng</small></span>`;
@@ -858,9 +866,9 @@ const depotLblPos = new THREE.Vector3(-30, 7, 42);
 BUSES.forEach((b) => {
   const el = document.createElement('div');
   el.className = 'lbl lbl-bus';
-  el.innerHTML = `${b.id.slice(3)}<u><b></b></u>`;
+  el.innerHTML = '<span></span><u><b></b></u>';
   labelsEl.appendChild(el);
-  b.el = el; b.fill = el.querySelector('b');
+  b.el = el; b.sign = el.querySelector('span'); b.fill = el.querySelector('b');
 });
 const projV = new THREE.Vector3();
 function place(el, pos, w, h) {
@@ -996,7 +1004,7 @@ function busRow(b) {
 function sideStop(s) {
   const r = ROUTES[s.r];
   return `
-    <div class="side-head"><span class="ic">${ICON.stop}</span><div><div class="eyebrow">Trạm ${s.k + 1} · ${r.code}</div><h2>${esc(s.name)}</h2></div><button class="x" data-sel="net" aria-label="Đóng">${ICON.x}</button></div>
+    <div class="side-head"><span class="ic">${ICON.stop}</span><div><div class="eyebrow">Trạm ${s.k + 1} · tuyến ${r.code}</div><h2>${esc(s.name)}</h2></div><button class="x" data-sel="net" aria-label="Đóng">${ICON.x}</button></div>
     <div class="statusrow"><span>${esc(r.name)}</span></div>
     <div class="tiles"><div class="tile"><small>Khách chờ cả tuyến ${r.code}</small><b class="num">${routeQueue(r)}</b></div><div class="tile"><small>Xe trên tuyến</small><b class="num">${committed(r.i)}</b></div></div>
     <div class="foot">API chỉ báo khách chờ theo tuyến. Khách bỏ cuộc sau 45 phút chờ; chờ quá 15 phút được tính vào thành phần X của cost.</div>`;
@@ -1095,6 +1103,7 @@ function renderPanels(force) {
   });
   BUSES.forEach((b) => {
     b.el.style.background = routeColor(b.route);
+    b.sign.textContent = b.route === null ? 'DP' : ROUTES[b.route].code;
     b.fill.style.width = pct(b.pax.length, PHYS.capacity);
     b.el.classList.toggle('sel', selection.kind === 'bus' && selection.ref === b);
     const m = b.route === null ? MAT.reserve : MAT['r' + (b.route + 1)];
@@ -1361,7 +1370,7 @@ function animateLive(now) {
 // Slot layout of the fixed 221-action table (bus_sim/oracle/actions.py).
 function describeAction(i) {
   const bus = (n) => (BUSES[n] ? BUSES[n].id : `#${n}`);
-  const route = (n) => (ROUTES[n] ? ROUTES[n].code : `R${n}`);
+  const route = (n) => `tuyến ${ROUTES[n] ? ROUTES[n].code : n}`;
   if (i >= 209) {
     const r = Math.floor((i - 209) / 3), h = PHYS.headways[(i - 209) % 3];
     return [`SET_HEADWAY(${r},${h})`, `${route(r)} xuất bến mỗi ${h} phút`, h < 15 ? 'warn' : 'ok'];
