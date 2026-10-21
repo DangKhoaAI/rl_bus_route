@@ -112,6 +112,17 @@ SIMULATION__MANIFEST_PATH=data/generated/base/manifest.json \
   uv run uvicorn bus_rl.main:app --host 127.0.0.1 --port 8000
 ```
 
+For a demo machine without the Rust toolchain, the `Dockerfile` builds the
+kernel and serves the dashboard with only the server's runtime dependencies
+(no torch); the scenario days are regenerated during the build.
+
+```bash
+docker build -t bus-rl-station .
+docker run --rm -p 8000:8000 bus-rl-station   # open http://localhost:8000
+```
+
+The page loads three.js from a CDN, so the demo machine needs internet access.
+
 ## Native kernel (Rust)
 
 The Rust migration (`docs/spec/rust_improve.md`, `docs/plan/rust_improve.md`)
