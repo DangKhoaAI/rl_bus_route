@@ -8,9 +8,11 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from bus_sim.oracle.domain import Phase
+from bus_sim.oracle.domain import Phase, Scenario
+from bus_sim.oracle.travel import edge_duration_s
 
 VEHICLE_ID, CAPACITY, ROUTE_ID, NODE, DIRECTION, PHASE = 0, 1, 2, 3, 4, 5
+REMAINING_S, NEXT_NODE = 6, 7
 COOLDOWN_UNTIL_S, LOAD = 9, 13
 DEPOT_ROUTE_ID = -1
 
@@ -51,3 +53,24 @@ def display_status(phase: int, load: int, comfort_capacity: int) -> str:
     if load > comfort_capacity:
         return "crowded"
     return _PHASE_STATUS[Phase(phase)]
+
+
+def edge_s(row: Sequence[int], scenario: Scenario, time_s: int) -> int:
+    """Full duration of the edge a moving bus is on, or of the edge a dwelling bus enters next.
+
+    The kernel keeps only the seconds left on an edge, so the dashboard cannot place a bus
+    along it. Durations are sampled from the traffic tape at entry, which is the latest tick
+    whose sampled duration ends exactly when the bus is due. Other phases have no edge: 0.
+    """
+    phase, route_id, remaining = row[PHASE], row[ROUTE_ID], row[REMAINING_S]
+    index = row[NODE] % scenario.config.stops_per_route
+    if phase == Phase.SERVICE_DWELL:
+        return edge_duration_s(scenario, route_id, index, time_s + remaining)
+    if phase != Phase.SERVICE_MOVING:
+        return 0
+    tick = scenario.config.tick_s
+    for entry in range(time_s - time_s % tick, -1, -tick):
+        duration = edge_duration_s(scenario, route_id, index, entry)
+        if entry + duration == time_s + remaining:
+            return duration
+    return remaining

@@ -23,7 +23,7 @@ from bus_rl.station.schema import (
 )
 from bus_sim.oracle.actions import ACTION_TABLE, HEADWAYS
 from bus_sim.oracle.costs import add_costs, interval_cost
-from bus_sim.oracle.domain import StepCosts
+from bus_sim.oracle.domain import Scenario, StepCosts
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +75,7 @@ class SimulationService:
             capacity=physical.capacity,
             comfort_capacity=physical.comfort_capacity,
             control_interval_s=physical.control_interval_s,
+            dwell_s=self._scenarios[0].config.dwell_s,
             horizon_s=physical.horizon_s,
             headway_options_s=list(HEADWAYS),
             routes=[
@@ -187,12 +188,14 @@ class SimulationService:
         trace = env.kernel.trace_snapshot()
         rows = env.kernel.debug_snapshot()["vehicles"].tolist()
         comfort = self._run.physical.comfort_capacity
+        scenario = self._scenarios[simulation.scenario_index]
+        time_s = int(trace["time_s"])
         routes = [
             RouteState(
                 route_id=route_id,
                 headway_s=int(trace["headway_targets"][route_id]),
                 waiting=int(trace["queues"][route_id]),
-                buses=[self._bus(row, comfort) for row in route_rows],
+                buses=[self._bus(row, comfort, scenario, time_s) for row in route_rows],
             )
             for route_id, route_rows in enumerate(
                 fleet.group_by_route(rows, self._run.physical.route_count)
@@ -203,22 +206,27 @@ class SimulationService:
             simulation_id=simulation.simulation_id,
             controller=simulation.controller_name,
             scenario_index=simulation.scenario_index,
-            time_s=int(trace["time_s"]),
+            time_s=time_s,
             finished=simulation.finished,
             routes=routes,
-            reserve_queue=[self._bus(row, comfort) for row in fleet.reserve_queue(rows)],
+            reserve_queue=[
+                self._bus(row, comfort, scenario, time_s) for row in fleet.reserve_queue(rows)
+            ],
             interval_cost=CostBreakdown(
                 **vars(costs), total=interval_cost(costs, self._run.reward)
             ),
         )
 
     @staticmethod
-    def _bus(row: list[int], comfort_capacity: int) -> Bus:
+    def _bus(row: list[int], comfort_capacity: int, scenario: Scenario, time_s: int) -> Bus:
         return Bus(
             bus_id=row[fleet.VEHICLE_ID],
             status=fleet.display_status(row[fleet.PHASE], row[fleet.LOAD], comfort_capacity),
             node=row[fleet.NODE],
             direction=row[fleet.DIRECTION],
+            next_node=row[fleet.NEXT_NODE],
+            remaining_s=row[fleet.REMAINING_S],
+            edge_s=fleet.edge_s(row, scenario, time_s),
             load=row[fleet.LOAD],
             cooldown_until_s=row[fleet.COOLDOWN_UNTIL_S],
         )

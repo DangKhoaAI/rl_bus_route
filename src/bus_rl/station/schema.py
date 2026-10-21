@@ -17,6 +17,7 @@ class StationLayout(BaseModel):
     capacity: int
     comfort_capacity: int
     control_interval_s: int
+    dwell_s: int
     horizon_s: int
     headway_options_s: list[int]
     routes: list[RouteLayout]
@@ -39,6 +40,11 @@ class Bus(BaseModel):
     status: str
     node: int
     direction: int
+    # Node being driven to (-1 when none) and seconds until the current edge, dwell or layover ends.
+    next_node: int
+    remaining_s: int
+    # Full duration of the current edge, or of the next one while dwelling; 0 otherwise.
+    edge_s: int
     load: int
     cooldown_until_s: int
 

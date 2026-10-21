@@ -67,6 +67,15 @@ def test_simulation_runs_a_full_day_then_rejects_more_steps(client):
     assert first["snapshot"]["time_s"] == 120
     assert first["decisions"][0]["time_s"] == 0
     assert first["snapshot"]["interval_cost"]["total"] >= 0
+    moving = [
+        bus
+        for route in first["snapshot"]["routes"]
+        for bus in route["buses"]
+        if bus["status"] in ("moving", "crowded")
+    ]
+    assert moving and all(
+        bus["next_node"] >= 0 and 0 < bus["remaining_s"] <= bus["edge_s"] for bus in moving
+    )
 
     rest = client.post(f"/simulations/{simulation_id}/steps", json={"decisions": 200}).json()
     assert rest["snapshot"]["finished"] is True
