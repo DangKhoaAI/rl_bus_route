@@ -370,7 +370,7 @@ button:active { transform: scale(.98); }
 'use strict';
 
 /* ---------- physical parameters, overwritten from GET /station before the first frame ---------- */
-const PHYS = { capacity: 40, comfort: 30, controlS: 120, fleetSize: 12, headways: [6, 10, 15] };
+const PHYS = { capacity: 40, comfort: 30, controlS: 120, dwellS: 30, fleetSize: 12, headways: [6, 10, 15] };
 const F_MIN = 2;
 const START_HOUR = 6;
 const LANE = 1.8;
@@ -1257,13 +1257,13 @@ async function connectLive() {
     throw new Error('station layout does not match the drawn campus');
   }
   Object.assign(PHYS, {
-    capacity: layout.capacity, comfort: layout.comfort_capacity, controlS: layout.control_interval_s,
+    capacity: layout.capacity, comfort: layout.comfort_capacity, controlS: layout.control_interval_s, dwellS: layout.dwell_s,
     fleetSize: layout.fleet_size, headways: layout.headway_options_s.map((h) => h / 60),
   });
   const controller = layout.controllers.includes('threshold') ? 'threshold' : layout.controllers[0];
   const snap = await api('POST', '/simulations', { controller, scenario_index: 0 });
   resetSim();
-  LIVE = { id: snap.simulation_id, controller, stopCount: 6, finished: false, steps: 0, tickAt: performance.now(), tickMs: 1 };
+  LIVE = { id: snap.simulation_id, controller, stopCount: 6, finished: false, steps: 0 };
   $('#who-controller').textContent = controller;
   setSpeed(speed);
   applySnapshot(snap, []);
@@ -1304,8 +1304,6 @@ function applySnapshot(snap, decisions) {
     rs.buses.forEach((bus) => placeLiveBus(BUSES[bus.bus_id], bus, rs.route_id, 0));
   });
   snap.reserve_queue.forEach((bus, j) => placeLiveBus(BUSES[bus.bus_id], bus, null, j));
-  LIVE.tickAt = performance.now();
-  LIVE.tickMs = tickMs();
   if (decisions.length) {
     const c = snap.interval_cost;
     // Weights mirror RewardConfig defaults so the cost bar matches the local view; `total` is the API's own.
@@ -1335,60 +1333,92 @@ function applySnapshot(snap, decisions) {
 }
 
 // Kernel nodes are numbered route * stopCount + stop index; direction 1 runs stop 0 → 5.
+// A snapshot says where each bus is heading (`next_node`), when it gets there (`remaining_s`)
+// and how long its edge takes (`edge_s`). The bus is placed on that edge, aimed at the stop,
+// and given its next leg (dwell, then the following edge) so it keeps driving between ticks.
 function placeLiveBus(b, bus, ri, queueIndex) {
   if (!b) return;
   b.pax = Array.from({ length: bus.load }, () => ({ dest: -1 }));
   b.cooldown = bus.cooldown_until_s;
   b.recall = false;
-  if (ri === null) {
-    b.bay = queueIndex % BAYS.length;
-    if (bus.status === 'deadhead') {
-      startDeadhead(b, 'bay', b.route ?? 0);
-      b.deadS = b.dead.len / 2;
-    } else {
-      b.mode = 'reserve'; b.route = null; b.dead = null;
-    }
-    return;
-  }
+  b.left = bus.remaining_s;
+  b.next = null;
+  if (ri === null) b.bay = queueIndex % BAYS.length;
   if (bus.status === 'deadhead') {
+    const to = ri === null ? 'bay' : 'route';
+    const continuing = b.mode === 'dead' && b.deadTo === to && (to === 'bay' || b.route === ri);
     b.bay = b.bay ?? 0;
-    startDeadhead(b, 'route', ri);
-    b.deadS = b.dead.len / 2;
+    if (!continuing) startDeadhead(b, to, ri ?? b.route ?? 0);
     return;
   }
-  const r = ROUTES[ri], dir = bus.direction > 0 ? 1 : -1;
-  const k = bus.node % LIVE.stopCount;
-  const sAt = (stop) => (dir > 0 ? stop.sF : stop.sB);
-  const eventIndex = (stopK) => Math.max(0, r.events.findIndex((e) => e.k === stopK && e.dir === dir));
-  let s, mode, ev;
-  if (bus.status === 'moving' || bus.status === 'crowded') {
-    // Only the last visited node is known, so a moving bus is drawn halfway to the next stop.
-    const next = clamp(k + dir, 0, LIVE.stopCount - 1);
-    const from = sAt(r.stops[k]), to = sAt(r.stops[next]);
-    s = (from + ((to - from + r.path.len) % r.path.len) / 2) % r.path.len;
-    mode = 'run'; ev = eventIndex(next);
-  } else {
-    s = sAt(r.stops[k]);
-    mode = bus.status === 'dwell' ? 'dwell' : 'hold';
-    ev = eventIndex(k);
+  if (ri === null) {
+    b.mode = 'reserve'; b.route = null; b.dead = null;
+    return;
   }
-  const glide = b.route === ri && (b.mode === 'run' || b.mode === 'dwell' || b.mode === 'hold');
-  b.fromS = glide ? b.s : s;
-  b.toS = s;
-  b.route = ri; b.mode = mode; b.ev = ev; b.until = SIM.t; b.dead = null;
+  const r = ROUTES[ri], dir = bus.direction > 0 ? 1 : -1, len = r.path.len;
+  const k = bus.node % LIVE.stopCount;
+  const sAt = (i) => (dir > 0 ? r.stops[i].sF : r.stops[i].sB);
+  const evAt = (i) => Math.max(0, r.events.findIndex((e) => e.k === i && e.dir === dir));
+  // The leg after reaching stop `i`: wait `wait` seconds there, then drive to the following stop.
+  const legAfter = (i, wait, edgeS) => {
+    const j = i + dir;
+    return j >= 0 && j < LIVE.stopCount && edgeS > 0 ? { s: sAt(j), ev: evAt(j), wait, left: edgeS } : null;
+  };
+  const moving = bus.status === 'moving' || bus.status === 'crowded';
+  const onRoute = b.route === ri && (b.mode === 'run' || b.mode === 'dwell' || b.mode === 'hold');
+  if (moving && bus.next_node >= 0) {
+    const target = bus.next_node % LIVE.stopCount;
+    if (!onRoute) {
+      const from = sAt(k), gap = (sAt(target) - from + len) % len;
+      b.s = (from + gap * (1 - bus.remaining_s / Math.max(bus.edge_s, bus.remaining_s, 1))) % len;
+    }
+    b.toS = sAt(target); b.ev = evAt(target); b.mode = 'run';
+    // Edges here run about the same length, so the next one is assumed to take as long as this one.
+    b.next = legAfter(target, bus.remaining_s + PHYS.dwellS, bus.edge_s);
+  } else {
+    // Dwelling or laid over: the bus is at its stop; a dwell also knows its next edge.
+    b.s = onRoute ? b.s : sAt(k);
+    b.toS = sAt(k); b.ev = evAt(k); b.left = 0;
+    b.mode = bus.status === 'dwell' ? 'dwell' : 'hold';
+    if (bus.status === 'dwell') b.next = legAfter(k, bus.remaining_s, bus.edge_s);
+  }
+  b.route = ri; b.until = SIM.t; b.dead = null;
 }
 
-// Glide route buses forward from their previous to their new position over one tick.
-// Returns whether any bus moved, so the loop can idle once every glide has landed.
+// Move every live bus by the simulated time since the last frame, so buses keep driving
+// across ticks and a paused clock freezes them. Returns whether any bus moved, so the
+// loop can idle once every bus has arrived.
+let lastAnim = 0;
 function animateLive(now) {
-  const p = clamp((now - LIVE.tickAt) / LIVE.tickMs, 0, 1);
+  const dt = lastAnim ? ((now - lastAnim) / 1000) * speed : 0;
+  lastAnim = now;
+  // Fraction of the remaining distance to cover this frame; 1 means the bus arrives.
+  const share = (b) => {
+    const f = b.left > dt ? dt / b.left : 1;
+    b.left = Math.max(0, b.left - dt);
+    return f;
+  };
   let moving = false;
   BUSES.forEach((b) => {
-    if (b.route === null || b.mode === 'dead' || b.mode === 'reserve') return;
+    if (b.mode === 'dead') {
+      if (b.deadS >= b.dead.len) return;
+      const f = share(b);
+      b.deadS = f === 1 ? b.dead.len : b.deadS + (b.dead.len - b.deadS) * f;
+      moving = true;
+      return;
+    }
+    if (b.route === null || b.mode === 'reserve') return;
+    if (b.next && (b.next.wait -= dt) <= 0 && b.s === b.toS) {
+      b.toS = b.next.s; b.ev = b.next.ev; b.mode = 'run';
+      b.left = Math.max(0, b.next.left + b.next.wait);
+      b.next = null;
+    }
+    if (b.s === b.toS) return;
     const len = ROUTES[b.route].path.len;
-    const d = (b.toS - b.fromS + len) % len;
-    const s = d > len / 2 ? b.toS : (b.fromS + d * p) % len;
-    if (s !== b.s) { b.s = s; moving = true; }
+    const gap = (b.toS - b.s + len) % len;
+    const f = share(b);
+    b.s = gap > len / 2 || f === 1 ? b.toS : (b.s + gap * f) % len;
+    moving = true;
   });
   return moving;
 }
