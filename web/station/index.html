@@ -593,10 +593,14 @@ function logDecision(code, text, kind, t = SIM.t) {
 
 /* ---------- three.js scene ---------- */
 const vp = $('#viewport');
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+// Render cost is what heats a laptop: prefer the integrated GPU, cap the pixel ratio,
+// and draw the shadow map once since only static scenery casts shadows.
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'low-power' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.autoUpdate = false;
+renderer.shadowMap.needsUpdate = true;
 vp.prepend(renderer.domElement);
 renderer.domElement.setAttribute('aria-label', 'Bản đồ 3D Làng Đại học với các tuyến xe buýt');
 renderer.domElement.setAttribute('role', 'img');
@@ -661,6 +665,14 @@ function box(w, h, d, m, x, y, z, parent = scene) {
   mesh.position.set(x, y, z); mesh.castShadow = true; mesh.receiveShadow = true;
   parent.add(mesh); return mesh;
 }
+// Repeated scenery (road dashes, metro pillars) costs one draw call per set instead of one per piece.
+function instanced(geometry, m, items, place) {
+  const mesh = new THREE.InstancedMesh(geometry, m, items.length);
+  const o = new THREE.Object3D();
+  items.forEach((item, i) => { place(o, item); o.updateMatrix(); mesh.setMatrixAt(i, o.matrix); });
+  mesh.receiveShadow = true;
+  scene.add(mesh); return mesh;
+}
 
 // ground and campus green blocks
 plane(420, 300, MAT.ground, 0, 0, -0.02);
@@ -670,19 +682,23 @@ plane(420, 300, MAT.ground, 0, 0, -0.02);
 ].forEach(([x0, x1, z0, z1]) => plane(x1 - x0 - 10, z1 - z0 - 10, MAT.grass, (x0 + x1) / 2, (z0 + z1) / 2, 0.005));
 plane(300, 22, MAT.grass, 0, 98, 0.005);
 
-// roads + dashed centre marks
+// roads + dashed centre marks, as [w, d, x, z] dashes
+const dashes = [];
 ROADS.forEach(({ a, b, w }) => {
   const dx = b[0] - a[0], dz = b[1] - a[1], L = Math.hypot(dx, dz);
   const m = plane(dx ? L + w : w, dz ? L + w : w, MAT.road, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, 0.02);
   m.receiveShadow = true;
   for (let s = 8; s < L - 8; s += 5) {
     const t = s / L;
-    plane(dx ? 2.2 : 0.3, dz ? 2.2 : 0.3, MAT.mark, a[0] + dx * t, a[1] + dz * t, 0.035);
+    dashes.push([dx ? 2.2 : 0.3, dz ? 2.2 : 0.3, a[0] + dx * t, a[1] + dz * t]);
   }
 });
 plane(420, HWY.w, MAT.road, 0, HWY.z, 0.02);
 plane(420, 0.6, MAT.curb, 0, HWY.z, 0.04);
-[-4, 4].forEach((o) => { for (let x = -200; x < 200; x += 6) plane(2.6, 0.3, MAT.mark, x, HWY.z + o, 0.035); });
+[-4, 4].forEach((o) => { for (let x = -200; x < 200; x += 6) dashes.push([2.6, 0.3, x, HWY.z + o]); });
+instanced(new THREE.PlaneGeometry(1, 1), MAT.mark, dashes, (o, [w, d, x, z]) => {
+  o.rotation.x = -Math.PI / 2; o.position.set(x, 0.035, z); o.scale.set(w, d, 1);
+});
 
 // depot bays with yellow lines like a yard
 plane(40, 16, MAT.concrete, -30, 42, 0.012);
@@ -718,7 +734,9 @@ LABELS.push({ kind: 'bld', text: 'Hồ Đá', pos: new THREE.Vector3(LAKE.x, 2, 
 // elevated metro line along the highway
 const METRO_Z = 95;
 box(440, 1.2, 4.5, MAT.concrete, 0, 9, METRO_Z);
-for (let x = -200; x <= 200; x += 16) box(1.4, 9, 1.4, MAT.concrete, x, 4.5, METRO_Z);
+const pillarXs = [];
+for (let x = -200; x <= 200; x += 16) pillarXs.push(x);
+instanced(new THREE.BoxGeometry(1.4, 9, 1.4), MAT.concrete, pillarXs, (o, x) => o.position.set(x, 4.5, METRO_Z)).castShadow = true;
 box(30, 0.6, 9, MAT.concrete, -98, 11.5, METRO_Z);
 
 // trees as instanced meshes
@@ -797,7 +815,8 @@ function makeBus(b) {
     w.rotation.z = Math.PI / 2; w.position.set(x, 0.48, z); g.add(w);
   });
   g.userData = { kind: 'bus', ref: b };
-  g.traverse((o) => { o.userData = g.userData; });
+  // Moving buses would force a shadow-map redraw every frame.
+  g.traverse((o) => { o.userData = g.userData; o.castShadow = false; });
   scene.add(g);
   PICKABLE.push(g);
   b.mesh = g;
@@ -883,6 +902,7 @@ let selection = { kind: 'net' };
 let camAnim = null;
 function select(sel, focus) {
   selection = sel;
+  needsRender = true;
   if (focus) {
     let p;
     if (sel.kind === 'bus') { const q = busPose(sel.ref); p = new THREE.Vector3(q.x, 0, q.z); }
@@ -901,6 +921,7 @@ function flyTo(target, dist) {
 }
 function home() {
   selection = { kind: 'net' };
+  needsRender = true;
   if (REDUCED) { camera.position.copy(HOME.pos); controls.target.copy(HOME.target); controls.update(); }
   else camAnim = { t0: performance.now(), dur: 700, fromP: camera.position.clone(), fromT: controls.target.clone(), toP: HOME.pos.clone(), toT: HOME.target.clone() };
   renderPanels(true);
@@ -1275,6 +1296,7 @@ function showOffline(err) {
 
 function applySnapshot(snap, decisions) {
   SIM.t = snap.time_s;
+  needsRender = true;
   snap.routes.forEach((rs) => {
     const r = ROUTES[rs.route_id];
     r.headway = rs.headway_s;
@@ -1357,14 +1379,18 @@ function placeLiveBus(b, bus, ri, queueIndex) {
 }
 
 // Glide route buses forward from their previous to their new position over one tick.
+// Returns whether any bus moved, so the loop can idle once every glide has landed.
 function animateLive(now) {
   const p = clamp((now - LIVE.tickAt) / LIVE.tickMs, 0, 1);
+  let moving = false;
   BUSES.forEach((b) => {
     if (b.route === null || b.mode === 'dead' || b.mode === 'reserve') return;
     const len = ROUTES[b.route].path.len;
     const d = (b.toS - b.fromS + len) % len;
-    b.s = d > len / 2 ? b.toS : (b.fromS + d * p) % len;
+    const s = d > len / 2 ? b.toS : (b.fromS + d * p) % len;
+    if (s !== b.s) { b.s = s; moving = true; }
   });
+  return moving;
 }
 
 // Slot layout of the fixed 221-action table (bus_sim/oracle/actions.py).
@@ -1387,10 +1413,14 @@ addEventListener('pagehide', () => {
 });
 
 /* ---------- loop ---------- */
+// The scene is drawn only when something visible changed; a paused or idle map costs no GPU time.
+let needsRender = true;
+controls.addEventListener('change', () => { needsRender = true; });
 function resize() {
   const w = vp.clientWidth, h = vp.clientHeight;
   renderer.setSize(w, h, false);
   camera.aspect = w / Math.max(1, h); camera.updateProjectionMatrix();
+  needsRender = true;
 }
 new ResizeObserver(resize).observe(vp);
 resize();
@@ -1400,15 +1430,25 @@ resetSim();
 if (location.protocol.startsWith('http')) connectLive().catch(showOffline);
 else showOffline(new Error('mở trang qua server station (uvicorn bus_rl.main:app), không mở file trực tiếp'));
 
+const GLIDE_FRAME_MS = 33; // bus glides alone redraw at most ~30 fps
+let lastDraw = 0;
 function frame(now) {
-  if (LIVE) animateLive(now);
+  requestAnimationFrame(frame);
+  renderPanels(false);
+  let dirty = needsRender;
   if (camAnim) {
     const k = clamp((now - camAnim.t0) / camAnim.dur, 0, 1), e = 1 - (1 - k) ** 3;
     camera.position.lerpVectors(camAnim.fromP, camAnim.toP, e);
     controls.target.lerpVectors(camAnim.fromT, camAnim.toT, e);
     if (k >= 1) camAnim = null;
+    dirty = true;
   }
-  controls.update();
+  // Returns true while the camera moves, including the damping tail after a drag.
+  if (controls.update()) dirty = true;
+  const gliding = LIVE ? animateLive(now) : false;
+  if (!dirty && !(gliding && now - lastDraw >= GLIDE_FRAME_MS)) return;
+  needsRender = false;
+  lastDraw = now;
 
   BUSES.forEach((b) => {
     const p = busPose(b);
@@ -1417,10 +1457,7 @@ function frame(now) {
   });
   const sel = selection.kind === 'bus' ? busPose(selection.ref) : selection.kind === 'stop' ? selection.ref.center : null;
   ring.visible = !!sel;
-  if (sel) {
-    ring.position.x = sel.x; ring.position.z = sel.z;
-    const s = REDUCED ? 1 : 1 + 0.08 * Math.sin(now / 250); ring.scale.set(s, s, s);
-  }
+  if (sel) { ring.position.x = sel.x; ring.position.z = sel.z; }
 
   renderer.render(scene, camera);
 
@@ -1430,9 +1467,6 @@ function frame(now) {
   place(depotLbl, depotLblPos, w, h);
   const bp = new THREE.Vector3();
   BUSES.forEach((b) => { const p = busPose(b); bp.set(p.x, 4.2, p.z); place(b.el, bp, w, h); });
-
-  renderPanels(false);
-  requestAnimationFrame(frame);
 }
 renderPanels(true);
 requestAnimationFrame(frame);
