@@ -298,7 +298,7 @@ button:active { transform: scale(.98); }
     </div>
     <button class="depot" id="btn-depot" aria-label="Xem bãi đỗ Bến xe buýt ĐHQG">
       <span class="tagbox">Depot</span>
-      <span><b>Bến xe buýt ĐHQG</b><small id="depot-sub">3/5 bãi đang dùng</small></span>
+      <span><b>Bến xe buýt ĐHQG</b><small id="depot-sub">3/6 bãi đang dùng</small></span>
     </button>
     <div class="toplinks">
       <button class="link" id="btn-buses">Lượt xe</button>
@@ -517,7 +517,8 @@ const BUILDINGS = [
 ];
 const LAKE = { x: -30, z: -80, w: 40, d: 26 };
 const FIELD = { x: 27, z: 22, w: 30, d: 14 };
-const BAYS = [-42, -36, -30, -24, -18].map((x) => V(x, 42));
+// Six bays: the fleet floor keeps 2 buses on each of 3 routes, so at most 12 - 6 buses sit in the depot.
+const BAYS = [-45, -39, -33, -27, -21, -15].map((x) => V(x, 42));
 
 /* ---------- route model (geometry only; state comes from the API) ---------- */
 const ROUTES = ROUTE_DEFS.map((d, ri) => {
@@ -677,12 +678,12 @@ plane(420, 0.6, MAT.curb, 0, HWY.z, 0.04);
 [-4, 4].forEach((o) => { for (let x = -200; x < 200; x += 6) plane(2.6, 0.3, MAT.mark, x, HWY.z + o, 0.035); });
 
 // depot bays with yellow lines like a yard
-plane(34, 16, MAT.concrete, -30, 42, 0.012);
+plane(40, 16, MAT.concrete, -30, 42, 0.012);
 BAYS.forEach((p) => {
   plane(0.35, 10, MAT.curb, p.x - 2.9, p.z, 0.03);
   if (p === BAYS[BAYS.length - 1]) plane(0.35, 10, MAT.curb, p.x + 2.9, p.z, 0.03);
 });
-plane(29.4, 0.35, MAT.curb, -30, 47, 0.03);
+plane(35.8, 0.35, MAT.curb, -30, 47, 0.03);
 
 // lake and field
 plane(LAKE.w, LAKE.d, MAT.water, LAKE.x, LAKE.z, 0.03);
@@ -1026,7 +1027,7 @@ function sideDepot() {
   return `
     <div class="side-head"><span class="ic">${ICON.depot}</span><div><div class="eyebrow">Depot · dự phòng</div><h2>Bãi đỗ Bến xe buýt ĐHQG</h2></div><button class="x" data-sel="net" aria-label="Đóng">${ICON.x}</button></div>
     <div class="tiles">
-      <div class="tile"><small>Xe ở bãi</small><b class="num">${res.length}<em> / 5 bãi</em></b><div class="bar"><i style="width:${pct(res.length, 5)}"></i></div></div>
+      <div class="tile"><small>Xe ở bãi</small><b class="num">${res.length}<em> / ${BAYS.length} bãi</em></b><div class="bar"><i style="width:${pct(res.length, BAYS.length)}"></i></div></div>
       <div class="tile"><small>Đang chạy rỗng</small><b class="num">${moving.length}</b></div>
     </div>
     <div class="rows">${res.concat(moving).map(busRow).join('') || '<span class="muted">Không còn xe dự phòng.</span>'}</div>
