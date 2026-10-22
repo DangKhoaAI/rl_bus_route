@@ -346,7 +346,7 @@ button:active { transform: scale(.98); }
       </div>
       <div class="card kpi">
         <span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
-        <span><small>Cost khoảng gần nhất</small><span class="v num" id="k-age"></span><small id="k-age-sub">đang kết nối API</small></span>
+        <span><small>Tổng cost (càng thấp càng tốt)</small><span class="v num" id="k-age"></span><small id="k-age-sub">đang kết nối API</small></span>
       </div>
     </div>
     <div class="legend-note" id="note">Đang kết nối station API…</div>
@@ -1175,8 +1175,8 @@ function renderKPIs() {
   const res = BUSES.filter((b) => b.mode === 'reserve').length;
   $('#k-bus').innerHTML = `${onRoute}<em> / ${PHYS.fleetSize}</em>`;
   $('#k-bus-sub').textContent = `${res} dự phòng ở bến`;
-  $('#k-age').textContent = SIM.lastK ? SIM.lastK.total.toFixed(0) : '0';
-  $('#k-age-sub').textContent = `tích lũy ${Math.round(SIM.total).toLocaleString('vi-VN')}`;
+  $('#k-age').textContent = Math.round(SIM.total).toLocaleString('vi-VN');
+  $('#k-age-sub').textContent = `khoảng gần nhất ${SIM.lastK ? SIM.lastK.total.toFixed(0) : '0'}`;
   $('#depot-sub').textContent = `${res}/${BAYS.length} bãi đang dùng`;
   $('#depot-lbl-sub').textContent = `${res} xe dự phòng`;
   depotLbl.classList.toggle('sel', selection.kind === 'depot');
