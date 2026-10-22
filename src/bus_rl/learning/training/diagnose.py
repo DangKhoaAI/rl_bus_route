@@ -150,7 +150,12 @@ def diagnose_train(
             for index in range(run.algorithm.n_envs)
         ]
     )
-    model = make_model(env, run.algorithm.seed, run.algorithm)
+    model = make_model(
+        env,
+        run.algorithm.seed,
+        run.algorithm,
+        episode_steps=run.physical.horizon_s // run.physical.control_interval_s,
+    )
     setup_s = perf_counter() - loaded_at
     print(f"[diagnose] env_model_setup {setup_s:.3f}s  n_envs={run.algorithm.n_envs}", flush=True)
 

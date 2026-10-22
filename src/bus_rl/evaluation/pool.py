@@ -55,7 +55,7 @@ def eval_pool_key(scenarios, run: RunConfig, forecaster=None) -> tuple:
         run.reward_hash,
         physical_config_hash(run.physical),
         action_schema_hash(),
-        observation_schema_hash(run.physical),
+        observation_schema_hash(run.physical, run.arrival_memory_bins),
         bool(run.forecast.enabled),
         _forecaster_fingerprint(forecaster),
     )

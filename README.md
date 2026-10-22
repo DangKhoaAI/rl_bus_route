@@ -63,30 +63,100 @@ pass `--legacy-python` to include them.
 Tiny smoke (2 train / 1 val / 1 test days, 32 PPO steps) lives in
 `tests/integration/test_cli_pipeline.py`.
 
-## Reproduce
+## CLI
+
+Commands use `bus-rl <noun> <action>`:
+
+| Command | Purpose |
+|---|---|
+| `data generate` | Generate scenario data and a manifest |
+| `model train` | Train a policy and save best/last checkpoints |
+| `model evaluate` | Evaluate a checkpoint and write results/traces |
+| `baseline run` | Evaluate fixed/threshold/proportional controllers |
+| `report generate` | Generate plots and a summary from results |
+| `test diagnose` | Diagnose training and evaluation timings |
+| `test profile` | Run the historical simulator microprofiler |
+
+Use `bus-rl model --help` or `bus-rl model train --help` for a group or action.
+Flat legacy commands such as `train`, `evaluate` and `generate` remain accepted
+as aliases so archived command lines still run. New documentation uses the
+grouped names. Flags, config precedence and output artifacts are unchanged.
+
+To collect a complete run under `runs/result-gru10/`:
+
+```bash
+uv run bus-rl model train --manifest data/generated/base/manifest.json --output runs/result-gru10/train
+uv run bus-rl model evaluate --manifest data/generated/base/manifest.json --checkpoint runs/result-gru10/train/best.zip --split test_id --trace --output runs/result-gru10/eval
+uv run bus-rl report generate --results runs/result-gru10/eval/results.csv --history runs/result-gru10/train/evaluations.csv --output runs/result-gru10/report
+```
+
+Each `--output` must be a fresh path; parent folders are created automatically.
+
+## Policy selection
+
+Training now defaults to **MaskablePPO + GRU, 10 minutes of arrival history,
+without belief features**. This was the best supported compact choice in the
+98,304-step encoder ablations; it has not replaced the frozen full-budget MLP
+benchmark in `reports/README.md`. `--config` is optional for `model train`, `test diagnose`
+and `model evaluate` (defaults: `configs/train.toml`, `configs/train.toml`,
+`configs/eval.toml`). The dataset manifest and output directory remain explicit.
+
+```bash
+# Default: GRU10
+uv run bus-rl model train --manifest data/generated/base/manifest.json --output runs/gru10
+
+# Override with flags
+uv run bus-rl model train --manifest data/generated/base/manifest.json --output runs/mlp --encoder mlp
+uv run bus-rl model train --manifest data/generated/base/manifest.json --output runs/gru30 --encoder gru --history-minutes 30
+
+# Or use a ready-to-run TOML preset
+uv run bus-rl model train --manifest data/generated/base/manifest.json --output runs/belief20-fade --config configs/policies/belief20-fade.toml
+
+# Evaluation restores encoder/history from the chosen checkpoint
+uv run bus-rl model evaluate --manifest data/generated/base/manifest.json --checkpoint runs/gru10/best.zip --output runs/gru10/eval
+```
+
+Presets under `configs/policies/`: `mlp`, `gru10`, `gru20`, `gru30`, `belief20`,
+`belief20-weak`, `belief20-fade`, `gru20-belief-fade`. They vary only the encoder,
+history and belief parameters; common settings are inherited from `base.toml`
+and configuration defaults. These presets use the normal training budget;
+the historical ablation budget remains in `configs/experiments/`.
+
+For `model train`/`test diagnose`, explicit flags override TOML, which overrides base
+defaults: `--encoder {mlp,gru,belief,belief_gru}`, `--history-minutes`,
+`--belief-prior-shape`, `--belief-prior-rate`, `--belief-decay`. The resolved
+settings are saved to `metadata.json`. When evaluating a checkpoint, its saved
+encoder/history take precedence over the evaluation config.
+
+Historical experiment configs explicitly retain `encoder="mlp"` so rerunning
+them preserves the original architecture. See the
+[encoder study](reports/archive/belief-gru-ablation/README.md) and
+[memory/belief follow-up](reports/archive/memory-belief-ablation/README.md).
+
+## Reproduce the original study
 
 Generate the frozen 500/100/200/200/200-day manifests (not committed):
 
 ```bash
-uv run bus-rl generate --config configs/base.toml --output data/generated/base
+uv run bus-rl data generate --config configs/base.toml --output data/generated/base
 ```
 
 Baselines, profiler, pilot (12,288 transitions), and evaluation:
 
 ```bash
-uv run bus-rl baseline --config configs/eval.toml --manifest data/generated/base/manifest.json --split validation --methods fixed,threshold,proportional --output runs/baselines
-uv run bus-rl profile --config configs/pilot.toml --decisions 120 --output runs/profile
-uv run bus-rl train --config configs/pilot.toml --seed 11 --output runs/pilot-11
-uv run bus-rl evaluate --config configs/eval.toml --checkpoint runs/pilot-11/best.zip --manifest data/generated/base/manifest.json --split validation --output runs/pilot-11/eval
-uv run bus-rl report --results runs/pilot-11/eval/results.csv --output reports/core-11
+uv run bus-rl baseline run --config configs/eval.toml --manifest data/generated/base/manifest.json --split validation --methods fixed,threshold,proportional --output runs/baselines
+uv run bus-rl test profile --config configs/pilot.toml --decisions 120 --output runs/profile
+uv run bus-rl model train --manifest data/generated/base/manifest.json --config configs/pilot.toml --seed 11 --output runs/pilot-11
+uv run bus-rl model evaluate --config configs/eval.toml --checkpoint runs/pilot-11/best.zip --manifest data/generated/base/manifest.json --split validation --output runs/pilot-11/eval
+uv run bus-rl report generate --results runs/pilot-11/eval/results.csv --output reports/core-11
 ```
 
 Core M3 (245,760 transitions, seeds 11/22/33):
 
 ```bash
-uv run bus-rl train --config configs/experiments/core.toml --seed 11 --output runs/core-11
-uv run bus-rl train --config configs/experiments/core.toml --seed 22 --output runs/core-22
-uv run bus-rl train --config configs/experiments/core.toml --seed 33 --output runs/core-33
+uv run bus-rl model train --manifest data/generated/base/manifest.json --config configs/experiments/core.toml --seed 11 --output runs/core-11
+uv run bus-rl model train --manifest data/generated/base/manifest.json --config configs/experiments/core.toml --seed 22 --output runs/core-22
+uv run bus-rl model train --manifest data/generated/base/manifest.json --config configs/experiments/core.toml --seed 33 --output runs/core-33
 ```
 
 Ablations use `configs/experiments/{no_reassign,no_short,fairness_zero}.toml`
@@ -121,7 +191,7 @@ uv run pytest -m native -q           # Python↔Rust interface contract
 `backend` defaults to `rust` (via `[runtime] backend` or `--backend`):
 
 ```bash
-uv run bus-rl evaluate --config configs/eval.toml --manifest data/generated/base/manifest.json \
+uv run bus-rl model evaluate --config configs/eval.toml --manifest data/generated/base/manifest.json \
   --split validation --method threshold --output runs/eval-rust
 ```
 
@@ -129,7 +199,7 @@ Running without the extension fails loudly. The deprecated Python oracle needs
 an explicit opt-in and warns when used:
 
 ```bash
-uv run bus-rl evaluate --config configs/eval.toml --manifest data/generated/base/manifest.json \
+uv run bus-rl model evaluate --config configs/eval.toml --manifest data/generated/base/manifest.json \
   --split validation --method threshold --output runs/eval-py \
   --backend python --legacy-python
 ```

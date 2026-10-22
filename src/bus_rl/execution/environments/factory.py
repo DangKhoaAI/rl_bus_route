@@ -38,6 +38,7 @@ def make_env_for_run(scenarios, run: RunConfig, forecaster=None, scenario_store=
             control=run.control,
             validate=run.runtime.validate_observation,
             scenario_store=scenario_store,
+            arrival_memory_bins=run.arrival_memory_bins,
         )
     raise ValueError(f"unknown backend: {backend!r}")
 
