@@ -4,22 +4,33 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Từ bài toán điều phối xe buýt và POMDP đến policy gradient, REINFORCE, Actor–Critic, A2C, PPO và MaskablePPO; đối chiếu source bus-rl.">
+  <meta name="color-scheme" content="light dark">
+  <script>
+    (() => {
+      let savedTheme;
+      try { savedTheme = localStorage.getItem("bus-rl-doc-theme"); } catch {}
+      document.documentElement.dataset.theme = savedTheme === "dark" || savedTheme === "light"
+        ? savedTheme : (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    })();
+  </script>
   <title>Điều phối xe buýt: từ bài toán đến MaskablePPO</title>
   <style>
-    :root{--paper:#f7f8fa;--surface:#fff;--ink:#182b3a;--muted:#526576;--line:#d8e0e7;--accent:#09695f;--soft:#eaf5f1;--blue:#235e96;--warm:#fff5e3;--red:#a13a36;--mono:ui-monospace,SFMono-Regular,Consolas,monospace}
-    *{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:24px}body{margin:0;background:var(--paper);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:16px;line-height:1.8}a{color:var(--accent);text-underline-offset:3px}a:hover{text-decoration-thickness:2px}a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(--blue);outline-offset:4px}button,input{font:inherit}button{cursor:pointer;border:1px solid var(--line);border-radius:7px;background:white;color:var(--ink);padding:7px 14px}button:hover{background:var(--soft)}
+    :root{color-scheme:light;--paper:#f7f8fa;--surface:#fff;--ink:#182b3a;--muted:#526576;--line:#d8e0e7;--accent:#09695f;--soft:#eaf5f1;--blue:#235e96;--red:#a13a36;--inset:#edf1f5;--table-head:#edf2f5;--demo-border:#b9d6cc;--bar-track:#e9eef2;--chart-muted:#98a9b7;--chart-axis:#8799a6;--chart-guide:#b5cfc5;--pre-bg:#132c3b;--pre-ink:#e8f2f5;--mono:ui-monospace,SFMono-Regular,Consolas,monospace}
+    :root[data-theme="dark"]{color-scheme:dark;--paper:#10191f;--surface:#18252e;--ink:#e2eaf1;--muted:#a9bbc9;--line:#344854;--accent:#7bdcc2;--soft:#1c3834;--blue:#8dc3fb;--red:#ff9b94;--inset:#243743;--table-head:#243440;--demo-border:#416c60;--bar-track:#2b414e;--chart-muted:#91a7b7;--chart-axis:#8ba1b1;--chart-guide:#416c60;--pre-bg:#0c151b;--pre-ink:#dce9ef;}
+    .theme-control{margin-top:16px}.theme-control button{font-size:13px}.chart-legend{font-size:13px;color:var(--muted)}
+    *{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:24px}body{margin:0;background:var(--paper);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:16px;line-height:1.8}a{color:var(--accent);text-underline-offset:3px}a:hover{text-decoration-thickness:2px}a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(--blue);outline-offset:4px}button,input{font:inherit}button{cursor:pointer;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--ink);padding:7px 14px}button:hover{background:var(--soft)}
     .layout{display:grid;grid-template-columns:246px minmax(0,1010px);gap:54px;max-width:1390px;padding:40px 38px 80px;margin:auto}.sidebar{position:sticky;top:26px;align-self:start;max-height:calc(100vh - 52px);overflow:auto;font-size:13px;line-height:1.5}.brand{font-size:12px;font-weight:800;letter-spacing:.15em;color:var(--accent)}.sidebar h2{font-size:15px;margin:24px 0 9px}.sidebar a{display:block;text-decoration:none;color:var(--muted);padding:5px 9px;border-left:2px solid transparent}.sidebar a:hover,.sidebar a.active{background:var(--soft);color:var(--accent);border-left-color:var(--accent)}.sidebar .sub{padding-left:20px}.sidebar p{font-size:12px;color:var(--muted);padding:0 9px}.tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.tools button{font-size:12px}
     main{min-width:0}.eyebrow{font-size:12px;font-weight:750;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);margin:0 0 14px}h1{font-size:clamp(34px,4.3vw,58px);line-height:1.15;letter-spacing:-.035em;margin:0 0 22px;max-width:850px}h1 span{color:var(--accent)}.lead{font-size:19px;line-height:1.75;max-width:800px;color:var(--muted)}.meta{display:flex;gap:10px;flex-wrap:wrap;margin:24px 0}.badge{font-size:12px;border:1px solid var(--line);border-radius:5px;padding:3px 9px;background:var(--surface)}.badge.live{background:var(--soft);border-color:#b5d8cd;color:var(--accent)}.hero{padding-bottom:38px;border-bottom:1px solid var(--line)}
-    section{margin-top:64px;scroll-margin-top:24px}h2{font-size:29px;line-height:1.3;letter-spacing:-.025em;margin:9px 0 22px}h3{font-size:20px;line-height:1.5;margin:30px 0 12px}h4{font-size:16px;margin:24px 0 8px}p{margin:12px 0}strong{font-weight:700}li{padding-left:3px;margin:7px 0}ul,ol{padding-left:24px}.number{font-size:12px;font-weight:800;letter-spacing:.12em;color:var(--accent);text-transform:uppercase}.note{padding:18px 22px;border-left:4px solid var(--accent);background:var(--soft);margin:22px 0}.note.warm{background:var(--warm);border-color:#ba8529}.note p:first-child{margin-top:0}.note p:last-child{margin-bottom:0}.source{font-size:12px;line-height:1.65;color:var(--muted);margin-top:20px}.source a{overflow-wrap:anywhere}code{font-family:var(--mono);font-size:.86em;background:#edf1f5;border-radius:3px;padding:2px 5px;overflow-wrap:anywhere}pre{background:#132c3b;color:#e8f2f5;padding:23px;border-radius:8px;overflow:auto;font-family:var(--mono);font-size:13px;line-height:1.85}pre code{background:none;padding:0;color:inherit;font-size:inherit;overflow-wrap:normal}
+    section{margin-top:64px;scroll-margin-top:24px}h2{font-size:29px;line-height:1.3;letter-spacing:-.025em;margin:9px 0 22px}h3{font-size:20px;line-height:1.5;margin:30px 0 12px}h4{font-size:16px;margin:24px 0 8px}p{margin:12px 0}strong{font-weight:700}li{padding-left:3px;margin:7px 0}ul,ol{padding-left:24px}code{font-family:var(--mono);font-size:.86em;background:var(--inset);border-radius:3px;padding:2px 5px;overflow-wrap:anywhere}pre{background:var(--pre-bg);color:var(--pre-ink);padding:23px;border-radius:8px;overflow:auto;font-family:var(--mono);font-size:13px;line-height:1.85}pre code{background:none;padding:0;color:inherit;font-size:inherit;overflow-wrap:normal}
     .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:22px 0}.card{padding:21px 23px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}.card h3{margin:0 0 10px;font-size:17px}.card p{margin:7px 0}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:28px 0}.stat{padding:17px;background:var(--surface);border:1px solid var(--line);border-radius:7px}.stat b{display:block;color:var(--accent);font-size:28px;line-height:1.3}.stat span{font-size:12px;color:var(--muted)}
-    .table-wrap{overflow-x:auto;margin:20px 0;border:1px solid var(--line);border-radius:7px}table{border-collapse:collapse;width:100%;font-size:14px;line-height:1.65;background:white}th,td{text-align:left;vertical-align:top;padding:12px 15px;border-bottom:1px solid var(--line)}th{font-weight:700;background:#edf2f5}tr:last-child td{border-bottom:0}td:first-child{font-weight:600}caption{text-align:left;padding:12px 15px;font-size:12px;color:var(--muted);background:#fff}td code{font-size:12px}
-    .equation{background:#fff;border:1px solid var(--line);border-radius:7px;padding:18px 22px;margin:20px 0}.eq-label{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:9px}.math{font-family:"Cambria Math","STIX Two Math","DejaVu Serif",serif;font-size:19px;line-height:1.8;overflow-x:auto;padding:3px 0}.math .row{display:block}.math sub,.math sup{font-size:.72em}.equation p{font-size:14px;color:var(--muted);margin:10px 0 0}.fraction{display:inline-flex;flex-direction:column;text-align:center;vertical-align:middle;line-height:1.4;margin:0 5px}.fraction>span:first-child{border-bottom:1px solid currentColor;padding:0 4px 3px}.fraction>span:last-child{padding-top:3px}.nowrap{white-space:nowrap}
-    .flow{display:flex;gap:10px;align-items:stretch;margin:24px 0;flex-wrap:wrap}.flow .node{flex:1;min-width:128px;padding:16px;background:#fff;border:1px solid var(--line);border-radius:6px;font-size:13px}.flow .node strong{display:block;color:var(--accent);font-size:14px}.flow .arrow{align-self:center;color:var(--muted)}.ladder{list-style:none;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:25px 0}.ladder li{margin:0;padding:16px 18px;border:1px solid var(--line);border-radius:7px;background:white}.ladder a{font-weight:750;text-decoration:none}.ladder small{display:block;color:var(--muted);font-size:12px;margin-top:7px}.progress{position:fixed;top:0;left:0;height:3px;background:var(--accent);width:0;z-index:5}.bridge{color:var(--accent);font-weight:650;border-top:1px solid var(--line);padding-top:17px;margin-top:25px}
-    .demo{border:1px solid #b9d6cc;border-radius:8px;background:#fff;padding:24px;margin:25px 0}.demo h3{margin:0 0 9px}.demo label{display:block;font-size:14px;margin:15px 0 6px}.demo input[type=range]{width:100%;accent-color:var(--accent)}.demo select{font:inherit;padding:5px 10px;border:1px solid var(--line);border-radius:5px;max-width:100%}.demo svg{display:block;width:100%;height:auto;margin:16px 0}.readout{padding:12px 15px;background:var(--soft);font-size:14px;min-height:76px}.mask-name{font-family:var(--mono);font-size:12px}.bar-track{width:100%;min-width:75px;height:9px;background:#e9eef2;border-radius:5px;margin-top:4px}.bar-fill{height:9px;background:var(--accent);border-radius:5px}.bar-fill.old{background:#98a9b7}.invalid{color:var(--red)}.small{font-size:13px;color:var(--muted)}.demo input[type=checkbox]{accent-color:var(--accent);width:18px;height:18px}.demo .check-label{display:flex;align-items:center;gap:8px;margin:0}.demo .table-wrap{margin-bottom:14px}footer{border-top:1px solid var(--line);margin-top:55px;padding-top:20px;font-size:12px;color:var(--muted)}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    .table-wrap{overflow-x:auto;margin:20px 0;border:1px solid var(--line);border-radius:7px}table{border-collapse:collapse;width:100%;font-size:14px;line-height:1.65;background:var(--surface)}th,td{text-align:left;vertical-align:top;padding:12px 15px;border-bottom:1px solid var(--line)}th{font-weight:700;background:var(--table-head)}tr:last-child td{border-bottom:0}td:first-child{font-weight:600}caption{text-align:left;padding:12px 15px;font-size:12px;color:var(--muted);background:var(--surface)}td code{font-size:12px}
+    .equation{background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:18px 22px;margin:20px 0}.eq-label{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:9px}.math{font-family:"Cambria Math","STIX Two Math","DejaVu Serif",serif;font-size:19px;line-height:1.8;overflow-x:auto;padding:3px 0}.math .row{display:block}.math sub,.math sup{font-size:.72em}.equation p{font-size:14px;color:var(--muted);margin:10px 0 0}.fraction{display:inline-flex;flex-direction:column;text-align:center;vertical-align:middle;line-height:1.4;margin:0 5px}.fraction>span:first-child{border-bottom:1px solid currentColor;padding:0 4px 3px}.fraction>span:last-child{padding-top:3px}.nowrap{white-space:nowrap}
+    .flow{display:flex;gap:10px;align-items:stretch;margin:24px 0;flex-wrap:wrap}.flow .node{flex:1;min-width:128px;padding:16px;background:var(--surface);border:1px solid var(--line);border-radius:6px;font-size:13px}.flow .node strong{display:block;color:var(--accent);font-size:14px}.flow .arrow{align-self:center;color:var(--muted)}.ladder{list-style:none;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:25px 0}.ladder li{margin:0;padding:16px 18px;border:1px solid var(--line);border-radius:7px;background:var(--surface)}.ladder a{font-weight:750;text-decoration:none}.ladder small{display:block;color:var(--muted);font-size:12px;margin-top:7px}.progress{position:fixed;top:0;left:0;height:3px;background:var(--accent);width:0;z-index:5}
+    .demo{border:1px solid var(--demo-border);border-radius:8px;background:var(--surface);padding:24px;margin:25px 0}.demo h3{margin:0 0 9px}.demo label{display:block;font-size:14px;margin:15px 0 6px}.demo input[type=range]{width:100%;accent-color:var(--accent)}.demo select{font:inherit;background:var(--surface);color:var(--ink);padding:5px 10px;border:1px solid var(--line);border-radius:5px;max-width:100%}.demo svg{display:block;width:100%;height:auto;margin:16px 0}.readout{padding:12px 15px;background:var(--soft);font-size:14px;min-height:76px}.mask-name{font-family:var(--mono);font-size:12px}.bar-track{width:100%;min-width:75px;height:9px;background:var(--bar-track);border-radius:5px;margin-top:4px}.bar-fill{height:9px;background:var(--accent);border-radius:5px}.bar-fill.old{background:var(--chart-muted)}.invalid{color:var(--red)}.small{font-size:13px;color:var(--muted)}.demo input[type=checkbox]{accent-color:var(--accent);width:18px;height:18px}.demo .check-label{display:flex;align-items:center;gap:8px;margin:0}.demo .table-wrap{margin-bottom:14px}footer{border-top:1px solid var(--line);margin-top:55px;padding-top:20px;font-size:12px;color:var(--muted)}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
     @media(max-width:1080px){.layout{grid-template-columns:204px minmax(0,1fr);gap:30px;padding:30px 24px}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.ladder{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    @media(max-width:760px){.layout{display:block;padding:24px 18px 60px}.sidebar{position:static;max-height:none;border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:30px}.sidebar nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 8px}.sidebar nav h2{grid-column:1/-1;margin-top:14px}.sidebar p{display:none}.sidebar a{font-size:12px}.grid{grid-template-columns:1fr}.lead{font-size:17px}h2{font-size:25px}.math{font-size:17px}.equation{padding:14px}section{margin-top:44px}.flow .arrow{display:none}.demo{padding:16px}th,td{padding:10px}.stats{gap:8px}.ladder li{padding:12px}.source{font-size:11px}}
+    @media(max-width:760px){.layout{display:block;padding:24px 18px 60px}.sidebar{position:static;max-height:none;border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:30px}.sidebar nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 8px}.sidebar nav h2{grid-column:1/-1;margin-top:14px}.sidebar p{display:none}.sidebar a{font-size:12px}.grid{grid-template-columns:1fr}.lead{font-size:17px}h2{font-size:25px}.math{font-size:17px}.equation{padding:14px}section{margin-top:44px}.flow .arrow{display:none}.demo{padding:16px}th,td{padding:10px}.stats{gap:8px}.ladder li{padding:12px}}
     @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
-    @media print{html{scroll-behavior:auto}body{font-size:10pt;background:#fff;color:#111;line-height:1.6}.layout{display:block;padding:0;max-width:none}.sidebar,.progress,.tools,.demo .controls{display:none}section{margin-top:28px}h1{font-size:30pt}h2{font-size:20pt;break-after:avoid}h3{font-size:13pt;break-after:avoid}.lead{font-size:12pt}.hero{padding-bottom:16px}.card,.equation,.note,.stats,.flow,.demo{break-inside:avoid}.table-wrap{overflow:visible}table{font-size:9pt}thead{display:table-header-group}tr{break-inside:avoid}.math{font-size:12pt;overflow:visible}.source{font-size:8pt}a{color:inherit}pre{white-space:pre-wrap;background:#f2f2f2;color:#111;font-size:8pt}.ladder{grid-template-columns:repeat(3,minmax(0,1fr))}.demo svg{max-height:200px}.badge{font-size:8pt}}
+    @media print{:root,:root[data-theme="dark"]{color-scheme:light;--paper:#f7f8fa;--surface:#fff;--ink:#182b3a;--muted:#526576;--line:#d8e0e7;--accent:#09695f;--soft:#eaf5f1;--blue:#235e96;--red:#a13a36;--inset:#edf1f5;--table-head:#edf2f5;--demo-border:#b9d6cc;--bar-track:#e9eef2;--chart-muted:#98a9b7;--chart-axis:#8799a6;--chart-guide:#b5cfc5;--pre-bg:#132c3b;--pre-ink:#e8f2f5;}html{scroll-behavior:auto}body{font-size:10pt;background:#fff;color:#111;line-height:1.6}.layout{display:block;padding:0;max-width:none}.sidebar,.progress,.tools,.demo .controls{display:none}section{margin-top:28px}h1{font-size:30pt}h2{font-size:20pt;break-after:avoid}h3{font-size:13pt;break-after:avoid}.lead{font-size:12pt}.hero{padding-bottom:16px}.card,.equation,.stats,.flow,.demo{break-inside:avoid}.table-wrap{overflow:visible}table{font-size:9pt}thead{display:table-header-group}tr{break-inside:avoid}.math{font-size:12pt;overflow:visible}a{color:inherit}pre{white-space:pre-wrap;background:#f2f2f2;color:#111;font-size:8pt}.ladder{grid-template-columns:repeat(3,minmax(0,1fr))}.demo svg{max-height:200px}.badge{font-size:8pt}}
   </style>
 </head>
 <body>
@@ -27,6 +38,7 @@
 <div class="layout">
   <aside class="sidebar" aria-label="Mục lục">
     <div class="brand">BUS-RL / TÀI LIỆU GIẢI THÍCH</div>
+    <div class="theme-control"><button type="button" id="theme-toggle" aria-pressed="false">Chế độ tối</button></div>
     <nav>
       <h2>Bài toán &amp; mô hình</h2>
       <a href="#overview">Lộ trình đọc</a>
@@ -47,331 +59,387 @@
       <a href="#sources">13 · Bản đồ nguồn</a>
     </nav>
     <div class="tools"><button type="button" id="print-button">In / lưu PDF</button><button type="button" id="top-button">Về đầu</button></div>
-    <p>HTML tự chứa, mở offline. Công thức dùng chữ và ký hiệu toán, không cần thư viện ngoài.</p>
   </aside>
   <main id="top">
     <header class="hero">
-      <p class="eyebrow">Problem → formulation → learning → control</p>
+      <p class="eyebrow">Bài toán → mô hình RL → thuật toán → huấn luyện</p>
       <h1>Điều phối xe buýt:<br>từ bài toán đến <span>MaskablePPO.</span></h1>
-      <p class="lead">Vì sao cần học một quy tắc điều phối? Agent biết gì, quyết định gì và học từ đâu? Đi từng bước từ Reinforcement Learning đến thuật toán đang chạy trong source.</p>
-      <div class="meta"><span class="badge">Tiếng Việt · đọc theo thứ tự</span><span class="badge">Đối chiếu source: 22/10/2026</span><span class="badge live">Hiện tại: MaskablePPO + GRU10</span></div>
-      <div class="note"><strong>Ý chính:</strong> cứ 2 phút, controller chọn một can thiệp hợp lệ cho đội xe. Simulator cho biết hệ quả; qua nhiều ngày mô phỏng, policy học cách đánh đổi giữa phục vụ hành khách và sử dụng nguồn lực trong cả ca.</div>
+      <p class="lead">Một đội xe hữu hạn phải phục vụ nhu cầu thay đổi trong cả ca. Ta sẽ xây dựng bài toán ra quyết định này, rồi từng bước tìm hiểu cách policy gradient, REINFORCE, Actor–Critic, A2C và PPO dẫn đến bộ điều phối MaskablePPO trong source.</p>
     </header>
 
     <section id="overview">
-      <div class="number">Lộ trình đọc</div><h2>Đặt bài toán trước, hiểu thuật toán sau</h2>
-      <p>Phần 01–03 định nghĩa môi trường và thông tin có sẵn. Phần 04–05 giải thích ngôn ngữ chung của các phương pháp tối ưu policy. Phần 06–10 tách riêng từng thuật toán, mỗi bước trả lời một hạn chế của bước trước.</p>
+      <h2>Lộ trình đọc</h2>
+      <p>Giả sử tuyến A đang đông khách, tuyến B còn ít người chờ và depot còn xe dự phòng. Người điều phối có thể đưa thêm xe vào A, chuyển một xe từ B sang A hoặc tiếp tục chờ. Mỗi lựa chọn làm thay đổi cách đội xe phục vụ trong những phút tiếp theo. Muốn lựa chọn tốt, ta cần biết thông tin nào đang có, đánh giá hệ quả bằng tiêu chí nào và học từ những lần điều phối trước ra sao.</p>
+      <p>Ba phần đầu trả lời những câu hỏi đó bằng mô hình RL và POMDP. Sau đó, ta xây dựng từng thành phần của thuật toán: cách biểu diễn quyết định bằng xác suất, cách chấm chất lượng một lựa chọn, cách học bộ dự đoán giá trị và cách cập nhật policy. Cuối cùng, các thành phần được ghép thành vòng huấn luyện đang dùng trong repository.</p>
       <ol class="ladder">
-        <li><a href="#policy-gradient">RL → Policy gradient</a><small>Học trực tiếp xác suất chọn hành động.</small></li>
-        <li><a href="#reinforce">→ REINFORCE</a><small>Dùng kết quả thực tế của cả episode.</small></li>
-        <li><a href="#actor-critic">→ Actor–Critic</a><small>Thêm bộ ước lượng để học sớm hơn.</small></li>
-        <li><a href="#a2c">→ A2C</a><small>Dùng advantage và gom rollout đồng bộ.</small></li>
-        <li><a href="#ppo">→ PPO</a><small>Tái dùng rollout với mục tiêu cập nhật thận trọng.</small></li>
-        <li><a href="#maskppo">→ MaskablePPO</a><small>Đưa ràng buộc hợp lệ vào phân phối hành động.</small></li>
+        <li><a href="#policy-gradient">Policy gradient</a><small>Điều chỉnh xác suất chọn hành động.</small></li>
+        <li><a href="#reinforce">REINFORCE</a><small>Học từ tổng reward thực tế của cả ca.</small></li>
+        <li><a href="#actor-critic">Actor–Critic</a><small>Dự đoán phần tương lai để học sớm hơn.</small></li>
+        <li><a href="#a2c">A2C</a><small>Gom trải nghiệm và cập nhật bằng advantage.</small></li>
+        <li><a href="#ppo">PPO</a><small>Học nhiều lượt trên một lô với objective có clipping.</small></li>
+        <li><a href="#maskppo">MaskablePPO</a><small>Đưa điều kiện hợp lệ vào xác suất lựa chọn.</small></li>
       </ol>
-      <p class="small">Đây là thứ tự giảng giải. Policy gradient và Actor–Critic là các họ phương pháp; PPO thuộc họ Actor–Critic trong triển khai này. Không hiểu các mũi tên là phả hệ bắt buộc, hoặc thuật toán sau luôn tốt hơn thuật toán trước trên mọi bài toán.</p>
-      <div class="note warm"><strong>Ranh giới lý thuyết và code:</strong> REINFORCE, Actor–Critic cơ bản và A2C được trình bày để xây nền tảng. Entry huấn luyện của repo tạo <code>sb3_contrib.MaskablePPO</code>; không có thí nghiệm so sánh REINFORCE/A2C với PPO trong nội dung này. MLP, GRU và belief là biến thể <em>encoder đầu vào</em>, không phải ba thuật toán RL khác nhau.</div>
-      <p class="source">Đối chiếu: <a href="../src/bus_rl/learning/training/train.py">train.py · make_model()</a>, <a href="../src/bus_rl/learning/policy.py">policy.py · policy_kwargs()</a>, <a href="../configs/base.toml">configs/base.toml</a>.</p>
     </section>
 
     <section id="problem">
-      <div class="number">01 / Problem</div><h2>Cần điều phối nguồn lực nào, để đạt điều gì?</h2>
-      <p>Đã có mạng tuyến cố định. Hành khách đến theo thời gian, có giờ cao điểm và biến động giao thông. Số xe hữu hạn: tăng dịch vụ ở tuyến đang đông có thể làm thiếu xe nơi khác, tăng chi phí hoặc sử dụng hết xe dự phòng quá sớm.</p>
-      <p><strong>Đầu ra cần tìm là một quy tắc ra quyết định trong cả ca</strong>: với thông tin đang có, nên giữ nguyên, tăng xe, chuyển xe, thu hồi xe, chạy vòng ngắn hay đổi headway? Bài toán không yêu cầu thiết kế tuyến mới.</p>
-      <div class="stats"><div class="stat"><b>3</b><span>tuyến hai hướng · 6 trạm/tuyến</span></div><div class="stat"><b>12</b><span>xe · 9 gán tuyến + 3 dự phòng</span></div><div class="stat"><b>40</b><span>khách/xe · comfort 30 khách</span></div><div class="stat"><b>120</b><span>quyết định trong ca 240 phút</span></div></div>
-      <h3>Ví dụ về đánh đổi theo thời gian</h3>
-      <p>Tuyến A tăng khách lúc phút 60. Đưa một xe dự phòng vào A tốn thêm bus-minutes và thời gian chạy rỗng, nhưng có thể giảm chờ và bỏ cuộc về sau. Chuyển xe từ B sang A có thể tiết kiệm xe dự phòng, nhưng làm B thiếu dịch vụ. Chỉ tối thiểu chi phí trong 2 phút tiếp theo có thể bỏ lỡ lợi ích của một xe cần vài phút mới đến được tuyến.</p>
-      <div class="grid"><div class="card"><h3>Được điều khiển</h3><p>Phân công xe, một số nhiệm vụ vận hành và headway mục tiêu. Mỗi bước chọn <strong>một</strong> hành động cấp cao.</p></div><div class="card"><h3>Phải phản ứng theo</h3><p>Khách đến, đích đến của khách và traffic. Controller không được chọn hoặc nhìn trước các sự kiện tương lai.</p></div></div>
-      <h3>Các quyết định hợp lệ</h3>
-      <div class="table-wrap"><table><thead><tr><th>Hành động</th><th>Ý nghĩa vận hành</th><th>Điểm cần nhớ</th></tr></thead><tbody>
-        <tr><td><code>NOOP</code></td><td>Giữ kế hoạch hiện tại.</td><td>Dispatcher vẫn cho xe chạy, đón/trả khách; thời gian vẫn trôi.</td></tr>
-        <tr><td><code>DISPATCH(b,r)</code></td><td>Đưa xe dự phòng b vào tuyến r.</td><td>Xe phải ở depot và hết cooldown; có thời gian deadhead.</td></tr>
-        <tr><td><code>REASSIGN(b,r)</code></td><td>Chuyển xe từ tuyến hiện tại sang tuyến r.</td><td>Xe rỗng, ở terminal, hết cooldown; phải qua donor guard.</td></tr>
-        <tr><td><code>SHORT_TURN(b,r)</code></td><td>Giao một nhiệm vụ chạy vòng ngắn đã định nghĩa.</td><td>Chỉ phục vụ phần tuyến được phép; không đón khách có đích vượt phạm vi phục vụ.</td></tr>
-        <tr><td><code>RECALL(b)</code></td><td>Thu hồi xe về depot.</td><td>Xe đủ điều kiện rút khỏi tuyến; không biến mất tức thời.</td></tr>
-        <tr><td><code>SET_HEADWAY(r,h)</code></td><td>Đặt khoảng cách xuất phát mục tiêu 6, 10 hoặc 15 phút.</td><td>Target chịu cooldown; headway thực tế còn phụ thuộc xe và giao thông.</td></tr>
+      <h2>01. Bài toán điều phối đội xe</h2>
+      <p>Mạng xe buýt đã có sẵn 3 tuyến, mỗi tuyến có 6 trạm và phục vụ hai hướng. Đội xe gồm 12 chiếc: ban đầu mỗi tuyến được gán 3 xe, còn 3 xe ở depot để dự phòng. Mỗi xe chở tối đa 40 khách; khi tải vượt 30 khách, chi phí phản ánh sự chật chội bắt đầu tăng.</p>
+      <div class="stats"><div class="stat"><b>3</b><span>tuyến cố định, hai hướng</span></div><div class="stat"><b>12</b><span>xe, gồm 3 xe dự phòng</span></div><div class="stat"><b>2 phút</b><span>giữa hai quyết định</span></div><div class="stat"><b>240 phút</b><span>một ca vận hành</span></div></div>
+      <p>Hành khách đến trạm trong 180 phút đầu, với lượng khách biến động theo giờ cao điểm. Giao thông cũng làm thời gian chạy xe thay đổi. Từ phút 180 đến phút 240, hệ thống tiếp tục phục vụ số khách đã xuất hiện. Trong suốt ca, cứ 2 phút controller được chọn một hành động điều phối, tổng cộng 120 quyết định.</p>
+      <h3>Những quyết định controller có thể chọn</h3>
+      <p>Controller quản lý đội xe ở cấp phân công nhiệm vụ. Sau khi nhận nhiệm vụ, xe tiếp tục chạy, đón và trả khách theo cơ chế dispatcher của simulator. Các hành động được biểu diễn như sau; b chỉ một xe, r chỉ một tuyến và h là headway mục tiêu.</p>
+      <div class="table-wrap"><table><thead><tr><th>Hành động</th><th>Quyết định vận hành</th></tr></thead><tbody>
+        <tr><td><code>NOOP</code></td><td>Giữ kế hoạch hiện tại trong bước này; đội xe tiếp tục vận hành.</td></tr>
+        <tr><td><code>DISPATCH(b,r)</code></td><td>Đưa xe dự phòng b từ depot vào phục vụ tuyến r.</td></tr>
+        <tr><td><code>REASSIGN(b,r)</code></td><td>Chuyển xe b từ tuyến hiện tại sang tuyến r.</td></tr>
+        <tr><td><code>SHORT_TURN(b,r)</code></td><td>Giao xe b chạy một vòng ngắn trên đoạn tuyến đã quy định.</td></tr>
+        <tr><td><code>RECALL(b)</code></td><td>Thu hồi xe b về depot.</td></tr>
+        <tr><td><code>SET_HEADWAY(r,h)</code></td><td>Đặt khoảng cách xuất phát mục tiêu của tuyến r bằng 6, 10 hoặc 15 phút.</td></tr>
       </tbody></table></div>
-      <h3>Ràng buộc vật lý và quy tắc bảo vệ dịch vụ</h3>
-      <p>Xe không chở quá 40 khách; không chuyển tuyến khi đang có khách; không dịch chuyển tức thời. Donor guard giữ ít nhất 2 xe FULL committed ở tuyến cho xe đi, kiểm tra xe thay thế tại terminal và điều kiện thời gian phục vụ. Cooldown xe là 20 phút, cooldown đổi headway là 10 phút. Các giới hạn này được kiểm tra bằng code trước khi chấp nhận hành động.</p>
-      <h3>Objective: giảm tổng chi phí kỳ vọng của cả ca</h3>
-      <div class="equation"><div class="eq-label">Mục tiêu vận hành</div><div class="math">min<sub>μ</sub> 𝔼<sub>μ</sub>[ ∑<sub>k=0</sub><sup>K−1</sup> c<sub>k</sub> + 60 N<sub>H</sub> ]</div><p>μ là quy tắc điều phối; c<sub>k</sub> là chi phí của khoảng thứ k; N<sub>H</sub> là số người còn chờ hoặc còn trên xe cuối ca. Kỳ vọng lấy trên các ngày có demand/traffic và các lựa chọn ngẫu nhiên của controller.</p></div>
-      <p>Chi phí quy đổi nhiều hậu quả về một thang điểm: chờ, ngồi trên xe, quá đông, vận hành, chạy rỗng, chờ lâu, từ chối lên xe, bỏ cuộc và đổi nhiệm vụ. Đó là <strong>proxy vận hành theo passenger-minute equivalent</strong>, không phải số tiền thực tế.</p>
-      <p class="source">Đối chiếu: <a href="problem_solution.md">docs/problem_solution.md · phần A</a>, <a href="spec/spec_v1.0.md">spec_v1.0.md · §3–6</a>, <a href="../configs/base.toml">base.toml</a>, <a href="../crates/bus-sim-core/src/guards.rs">guards.rs</a>, <a href="../crates/bus-sim-core/src/costs.rs">costs.rs</a>.</p>
+      <p><strong>Headway</strong> là khoảng thời gian giữa hai lần xe xuất phát trên cùng luồng dịch vụ. Đặt target 6 phút nghĩa là muốn có xe xuất phát cách nhau khoảng 6 phút. Để thực hiện được target đó, tuyến vẫn cần đủ xe sẵn sàng; xe đang mắc trong giao thông chưa thể quay về terminal để xuất phát đúng lúc.</p>
+      <p>Một xe chuyển từ depot hoặc tuyến khác sang tuyến nhận phải chạy đến nơi trước khi phục vụ. Đoạn chạy rỗng này gọi là <strong>deadhead</strong>. Vì vậy, dispatch tại phút 60 có thể làm chi phí vận hành tăng ngay, trong khi lợi ích giảm chờ chỉ xuất hiện sau vài phút. Đánh giá quyết định cần tính cả hai phần.</p>
+      <h3>Quyết định phải tuân thủ điều kiện vận hành</h3>
+      <p>Xe đang chở khách không thể bị chuyển sang tuyến khác. Xe được rút khỏi tuyến phải đang rỗng, ở terminal và đáp ứng điều kiện bảo vệ tuyến cho xe đi. Code gọi tập điều kiện này là <strong>donor guard</strong>: tuyến còn ít nhất 2 xe phục vụ toàn tuyến, có xe thay thế phù hợp tại terminal và đáp ứng kiểm tra khoảng thời gian phục vụ.</p>
+      <p>Sau thay đổi nhiệm vụ, xe phải chờ 20 phút trước lần thay đổi tiếp theo; khoảng chờ này gọi là <strong>cooldown</strong>. Việc đổi headway của một tuyến có cooldown 10 phút. Cùng với giới hạn sức chứa và thời gian di chuyển, những quy tắc đó xác định các hành động thực hiện được tại mỗi thời điểm.</p>
+      <h3>Mục tiêu là phục vụ tốt với nguồn lực hữu hạn</h3>
+      <p>Nếu chỉ muốn giảm chờ, ta có thể đưa nhiều xe ra đường. Nhưng sử dụng thêm xe làm tăng thời gian vận hành, chạy rỗng và có thể dùng hết nguồn dự phòng. Nếu chỉ muốn tiết kiệm xe, hành khách phải chờ lâu hoặc bỏ cuộc. Bài toán cần một tiêu chí chung để cân bằng các hậu quả này.</p>
+      <p>Simulator chuyển chúng thành các thành phần chi phí có trọng số. Tổng chi phí của cả ca bao gồm thời gian chờ, thời gian trên xe, mức quá đông, sử dụng xe, chạy rỗng và các hậu quả phục vụ kém. Cuối ca, mỗi người còn chờ hoặc còn trên xe nhận thêm chi phí chưa hoàn thành.</p>
+      <div class="equation"><div class="eq-label">Mục tiêu điều phối</div><div class="math">min<sub>μ</sub> 𝔼<sub>μ</sub>[ ∑<sub>k=0</sub><sup>K−1</sup> c<sub>k</sub> + 60N<sub>H</sub> ]</div></div>
+      <p>Trong công thức, μ là quy tắc ra quyết định cần tìm; k là chỉ số bước điều phối; K = 120 là tổng số bước. c<sub>k</sub> là chi phí trong khoảng 2 phút của bước k. N<sub>H</sub> là số khách chưa hoàn thành khi hết ca. Ký hiệu 𝔼 là kỳ vọng: ta muốn quy tắc hoạt động tốt trung bình qua nhiều ngày có nhu cầu và giao thông khác nhau.</p>
+      <p>Đầu ra của bài toán do đó là một quy tắc sử dụng thông tin hiện có để chọn quyết định, sao cho tổng chi phí kỳ vọng của cả ca thấp. RL sẽ học quy tắc này qua tương tác với simulator.</p>
     </section>
 
     <section id="rl-model">
-      <div class="number">02 / Formulation</div><h2>Chuyển bài toán vận hành thành môi trường RL</h2>
-      <p>Trong học tăng cường, agent chọn hành động, môi trường tiến triển và trả reward. Ở đây agent là controller điều phối; môi trường là simulator xe buýt. Ta dùng <strong>k</strong> cho bước quyết định và <strong>t</strong> cho thời gian vật lý, để không nhầm một bước RL với một tick mô phỏng.</p>
-      <div class="table-wrap"><table><thead><tr><th>Thành phần</th><th>Ánh xạ vào bài toán</th></tr></thead><tbody>
-        <tr><td>Agent</td><td>Policy điều phối đội xe, không phải từng tài xế hoặc từng xe là một agent riêng.</td></tr>
-        <tr><td>Environment</td><td>Rust kernel mô phỏng hành khách, xe, dispatcher, travel, guards và costs; Python cung cấp Gym wrapper.</td></tr>
-        <tr><td>Episode</td><td>Một ca 240 phút trên một scenario-day. Arrivals dừng ở phút 180; vẫn phục vụ khách còn lại đến phút 240.</td></tr>
-        <tr><td>Decision step</td><td>Δ = 120 giây. Simulator chạy 4 tick × 30 giây sau mỗi quyết định. Cả episode có K = 120 bước.</td></tr>
-        <tr><td>Full state s<sub>k</sub></td><td>Thời gian; cohort/tuổi chờ/đích đến; xe, tải, vị trí, phase/timer/cooldown; assignment, headway và dispatcher clocks; thông tin ngoại sinh cần cho dynamics.</td></tr>
-        <tr><td>Observation o<sub>k</sub></td><td>Tổng hợp hàng chờ, tuổi chờ, xe, tải, headway, arrivals đã xảy ra và thời gian còn lại. Không phải toàn bộ state.</td></tr>
-        <tr><td>Action a<sub>k</sub></td><td>Một mã rời rạc trong bảng cố định 221 slot; giải mã thành quyết định vận hành.</td></tr>
-        <tr><td>Transition</td><td>Áp action rồi mô phỏng arrivals, boarding/alighting, xe di chuyển, dispatcher và abandon trong 2 phút.</td></tr>
-        <tr><td>Reward r<sub>k</sub></td><td>Âm của chi phí khoảng điều khiển, chia 3000; bước cuối thêm phạt khách chưa hoàn thành.</td></tr>
+      <h2>02. Mô hình hóa bài toán RL</h2>
+      <p>Trong Reinforcement Learning, hay học tăng cường, một <strong>agent</strong> chọn hành động trong <strong>environment</strong>, rồi nhận điểm đánh giá gọi là <strong>reward</strong>. Với bài toán này, agent là controller quản lý toàn đội xe; environment là simulator mô phỏng xe, hành khách và hoạt động phục vụ.</p>
+      <h3>Một bước RL diễn ra như thế nào?</h3>
+      <p>Ở đầu bước k, môi trường cung cấp thông tin quan sát. Controller chọn một hành động, chẳng hạn dispatch xe dự phòng vào A. Môi trường thực hiện quyết định rồi tiến thêm 2 phút: khách mới đến, xe chạy, khách lên/xuống xe và những người chờ quá lâu có thể bỏ cuộc. Sau đó, môi trường trả reward của khoảng vừa chạy và thông tin cho bước kế tiếp.</p>
+      <div class="flow" aria-label="Vòng tương tác RL"><div class="node"><strong>Quan sát</strong>Tình hình hàng chờ và đội xe</div><span class="arrow">→</span><div class="node"><strong>Hành động</strong>Một quyết định điều phối</div><span class="arrow">→</span><div class="node"><strong>Môi trường</strong>Vận hành thêm 2 phút</div><span class="arrow">→</span><div class="node"><strong>Phản hồi</strong>Reward và quan sát mới</div></div>
+      <p>Bên trong khoảng 2 phút đó, simulator cập nhật theo tick 30 giây. Một bước quyết định RL tương ứng 4 tick mô phỏng. Một ca hoàn chỉnh được gọi là <strong>episode</strong>: bắt đầu từ trạng thái ban đầu của ngày và kết thúc ở phút 240.</p>
+      <h3>State, observation, action và transition</h3>
+      <p><strong>State s<sub>k</sub></strong> là trạng thái đầy đủ mà simulator cần để tiếp tục vận hành: ai đang chờ, họ đến lúc nào và muốn đi đâu; xe đang ở đâu, chở những ai, còn bao lâu mới đến trạm; các phân công, cooldown và đồng hồ xuất phát. <strong>Observation o<sub>k</sub></strong> là phần thông tin được cung cấp cho controller, như số người chờ, tuổi chờ, tải xe và vị trí xe.</p>
+      <p><strong>Action a<sub>k</sub></strong> là mã của quyết định controller chọn ở bước k. Khi action tác động lên state và các sự kiện trong 2 phút tiếp theo xảy ra, simulator tạo state mới. Quy tắc tiến triển này được gọi là <strong>transition</strong>.</p>
+      <div class="equation"><div class="eq-label">Chuyển trạng thái</div><div class="math">s<sub>k+1</sub> = f(s<sub>k</sub>, a<sub>k</sub>, ω<sub>k</sub>)</div></div>
+      <p>f là cơ chế mô phỏng. ω<sub>k</sub> gom các tác động bên ngoài trong khoảng đó, chủ yếu là arrivals và traffic. Chẳng hạn, hàng chờ mới bằng hàng chờ cũ cộng khách đến, trừ khách lên xe và khách bỏ cuộc. Action ảnh hưởng số xe phục vụ và thời điểm phục vụ, từ đó ảnh hưởng các đại lượng này.</p>
+      <h3>Từ cost sang reward</h3>
+      <p>RL tối đa hóa reward, trong khi bài toán vận hành cần tối thiểu cost. Ta nối hai mục tiêu bằng cách đặt reward bằng âm của cost. Các thành phần cost mặc định được tính như sau:</p>
+      <div class="table-wrap"><table><thead><tr><th>Ký hiệu</th><th>Đại lượng trong một khoảng điều khiển</th><th>Trọng số</th></tr></thead><tbody>
+        <tr><td>W<sub>k</sub></td><td>Tổng thời gian chờ của hành khách, tính bằng người-phút.</td><td>1</td></tr>
+        <tr><td>V<sub>k</sub></td><td>Tổng thời gian trên xe của hành khách, tính bằng người-phút.</td><td>0,25</td></tr>
+        <tr><td>O<sub>k</sub></td><td>Tổng người-phút vượt mức 30 khách/xe.</td><td>0,5</td></tr>
+        <tr><td>C<sub>k</sub></td><td>Tổng xe-phút hoạt động ngoài depot.</td><td>0,5</td></tr>
+        <tr><td>D<sub>k</sub></td><td>Tổng xe-phút deadhead, tính thêm ngoài C<sub>k</sub>.</td><td>0,5</td></tr>
+        <tr><td>X<sub>k</sub></td><td>Người-phút chờ của những người đã chờ ít nhất 15 phút, tính thêm ngoài W<sub>k</sub>.</td><td>1</td></tr>
+        <tr><td>U<sub>k</sub></td><td>Số khách lần đầu bị từ chối lên xe vì xe đầy.</td><td>5</td></tr>
+        <tr><td>E<sub>k</sub></td><td>Số khách bỏ cuộc khi thời gian chờ đạt ngưỡng 45 phút.</td><td>60</td></tr>
+        <tr><td>M<sub>k</sub></td><td>Số lần đổi nhiệm vụ xe được thực hiện.</td><td>2</td></tr>
       </tbody></table></div>
-      <div class="flow" aria-label="Vòng tương tác RL"><div class="node"><strong>1. Quan sát</strong>o<sub>k</sub> + mask m<sub>k</sub></div><span class="arrow">→</span><div class="node"><strong>2. Quyết định</strong>Chọn a<sub>k</sub></div><span class="arrow">→</span><div class="node"><strong>3. Mô phỏng</strong>Tiến thêm 120 giây</div><span class="arrow">→</span><div class="node"><strong>4. Phản hồi</strong>r<sub>k</sub>, o<sub>k+1</sub>, kết thúc?</div></div>
-      <h3>Dynamics: action có hệ quả kéo dài</h3>
-      <div class="equation"><div class="eq-label">Chuyển trạng thái</div><div class="math">s<sub>k+1</sub> = f(s<sub>k</sub>, a<sub>k</sub>, ω<sub>k</sub>)</div><p>ω<sub>k</sub> gồm arrivals và tác động traffic trong khoảng đó. Hệ thống có chuyển trạng thái xác định khi cố định scenario tape và chuỗi action; controller vẫn không biết trước phần tape tương lai.</p></div>
-      <p>Queue tăng vì khách mới, giảm vì lên xe hoặc bỏ cuộc. Tải xe giảm khi trả khách, tăng khi đón khách. Simulator giữ bảo toàn hành khách: số đã sinh bằng số đang chờ + trên xe + hoàn thành + bỏ cuộc.</p>
-      <h3>Reward: chấm điểm điều gì?</h3>
-      <div class="table-wrap"><table><thead><tr><th>Ký hiệu</th><th>Đại lượng trong một khoảng</th><th>Trọng số mặc định</th></tr></thead><tbody>
-        <tr><td>W<sub>k</sub></td><td>Passenger-minutes chờ. 10 người chờ 5 phút tạo 50.</td><td>1</td></tr>
-        <tr><td>V<sub>k</sub></td><td>Passenger-minutes trên xe.</td><td>0,25</td></tr>
-        <tr><td>O<sub>k</sub></td><td>Passenger-minutes vượt ngưỡng comfort 30 khách/xe.</td><td>0,5</td></tr>
-        <tr><td>C<sub>k</sub>, D<sub>k</sub></td><td>Bus-minutes ngoài depot; bus-minutes chạy rỗng. Deadhead chịu cả base operating cost và phụ phí.</td><td>0,5; 0,5</td></tr>
-        <tr><td>X<sub>k</sub></td><td>Passenger-minutes chờ của người có tuổi chờ ≥ 15 phút; cộng thêm vào W<sub>k</sub>.</td><td>1</td></tr>
-        <tr><td>U<sub>k</sub></td><td>Số người lần đầu bị từ chối lên xe vì đầy.</td><td>5</td></tr>
-        <tr><td>E<sub>k</sub></td><td>Số người bỏ cuộc; patience mặc định 45 phút.</td><td>60</td></tr>
-        <tr><td>M<sub>k</sub></td><td>Số mission change được nhận: dispatch/reassign/recall/short-turn.</td><td>2</td></tr>
-        <tr><td>N<sub>H</sub></td><td>Số người chưa hoàn thành ở cuối ca; chỉ tính settlement cuối.</td><td>60</td></tr>
-      </tbody></table></div>
-      <div class="equation"><div class="eq-label">Cost → reward → mục tiêu học</div><div class="math"><span class="row">c<sub>k</sub> = W<sub>k</sub> + 0.25V<sub>k</sub> + 0.5O<sub>k</sub> + 0.5C<sub>k</sub> + 0.5D<sub>k</sub> + X<sub>k</sub> + 5U<sub>k</sub> + 60E<sub>k</sub> + 2M<sub>k</sub></span><span class="row">r<sub>k</sub> = −(c<sub>k</sub> + 𝟙[k = K−1] · 60N<sub>H</sub>) / 3000</span><span class="row">max<sub>θ</sub> J(θ) = 𝔼<sub>πθ</sub>[ ∑<sub>k=0</sub><sup>K−1</sup> γ<sup>k</sup> r<sub>k</sub> ]</span></div><p>𝟙 bằng 1 ở bước cuối, còn lại bằng 0. Với γ = 1 như config hiện tại, tối đa tổng reward tương đương tối thiểu objective vận hành. Chia 3000 đổi thang điểm, không đổi policy tối ưu của objective này.</p></div>
-      <div class="note"><strong>Reward âm vẫn học được.</strong> Nếu hai lựa chọn có tổng reward −20 và −15 thì −15 tốt hơn. Settlement khiến policy phải quan tâm tới người chưa hoàn thành cuối ca; không thể làm đẹp objective bằng cách dừng đồng hồ khi họ vẫn còn chờ.</div>
-      <p>Cuối ca là kết thúc thật của nhiệm vụ: <code>terminated=True</code>, <code>truncated=False</code>, giá trị tương lai bằng 0. Điểm hết một rollout huấn luyện thường chỉ là ranh giới thu thập dữ liệu; nếu episode chưa hết thì vẫn phải ước lượng phần tương lai.</p>
-      <p class="source">Đối chiếu: <a href="../crates/bus-sim-core/src/engine.rs">engine.rs</a>, <a href="../crates/bus-sim-core/src/costs.rs">costs.rs · interval_cost()</a>, <a href="../src/bus_rl/execution/environments/rust/environment.py">NativeBusDispatchEnv</a>, <a href="spec/spec_v1.0.md">spec_v1.0.md · §6</a>.</p>
+      <p>Đơn vị người-phút cộng thời gian chờ của mọi người: 10 người cùng chờ thêm 2 phút tạo 20 người-phút. Tương tự, một xe hoạt động thêm 2 phút tạo 2 xe-phút. Các trọng số quy đổi những đại lượng này thành thang điểm vận hành chung.</p>
+      <div class="equation"><div class="eq-label">Chi phí một khoảng điều khiển</div><div class="math">c<sub>k</sub> = W<sub>k</sub> + 0.25V<sub>k</sub> + 0.5O<sub>k</sub> + 0.5C<sub>k</sub> + 0.5D<sub>k</sub> + X<sub>k</sub> + 5U<sub>k</sub> + 60E<sub>k</sub> + 2M<sub>k</sub></div></div>
+      <p>Ở các bước thông thường, reward là −c<sub>k</sub>/3000. Ở bước cuối, cộng thêm 60N<sub>H</sub> vào cost trước khi đổi dấu. Chia cho 3000 giúp đưa điểm về thang số thuận tiện cho huấn luyện.</p>
+      <div class="equation"><div class="eq-label">Reward cả ca gắn trực tiếp với objective</div><div class="math">∑<sub>k=0</sub><sup>K−1</sup> r<sub>k</sub> = −<span class="fraction"><span>∑<sub>k=0</sub><sup>K−1</sup> c<sub>k</sub> + 60N<sub>H</sub></span><span>3000</span></span></div></div>
+      <p>Như vậy, policy nào nhận tổng reward lớn hơn sẽ có tổng cost thấp hơn trên cùng cách đánh giá. Tổng reward −15 tốt hơn −20. Tính cả khách chưa hoàn thành vào cuối ca giúp controller quan tâm đến những hậu quả còn tồn tại khi thời gian vận hành kết thúc.</p>
     </section>
 
     <section id="pomdp">
-      <div class="number">03 / Partial observability</div><h2>Vì sao là POMDP, và policy xử lý ra sao?</h2>
-      <p>MDP giả định state cung cấp đủ thông tin để phân phối trạng thái kế tiếp chỉ còn phụ thuộc state hiện tại và action. Trong repo, simulator giữ thông tin chi tiết hơn nhiều so với controller. Vì vậy <strong>không được đồng nhất observation với Markov state đầy đủ</strong>.</p>
-      <div class="grid"><div class="card"><h3>Controller thấy</h3><p>Số khách chờ; tuổi chờ trung bình/tối đa và số chờ lâu; arrivals gần đây; phase, vị trí, tải và timer của xe; tuyến, headway, cooldown; thời gian đã qua/còn lại.</p></div><div class="card"><h3>Controller không thấy</h3><p>Đích đến chi tiết của các cohort, tham số demand tiềm ẩn và demand/traffic tương lai. Seed và future tape không được đưa vào đầu vào policy.</p></div></div>
-      <p>Ví dụ: hai observation đều có 30 khách chờ ở cùng trạm. Ở thế giới thứ nhất phần lớn muốn đi trong đoạn short-turn; ở thế giới thứ hai phần lớn muốn đi xa hơn turnpoint. Aggregate queue có thể giống nhau nhưng hiệu quả short-turn khác nhau. Một ảnh chụp observation chưa cho biết đầy đủ tình huống.</p>
-      <div class="equation"><div class="eq-label">Mô hình POMDP khái niệm</div><div class="math">𝒫 = (𝒮, 𝒜, T, Ω, O, R, γ; K)</div><p>𝒮: full state; 𝒜: action; T(s′|s,a): dynamics; Ω: không gian observation; O(o|s): cơ chế quan sát; R: reward; K: horizon. Ở đây observation được tổng hợp xác định từ state/lịch sử cảm biến; ngẫu nhiên vẫn đến từ các ngày mô phỏng và thông tin bị ẩn.</p></div>
-      <h3>Belief state đầy đủ là gì?</h3>
-      <p>Nếu lưu toàn bộ lịch sử <span class="nowrap">H<sub>k</sub> = (o<sub>0</sub>, a<sub>0</sub>, r<sub>0</sub>, …, o<sub>k</sub>)</span>, belief đầy đủ là phân phối xác suất trên state hiện tại khi đã biết lịch sử đó: <strong>b<sub>k</sub>(s) = P(s<sub>k</sub> = s | H<sub>k</sub>)</strong>. Khi thêm thông tin phụ như mask, nó cũng thuộc lịch sử thông tin của controller. Với mô hình chính xác, có thể cập nhật belief bằng Bayes và điều khiển trên belief.</p>
-      <p>Repo không xây belief đầy đủ cho tất cả passenger records, xe và trạng thái ngoại sinh. Nó học policy xấp xỉ từ observation cộng thông tin quá khứ hữu hạn.</p>
-      <h3>Ba cách encode thông tin đang có trong source</h3>
-      <div class="table-wrap"><table><thead><tr><th>Encoder</th><th>Cách xử lý</th><th>Phạm vi ý nghĩa</th></tr></thead><tbody>
-        <tr><td><code>mlp</code></td><td>Flatten các tensor observation, trong đó đã có 5 arrival bins gần nhất, rồi đưa qua MLP [256,128].</td><td>History đã có trong đầu vào; không phải policy chỉ nhìn ảnh chụp không có lịch sử.</td></tr>
-        <tr><td><code>gru</code></td><td>Đọc arrivals từ cũ → mới bằng GRU hidden size 32; nối đặc trưng này với raw observation rồi qua MLP.</td><td>Mặc định hiện tại là cửa sổ 10 phút. GRU reset hidden về 0 mỗi forward, không mang hidden state từ quyết định này sang quyết định tiếp theo.</td></tr>
-        <tr><td><code>belief</code></td><td>Thêm mean và standard deviation của ước lượng rate Gamma–Poisson theo stop/direction từ arrival bins quan sát được.</td><td>Belief cục bộ về demand rate theo giả định đơn giản, không phải posterior trên toàn state.</td></tr>
-        <tr><td><code>belief_gru</code></td><td>Kết hợp cả đặc trưng rate và GRU.</td><td>Vẫn giữ cùng PPO, mask và contract môi trường.</td></tr>
-      </tbody></table></div>
-      <p>Native history có 5 bin × 2 phút = 10 phút. Config có thể yêu cầu cửa sổ dài hơn; Python thêm <code>arrival_memory</code> theo từng slot môi trường. GRU chỉ đọc chuỗi arrivals, không đọc toàn bộ chuỗi observation/action/reward của cả episode.</p>
-      <div class="equation"><div class="eq-label">Belief rate tùy chọn — đơn vị rate: khách / bin 2 phút</div><div class="math"><span class="row">λ ∼ Gamma(α<sub>0</sub>, β<sub>0</sub>), &nbsp; n<sub>i</sub> | λ ∼ Poisson(λ)</span><span class="row">α = α<sub>0</sub> + ∑<sub>i</sub> w<sub>i</sub>n<sub>i</sub>, &nbsp; β = β<sub>0</sub> + ∑<sub>i</sub> w<sub>i</sub></span><span class="row">mean = α/β, &nbsp; std = √α/β</span></div><p>β dùng tham số hóa rate. Chỉ tính bin đã thực sự trôi qua; padding đầu ca không phải bằng chứng “0 khách”. Khi w<sub>i</sub> = 1 và giả định rate hằng đúng, đây là cập nhật Gamma–Poisson. Với decay &lt; 1, bin cũ có trọng số nhỏ hơn; đó là xấp xỉ power-likelihood. Demand thật thay đổi theo thời gian nên không coi đây là posterior chính xác của simulator.</p></div>
-      <div class="note"><strong>Cách mô tả chính xác:</strong> MaskablePPO học policy trên đặc trưng observation/lịch sử hữu hạn để điều khiển một POMDP. Lịch sử hữu hạn và GRU không đảm bảo khôi phục tính Markov. Có thể nhìn bài toán theo góc độ mixed observability, nhưng repo không triển khai bộ giải MOMDP đầy đủ.</div>
-      <p class="small">GRU ở đây là <em>encoder của một cửa sổ dữ liệu đầu vào</em>. Điều này tương thích với minibatch PPO được shuffle vì đầu ra chỉ phụ thuộc mẫu hiện tại. Nó khác RecurrentPPO có hidden state đi xuyên qua các bước và phải xử lý chuỗi rollout.</p>
-      <p class="source">Đối chiếu: <a href="../crates/bus-sim-core/src/observation.rs">observation.rs</a>, <a href="../src/bus_rl/learning/policy.py">policy.py · arrival_rate_belief(), BeliefGRUExtractor</a>, <a href="../src/bus_rl/execution/environments/arrival_memory.py">arrival_memory.py</a>, <a href="../src/bus_rl/config.py">config.py · arrival_memory_bins</a>, <a href="../tests/unit/bus_rl/learning/test_policy.py">test_policy.py</a>. Spec cũ mô tả MLP core; source hiện tại có các encoder trên.</p>
+      <h2>03. POMDP: ra quyết định từ quan sát một phần</h2>
+      <p>Một bài toán có tính Markov khi state hiện tại đã chứa đủ thông tin để mô tả phân phối bước tiếp theo sau một action. Ví dụ, để biết một xe có thể đón ai ở trạm tiếp theo, simulator cần vị trí và tải xe, thời gian di chuyển còn lại, hàng chờ và đích đến của khách. Giữ đủ những thông tin đó trong state cho phép simulator tiếp tục từ hiện tại.</p>
+      <p>Controller chỉ nhận observation tổng hợp. Nó thấy số khách chờ, tuổi chờ, trạng thái hoạt động/vị trí/tải xe, headway, cooldown và arrivals gần đây. Đích đến chi tiết của khách, tham số nhu cầu tiềm ẩn và các sự kiện tương lai được giữ bên trong môi trường.</p>
+      <h3>Cùng một observation có thể tương ứng nhiều tình huống khác nhau</h3>
+      <p>Giả sử một trạm có 30 khách chờ. Trong tình huống thứ nhất, phần lớn muốn xuống trong đoạn chạy short-turn. Trong tình huống thứ hai, phần lớn muốn đi xa hơn điểm quay đầu. Controller có thể thấy cùng số người, cùng tuổi chờ và cùng trạng thái xe, nhưng một chuyến short-turn phục vụ được nhiều người hơn ở tình huống thứ nhất.</p>
+      <p>Do đó, observation chưa xác định đầy đủ hệ quả của action. Mô hình này được gọi là <strong>POMDP — Partially Observable Markov Decision Process</strong>, tức quá trình ra quyết định Markov chỉ quan sát được một phần. Trạng thái đầy đủ vẫn tồn tại trong môi trường; khó khăn của controller là lựa chọn khi chưa biết toàn bộ trạng thái đó.</p>
+      <h3>Lịch sử giúp bổ sung điều gì?</h3>
+      <p>Ảnh chụp hiện tại cho biết một trạm đang có 30 người, nhưng chưa cho biết áp lực có đang tăng hay giảm. Lịch sử khách đến trong 5 khoảng gần nhất có thể là 2, 4, 8, 12, 15 người: nhu cầu đang tăng. Một trạm khác cũng có 30 người chờ nhưng lịch sử 15, 12, 8, 4, 2 gợi ý tình hình đang dịu xuống. Những quan sát trước đó giúp phân biệt hai trường hợp.</p>
+      <p>Repo vì vậy đưa vào observation 5 bin arrivals, mỗi bin dài 2 phút, tạo một cửa sổ 10 phút. Policy dùng tình hình hiện tại cùng cửa sổ này để học cách phản ứng. Phần chưa quan sát vẫn có thể tạo bất định, nhưng controller có thêm thông tin để ước lượng nhu cầu thay vì chỉ dựa vào queue hiện tại.</p>
+      <p>Từ đây ký hiệu <strong>x<sub>k</sub></strong> là đầu vào mà policy dùng để quyết định: observation hiện tại với các đặc trưng lịch sử đã cung cấp. Chính từ đầu vào này, ta sẽ xây quy tắc chọn action và cách học quy tắc đó.</p>
     </section>
 
     <section id="common">
-      <div class="number">04 / Phần chung</div><h2>Các thuật toán cùng học điều gì?</h2>
-      <p>Từ đây dùng <strong>x<sub>k</sub></strong> cho thông tin/đặc trưng thực sự đưa vào mạng ở bước k. Trong MDP lý tưởng x có thể là state; trong repo x được xây từ observation và cửa sổ arrivals. Ký hiệu này giúp công thức dễ đọc mà không ngầm khẳng định observation là state đầy đủ.</p>
-      <div class="table-wrap"><table><thead><tr><th>Khái niệm</th><th>Diễn giải dễ hiểu</th><th>Ký hiệu</th></tr></thead><tbody>
-        <tr><td>Policy</td><td>Quy tắc gán xác suất cho từng lựa chọn với thông tin hiện tại.</td><td>π<sub>θ</sub>(a|x)</td></tr>
-        <tr><td>Tham số</td><td>Các trọng số của mạng được điều chỉnh khi học.</td><td>θ của actor; φ của critic</td></tr>
-        <tr><td>Reward</td><td>Điểm ngay sau một bước, phản ánh chi phí khoảng vừa chạy.</td><td>r<sub>k</sub></td></tr>
-        <tr><td>Return</td><td>Tổng reward từ bước này về sau, có thể giảm trọng số tương lai.</td><td>G<sub>k</sub></td></tr>
-        <tr><td>Value</td><td>Điểm tương lai kỳ vọng khi tiếp tục policy hiện tại.</td><td>V<sup>π</sup>(x)</td></tr>
-        <tr><td>Action value</td><td>Điểm tương lai kỳ vọng nếu chọn a trước rồi tiếp tục policy.</td><td>Q<sup>π</sup>(x,a)</td></tr>
-        <tr><td>Advantage</td><td>Lựa chọn a tốt hơn/kém hơn mức thường kỳ vọng ở x bao nhiêu.</td><td>A<sup>π</sup>(x,a) = Q<sup>π</sup>(x,a) − V<sup>π</sup>(x)</td></tr>
-        <tr><td>Rollout</td><td>Một lô tương tác thu được khi chạy policy: đầu vào, action, reward, tín hiệu kết thúc…</td><td>𝒟</td></tr>
-      </tbody></table></div>
-      <div class="equation"><div class="eq-label">Return và value</div><div class="math"><span class="row">G<sub>k</sub> = r<sub>k</sub> + γr<sub>k+1</sub> + γ²r<sub>k+2</sub> + …</span><span class="row">V<sup>π</sup>(x) = 𝔼<sub>π</sub>[G<sub>k</sub> | x<sub>k</sub> = x]</span></div><p>γ ∈ [0,1] là discount factor. γ = 1 coi các thời điểm ngang nhau trong ca hữu hạn; γ nhỏ hơn ưu tiên gần. Với x không đầy đủ trong POMDP, critic là xấp xỉ dựa trên thông tin bị nén; Bellman/bootstrapping có thể chịu sai số do mất lịch sử.</p></div>
-      <h3>Ví dụ reward âm và advantage dương</h3>
-      <p>Critic dự đoán từ tình huống này còn nhận tổng reward −20. Sau một hành động, return ước lượng là −16. Advantage bằng <strong>−16 − (−20) = +4</strong>: tốt hơn dự kiến, nên tăng xác suất lựa chọn ấy trong các tình huống tương tự. Nếu return là −24 thì advantage bằng −4, nên giảm xác suất.</p>
-      <h3>Học policy khác với sử dụng policy</h3>
-      <div class="grid"><div class="card"><h3>Training</h3><p>Lấy mẫu hành động để khám phá → chạy simulator → thu rollout → cập nhật trọng số → lặp lại qua nhiều scenario.</p></div><div class="card"><h3>Inference / evaluation</h3><p>Đọc observation và mask → mạng forward → chọn hành động. Runner hiện tại dùng <code>deterministic=True</code>; không cập nhật trọng số khi đánh giá.</p></div></div>
-      <h3>Ba trục phân loại cần dùng xuyên suốt</h3>
-      <ul><li><strong>Model-free:</strong> policy học từ tương tác; không dùng dynamics model để tìm kiếm nhiều tương lai trước mỗi quyết định. Có simulator để sinh trải nghiệm không tự biến thuật toán thành model-based.</li><li><strong>On-policy:</strong> các phương pháp trong mạch này học từ dữ liệu do policy hiện tại hoặc policy vừa dùng tạo ra. PPO tái dùng một rollout vài epoch rồi thu rollout mới; không dùng replay buffer lâu dài kiểu off-policy.</li><li><strong>Tối ưu policy trực tiếp:</strong> actor biểu diễn phân phối lựa chọn. Critic hỗ trợ việc học; không đồng nghĩa critic trực tiếp chọn action bằng argmax Q như một value-based controller.</li></ul>
-      <p class="source">Đối chiếu repo: <a href="../src/bus_rl/learning/training/train.py">train.py</a>, <a href="../src/bus_rl/evaluation/runner.py">runner.py · PPOController</a>. Nền tảng policy/value và trọng số cập nhật: <a href="https://spinningup.openai.com/en/latest/spinningup/rl_intro3.html">Spinning Up · Intro to Policy Optimization</a>.</p>
+      <h2>04. Nền tảng chung của học tăng cường</h2>
+      <h3>Policy biểu diễn cách ra quyết định</h3>
+      <p><strong>Policy</strong> là quy tắc chọn hành động từ x. Trong các phương pháp sắp xét, policy trả một phân phối xác suất: chẳng hạn NOOP 20%, dispatch 50% và đổi headway 30%. Khi huấn luyện, lấy mẫu từ phân phối này giúp agent thử nhiều cách vận hành và thu được dữ liệu về hệ quả của từng cách.</p>
+      <p>Policy được viết là <strong>π<sub>θ</sub>(a|x)</strong>: xác suất chọn action a khi có đầu vào x. θ là tập trọng số của mạng nơ-ron. Huấn luyện là quá trình điều chỉnh θ để những lựa chọn tạo kết quả tốt có xác suất cao hơn trong các tình huống tương tự.</p>
+      <h3>Return đo hệ quả từ một bước về sau</h3>
+      <p>Reward r<sub>k</sub> chỉ chấm khoảng 2 phút vừa chạy. Nhưng một quyết định dispatch cần được đánh giá bằng cả lượng chờ giảm đi sau khi xe tới tuyến. Vì thế, thuật toán dùng <strong>return G<sub>k</sub></strong>: tổng reward từ bước k đến hết episode.</p>
+      <div class="equation"><div class="eq-label">Return</div><div class="math">G<sub>k</sub> = r<sub>k</sub> + γr<sub>k+1</sub> + γ²r<sub>k+2</sub> + … + γ<sup>K−1−k</sup>r<sub>K−1</sub></div></div>
+      <p>γ là hệ số giảm trọng số của reward ở xa. Nếu γ = 0,9 thì reward sau một bước nhân 0,9, sau hai bước nhân 0,81. Dự án chọn <strong>γ = 1</strong>, nên mọi reward còn lại trong ca được cộng ngang nhau. Các công thức cập nhật trong bài tiếp tục dùng lựa chọn này.</p>
+      <p>Ví dụ một đoạn cuối ca nhận reward −1, −2, −3. Return của ba bước lần lượt là −6, −5, −3. Action ở bước đầu được chấm bằng −6 vì nó có thể ảnh hưởng cả ba khoảng; action ở bước cuối chỉ còn hệ quả trong khoảng cuối.</p>
+      <h3>Mục tiêu học là tăng tổng reward kỳ vọng</h3>
+      <div class="equation"><div class="eq-label">Mục tiêu của policy</div><div class="math">max<sub>θ</sub> J(θ) = 𝔼<sub>πθ</sub>[ G<sub>0</sub> ]</div></div>
+      <p>Một lần chạy cho một chuỗi reward cụ thể. Chạy nhiều lần qua các ngày mô phỏng khác nhau giúp thuật toán ước lượng policy đang tốt đến đâu. Tập các bước tương tác được gom để học gọi là <strong>rollout</strong>; một rollout có thể chứa nhiều ca hoàn chỉnh hoặc các đoạn của nhiều ca.</p>
+      <p>Ta đã có đầu vào x, policy π, action a và tín hiệu kết quả G. Bước tiếp theo là tìm cách thay trọng số θ từ những trải nghiệm đó.</p>
     </section>
 
     <section id="policy-gradient">
-      <div class="number">05 / Từ RL đến tối ưu policy</div><h2>Policy gradient: học trực tiếp cách chọn hành động</h2>
-      <p>Thay vì viết quy tắc “queue ≥ 40 thì dispatch”, ta để mạng nơ-ron học các xác suất từ dữ liệu. Với action rời rạc, actor trả một điểm số <strong>logit z<sub>a</sub></strong> cho mỗi action; softmax chuyển điểm số thành xác suất.</p>
-      <div class="equation"><div class="eq-label">Logits → xác suất</div><div class="math">π<sub>θ</sub>(a|x) = <span class="fraction"><span>exp(z<sub>a</sub>(x))</span><span>∑<sub>b∈𝒜</sub> exp(z<sub>b</sub>(x))</span></span></div><p>Logit cao hơn tạo xác suất lớn hơn, nhưng xác suất của các action liên hệ với nhau vì tổng bằng 1. Action mask sẽ được thêm ở phần 10; trước đó giả sử các lựa chọn đang xét đều hợp lệ.</p></div>
-      <p><strong>Gradient</strong> cho biết đổi trọng số theo hướng nào để tăng mục tiêu. Với dữ liệu mẫu, ta tăng trọng số theo một ước lượng gradient thay vì tính kỳ vọng trên mọi tương lai.</p>
-      <div class="equation"><div class="eq-label">Khung cập nhật — γ = 1 của bài toán này</div><div class="math"><span class="row">θ ← θ + αĝ</span><span class="row">ĝ = average<sub>episodes</sub>[ ∑<sub>k</sub> ∇<sub>θ</sub> log π<sub>θ</sub>(a<sub>k</sub>|x<sub>k</sub>) · w<sub>k</sub> ]</span></div><p>α là learning rate; ∇log π là hướng làm action đã chọn có khả năng xuất hiện cao hơn; w<sub>k</sub> là tín hiệu chấm chất lượng của lựa chọn. Các phương pháp sau chủ yếu khác nhau ở cách tính w và cách kiểm soát cập nhật. Nếu tối ưu tổng reward có γ &lt; 1 theo chỉ số thời gian từ đầu episode, dạng REINFORCE tương ứng có thêm γ<sup>k</sup> ngoài G<sub>k</sub>; các ví dụ gradient ở đây dùng γ = 1.</p></div>
-      <p>Nếu w dương, tăng xác suất action đã chọn; nếu w âm, giảm. Mạng tổng quát hóa từ nhiều tình huống: không lưu một bảng riêng cho từng ngày và từng queue count.</p>
-      <div class="note"><strong>Vì sao có log?</strong> Xác suất một chuỗi tương tác chứa tích các xác suất chọn action. Lấy log biến tích thành tổng; đạo hàm của log cho phép dùng chính các trajectory lấy mẫu để ước lượng hướng cải thiện. Dynamics không cần khả vi vì gradient được tính qua policy.</div>
-      <p>Trong POMDP, công thức gradient vẫn áp dụng cho policy được tham số hóa theo thông tin/lịch sử nó thực sự dùng. Khó khăn thêm nằm ở chất lượng biểu diễn x và ước lượng value; không có bước nào tự làm phần trạng thái ẩn trở thành quan sát đầy đủ.</p>
-      <p class="bridge">Vậy lấy tín hiệu w từ đâu? REINFORCE bắt đầu bằng cách dùng tổng reward thực sự quan sát được về sau.</p>
-      <p class="source">Nền tảng và phép biến đổi gradient: <a href="https://spinningup.openai.com/en/latest/spinningup/rl_intro3.html">Spinning Up · policy gradient, reward-to-go và baseline</a>. Đối chiếu mạng actor của repo: <a href="../src/bus_rl/learning/policy.py">policy.py</a>.</p>
+      <h2>05. Policy gradient</h2>
+      <h3>Từ đầu vào đến xác suất</h3>
+      <p>Mạng policy nhận x và trả một điểm số cho mỗi action. Điểm số này gọi là <strong>logit</strong>, ký hiệu z<sub>a</sub>(x). Hàm softmax biến các logits thành xác suất dương có tổng bằng 1:</p>
+      <div class="equation"><div class="eq-label">Softmax</div><div class="math">π<sub>θ</sub>(a|x) = <span class="fraction"><span>exp(z<sub>a</sub>(x))</span><span>∑<sub>b∈𝒜</sub> exp(z<sub>b</sub>(x))</span></span></div></div>
+      <p>𝒜 là tập action đang xét. exp là hàm mũ: logit càng cao thì giá trị exp càng lớn, nên action đó nhận phần xác suất lớn hơn. Mẫu số cộng các giá trị exp của mọi action để chuẩn hóa tổng xác suất.</p>
+      <h3>Gradient cho biết phải thay trọng số theo hướng nào</h3>
+      <p><strong>Gradient</strong> là đạo hàm theo các trọng số của mạng. Nó cho biết thay từng trọng số theo hướng nào để một đại lượng tăng. Policy gradient dùng gradient để tăng mục tiêu J: policy nhận nhiều reward hơn trung bình qua các lần tương tác.</p>
+      <div class="equation"><div class="eq-label">Một bước cập nhật trọng số</div><div class="math">θ ← θ + αĝ</div></div>
+      <p>ĝ là hướng cải thiện ước lượng từ dữ liệu; α là learning rate, quy định đi bao xa theo hướng đó. Để tạo ĝ, mỗi action đã chọn đóng góp một hướng thay đổi xác suất và một trọng số chấm chất lượng:</p>
+      <div class="equation"><div class="eq-label">Đóng góp của một bước tương tác</div><div class="math">∇<sub>θ</sub> log π<sub>θ</sub>(a<sub>k</sub>|x<sub>k</sub>) · w<sub>k</sub></div></div>
+      <p>∇<sub>θ</sub> log π là hướng làm tăng log-xác-suất của action đã chọn. Hàm log tăng khi xác suất tăng, nên đi theo hướng này khuyến khích action đó. w<sub>k</sub> quyết định mức và dấu khuyến khích: dương thì đi theo hướng tăng xác suất; âm thì đi ngược lại để giảm xác suất.</p>
+      <p>Log xuất hiện vì xác suất chọn cả chuỗi action là tích của các xác suất từng bước. Lấy log biến tích thành tổng. Khi tính đạo hàm, thuật toán có thể cộng các đóng góp ∇log π của những action đã thực sự lấy mẫu, rồi cân chúng bằng kết quả đạt được. Nhờ đó, ta học từ các chuỗi tương tác quan sát được thay vì phải liệt kê mọi chuỗi có thể xảy ra.</p>
+      <p>Các đóng góp được cộng trong mỗi episode và lấy trung bình qua dữ liệu để tạo ĝ. Điều còn thiếu là cách tính w: ta cần chấm action dựa trên kết quả về sau. REINFORCE bắt đầu bằng cách dùng chính return đã quan sát được.</p>
     </section>
 
     <section id="reinforce">
-      <div class="number">06 / Monte Carlo policy gradient</div><h2>REINFORCE: nhìn kết quả cả hành trình rồi học</h2>
-      <p><strong>Ý tưởng:</strong> chạy hết episode, tính return thực tế từ từng bước và dùng nó làm w. Đây là phương pháp Monte Carlo: chấm kết quả bằng các reward đã xảy ra, không nối thêm dự đoán của critic vào cuối return.</p>
-      <div class="equation"><div class="eq-label">REINFORCE với reward-to-go — γ = 1</div><div class="math"><span class="row">G<sub>k</sub> = ∑<sub>j=k</sub><sup>K−1</sup> r<sub>j</sub></span><span class="row">θ ← θ + α · average<sub>episodes</sub>[ ∑<sub>k</sub> ∇<sub>θ</sub> log π<sub>θ</sub>(a<sub>k</sub>|x<sub>k</sub>) · G<sub>k</sub> ]</span></div><p>Chỉ dùng reward từ k trở đi vì hành động hiện tại không thể thay đổi chi phí đã xảy ra trước đó. Trong gradient của actor, coi G<sub>k</sub> là nhãn chấm điểm cố định.</p></div>
-      <ol><li>Thu một hoặc nhiều episode bằng policy hiện tại.</li><li>Duyệt ngược reward để tính G ở mỗi bước.</li><li>Tính gradient và cập nhật actor; sau đó thu dữ liệu mới.</li></ol>
-      <h3>Hạn chế: một ngày may/rủi có thể làm tín hiệu rất nhiễu</h3>
-      <p>Policy điều phối tốt nhưng gặp traffic xấu có thể có return kém hơn policy điều phối bình thường ở ngày nhẹ tải. Return chứa cả chất lượng action và biến động ngoài kiểm soát. Đây là vấn đề <strong>variance cao</strong>: các lô dữ liệu có thể chỉ hướng cập nhật rất khác nhau.</p>
-      <p>Trong ca dài 120 quyết định, phải chờ cuối ca mới biết return đầy đủ. Dù Monte Carlo không đưa bias do bootstrap critic vào return, nó có thể cần nhiều episode để ước lượng gradient ổn định; điều đó không phải bảo đảm hội tụ hay tối ưu toàn cục.</p>
-      <h3>Thêm baseline để so với mức kỳ vọng</h3>
-      <div class="equation"><div class="eq-label">REINFORCE với baseline</div><div class="math">w<sub>k</sub> = G<sub>k</sub> − b(x<sub>k</sub>)</div><p>Baseline không phụ thuộc action đang lấy mẫu khi đã cố định đầu vào policy; với masked policy có thể điều kiện thêm mask. Trừ baseline thích hợp không đổi kỳ vọng policy gradient trong thiết lập chuẩn, nhưng có thể giảm variance. Có thể học b bằng một mạng dự đoán return.</p></div>
-      <p><strong>Điểm phân biệt:</strong> có một mạng baseline chưa tự làm phương pháp thành Actor–Critic theo nghĩa bootstrapping. Nếu actor vẫn được chấm bằng return Monte Carlo đầy đủ trừ baseline, đây vẫn là REINFORCE có baseline. Bước chuyển tiếp là dùng critic để dự đoán phần reward còn chưa xảy ra.</p>
-      <p class="bridge">Muốn cập nhật trước cuối ca và bớt phụ thuộc return dài, ta thêm critic có khả năng bootstrap.</p>
-      <p class="source">Phần này là nền tảng lý thuyết, không phải trainer có sẵn trong repo. Tham khảo <a href="https://spinningup.openai.com/en/latest/spinningup/rl_intro3.html">Spinning Up · reward-to-go, baselines</a>.</p>
+      <h2>06. REINFORCE</h2>
+      <p>REINFORCE thực hiện đúng ý tưởng vừa xây dựng: chạy policy hết một episode, tính return G<sub>k</sub> của từng bước và dùng G<sub>k</sub> làm trọng số w<sub>k</sub>. Vì dùng reward thực sự đã xảy ra đến cuối ca, cách ước lượng này được gọi là <strong>Monte Carlo</strong>.</p>
+      <div class="equation"><div class="eq-label">Cập nhật REINFORCE</div><div class="math">θ ← θ + α · average<sub>episodes</sub>[ ∑<sub>k=0</sub><sup>K−1</sup> ∇<sub>θ</sub> log π<sub>θ</sub>(a<sub>k</sub>|x<sub>k</sub>) · G<sub>k</sub> ]</div></div>
+      <p>Công thức cộng đóng góp của mọi quyết định trong ca. Action chỉ được chấm bằng reward từ thời điểm nó xảy ra về sau, vì nó không thể thay đổi những chi phí đã phát sinh trước đó. Qua nhiều episode, những lựa chọn gắn với kết quả tốt hơn được ưu tiên dần.</p>
+      <h3>Tại sao return có thể làm việc học nhiễu?</h3>
+      <p>Một chuyến dispatch có thể hợp lý nhưng gặp giao thông xấu. Ở ngày khác, cùng quyết định đó gặp đường thoáng và tạo return tốt hơn. Return vì vậy chứa cả tác dụng của quyết định lẫn biến động của ngày vận hành.</p>
+      <p>Nếu chỉ dựa vào một vài ca, các kết quả này có thể dẫn đến những hướng cập nhật rất khác nhau. Ta gọi sự dao động của ước lượng đó là <strong>variance</strong>. REINFORCE thường cần nhiều episode để tín hiệu trung bình trở nên ổn định; đồng thời phải đợi hết ca để tính đủ return.</p>
+      <h3>Dùng baseline để đánh giá tốt hơn hay kém hơn kỳ vọng</h3>
+      <p>Giả sử ở một tình huống đông khách, tổng reward còn lại thường khoảng −20. Một lần điều phối đạt −16 là tốt hơn mức thường gặp, dù reward vẫn âm. Nếu so với một mức tham chiếu −20, ta thu được tín hiệu +4 rõ ràng hơn cho việc khuyến khích action.</p>
+      <p>Mức tham chiếu đó gọi là <strong>baseline b(x)</strong>. Nó dự đoán return thường nhận được với đầu vào x và được trừ khỏi return thực tế:</p>
+      <div class="equation"><div class="eq-label">Tín hiệu so với baseline</div><div class="math">w<sub>k</sub> = G<sub>k</sub> − b(x<sub>k</sub>)</div></div>
+      <p>Với b = −20, return −16 tạo w = +4; return −24 tạo w = −4. Dấu của w giờ cho biết lựa chọn vừa thực hiện tốt hơn hay kém hơn mức dự kiến. Baseline có thể được học từ dữ liệu bằng một mạng dự đoán return.</p>
+      <p>Ở cùng một đầu vào, baseline là một số chung cho mọi action. Vì vậy, nó không tự ưu ái action nào trước khi action được lấy mẫu. Trong ước lượng policy gradient, phần gradient nhân với số chung này có kỳ vọng bằng 0; trừ baseline giữ hướng gradient kỳ vọng, đồng thời một baseline phù hợp có thể giảm dao động giữa các mẫu.</p>
+      <p>Return dùng để chấm vẫn phải chờ tới cuối ca. Muốn học ngay sau một đoạn ngắn, ta cần dự đoán phần tương lai chưa quan sát. Đây là vai trò tiếp theo của critic.</p>
     </section>
 
     <section id="actor-critic">
-      <div class="number">07 / Policy + value</div><h2>Actor–Critic: một bên quyết định, một bên ước lượng</h2>
-      <div class="grid"><div class="card"><h3>Actor · π<sub>θ</sub></h3><p>“Với thông tin này, nên chọn action nào?”</p><p>Trả phân phối xác suất hành động và được cập nhật để ưu tiên lựa chọn tốt hơn kỳ vọng.</p></div><div class="card"><h3>Critic · V<sub>φ</sub></h3><p>“Nếu tiếp tục policy hiện tại, tổng điểm còn lại khoảng bao nhiêu?”</p><p>Trả một số vô hướng; học bằng cách so dự đoán với target từ reward và giá trị bước sau.</p></div></div>
-      <h3>Bootstrapping: dùng một bước thật và phần tương lai dự đoán</h3>
-      <div class="equation"><div class="eq-label">TD error một bước</div><div class="math"><span class="row">y<sub>k</sub> = r<sub>k</sub> + γ(1−d<sub>k</sub>) V<sub>φ</sub>(x<sub>k+1</sub>)</span><span class="row">δ<sub>k</sub> = y<sub>k</sub> − V<sub>φ</sub>(x<sub>k</sub>)</span></div><p>d<sub>k</sub> = 1 khi bước đó kết thúc nhiệm vụ thật; d = 0 nếu còn tương lai. δ là Temporal Difference error: target mới tốt hơn/kém hơn dự đoán cũ bao nhiêu. Ở terminal y = r; ở ranh giới rollout chưa terminal, vẫn giữ giá trị bước sau.</p></div>
-      <p>Trong MDP với value đúng, δ một bước là ước lượng advantage theo kỳ vọng. Với critic học xấp xỉ, đặc biệt khi x là thông tin nén của POMDP, nó có thể có bias. Đổi lại, không cần chờ hết episode và thường giảm variance so với return toàn ca.</p>
-      <div class="equation"><div class="eq-label">Hai việc học khác nhau</div><div class="math"><span class="row">Actor: θ ← θ + α · ∇<sub>θ</sub> log π<sub>θ</sub>(a<sub>k</sub>|x<sub>k</sub>) · stopgrad(δ<sub>k</sub>)</span><span class="row">Critic: min<sub>φ</sub> 𝔼[(V<sub>φ</sub>(x<sub>k</sub>) − stopgrad(y<sub>k</sub>))²]</span></div><p>stopgrad nghĩa là coi target/advantage là số cố định khi lấy gradient của loss tương ứng. Nếu chia sẻ encoder, cả actor loss và critic loss vẫn có thể cập nhật các tham số encoder chung.</p></div>
-      <h3>Ví dụ số</h3>
-      <p>V(x<sub>k</sub>) = −20, reward vừa nhận r = −1, V(x<sub>k+1</sub>) = −17 và γ = 1. Khi chưa terminal: target y = −18, δ = +2. Hệ quả vừa thấy tốt hơn mức −20 dự đoán ban đầu: actor được khuyến khích, critic được kéo về −18.</p>
-      <div class="note warm"><strong>Critic không phải oracle.</strong> Nó học từ dữ liệu cùng lúc với actor. Nếu critic sai, advantage và hướng cập nhật có thể sai. Actor–Critic trao đổi variance thấp hơn lấy nguy cơ bias của bộ ước lượng; không loại bỏ nhu cầu khám phá và đánh giá.</div>
-      <p class="bridge">A2C tổ chức cách học Actor–Critic này bằng advantage và các rollout ngắn, thường thu từ nhiều môi trường đồng bộ.</p>
+      <h2>07. Actor–Critic</h2>
+      <p>Actor–Critic gồm hai bộ phận học cùng nhau. <strong>Actor π<sub>θ</sub></strong> trả xác suất chọn action. <strong>Critic V<sub>φ</sub></strong> dự đoán tổng reward còn lại nếu tiếp tục policy đang dùng; φ là trọng số của critic. Dự đoán này gọi là value.</p>
+      <p>Critic được xây từ đầu vào x giống như actor: tình hình hàng chờ, đội xe và lịch sử arrivals. Qua các trải nghiệm, nó học những tình huống nào thường dẫn đến chi phí cao hoặc thấp. Chẳng hạn, hàng chờ lớn trong khi xe đang ở xa thường tương ứng với return thấp hơn.</p>
+      <h3>Dự đoán tương lai bằng một bước thật rồi nối value</h3>
+      <p>Ở bước k, ta chưa biết đầy đủ G<sub>k</sub>, nhưng sau khi action thực hiện đã biết reward r<sub>k</sub> và đầu vào mới x<sub>k+1</sub>. Critic có thể dự đoán phần reward từ tình huống mới về sau. Cộng reward vừa thấy với dự đoán đó tạo target y<sub>k</sub>:</p>
+      <div class="equation"><div class="eq-label">Target một bước, với γ = 1</div><div class="math">y<sub>k</sub> = r<sub>k</sub> + (1−d<sub>k</sub>)V<sub>φ</sub>(x<sub>k+1</sub>)</div></div>
+      <p>d<sub>k</sub> bằng 1 nếu khoảng vừa chạy đã kết thúc ca, bằng 0 nếu ca còn tiếp tục. Hệ số 1−d làm value tương lai bằng 0 ở cuối ca. Khi chưa kết thúc, target gồm một reward thật và phần tương lai do critic ước lượng.</p>
+      <p>Cách dùng chính dự đoán value để xây target được gọi là <strong>bootstrapping</strong>. Nó cho phép cập nhật mà chưa phải chờ toàn bộ reward xuất hiện.</p>
+      <h3>TD error cho biết kết quả mới lệch dự đoán bao nhiêu</h3>
+      <div class="equation"><div class="eq-label">Temporal Difference error</div><div class="math">δ<sub>k</sub> = y<sub>k</sub> − V<sub>φ</sub>(x<sub>k</sub>)</div></div>
+      <p>V<sub>φ</sub>(x<sub>k</sub>) là dự đoán trước khi hành động. y<sub>k</sub> là đánh giá mới sau khi đã thấy một bước thật. Hiệu δ<sub>k</sub>, gọi là TD error, biểu thị kết quả tốt hơn hoặc kém hơn dự đoán cũ.</p>
+      <p>Ví dụ, critic ban đầu dự đoán −20. Sau action nhận reward −1, tình huống mới có value −17. Target là −1 + (−17) = −18, nên δ = −18 − (−20) = <strong>+2</strong>. Kết quả vừa thấy tốt hơn dự đoán. Actor dùng tín hiệu +2 để khuyến khích lựa chọn đó; critic điều chỉnh dự đoán ban đầu về gần −18.</p>
+      <h3>Hai bộ phận được cập nhật bằng hai mục tiêu</h3>
+      <div class="equation"><div class="eq-label">Actor dùng TD error làm trọng số</div><div class="math">θ ← θ + α · ∇<sub>θ</sub> log π<sub>θ</sub>(a<sub>k</sub>|x<sub>k</sub>) · δ<sub>k</sub></div></div>
+      <p>Actor giữ cơ chế policy gradient: tăng hoặc giảm xác suất theo dấu của tín hiệu chấm điểm. Critic học bằng cách giảm bình phương sai số giữa dự đoán và target. Hàm đo sai số cần giảm này được gọi là <strong>loss</strong>:</p>
+      <div class="equation"><div class="eq-label">Loss của critic</div><div class="math">L<sub>value</sub> = average[ (V<sub>φ</sub>(x<sub>k</sub>) − y<sub>k</sub>)² ]</div></div>
+      <p>Trong một lần cập nhật, target y và tín hiệu δ dùng để chấm actor được giữ cố định. Ta điều chỉnh actor để chọn tốt hơn và điều chỉnh critic để dự đoán đúng target hơn. Sau đó tiếp tục tương tác, tạo những target mới.</p>
+      <p>So với REINFORCE, phần tương lai giờ được dự đoán nên có thể học sớm hơn và giảm phụ thuộc vào return dài của cả ca. Đổi lại, dự đoán sai của critic có thể làm tín hiệu cập nhật sai lệch; sai lệch có hệ thống này gọi là <strong>bias</strong>. Chọn bao nhiêu reward thật trước khi nối value là cách cân bằng sự dao động của dữ liệu với mức phụ thuộc vào critic.</p>
+      <p>A2C tiếp tục ý tưởng này bằng cách dùng advantage và gom các đoạn tương tác để cập nhật chung.</p>
     </section>
 
     <section id="a2c">
-      <div class="number">08 / Advantage Actor–Critic</div><h2>A2C: gom trải nghiệm, dùng advantage, cập nhật đồng bộ</h2>
-      <p><strong>A2C</strong> là Advantage Actor–Critic, thường dùng để chỉ phiên bản đồng bộ của A3C. Nhiều môi trường cùng chạy policy hiện tại; sau một đoạn tương tác, dữ liệu được gom lại để cập nhật chung. “Đồng bộ” mô tả cách gom/cập nhật, không có nghĩa policy phải chọn action xác định.</p>
-      <h3>Từ TD một bước sang return nhiều bước</h3>
-      <p>Thay vì chỉ dùng một reward rồi bootstrap, có thể cộng n reward thật và bootstrap ở cuối đoạn. Nếu gặp terminal trước n bước, dừng return tại terminal và bỏ phần value phía sau.</p>
-      <div class="equation"><div class="eq-label">n-step target, khi n bước chưa vượt terminal</div><div class="math"><span class="row">Ĝ<sub>k</sub><sup>(n)</sup> = r<sub>k</sub> + γr<sub>k+1</sub> + … + γ<sup>n−1</sup>r<sub>k+n−1</sub> + γ<sup>n</sup>V<sub>φ</sub>(x<sub>k+n</sub>)</span><span class="row">Â<sub>k</sub> = Ĝ<sub>k</sub><sup>(n)</sup> − V<sub>φ</sub>(x<sub>k</sub>)</span></div><p>n nhỏ phụ thuộc critic nhiều hơn; n dài dùng nhiều reward thật hơn nhưng return dễ nhiễu hơn. Các triển khai có thể dùng GAE để phối hợp các độ dài, không chỉ một n cố định.</p></div>
-      <h3>Loss chung của Actor–Critic</h3>
-      <div class="equation"><div class="eq-label">Dạng cơ bản — minimize loss</div><div class="math"><span class="row">L<sub>actor</sub> = −𝔼[log π<sub>θ</sub>(a<sub>k</sub>|x<sub>k</sub>) · stopgrad(Â<sub>k</sub>)]</span><span class="row">L<sub>value</sub> = 𝔼[(V<sub>φ</sub>(x<sub>k</sub>) − stopgrad(Ĝ<sub>k</sub>))²]</span><span class="row">L = L<sub>actor</sub> + c<sub>V</sub>L<sub>value</sub> − c<sub>H</sub>𝓗(π<sub>θ</sub>)</span></div><p>𝓗(π) = −∑<sub>a</sub>π(a)log π(a) là entropy. Hệ số c<sub>H</sub> khuyến khích phân phối chưa quá tập trung, giúp khám phá. Dấu âm phía actor đổi mục tiêu tăng reward thành loss để minimizer xử lý.</p></div>
-      <p>Vòng A2C chuẩn: <strong>thu rollout ngắn → tính return/advantage → một lượt cập nhật trên rollout → thu rollout mới</strong>. Các worker dùng cùng policy khi thu lô đó. Một rollout không nhất thiết là một episode hoàn chỉnh.</p>
-      <h3>Hạn chế dẫn đến PPO</h3>
-      <p>Vanilla actor loss không có cơ chế tỷ lệ xác suất và clipping như PPO. Nếu gradient hoặc learning rate làm policy đổi quá mạnh, dữ liệu vừa thu nhanh chóng không còn đại diện tốt cho policy mới. Tái dùng cùng rollout nhiều lần theo loss vanilla có thể làm vấn đề này rõ hơn.</p>
-      <p class="bridge">PPO vẫn giữ actor, critic và advantage, nhưng đổi objective của actor để tái dùng rollout thận trọng hơn.</p>
-      <p class="source">Định nghĩa và tính đồng bộ: <a href="https://stable-baselines3.readthedocs.io/en/master/modules/a2c.html">Stable-Baselines3 · A2C</a>. A2C ở đây phục vụ giải thích; repo đang tạo MaskablePPO.</p>
+      <h2>08. A2C — Advantage Actor–Critic</h2>
+      <p><strong>Advantage</strong> đo một lựa chọn tốt hơn hay kém hơn mức kỳ vọng tại tình huống đang xét. Với return ước lượng Ĝ<sub>k</sub> và value V(x<sub>k</sub>), ta tính:</p>
+      <div class="equation"><div class="eq-label">Advantage ước lượng</div><div class="math">Â<sub>k</sub> = Ĝ<sub>k</sub> − V<sub>φ</sub>(x<sub>k</sub>)</div></div>
+      <p>Dấu mũ cho biết đại lượng được ước lượng từ dữ liệu và critic. Ví dụ dự đoán −20 nhưng return ước lượng −16 tạo advantage +4. TD error một bước ở phần trước chính là cách tạo tín hiệu kiểu này khi chỉ dùng một reward thật trước khi bootstrap.</p>
+      <h3>Tính return từ nhiều bước thật</h3>
+      <p>Thay vì chỉ nhìn một bước, ta có thể chạy n bước, cộng reward trong đoạn rồi nối value tại cuối đoạn. Gọi d bằng 1 nếu điểm cuối đoạn cũng là cuối ca, bằng 0 nếu ca còn tiếp tục:</p>
+      <div class="equation"><div class="eq-label">n-step return, với γ = 1</div><div class="math">Ĝ<sub>k</sub> = r<sub>k</sub> + r<sub>k+1</sub> + … + r<sub>k+n−1</sub> + (1−d)V<sub>φ</sub>(x<sub>k+n</sub>)</div></div>
+      <p>Chẳng hạn, hai reward thật là −1 và −2, value ở cuối đoạn là −13. Return ước lượng của bước đầu bằng −1 −2 −13 = −16. Nếu value ban đầu là −20, advantage bằng +4. Ta đã chấm quyết định từ hai khoảng thực tế thay vì chỉ một khoảng.</p>
+      <p>Đoạn dài hơn sử dụng nhiều reward thật hơn, nên ít phụ thuộc vào các dự đoán trung gian của critic. Nó cũng nhận thêm biến động của môi trường. Độ dài đoạn vì vậy ảnh hưởng trực tiếp đến chất lượng tín hiệu học.</p>
+      <h3>A2C tổ chức việc thu thập và cập nhật</h3>
+      <p><strong>A2C — Advantage Actor–Critic</strong> thu các đoạn trải nghiệm từ nhiều môi trường đang dùng cùng policy. Các môi trường có thể chạy những ngày mô phỏng khác nhau. Sau một số bước, dữ liệu được gom lại, tính return/advantage và cập nhật một bộ trọng số chung. Cách chờ gom dữ liệu rồi cập nhật cùng nhau được gọi là đồng bộ.</p>
+      <p>Actor được tối ưu bằng loss sau. Dấu âm giúp chuyển mục tiêu tăng reward thành một hàm cần giảm, để bộ cập nhật trọng số, gọi là <strong>optimizer</strong>, tìm cách giảm hàm đó:</p>
+      <div class="equation"><div class="eq-label">Actor loss của A2C</div><div class="math">L<sub>actor</sub> = −average[ log π<sub>θ</sub>(a<sub>k</sub>|x<sub>k</sub>) · Â<sub>k</sub> ]</div></div>
+      <p>Khi advantage dương, giảm loss có xu hướng tăng xác suất của action đã chọn. Khi advantage âm, giảm loss có xu hướng hạ xác suất đó. Critic đồng thời giảm sai số giữa value và return target như phần trước.</p>
+      <h3>Giữ khả năng khám phá bằng entropy</h3>
+      <p>Nếu policy quá sớm chỉ chọn một action, nó sẽ thu ít dữ liệu về các lựa chọn khác. Ta thêm một thành phần khuyến khích xác suất chưa tập trung quá mạnh. Đại lượng đo độ phân tán của phân phối gọi là <strong>entropy</strong>:</p>
+      <div class="equation"><div class="eq-label">Entropy và loss kết hợp</div><div class="math"><span class="row">𝓗(π) = −∑<sub>a</sub> π(a|x) log π(a|x)</span><span class="row">L = L<sub>actor</sub> + c<sub>V</sub>L<sub>value</sub> − c<sub>H</sub>average[𝓗(π)]</span></div></div>
+      <p>Phân phối chỉ chọn một action có entropy bằng 0; phân phối chia đều cho nhiều action có entropy cao hơn. Khi minimize loss, dấu âm trước entropy khuyến khích khám phá. c<sub>V</sub> và c<sub>H</sub> quy định mức quan tâm tới dự đoán value và khám phá so với actor loss.</p>
+      <p>Một chu kỳ A2C là: thu rollout ngắn, tính advantage, cập nhật actor/critic rồi thu rollout mới. Ta muốn tận dụng rollout nhiều hơn bằng cách học nhiều lượt, nhưng mỗi lượt học lại làm policy khác đi so với policy đã tạo dữ liệu. PPO giải quyết cách cập nhật trong tình huống này.</p>
     </section>
 
     <section id="ppo">
-      <div class="number">09 / Proximal Policy Optimization</div><h2>PPO: cải thiện policy mà tránh đổi quá mạnh</h2>
-      <p>PPO trong repo là bản <strong>PPO-Clip</strong>. Nó đóng băng policy cũ để thu rollout, lưu xác suất cũ của action đã chọn, rồi cập nhật policy mới qua nhiều minibatch/epoch trên lô đó. Điều cần kiểm soát là mức độ policy mới khác policy tạo dữ liệu.</p>
-      <h3>1. Đo thay đổi bằng tỷ lệ xác suất</h3>
-      <div class="equation"><div class="eq-label">Probability ratio</div><div class="math">ρ<sub>k</sub>(θ) = <span class="fraction"><span>π<sub>θ</sub>(a<sub>k</sub>|x<sub>k</sub>)</span><span>π<sub>old</sub>(a<sub>k</sub>|x<sub>k</sub>)</span></span></div><p>ρ = 1: xác suất chưa đổi; ρ = 1,5: action đã chọn có xác suất gấp 1,5 lần trước; ρ = 0,5: còn một nửa. Không nhầm ρ là reward; r là reward.</p></div>
-      <h3>2. Cắt động lực đẩy xác suất quá xa theo chiều đang được thưởng</h3>
-      <div class="equation"><div class="eq-label">Clipped surrogate objective — maximize</div><div class="math">L<sup>clip</sup>(θ) = 𝔼[ min(ρ<sub>k</sub>Â<sub>k</sub>, clip(ρ<sub>k</sub>, 1−ε, 1+ε)Â<sub>k</sub>) ]</div><p>Repo dùng ε = 0,2, tức vùng tham chiếu tỷ lệ [0,8; 1,2]. Advantage dương: ngừng tăng phần thưởng surrogate khi tỷ lệ vượt 1,2. Advantage âm: ngừng tăng lợi ích từ việc hạ tỷ lệ xuống dưới 0,8. Dùng min để lấy phương án bi quan hơn cho mục tiêu maximize.</p></div>
-      <div class="grid"><div class="card"><h3>Ví dụ Â = +2</h3><p>ρ = 1,5 → phần thường = 3; phần clip = 2,4; lấy min = <strong>2,4</strong>. Không còn được thêm surrogate reward vì tăng quá mốc 1,2.</p></div><div class="card"><h3>Ví dụ Â = −2</h3><p>ρ = 0,5 → phần thường = −1; phần clip = −1,6; lấy min = <strong>−1,6</strong>. Không được tiếp tục cải thiện surrogate bằng cách giảm quá mốc 0,8.</p></div></div>
+      <h2>09. PPO — Proximal Policy Optimization</h2>
+      <p><strong>PPO — Proximal Policy Optimization</strong> giữ actor, critic và advantage. Điểm thay đổi là cách dùng dữ liệu sau khi thu thập: PPO lưu thông tin của policy đã tạo rollout rồi so policy đang học với policy đó trong từng lần cập nhật.</p>
+      <h3>Giữ một mốc tham chiếu cho cả vòng học</h3>
+      <p>Gọi policy tạo dữ liệu là π<sub>old</sub>. Trong lúc thu rollout, trọng số giữ nguyên. Với mỗi bước, ta lưu đầu vào x<sub>k</sub>, action a<sub>k</sub>, reward r<sub>k</sub>, value dự đoán và xác suất cũ π<sub>old</sub>(a<sub>k</sub>|x<sub>k</sub>). Sau khi thu đủ lô, policy bắt đầu được cập nhật; các giá trị đã lưu giữ vai trò mốc tham chiếu.</p>
+      <p>Trước khi cập nhật, thuật toán cần chấm chất lượng của các action trong lô. Repo dùng GAE để tạo advantage từ reward và value đã thu được.</p>
+      <h3>GAE kết hợp tín hiệu của nhiều bước</h3>
+      <p>Ở phần Actor–Critic, δ<sub>k</sub> chấm một bước bằng reward thật cộng value bước sau, rồi trừ value ban đầu. Một quyết định dispatch có thể chưa bộc lộ lợi ích ngay trong bước đó; các δ tiếp theo cung cấp thêm tín hiệu về những thay đổi sau khi xe đi vào phục vụ.</p>
+      <p><strong>GAE — Generalized Advantage Estimation</strong> cộng các TD error hiện tại và về sau với trọng số giảm dần. Với γ = 1 của dự án, ta tính:</p>
+      <div class="equation"><div class="eq-label">TD error và advantage GAE</div><div class="math"><span class="row">δ<sub>k</sub> = r<sub>k</sub> + (1−d<sub>k</sub>)V<sub>old</sub>(x<sub>k+1</sub>) − V<sub>old</sub>(x<sub>k</sub>)</span><span class="row">Â<sub>k</sub> = δ<sub>k</sub> + λ(1−d<sub>k</sub>)Â<sub>k+1</sub></span></div></div>
+      <p>λ quy định giữ bao nhiêu ảnh hưởng của những bước sau. Khi ca còn tiếp tục, khai triển dòng thứ hai cho ta Â<sub>k</sub> = δ<sub>k</sub> + λδ<sub>k+1</sub> + λ²δ<sub>k+2</sub> + … . Với λ = 0,95 và ba TD error 1, 2, 1, advantage bằng 1 + 0,95 × 2 + 0,95² × 1 = 3,8025.</p>
+      <p>Giá trị λ lớn giữ nhiều tín hiệu xa hơn, đồng thời nhận thêm biến động của các bước đó. Giá trị nhỏ tập trung vào các TD error gần và phụ thuộc nhiều hơn vào dự đoán value. Repo dùng λ = 0,95 để kết hợp các độ dài trong một estimator.</p>
+      <p>GAE được tính ngược từ cuối rollout. Nếu cuối rollout vẫn đang giữa ca, reward tương lai chưa có trong lô được đại diện bằng value ở đầu vào tiếp theo. Nếu bước đó đã hết ca, d = 1 làm phần tương lai bằng 0. Tại ranh giới cuối lô, khởi tạo phần advantage nằm ngoài lô bằng 0 rồi lần lượt tính về đầu. Qua đó, tín hiệu của ca mới không bị cộng vào ca vừa kết thúc.</p>
+      <div class="equation"><div class="eq-label">Return target của critic</div><div class="math">Ĝ<sub>k</sub> = Â<sub>k</sub> + V<sub>old</sub>(x<sub>k</sub>)</div></div>
+      <p>Advantage cho actor biết mức tốt hơn/kém hơn dự kiến. Cộng lại value cũ chuyển nó thành target tổng reward để critic học. Hai đại lượng này được tính từ rollout và giữ cố định trong các lượt cập nhật trên lô.</p>
+      <h3>Đo policy đã thay đổi bao nhiêu bằng tỷ lệ xác suất</h3>
+      <p>Sau một lần cập nhật, action từng được chọn có thể nhận xác suất mới khác trước. PPO dùng tỷ lệ ρ để đo sự thay đổi tại chính mẫu dữ liệu đó:</p>
+      <div class="equation"><div class="eq-label">Tỷ lệ xác suất mới trên cũ</div><div class="math">ρ<sub>k</sub>(θ) = <span class="fraction"><span>π<sub>θ</sub>(a<sub>k</sub>|x<sub>k</sub>)</span><span>π<sub>old</sub>(a<sub>k</sub>|x<sub>k</sub>)</span></span></div></div>
+      <p>Nếu xác suất cũ là 0,2 và xác suất mới là 0,3 thì ρ = 1,5: action đang có khả năng được chọn gấp 1,5 lần trước. ρ = 1 nghĩa là chưa đổi; ρ = 0,5 nghĩa là xác suất còn một nửa. Ở lần đầu, policy hiện tại chính là policy cũ nên tỷ lệ bắt đầu từ 1.</p>
+      <p>Nếu dùng ρÂ làm mục tiêu, advantage dương khuyến khích tăng tỷ lệ; advantage âm khuyến khích giảm tỷ lệ. Nhưng khi học nhiều lượt trên cùng dữ liệu, việc tiếp tục đẩy tỷ lệ theo hướng đó có thể làm policy đổi quá mạnh. PPO thay mục tiêu này bằng một phiên bản được cắt ở ngưỡng tham chiếu.</p>
+      <h3>Clipping hoạt động cụ thể thế nào?</h3>
+      <p>Hàm clip(ρ, 1−ε, 1+ε) giữ ρ trong khoảng từ 1−ε đến 1+ε khi tính một nhánh của objective. Repo đặt ε = 0,2, nên tỷ lệ dưới 0,8 được thay bằng 0,8, tỷ lệ trên 1,2 được thay bằng 1,2; ở giữa thì giữ nguyên.</p>
+      <div class="equation"><div class="eq-label">Objective PPO-Clip cần tối đa hóa</div><div class="math">L<sup>clip</sup> = average[ min(ρ<sub>k</sub>Â<sub>k</sub>, clip(ρ<sub>k</sub>, 0.8, 1.2)Â<sub>k</sub>) ]</div></div>
+      <p>Công thức tính hai số cho mỗi mẫu: tỷ lệ thật nhân advantage và tỷ lệ đã clip nhân advantage. Sau đó lấy số nhỏ hơn. Cách chọn này làm mất lợi ích từ việc đẩy xác suất quá xa theo chiều đang được khuyến khích, đồng thời vẫn giữ tác động bất lợi khi xác suất đổi sai chiều.</p>
+      <p><strong>Với advantage +2:</strong> action tốt hơn dự kiến nên tăng xác suất là hướng có lợi. Nếu ρ = 1,5 thì nhánh thường bằng 1,5 × 2 = 3; nhánh clip bằng 1,2 × 2 = 2,4. PPO lấy 2,4. Tăng ρ lên 1,6 vẫn cho min bằng 2,4: riêng mẫu này không tạo thêm động lực tăng xác suất sau mốc 1,2.</p>
+      <p><strong>Với advantage −2:</strong> action kém hơn dự kiến nên giảm xác suất là hướng có lợi. Nếu ρ = 0,5 thì nhánh thường bằng −1; nhánh clip bằng −1,6. PPO lấy −1,6. Giảm ρ tiếp xuống 0,4 vẫn cho min bằng −1,6: lợi ích từ việc giảm xác suất dừng lại dưới mốc 0,8.</p>
+      <p>Ngược lại, nếu advantage âm mà tỷ lệ tăng lên 1,5, nhánh thường bằng −3 và nhánh clip bằng −2,4. Lấy min giữ giá trị −3, nên tăng xác suất của action kém vẫn làm objective xấu đi. Đây là lý do dùng min thay vì chỉ thay mọi tỷ lệ bằng tỷ lệ đã clip.</p>
       <div class="demo" id="ppo-demo">
-        <h3>Thử thay tỷ lệ xác suất</h3><p class="small">Minh họa một mẫu, không phải quá trình train. Kéo ρ và đổi dấu advantage để xem phần bị làm phẳng.</p>
+        <h3>Thử thay tỷ lệ xác suất</h3><p>Kéo tỷ lệ ρ và đổi dấu advantage để xem objective của một mẫu. Phần đồ thị nằm ngang cho biết thay đổi tỷ lệ thêm theo hướng đó không làm objective tăng.</p>
         <div class="controls"><label for="advantage-select">Advantage của mẫu</label><select id="advantage-select"><option value="2">+2 · tốt hơn kỳ vọng</option><option value="-2">−2 · kém hơn kỳ vọng</option></select><label for="ratio-slider">Tỷ lệ mới/cũ ρ: <output id="ratio-value" for="ratio-slider">1.50</output></label><input id="ratio-slider" type="range" min="0.2" max="1.8" step="0.01" value="1.5"></div>
-        <svg id="ppo-chart" viewBox="0 0 620 250" role="img" aria-labelledby="ppo-chart-title ppo-chart-desc"><title id="ppo-chart-title">PPO surrogate trước và sau clipping</title><desc id="ppo-chart-desc">Đường xám là tỷ lệ nhân advantage. Đường xanh là objective PPO của một mẫu; một phía được làm phẳng ở mốc clip.</desc><rect x="250" y="16" width="120" height="200" fill="#eaf5f1"/><line x1="70" y1="116" x2="550" y2="116" stroke="#d8e0e7"/><line x1="70" y1="16" x2="70" y2="216" stroke="#8799a6"/><line x1="70" y1="216" x2="550" y2="216" stroke="#8799a6"/><line x1="250" y1="16" x2="250" y2="216" stroke="#b5cfc5" stroke-dasharray="4 4"/><line x1="370" y1="16" x2="370" y2="216" stroke="#b5cfc5" stroke-dasharray="4 4"/><path id="ppo-raw-path" fill="none" stroke="#98a9b7" stroke-width="3" stroke-dasharray="6 4"/><path id="ppo-clipped-path" fill="none" stroke="#09695f" stroke-width="3"/><circle id="ppo-dot" r="6" fill="#09695f" stroke="white" stroke-width="2"/><text x="70" y="238" text-anchor="middle" font-size="12" fill="#526576">0.2</text><text x="250" y="238" text-anchor="middle" font-size="12" fill="#526576">0.8</text><text x="310" y="238" text-anchor="middle" font-size="12" fill="#526576">1.0</text><text x="370" y="238" text-anchor="middle" font-size="12" fill="#526576">1.2</text><text x="550" y="238" text-anchor="middle" font-size="12" fill="#526576">1.8</text><text x="585" y="238" font-size="13" fill="#526576">ρ</text><text x="14" y="22" font-size="12" fill="#526576">+4</text><text x="25" y="120" font-size="12" fill="#526576">0</text><text x="14" y="216" font-size="12" fill="#526576">−4</text></svg>
-        <p class="small">Xám đứt: ρÂ · Xanh liền: min(ρÂ, clip(ρ)Â) · Nền xanh nhạt: [0,8; 1,2].</p><div class="readout" id="ppo-readout" aria-live="polite">ρ = 1,50; Â = +2 → surrogate PPO = 2,40. Đã qua mốc clip ở phía tăng xác suất.</div>
+        <svg id="ppo-chart" viewBox="0 0 620 250" role="img" aria-labelledby="ppo-chart-title ppo-chart-desc"><title id="ppo-chart-title">Objective PPO trước và sau clipping</title><desc id="ppo-chart-desc">Đường xám là tỷ lệ nhân advantage. Đường xanh là objective PPO của một mẫu; một phía được làm phẳng ở mốc clip.</desc><rect x="250" y="16" width="120" height="200" fill="var(--soft)"/><line x1="70" y1="116" x2="550" y2="116" stroke="var(--line)"/><line x1="70" y1="16" x2="70" y2="216" stroke="var(--chart-axis)"/><line x1="70" y1="216" x2="550" y2="216" stroke="var(--chart-axis)"/><line x1="250" y1="16" x2="250" y2="216" stroke="var(--chart-guide)" stroke-dasharray="4 4"/><line x1="370" y1="16" x2="370" y2="216" stroke="var(--chart-guide)" stroke-dasharray="4 4"/><path id="ppo-raw-path" fill="none" stroke="var(--chart-muted)" stroke-width="3" stroke-dasharray="6 4"/><path id="ppo-clipped-path" fill="none" stroke="var(--accent)" stroke-width="3"/><circle id="ppo-dot" r="6" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/><text x="70" y="238" text-anchor="middle" font-size="12" fill="var(--muted)">0.2</text><text x="250" y="238" text-anchor="middle" font-size="12" fill="var(--muted)">0.8</text><text x="310" y="238" text-anchor="middle" font-size="12" fill="var(--muted)">1.0</text><text x="370" y="238" text-anchor="middle" font-size="12" fill="var(--muted)">1.2</text><text x="550" y="238" text-anchor="middle" font-size="12" fill="var(--muted)">1.8</text><text x="585" y="238" font-size="13" fill="var(--muted)">ρ</text><text x="14" y="22" font-size="12" fill="var(--muted)">+4</text><text x="25" y="120" font-size="12" fill="var(--muted)">0</text><text x="14" y="216" font-size="12" fill="var(--muted)">−4</text></svg>
+        <p class="chart-legend">Xám đứt: ρÂ · Xanh liền: min(ρÂ, clip(ρ)Â) · Vùng nền xanh: [0,8; 1,2].</p><div class="readout" id="ppo-readout" aria-live="polite">ρ = 1,50; Â = +2 → objective PPO = 2,40. Đã qua mốc clip ở phía tăng xác suất.</div>
       </div>
-      <div class="note warm"><strong>Clip không phải hàng rào cứng.</strong> PPO không ép mọi xác suất mới vào ±20%, cũng không đảm bảo KL hoặc chất lượng policy luôn cải thiện. Clipping giới hạn động lực của surrogate ở một phía; tham số chia sẻ, các mẫu khác, value loss và entropy vẫn tác động đến policy. Gradient clipping là cơ chế khác.</div>
-      <h3>3. Ước lượng advantage bằng GAE</h3>
-      <p>PPO không bắt buộc chỉ có một cách tính advantage. Setup hiện tại dùng <strong>Generalized Advantage Estimation</strong>, phối hợp các TD error theo thời gian.</p>
-      <div class="equation"><div class="eq-label">GAE trên rollout</div><div class="math"><span class="row">δ<sub>k</sub> = r<sub>k</sub> + γ(1−d<sub>k</sub>)V<sub>old</sub>(x<sub>k+1</sub>) − V<sub>old</sub>(x<sub>k</sub>)</span><span class="row">Â<sub>k</sub> = δ<sub>k</sub> + γλ(1−d<sub>k</sub>)Â<sub>k+1</sub></span><span class="row">Ĝ<sub>k</sub> = Â<sub>k</sub> + V<sub>old</sub>(x<sub>k</sub>)</span></div><p>Tính ngược trong rollout, khởi đầu phần advantage ngoài lô bằng 0; bootstrap value ở cuối lô nếu episode còn tiếp tục. Qua terminal không nối advantage sang episode mới. λ = 0 gần TD một bước; λ gần 1 dùng hiệu ứng dài hơn, thường tăng variance và giảm phụ thuộc bootstrap trung gian. Với rollout hữu hạn chưa terminal, λ = 1 vẫn có bootstrap ở ranh giới cuối lô.</p></div>
-      <p>Trong repo γ = 1 và λ = 0,95. Khi optimize actor, thư viện mặc định chuẩn hóa advantage theo minibatch: trừ mean rồi chia standard deviation. Return target của critic được tính trước bước chuẩn hóa này.</p>
-      <h3>4. Ghép actor, critic và entropy</h3>
-      <div class="equation"><div class="eq-label">Loss PPO trong setup này — minimize</div><div class="math">L = −L<sup>clip</sup> + 0.5 · 𝔼[(V<sub>φ</sub>(x<sub>k</sub>) − Ĝ<sub>k</sub>)²] − 0.01 · 𝓗(π<sub>θ</sub>)</div><p>Actor dùng objective clip; critic dự đoán return target; entropy khuyến khích khám phá. Default thư viện không clip value prediction khi <code>clip_range_vf=None</code>. Các hệ số và learning rate ảnh hưởng cân bằng giữa ba mục tiêu.</p></div>
-      <h3>5. Một rollout, nhiều lượt học rồi thay dữ liệu</h3>
-      <p>4 môi trường × 256 bước/môi trường = <strong>1.024 transitions</strong>. Mỗi epoch chia thành 4 minibatch × 256 mẫu; 4 epoch tạo <strong>16 bước optimizer trên một rollout</strong> với setup hiện tại. Policy/critic cũ và advantage/target đã tính giữ cố định trong vòng cập nhật đó. Sau đó thu rollout mới bằng policy vừa cập nhật.</p>
-      <p class="bridge">PPO giải quyết cách cập nhật. Bài toán xe buýt còn cần một cơ chế để policy chỉ chọn các hành động thực thi được: action masking.</p>
-      <p class="source">Lý thuyết: <a href="https://arxiv.org/abs/1707.06347">Schulman et al. · PPO</a>, <a href="https://arxiv.org/abs/1506.02438">Schulman et al. · GAE</a>. Config repo: <a href="../configs/train.toml">train.toml</a>, <a href="../src/bus_rl/learning/training/train.py">make_model()</a>. Chi tiết optimize được kiểm tra thêm trong package <code>sb3_contrib/ppo_mask/ppo_mask.py</code> phiên bản 2.9.0 của môi trường local.</p>
+      <p>Clipping được thực hiện trong phép tính objective. Tỷ lệ thực tế vẫn có thể vượt 1,2 hoặc thấp hơn 0,8, như ngay trong các ví dụ trên. Tác dụng của nó là làm phẳng phần động lực cập nhật của mẫu theo một phía; tổng cập nhật của mạng còn là kết quả cộng tác động từ toàn bộ mẫu trong lô và các thành phần loss.</p>
+      <h3>Ghép loss và học nhiều lượt</h3>
+      <p>Actor dùng −L<sup>clip</sup> để optimizer có thể minimize. Critic giảm sai số so với return target; entropy tiếp tục khuyến khích khám phá như ở A2C. Với các hệ số đang dùng trong repo:</p>
+      <div class="equation"><div class="eq-label">Loss PPO</div><div class="math">L = −L<sup>clip</sup> + 0.5 · average[(V<sub>φ</sub>(x<sub>k</sub>) − Ĝ<sub>k</sub>)²] − 0.01 · average[𝓗(π<sub>θ</sub>)]</div></div>
+      <p>Rollout được chia thành các nhóm mẫu nhỏ gọi là <strong>minibatch</strong>. Đi qua toàn bộ mẫu một lần là một <strong>epoch</strong>. Trong mỗi minibatch, tính xác suất mới, tỷ lệ mới/cũ và loss, rồi cập nhật trọng số. PPO thực hiện nhiều epoch trên cùng rollout, luôn dùng xác suất cũ làm mốc.</p>
+      <p>Hết các epoch, policy mới được dùng để thu rollout tiếp theo. Vòng này cho phép mỗi lô trải nghiệm phục vụ nhiều lần cập nhật, trong khi objective clip kiểm soát động lực làm policy đi xa khỏi mốc tạo dữ liệu.</p>
+      <p>Đến đây, ta đã có cách học một policy. Để policy điều phối xe thực thi được, còn cần đưa các điều kiện như xe rỗng, cooldown và donor guard vào chính cách chọn action.</p>
     </section>
 
     <section id="maskppo">
-      <div class="number">10 / PPO + feasibility</div><h2>MaskablePPO: học lựa chọn tốt trong tập hợp lệ</h2>
-      <p>Một bảng action cố định thuận tiện cho mạng, nhưng phần lớn tổ hợp không thực thi được ở từng thời điểm: xe chưa rỗng, đang di chuyển, cooldown chưa hết, tuyến không tồn tại ở slot padding, hoặc donor guard không cho rút xe.</p>
-      <p>Trong simulator này, action sai bị từ chối; không có ý nghĩa vận hành để thử chuyển một xe đang chở khách bằng cách “phạt rồi xem sao”. Môi trường tính mask từ các quy tắc đã biết; policy học cách chọn trong những lựa chọn còn lại.</p>
-      <h3>Bảng 221 action vì sao lớn hơn bài toán 12 xe, 3 tuyến?</h3>
-      <p>Encoding dành sẵn tối đa 16 xe và 4 tuyến. Slot dư được mask để giữ cùng hình dạng tensor và output mạng.</p>
-      <div class="table-wrap"><table><thead><tr><th>Nhóm</th><th>Số slot</th><th>Giải thích</th></tr></thead><tbody><tr><td>NOOP</td><td>1</td><td>Một lựa chọn giữ kế hoạch.</td></tr><tr><td>DISPATCH</td><td>64</td><td>16 xe × 4 tuyến.</td></tr><tr><td>REASSIGN</td><td>64</td><td>16 xe × 4 tuyến.</td></tr><tr><td>SHORT_TURN</td><td>64</td><td>16 xe × 4 tuyến.</td></tr><tr><td>RECALL</td><td>16</td><td>Mỗi slot xe một lựa chọn.</td></tr><tr><td>SET_HEADWAY</td><td>12</td><td>4 tuyến × 3 target.</td></tr><tr><td>Tổng</td><td>221</td><td>Actor luôn trả 221 logits; số action hợp lệ thay đổi theo tình huống.</td></tr></tbody></table></div>
-      <div class="equation"><div class="eq-label">Masked categorical policy</div><div class="math">π<sup>mask</sup><sub>θ</sub>(a|x,m) = <span class="fraction"><span>m(a) · exp(z<sub>a</sub>(x))</span><span>∑<sub>b∈𝒜</sub> m(b) · exp(z<sub>b</sub>(x))</span></span></div><p>m(a) = 1 nếu action hợp lệ, = 0 nếu không. Tương đương đặt logit invalid về −∞ trước softmax; implementation dùng số âm rất lớn để tính số học ổn định. Invalid có xác suất bằng 0, valid được chuẩn hóa lại. NOOP luôn hợp lệ trước terminal nên tập lựa chọn không rỗng.</p></div>
-      <div class="demo" id="mask-demo"><h3>Thử bật/tắt tính hợp lệ</h3><p class="small">Ví dụ giả lập rút gọn còn 4 action, không phải xác suất của checkpoint thực. Logits giữ nguyên để thấy riêng tác dụng của mask. Chọn ô để thay đổi tình huống hợp lệ.</p><div class="table-wrap"><table><thead><tr><th>Action</th><th>Logit</th><th>Hợp lệ?</th><th>Softmax gốc</th><th>Sau mask</th></tr></thead><tbody>
+      <h2>10. MaskablePPO</h2>
+      <p>Ở mỗi thời điểm, các action có thể thực hiện được khác nhau. Một xe dự phòng ở depot có thể dispatch, nhưng một xe đang chở khách chưa thể reassign. Một tuyến vừa đổi headway phải chờ hết cooldown. Môi trường dùng các quy tắc vận hành đã định nghĩa để kiểm tra từng lựa chọn.</p>
+      <h3>Biểu diễn action bằng một bảng cố định</h3>
+      <p>Đầu ra mạng cần có kích thước cố định, nên code dành sẵn slot cho tối đa 16 xe và 4 tuyến. Mỗi tổ hợp hành động/xe/tuyến có một mã. Với 3 lựa chọn headway, bảng gồm:</p>
+      <div class="table-wrap"><table><thead><tr><th>Nhóm action</th><th>Cách đếm</th><th>Số slot</th></tr></thead><tbody>
+        <tr><td>NOOP</td><td>Một action giữ kế hoạch.</td><td>1</td></tr>
+        <tr><td>DISPATCH</td><td>16 xe × 4 tuyến.</td><td>64</td></tr>
+        <tr><td>REASSIGN</td><td>16 xe × 4 tuyến.</td><td>64</td></tr>
+        <tr><td>SHORT_TURN</td><td>16 xe × 4 tuyến.</td><td>64</td></tr>
+        <tr><td>RECALL</td><td>16 xe.</td><td>16</td></tr>
+        <tr><td>SET_HEADWAY</td><td>4 tuyến × 3 target.</td><td>12</td></tr>
+        <tr><td>Tổng</td><td>Mỗi slot tương ứng một logit đầu ra.</td><td>221</td></tr>
+      </tbody></table></div>
+      <p>Bài toán hiện tại dùng 12 xe và 3 tuyến, nên các slot dành cho xe/tuyến còn dư luôn bị đánh dấu không hợp lệ. Những slot còn lại tiếp tục được kiểm tra theo trạng thái thực tế ở bước đó.</p>
+      <h3>Mask đưa điều kiện vận hành vào phân phối</h3>
+      <p><strong>Action mask m<sub>k</sub></strong> là một mảng 221 giá trị đúng/sai. m<sub>k</sub>(a) = 1 nghĩa là action a hợp lệ; bằng 0 nghĩa là action không được chọn. Actor vẫn trả 221 logits, nhưng softmax chỉ chuẩn hóa trên các slot có mask bằng 1.</p>
+      <div class="equation"><div class="eq-label">Masked policy</div><div class="math">π<sup>mask</sup><sub>θ</sub>(a|x,m) = <span class="fraction"><span>m(a) · exp(z<sub>a</sub>(x))</span><span>∑<sub>b∈𝒜</sub> m(b) · exp(z<sub>b</sub>(x))</span></span></div></div>
+      <p>Tử số của action không hợp lệ bằng 0, nên xác suất của nó bằng 0. Mẫu số chỉ cộng các action hợp lệ, nên tổng xác suất trên phần còn lại vẫn bằng 1. NOOP luôn hợp lệ khi đang điều khiển, vì thế luôn có ít nhất một lựa chọn.</p>
+      <p>Ví dụ, actor ưu tiên REASSIGN nhưng xe đang có khách, còn NOOP và DISPATCH thực hiện được. Mask loại REASSIGN trước khi lấy mẫu, rồi phân phối lại xác suất giữa các action hợp lệ. Trong phần tương tác dưới đây, bật/tắt điều kiện để quan sát sự thay đổi đó.</p>
+      <div class="demo" id="mask-demo"><h3>Thử bật/tắt tính hợp lệ</h3><p>Ví dụ gồm 4 action với logits giữ nguyên. Chọn các ô điều kiện để thay tập hợp lệ, rồi so xác suất trước và sau mask.</p><div class="table-wrap"><table><thead><tr><th>Action</th><th>Logit</th><th>Hợp lệ?</th><th>Softmax gốc</th><th>Sau mask</th></tr></thead><tbody>
         <tr><td class="mask-name">NOOP</td><td>1,0</td><td>Luôn có</td><td><span data-before="0">12.3%</span><div class="bar-track"><div class="bar-fill old" data-oldbar="0"></div></div></td><td><span data-after="0">37.8%</span><div class="bar-track"><div class="bar-fill" data-bar="0"></div></div></td></tr>
         <tr><td class="mask-name">DISPATCH</td><td>1,5</td><td><label class="check-label"><input type="checkbox" id="valid-dispatch" checked aria-label="DISPATCH hợp lệ"><span>Dự phòng sẵn sàng</span></label></td><td><span data-before="1">20.3%</span><div class="bar-track"><div class="bar-fill old" data-oldbar="1"></div></div></td><td><span data-after="1">62.2%</span><div class="bar-track"><div class="bar-fill" data-bar="1"></div></div></td></tr>
         <tr><td class="mask-name">REASSIGN</td><td>2,5</td><td><label class="check-label"><input type="checkbox" id="valid-reassign" aria-label="REASSIGN hợp lệ"><span>Xe qua donor guard</span></label></td><td><span data-before="2">55.1%</span><div class="bar-track"><div class="bar-fill old" data-oldbar="2"></div></div></td><td><span data-after="2" class="invalid">0.0%</span><div class="bar-track"><div class="bar-fill" data-bar="2"></div></div></td></tr>
         <tr><td class="mask-name">RECALL</td><td>1,0</td><td><label class="check-label"><input type="checkbox" id="valid-recall" aria-label="RECALL hợp lệ"><span>Xe đủ điều kiện về depot</span></label></td><td><span data-before="3">12.3%</span><div class="bar-track"><div class="bar-fill old" data-oldbar="3"></div></div></td><td><span data-after="3" class="invalid">0.0%</span><div class="bar-track"><div class="bar-fill" data-bar="3"></div></div></td></tr>
       </tbody></table></div><div class="readout" id="mask-readout" aria-live="polite">REASSIGN có logit lớn nhất nhưng không hợp lệ nên xác suất sau mask bằng 0. Policy chọn giữa NOOP và DISPATCH.</div></div>
-      <h3>Mask phải tham gia cả thu thập và cập nhật PPO</h3>
-      <ol><li><strong>Lúc chọn action:</strong> lấy m<sub>k</sub> từ môi trường, áp mask vào logits, lấy mẫu và lưu log probability của phân phối đã mask.</li><li><strong>Trong rollout:</strong> lưu đúng mask của từng mẫu, cùng input, action, reward, terminal/episode-start, old value và old log probability.</li><li><strong>Lúc optimize:</strong> tính probability mới với <em>chính mask đã lưu</em> của mẫu đó. Không lấy mask của tình huống mới nhất trong môi trường.</li><li><strong>Lúc evaluate:</strong> runner cũng phải truyền mask cho <code>predict()</code>. Với lựa chọn xác định, lấy action hợp lệ có xác suất cao nhất.</li></ol>
-      <div class="equation"><div class="eq-label">PPO ratio trong repo thực tế</div><div class="math">ρ<sub>k</sub>(θ) = <span class="fraction"><span>π<sup>mask</sup><sub>θ</sub>(a<sub>k</sub>|x<sub>k</sub>, m<sub>k</sub>)</span><span>π<sup>mask</sup><sub>old</sub>(a<sub>k</sub>|x<sub>k</sub>, m<sub>k</sub>)</span></span></div><p>Tử và mẫu dùng cùng input/action/mask của rollout. Objective clip, GAE, value loss và entropy giữ khung PPO; entropy được tính trên phân phối hợp lệ. Mask do môi trường cung cấp, không phải mạng phải học một nhãn hợp lệ trước.</p></div>
-      <div class="note"><strong>Hai cơ chế giải quyết hai vấn đề.</strong> History/GRU/belief rate giúp khai thác thông tin quá khứ trong POMDP. Action mask áp ràng buộc thực thi. Mask không suy ra demand tương lai, không thay thế critic và không chứng minh policy tối ưu. Nó có thể tiết lộ tính khả thi hiện tại như một phần thông tin được phép dùng.</div>
-      <p class="source">Đối chiếu: <a href="../crates/bus-sim-core/src/actions.rs">actions.rs</a>, <a href="../crates/bus-sim-core/src/guards.rs">guards.rs · valid_action_mask()</a>, <a href="../src/bus_rl/execution/environments/rust/environment.py">environment.py · action_masks()</a>, <a href="../src/bus_rl/evaluation/runner.py">runner.py</a>. Lý thuyết: <a href="https://arxiv.org/abs/2006.14171">Huang &amp; Ontañón · invalid action masking</a>; implementation: <a href="https://sb3-contrib.readthedocs.io/en/v2.9.0/modules/ppo_mask.html">sb3-contrib 2.9.0 · MaskablePPO</a>.</p>
+      <h3>PPO học bằng cùng phân phối đã dùng để hành động</h3>
+      <p><strong>MaskablePPO</strong> ghép masked policy này với vòng học PPO. Khi lấy mẫu, nó dùng mask của tình huống hiện tại. Rollout lưu cả mask, action và xác suất đã tính sau mask. Khi cập nhật, xác suất mới được tính lại với đúng mask của mẫu đang học.</p>
+      <div class="equation"><div class="eq-label">Tỷ lệ xác suất của MaskablePPO</div><div class="math">ρ<sub>k</sub>(θ) = <span class="fraction"><span>π<sup>mask</sup><sub>θ</sub>(a<sub>k</sub>|x<sub>k</sub>,m<sub>k</sub>)</span><span>π<sup>mask</sup><sub>old</sub>(a<sub>k</sub>|x<sub>k</sub>,m<sub>k</sub>)</span></span></div></div>
+      <p>Tử và mẫu cùng đánh giá một action trong cùng tập lựa chọn hợp lệ. Vì vậy, tỷ lệ phản ánh sự thay đổi của policy. GAE, objective clip, critic loss và entropy được tính theo vòng PPO đã giải thích; entropy đo độ phân tán giữa các lựa chọn còn hợp lệ.</p>
+      <p>Khi sử dụng policy đã học, môi trường tiếp tục cung cấp mask ở mỗi bước. Controller có thể chọn action hợp lệ có xác suất lớn nhất. Như vậy, quy tắc vận hành xác định điều gì được làm, còn policy học lựa chọn nào trong số đó có triển vọng giảm cost của cả ca.</p>
     </section>
 
     <section id="implementation">
-      <div class="number">11 / Source → runtime</div><h2>Một vòng học trong repository hiện tại</h2>
-      <p><strong>Khung thuật toán:</strong> MaskablePPO <code>MultiInputPolicy</code>, actor–critic, model-free, on-policy. <strong>Encoder mặc định:</strong> GRU, cửa sổ arrival history 10 phút, không bật belief features. Native simulator mặc định là Rust.</p>
-      <div class="flow" aria-label="Kiến trúc policy"><div class="node"><strong>Observation Dict</strong>Stops + vehicles + routes + arrivals + context</div><span class="arrow">→</span><div class="node"><strong>Encoder</strong>Raw features + GRU arrivals → 128 đặc trưng</div><span class="arrow">→</span><div class="node"><strong>Hai nhánh</strong>Actor hidden 128 → 221 logits<br>Critic hidden 128 → 1 value</div><span class="arrow">→</span><div class="node"><strong>Masked policy</strong>Mask → categorical → action</div></div>
-      <p>Actor và critic chia sẻ feature extractor, sau đó có head riêng. Với MLP core cũ, shared MLP là [256,128]; với encoder GRU/belief, chiều rộng lớp ẩn được code điều chỉnh để giữ ngân sách tham số gần MLP gốc. Vì vậy không mô tả mọi encoder là cùng một MLP [256,128] nguyên xi.</p>
-      <h3>Pseudocode của một chu kỳ</h3>
-      <pre><code>Khởi tạo 4 môi trường, policy và critic
-Lặp cho đến hết ngân sách transitions:
-    Cố định policy_old và value_old cho rollout này
-    Trong 256 bước trên mỗi môi trường:
-        Nhận observation x_k và mask m_k
-        Lấy mẫu a_k từ masked policy_old
-        step(a_k): mô phỏng 2 phút → reward, observation mới, terminal
-        Lưu input, mask, action, reward, giá trị và log probability cũ
-        Reset slot nếu episode kết thúc; không nối return sang episode mới
-
-    Tính GAE ngược thời gian và return target
-    Bootstrap cuối rollout nếu chưa terminal; terminal value = 0
-    Trong 4 epoch:
-        Shuffle 1.024 mẫu thành minibatch 256
-        Tính log probability mới với mask đã lưu
-        Tính PPO-Clip + value loss − entropy bonus
-        Backprop, clip gradient norm, optimizer step
-
-    Theo lịch đánh giá: chạy validation, chọn checkpoint theo cost
-Lưu checkpoint và metadata của run</code></pre>
-      <h3>Cấu hình mặc định cần hiểu</h3>
-      <div class="table-wrap"><table><thead><tr><th>Tham số</th><th>Giá trị</th><th>Ý nghĩa</th></tr></thead><tbody>
-        <tr><td>γ / λ<sub>GAE</sub></td><td>1,0 / 0,95</td><td>Không discount cost trong ca; advantage kết hợp TD error nhiều bước.</td></tr>
-        <tr><td>Learning rate / ε</td><td>3 × 10<sup>−4</sup> / 0,2</td><td>Cỡ bước optimizer / biên clip tỷ lệ xác suất.</td></tr>
-        <tr><td>n_envs × n_steps</td><td>4 × 256</td><td>1.024 transitions/rollout; có thể chứa nhiều episode và các đoạn episode.</td></tr>
-        <tr><td>batch_size / n_epochs</td><td>256 / 4</td><td>4 minibatch mỗi epoch; 16 optimizer steps mỗi rollout đầy đủ.</td></tr>
-        <tr><td>Value / entropy coeff</td><td>0,5 / 0,01</td><td>Cân bằng critic và khuyến khích khám phá.</td></tr>
-        <tr><td>max_grad_norm</td><td>0,5</td><td>Giới hạn norm gradient; khác probability-ratio clipping.</td></tr>
-        <tr><td>total_timesteps</td><td>245.760 mỗi seed</td><td>Số transitions RL cộng qua các môi trường, không phải số tick hay hành khách.</td></tr>
-        <tr><td>eval_freq</td><td>12.288 transitions</td><td>Lịch validation để chọn checkpoint.</td></tr>
-        <tr><td>encoder / history</td><td>gru / 10 phút</td><td>Defaults hiện tại; config experiment hoặc CLI có thể override.</td></tr>
+      <h2>11. Huấn luyện trong repository</h2>
+      <p>Source khởi tạo <code>sb3_contrib.MaskablePPO</code> với <code>MultiInputPolicy</code>. Môi trường mô phỏng dùng Rust; Python cung cấp cấu hình, đầu vào cho mạng, vòng huấn luyện và đánh giá. Kết quả học được lưu thành một bản trọng số gọi là <strong>checkpoint</strong>. Ta có thể lần theo một chu kỳ từ thông tin của simulator đến bản lưu này.</p>
+      <h3>Chuẩn bị đầu vào cho actor và critic</h3>
+      <p>Observation được chia thành các tensor, tức các mảng số nhiều chiều: hàng chờ tại trạm, thông tin xe, thông tin tuyến, arrivals gần đây và thời gian còn lại. Các đại lượng được đưa về thang số phù hợp, chẳng hạn số khách chia cho sức chứa 40. Những slot không có xe hoặc trạm được đánh dấu bằng các trường xác định phần dữ liệu có thật.</p>
+      <p>Mặc định hiện tại, encoder sử dụng <strong>GRU</strong> để đọc cửa sổ arrivals 10 phút. GRU là một mạng xử lý chuỗi: đọc bin cũ nhất trước, cập nhật một vector tóm tắt, rồi đọc bin tiếp theo cho đến bin mới nhất. Vector cuối cùng có 32 giá trị học được, dùng để biểu diễn mẫu biến động của arrivals trong cửa sổ.</p>
+      <p>Mỗi lần dự đoán, GRU bắt đầu từ vector 0 và đọc lại cửa sổ được cung cấp trong mẫu đó. Vector arrivals sau khi đọc xong được nối với các đặc trưng quan sát khác. Một mạng nhiều lớp chuyển phần đầu vào đã nối thành 128 đặc trưng chung cho actor và critic.</p>
+      <div class="flow" aria-label="Luồng dữ liệu qua mạng"><div class="node"><strong>Observation</strong>Hàng chờ, xe, tuyến, thời gian</div><span class="arrow">→</span><div class="node"><strong>Encoder</strong>Thêm GRU arrivals → 128 đặc trưng</div><span class="arrow">→</span><div class="node"><strong>Actor / critic</strong>221 logits / một value</div><span class="arrow">→</span><div class="node"><strong>Mask + chọn</strong>Một action hợp lệ</div></div>
+      <p>Sau phần đặc trưng chung, actor và critic có nhánh riêng, mỗi nhánh có lớp ẩn 128 đơn vị. Actor trả 221 logits để tạo phân phối đã mask. Critic trả một số dự đoán tổng reward còn lại. Đây là cách một đầu vào phục vụ cả quyết định lẫn việc đánh giá tình huống.</p>
+      <h3>Thu đủ dữ liệu cho một rollout</h3>
+      <p>Cấu hình chạy 4 môi trường, mỗi môi trường thu 256 bước điều phối trước vòng cập nhật. Tổng lô là 4 × 256 = <strong>1.024 transitions</strong>. Một transition là một lần chọn action và nhận phản hồi sau 2 phút mô phỏng.</p>
+      <p>Một ca có 120 bước, nên một môi trường có thể kết thúc ca và bắt đầu ca khác trong lúc thu 256 bước. Dữ liệu ghi lại các ranh giới này để tính return riêng cho từng ca. Kết thúc ca thật thì value tương lai bằng 0; nếu chỉ hết phần dữ liệu của rollout nhưng ca còn tiếp tục, critic dự đoán phần còn lại.</p>
+      <h3>Cập nhật trọng số từ rollout</h3>
+      <p>Từ lô dữ liệu, thuật toán tính GAE và return target. Khi dùng advantage cho actor, implementation trừ trung bình rồi chia độ lệch chuẩn của advantage trong minibatch. Phép chuẩn hóa này đưa tín hiệu về thang ổn định hơn giữa các lô; critic tiếp tục học từ return target đã tính ban đầu.</p>
+      <p>Mỗi epoch chia 1.024 mẫu thành 4 minibatch, mỗi minibatch 256 mẫu. Cấu hình dùng 4 epoch, nên một rollout tạo 16 lần cập nhật optimizer. Learning rate là 3 × 10<sup>−4</sup>. Sau khi tính gradient của loss, code đo độ lớn vector gradient bằng căn bậc hai của tổng bình phương các thành phần. Nếu độ lớn này vượt 0,5, toàn bộ vector được thu nhỏ cùng tỷ lệ để về 0,5. Giới hạn này giữ hướng gradient nhưng giảm cỡ bước thay đổi khi gradient quá lớn.</p>
+      <div class="table-wrap"><table><thead><tr><th>Tham số</th><th>Giá trị</th><th>Vai trò trong vòng học</th></tr></thead><tbody>
+        <tr><td>γ</td><td>1</td><td>Cộng reward còn lại trong ca ngang nhau.</td></tr>
+        <tr><td>λ của GAE</td><td>0,95</td><td>Giảm trọng số của TD error ở xa.</td></tr>
+        <tr><td>ε của PPO</td><td>0,2</td><td>Ngưỡng clip tỷ lệ [0,8; 1,2] trong objective.</td></tr>
+        <tr><td>Value / entropy coefficient</td><td>0,5 / 0,01</td><td>Trọng số hai thành phần so với actor loss.</td></tr>
+        <tr><td>n_envs × n_steps</td><td>4 × 256</td><td>Tạo 1.024 mẫu trong rollout.</td></tr>
+        <tr><td>batch_size / n_epochs</td><td>256 / 4</td><td>Tạo 16 lần cập nhật trên rollout đầy đủ.</td></tr>
+        <tr><td>total_timesteps</td><td>245.760</td><td>Ngân sách transitions cho một lần train.</td></tr>
       </tbody></table></div>
-      <p>Training mặc định dùng seed 11; các study nhiều seed khai báo thêm 22/33. Cần xem config và metadata từng run khi giải thích kết quả cụ thể. Các experiment lịch sử đã ghi <code>encoder="mlp"</code> để giữ kiến trúc gốc; việc thay default không tự đổi các checkpoint cũ.</p>
-      <h3>Policy được chọn như thế nào, rồi sử dụng thế nào?</h3>
-      <p>Checkpoint được chọn theo <strong>mean validation core cost thấp nhất sau khi bắt đầu train</strong>; bằng nhau giữ checkpoint sớm hơn. Đánh giá ở step 0 là mốc tham chiếu, không được chọn như best checkpoint. Test dành cho báo cáo chất lượng sau khi chọn, không dùng chọn checkpoint.</p>
-      <p>Khi chạy controller, chỉ cần load checkpoint, lấy observation/mask và gọi policy. Ví dụ một action trả về có thể được decode thành <code>DISPATCH(b,r)</code>. Đây là kết quả vận hành của một bước; kết quả của toàn quá trình huấn luyện là trọng số mạng và metadata.</p>
-      <p class="source">Đối chiếu: <a href="../src/bus_rl/learning/training/train.py">train.py</a>, <a href="../src/bus_rl/learning/training/callbacks.py">callbacks.py</a>, <a href="../src/bus_rl/learning/policy.py">policy.py</a>, <a href="../src/bus_rl/config.py">config.py</a>, <a href="../configs/base.toml">base.toml</a>, <a href="../configs/train.toml">train.toml</a>, <a href="../README.md">README · Policy selection</a>.</p>
+      <h3>Vòng huấn luyện hoàn chỉnh</h3>
+      <pre><code>Khởi tạo policy, critic và 4 môi trường
+Lặp cho đến hết ngân sách tương tác:
+    Giữ nguyên trọng số trong lúc thu dữ liệu
+    Thu 256 bước ở mỗi môi trường:
+        Nhận observation và mask
+        Tính xác suất, lấy mẫu action hợp lệ
+        Mô phỏng 2 phút, nhận reward và observation mới
+        Lưu mẫu cùng value, xác suất cũ và mask
+        Nếu hết ca, bắt đầu ca mới
+
+    Tính advantage GAE và return target
+    Học 4 epoch trên rollout:
+        Chia dữ liệu thành minibatch 256 mẫu
+        Tính xác suất mới với mask đã lưu
+        Tính tỷ lệ mới/cũ và loss MaskablePPO
+        Tính gradient, giới hạn norm, cập nhật trọng số
+
+    Đến lịch đánh giá thì chạy trên các ngày validation
+    Lưu checkpoint nếu validation cost tốt hơn trước</code></pre>
+      <h3>Từ checkpoint đến một quyết định vận hành</h3>
+      <p>Một tập ngày mô phỏng riêng được giữ lại để lựa chọn checkpoint, gọi là <strong>validation</strong>. Cứ 12.288 transitions, controller được chạy trên các ngày này. Checkpoint có mean cost thấp nhất sau khi train được giữ làm bản tốt nhất; bằng nhau thì giữ bản sớm hơn. Nhờ đó, đầu ra của huấn luyện là một bộ trọng số đã qua tiêu chí lựa chọn cụ thể.</p>
+      <p>Khi đánh giá hoặc điều khiển bằng checkpoint, vòng xử lý ngắn hơn: nhận observation và mask, chạy mạng, chọn action hợp lệ có xác suất lớn nhất rồi thực thi. Trọng số giữ nguyên trong giai đoạn này. Cả quá trình học dài trước đó được sử dụng dưới dạng một phép dự đoán tại mỗi quyết định.</p>
     </section>
 
     <section id="comparison">
-      <div class="number">12 / So sánh sau khi đã hiểu phần chung</div><h2>Mỗi phương pháp thêm điều gì?</h2>
-      <p>Trong mạch này, các phương pháp đều học từ reward để cải thiện policy. Bảng dưới so các điểm khác biệt; không phải bảng xếp hạng hiệu năng thực nghiệm.</p>
-      <div class="table-wrap"><table><thead><tr><th>Phương pháp</th><th>Tín hiệu cho actor</th><th>Critic / bootstrap</th><th>Cách dùng dữ liệu</th><th>Giải quyết thêm</th></tr></thead><tbody>
-        <tr><td>REINFORCE</td><td>Return Monte Carlo G, có thể trừ baseline.</td><td>Không bắt buộc critic; baseline không bootstrap.</td><td>Thu episode hoàn chỉnh rồi cập nhật từ return.</td><td>Ước lượng policy gradient trực tiếp; dễ hiểu nhưng variance cao.</td></tr>
-        <tr><td>Actor–Critic</td><td>TD error hoặc advantage ước lượng.</td><td>Có critic; có bootstrap.</td><td>Một họ phương pháp; có thể học từ các đoạn ngắn.</td><td>Giảm chờ return toàn episode, đổi lấy sai số critic.</td></tr>
-        <tr><td>A2C</td><td>Advantage, thường từ n-step/GAE.</td><td>Có.</td><td>Gom rollout đồng bộ; cập nhật rồi thu lô mới.</td><td>Tổ chức Advantage Actor–Critic; loss actor vanilla.</td></tr>
-        <tr><td>PPO-Clip</td><td>Advantage + probability ratio.</td><td>Có trong setup này.</td><td>Nhiều minibatch/epoch trên một rollout.</td><td>Clip surrogate để hạn chế động lực đổi policy quá xa.</td></tr>
-        <tr><td>MaskablePPO</td><td>Khung PPO, xác suất điều kiện theo mask.</td><td>Có.</td><td>Lưu mask theo mẫu; tái dùng cùng mask khi optimize.</td><td>Không chọn action không hợp lệ theo guards.</td></tr>
+      <h2>12. So sánh thuật toán và đánh giá</h2>
+      <p>Trong mạch đã xây dựng, policy gradient là nguyên tắc dùng gradient để cải thiện xác suất hành động; Actor–Critic là cách ghép policy với bộ dự đoán value. REINFORCE, A2C và PPO tổ chức việc chấm action và cập nhật theo những cách cụ thể. Ta có thể so các đặc điểm đó trong cùng một bảng:</p>
+      <div class="table-wrap"><table><thead><tr><th>Phương pháp</th><th>Cách chấm action</th><th>Cách học từ dữ liệu</th></tr></thead><tbody>
+        <tr><td>REINFORCE</td><td>Return thực tế đến cuối ca, có thể trừ baseline.</td><td>Thu episode hoàn chỉnh rồi cập nhật policy.</td></tr>
+        <tr><td>Actor–Critic</td><td>Reward đã thấy cộng value dự đoán, so với value ban đầu.</td><td>Học policy và critic từ các đoạn tương tác.</td></tr>
+        <tr><td>A2C</td><td>Advantage từ return ước lượng và value.</td><td>Gom rollout đồng bộ, cập nhật chung rồi thu lô mới.</td></tr>
+        <tr><td>PPO-Clip</td><td>Advantage kết hợp tỷ lệ xác suất mới/cũ trong objective clip.</td><td>Học nhiều epoch trên rollout với mốc policy cũ.</td></tr>
+        <tr><td>MaskablePPO</td><td>Khung PPO với xác suất tính trên action hợp lệ.</td><td>Lưu mask từng mẫu, dùng lại khi cập nhật và chọn action.</td></tr>
       </tbody></table></div>
-      <p class="small">Policy gradient là họ phương pháp bao quát nên không xếp thành một hàng ngang với các thuật toán cụ thể. Action masking cũng có thể áp dụng cho phương pháp khác nếu được thiết kế đúng; nó không thuộc độc quyền của PPO.</p>
-      <h3>Baseline vận hành khác với baseline của policy gradient</h3>
-      <p>“Baseline” có hai nghĩa dễ nhầm: <strong>b(x)</strong> trong policy gradient là số tham chiếu để giảm variance; <strong>Fixed/Threshold/Proportional</strong> trong thực nghiệm là các controller dùng để so chất lượng.</p>
-      <div class="table-wrap"><table><thead><tr><th>Controller so sánh</th><th>Cách quyết định</th><th>Phần dùng chung để so công bằng</th></tr></thead><tbody><tr><td>Fixed</td><td>Chọn NOOP; giữ assignment và target ban đầu, dispatcher tiếp tục chạy xe.</td><td rowspan="4">Cùng scenario days/tapes; cùng dynamics và cost; cùng giới hạn thông tin, action/guards; cùng định nghĩa metrics. Ghi rõ forecast/config nếu thay đổi.</td></tr><tr><td>Threshold</td><td>Quy tắc dựa trên queue, tuổi chờ, headway gap; dispatch, reassign hoặc short-turn khi đủ điều kiện.</td></tr><tr><td>Proportional</td><td>Chia fleet mong muốn theo arrivals gần đây rồi chọn các action khả thi để tiến về phân bổ đó.</td></tr><tr><td>MaskablePPO</td><td>Policy học trọng số từ tương tác; đánh giá bằng action hợp lệ có xác suất cao nhất.</td></tr></tbody></table></div>
-      <h3>Đánh giá có trả lời đúng câu hỏi ban đầu không?</h3>
-      <p>Đo total cost cùng mean/P95 waiting, completed/abandoned/unfinished share, dịch vụ từng tuyến và worst-route. Cost tổng thấp hơn vẫn có thể đi cùng P95 wait xấu hơn; cần báo cả hai. Dùng validation chọn cấu hình/checkpoint, rồi so trên các ngày test cùng tape và nhiều seed.</p>
-      <div class="note warm"><strong>Phân biệt hiện trạng và bằng chứng.</strong> Default source hiện tại là GRU10. Báo cáo benchmark đã chốt trong <code>reports/README.md</code> mô tả MLP core lịch sử. Không gán kết quả của MLP cho GRU10, hoặc suy ra REINFORCE/A2C thua chỉ vì repo chọn MaskablePPO. Đây là nghiên cứu trên simulator tổng hợp, mạng cố định; chưa phải bằng chứng triển khai cho một thành phố thực.</div>
-      <p class="source">Đối chiếu: <a href="../src/bus_rl/learning/baselines/fixed.py">fixed.py</a>, <a href="../src/bus_rl/learning/baselines/threshold.py">threshold.py</a>, <a href="../src/bus_rl/learning/baselines/proportional.py">proportional.py</a>, <a href="../reports/README.md">reports/README.md</a>, <a href="../README.md">README hiện tại</a>.</p>
+      <h3>So chất lượng vận hành với các quy tắc có sẵn</h3>
+      <p>Sau khi train MaskablePPO, câu hỏi cần kiểm tra là controller học được có giảm cost và phục vụ tốt hơn các cách điều phối hiện có không. Repo cung cấp ba controller so sánh: Fixed giữ phân công ban đầu; Threshold can thiệp khi queue/tuổi chờ/headway vượt ngưỡng; Proportional phân bổ fleet theo arrivals gần đây.</p>
+      <p>Mỗi controller chạy trên cùng các ngày và cùng dữ liệu arrivals/traffic. Chúng dùng cùng quy tắc vận hành và cùng cách tính chi phí. Nhờ đó, khác biệt kết quả phản ánh cách chọn quyết định trên một bài toán chung.</p>
+      <p>Validation được dùng để chọn checkpoint. Sau khi đã chọn, các ngày test được dùng để đo chất lượng. Mỗi seed khởi tạo các nguồn ngẫu nhiên của một lần huấn luyện, như trọng số ban đầu và việc lấy mẫu. Chạy nhiều seed giúp quan sát kết quả thay đổi bao nhiêu khi học lại, bên cạnh biến động giữa các ngày.</p>
+      <h3>Đọc cost cùng các kết quả phục vụ</h3>
+      <p>Total cost đo mục tiêu tổng hợp, nhưng các thành phần cần được xem cùng nhau. Thời gian chờ trung bình phản ánh trải nghiệm chung; P95 waiting là mốc mà 95% thời gian chờ quan sát được nằm dưới hoặc bằng nó, giúp nhìn phần hành khách phải chờ lâu. Tỷ lệ hoàn thành, bỏ cuộc và chưa hoàn thành cho biết kết quả phục vụ cuối ca.</p>
+      <p>Chỉ số theo từng tuyến còn cho biết giảm cost tổng có đi cùng việc một tuyến bị phục vụ kém hơn không. Đánh giá bằng cả cost và các chỉ số này nối kết quả học trở lại mục tiêu ban đầu: sử dụng đội xe hữu hạn để phục vụ nhu cầu biến động trong cả ca.</p>
     </section>
 
     <section id="sources">
-      <div class="number">13 / Đọc tiếp &amp; kiểm chứng</div><h2>Bản đồ từ khái niệm sang source</h2>
-      <p>Các đường dẫn tương đối dưới đây trỏ vào repository khi mở HTML tại <code>docs/</code>. Trang tự chứa toàn bộ phần giải thích; muốn xem code qua liên kết cần giữ cấu trúc thư mục repo.</p>
-      <div class="table-wrap"><table><thead><tr><th>Muốn kiểm tra</th><th>Nguồn nên mở</th></tr></thead><tbody>
-        <tr><td>Problem, biến và objective</td><td><a href="problem_solution.md">docs/problem_solution.md</a> · phần A; <a href="spec/spec_v1.0.md">spec_v1.0.md</a> · §3–6.</td></tr>
-        <tr><td>Defaults hiện tại</td><td><a href="../configs/base.toml">configs/base.toml</a>, <a href="../configs/train.toml">configs/train.toml</a>, <a href="../src/bus_rl/config.py">config.py · AlgorithmConfig</a>.</td></tr>
-        <tr><td>221 slot và điều kiện action</td><td><a href="../crates/bus-sim-core/src/actions.rs">actions.rs · action_at()</a>; <a href="../crates/bus-sim-core/src/guards.rs">guards.rs · valid_action_mask()</a>.</td></tr>
-        <tr><td>Dynamics, tick, settlement</td><td><a href="../crates/bus-sim-core/src/engine.rs">engine.rs · advance_tick(), advance_interval()</a>; <a href="../crates/bus-sim-core/src/costs.rs">costs.rs · integrate_tick_costs(), interval_cost()</a>.</td></tr>
-        <tr><td>Observation và giới hạn thông tin</td><td><a href="../crates/bus-sim-core/src/observation.rs">observation.rs · observe()</a>; <a href="../src/bus_rl/execution/environments/rust/environment.py">environment.py</a>.</td></tr>
-        <tr><td>MLP/GRU/belief rate</td><td><a href="../src/bus_rl/learning/policy.py">policy.py · SharedMLPExtractor, BeliefGRUExtractor, arrival_rate_belief()</a>; <a href="../src/bus_rl/execution/environments/arrival_memory.py">arrival_memory.py</a>.</td></tr>
-        <tr><td>Khởi tạo MaskablePPO</td><td><a href="../src/bus_rl/learning/training/train.py">train.py · make_model(), train_run()</a>. PPO optimizer và rollout buffer do package sb3-contrib cung cấp, không được viết lại trong repo.</td></tr>
-        <tr><td>Chọn checkpoint / inference</td><td><a href="../src/bus_rl/learning/training/callbacks.py">callbacks.py · BestValidationCallback</a>; <a href="../src/bus_rl/evaluation/runner.py">runner.py · PPOController</a>.</td></tr>
-        <tr><td>Bằng chứng thực nghiệm</td><td><a href="../reports/README.md">reports/README.md</a>; <a href="../runs/README.md">runs/README.md</a>; <a href="../README.md">README · Policy selection</a>.</td></tr>
+      <h2>13. Nguồn tham khảo</h2>
+      <div class="table-wrap"><table><thead><tr><th>Nội dung</th><th>Tài liệu và code</th></tr></thead><tbody>
+        <tr><td>Bài toán và objective</td><td><a href="problem_solution.md">docs/problem_solution.md</a>; <a href="spec/spec_v1.0.md">spec/spec_v1.0.md</a>.</td></tr>
+        <tr><td>Thông số môi trường và huấn luyện</td><td><a href="../configs/base.toml">configs/base.toml</a>; <a href="../configs/train.toml">configs/train.toml</a>; <a href="../src/bus_rl/config.py">AlgorithmConfig</a>.</td></tr>
+        <tr><td>State, dynamics và cost</td><td><a href="../crates/bus-sim-core/src/domain.rs">domain.rs</a>; <a href="../crates/bus-sim-core/src/engine.rs">engine.rs</a>; <a href="../crates/bus-sim-core/src/costs.rs">costs.rs</a>.</td></tr>
+        <tr><td>Observation và lịch sử arrivals</td><td><a href="../crates/bus-sim-core/src/observation.rs">observation.rs</a>; <a href="../src/bus_rl/execution/environments/arrival_memory.py">arrival_memory.py</a>.</td></tr>
+        <tr><td>Action table và mask</td><td><a href="../crates/bus-sim-core/src/actions.rs">actions.rs</a>; <a href="../crates/bus-sim-core/src/guards.rs">guards.rs</a>; <a href="../src/bus_rl/execution/environments/rust/environment.py">NativeBusDispatchEnv</a>.</td></tr>
+        <tr><td>Mạng và vòng huấn luyện</td><td><a href="../src/bus_rl/learning/policy.py">policy.py</a>; <a href="../src/bus_rl/learning/training/train.py">train.py</a>.</td></tr>
+        <tr><td>Checkpoint và đánh giá</td><td><a href="../src/bus_rl/learning/training/callbacks.py">callbacks.py</a>; <a href="../src/bus_rl/evaluation/runner.py">runner.py</a>.</td></tr>
+        <tr><td>Controller so sánh</td><td><a href="../src/bus_rl/learning/baselines/fixed.py">Fixed</a>; <a href="../src/bus_rl/learning/baselines/threshold.py">Threshold</a>; <a href="../src/bus_rl/learning/baselines/proportional.py">Proportional</a>.</td></tr>
       </tbody></table></div>
-      <h3>Tài liệu thuật toán gốc và hướng dẫn chính thức</h3>
-      <ul><li><a href="https://spinningup.openai.com/en/latest/spinningup/rl_intro3.html">Spinning Up · Intro to Policy Optimization</a> — phép biến đổi policy gradient và baseline.</li><li><a href="https://stable-baselines3.readthedocs.io/en/master/modules/a2c.html">Stable-Baselines3 · A2C</a> — cách gọi A2C và rollout đồng bộ.</li><li><a href="https://arxiv.org/abs/1506.02438">Schulman et al. · Generalized Advantage Estimation</a> — estimator advantage.</li><li><a href="https://arxiv.org/abs/1707.06347">Schulman et al. · Proximal Policy Optimization Algorithms</a> — ratio và clipped surrogate.</li><li><a href="https://arxiv.org/abs/2006.14171">Huang &amp; Ontañón · A Closer Look at Invalid Action Masking in Policy Gradient Algorithms</a> — masking.</li><li><a href="https://sb3-contrib.readthedocs.io/en/v2.9.0/modules/ppo_mask.html">sb3-contrib 2.9.0 · MaskablePPO</a> — API và yêu cầu đánh giá có mask. <code>uv.lock</code> hiện pin SB3/sb3-contrib 2.9.0.</li></ul>
+      <h3>Tài liệu nền tảng thuật toán</h3>
+      <ul>
+        <li><a href="https://spinningup.openai.com/en/latest/spinningup/rl_intro3.html">Spinning Up — Intro to Policy Optimization</a>: policy gradient, return và baseline.</li>
+        <li><a href="https://stable-baselines3.readthedocs.io/en/master/modules/a2c.html">Stable-Baselines3 — A2C</a>: Advantage Actor–Critic đồng bộ.</li>
+        <li><a href="https://arxiv.org/abs/1506.02438">Schulman et al. — Generalized Advantage Estimation</a>: ước lượng advantage từ chuỗi TD error.</li>
+        <li><a href="https://arxiv.org/abs/1707.06347">Schulman et al. — Proximal Policy Optimization Algorithms</a>: tỷ lệ xác suất và clipped objective.</li>
+        <li><a href="https://arxiv.org/abs/2006.14171">Huang &amp; Ontañón — A Closer Look at Invalid Action Masking in Policy Gradient Algorithms</a>: action masking.</li>
+        <li><a href="https://sb3-contrib.readthedocs.io/en/v2.9.0/modules/ppo_mask.html">sb3-contrib 2.9.0 — MaskablePPO</a>: implementation thư viện được trainer sử dụng.</li>
+      </ul>
     </section>
-    <footer>Biên soạn từ docs, source và config của bus-rl ngày 22/10/2026. Ví dụ số ở phần thuật toán là minh họa, không phải số đo của checkpoint. Khi code và spec lịch sử khác nhau, phần “hiện tại” theo source/config; kết quả từng study theo evidence của study đó.</footer>
+    <footer>Tài liệu giải thích bài toán và thuật toán của bus-rl. Có thể đọc offline và dùng nút “In / lưu PDF” để xuất bản in.</footer>
   </main>
 </div>
 <script>
   'use strict';
+  const themeToggle = document.getElementById('theme-toggle');
+  const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
+  let themePreference = null;
+  try {
+    const savedTheme = localStorage.getItem('bus-rl-doc-theme');
+    if (savedTheme === 'dark' || savedTheme === 'light') themePreference = savedTheme;
+  } catch {}
+  function applyTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+    const dark = theme === 'dark';
+    themeToggle.textContent = dark ? 'Chế độ sáng' : 'Chế độ tối';
+    themeToggle.setAttribute('aria-pressed', String(dark));
+    themeToggle.setAttribute('aria-label', dark ? 'Chuyển sang chế độ sáng' : 'Chuyển sang chế độ tối');
+  }
+  applyTheme(themePreference || (systemTheme.matches ? 'dark' : 'light'));
+  themeToggle.addEventListener('click', () => {
+    themePreference = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    applyTheme(themePreference);
+    try { localStorage.setItem('bus-rl-doc-theme', themePreference); } catch {}
+  });
+  systemTheme.addEventListener('change', event => {
+    if (!themePreference) applyTheme(event.matches ? 'dark' : 'light');
+  });
   document.getElementById('print-button').addEventListener('click', () => window.print());
   document.getElementById('top-button').addEventListener('click', () => window.scrollTo({top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'}));
   const navLinks = [...document.querySelectorAll('.sidebar nav a')];
@@ -407,7 +475,7 @@ Lưu checkpoint và metadata của run</code></pre>
     document.getElementById('ppo-dot').setAttribute('cy', y(objective));
     document.getElementById('ratio-value').value = ratio.toFixed(2);
     const plateau = advantage > 0 ? ratio > 1 + epsilon : ratio < 1 - epsilon;
-    document.getElementById('ppo-readout').textContent = `ρ = ${ratio.toFixed(2)}; Â = ${advantage > 0 ? '+' : '−'}2. Phần thường = ${raw.toFixed(2)}; phần clip = ${clippedTerm.toFixed(2)}; PPO lấy min = ${objective.toFixed(2)}. ${plateau ? 'Đang ở vùng phẳng: thay tỷ lệ thêm theo hướng này không tăng surrogate của mẫu.' : 'Chưa ở phía phẳng của objective: tỷ lệ vẫn tác động đến surrogate của mẫu.'}`;
+    document.getElementById('ppo-readout').textContent = `ρ = ${ratio.toFixed(2)}; Â = ${advantage > 0 ? '+' : '−'}2. Phần thường = ${raw.toFixed(2)}; phần clip = ${clippedTerm.toFixed(2)}; PPO lấy min = ${objective.toFixed(2)}. ${plateau ? 'Đang ở vùng phẳng: thay tỷ lệ thêm theo hướng này không tăng objective của mẫu.' : 'Chưa ở phía phẳng của objective: tỷ lệ vẫn tác động đến objective của mẫu.'}`;
   }
   ratioSlider.addEventListener('input', updatePPO);
   advantageSelect.addEventListener('change', updatePPO);
