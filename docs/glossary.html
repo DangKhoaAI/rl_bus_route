@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thuật ngữ Bus RL</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f6f6f2;
+    --card: #ffffff;
+    --ink: #1d1e1b;
+    --muted: #686a62;
+    --line: #e3e3da;
+    --accent: #2f6f4e;
+    --accent-soft: #e4efe7;
+    --warn: #8a5a12;
+    --warn-soft: #f6ecd9;
+    --code: #eff0ea;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141513;
+      --card: #1c1e1a;
+      --ink: #ecece6;
+      --muted: #a2a49b;
+      --line: #2e312b;
+      --accent: #83c79f;
+      --accent-soft: #223128;
+      --warn: #e0b472;
+      --warn-soft: #33291a;
+      --code: #242620;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141513;
+    --card: #1c1e1a;
+    --ink: #ecece6;
+    --muted: #a2a49b;
+    --line: #2e312b;
+    --accent: #83c79f;
+    --accent-soft: #223128;
+    --warn: #e0b472;
+    --warn-soft: #33291a;
+    --code: #242620;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 960px; margin: 0 auto; padding: 48px 24px 72px; }
+  @media (max-width: 600px) { main { padding: 28px 16px 56px; } }
+  header { margin-bottom: 40px; }
+  .eyebrow { margin: 0 0 8px; color: var(--accent); font-size: .78rem; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; }
+  h1 { margin: 0 0 12px; font-size: clamp(1.9rem, 4.5vw, 2.7rem); line-height: 1.15; letter-spacing: -.02em; }
+  .lede { margin: 0; max-width: 62ch; color: var(--muted); font-size: 1.02rem; }
+  h2 { margin: 48px 0 16px; font-size: 1.15rem; letter-spacing: -.01em; }
+  .section-note { margin: -8px 0 20px; color: var(--muted); font-size: .9rem; }
+
+  .ladder { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  @media (max-width: 760px) { .ladder { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 420px) { .ladder { grid-template-columns: 1fr; } }
+  .rung { position: relative; padding: 16px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+  .rung small { display: block; color: var(--muted); font-size: .74rem; letter-spacing: .06em; text-transform: uppercase; }
+  .rung b { display: block; margin: 6px 0 2px; font-size: 1.12rem; }
+  .rung span { color: var(--muted); font-size: .86rem; }
+
+  .terms { display: grid; gap: 12px; }
+  .term { padding: 18px 20px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+  .term h3 { margin: 0 0 6px; font-size: 1rem; }
+  .term h3 code { font-size: .86em; }
+  .term p { margin: 0; color: var(--ink); }
+  .term p + p { margin-top: 10px; }
+  .term .repo { margin-top: 10px; color: var(--muted); font-size: .82rem; }
+  code {
+    padding: .1em .38em;
+    background: var(--code);
+    border-radius: 5px;
+    font: .88em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; font-size: .92rem; }
+  th, td { padding: 10px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  th { color: var(--muted); font-size: .78rem; letter-spacing: .05em; text-transform: uppercase; font-weight: 600; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  .callout { margin-top: 16px; padding: 16px 20px; border-radius: 12px; border: 1px solid var(--line); background: var(--accent-soft); }
+  .callout.warn { background: var(--warn-soft); }
+  .callout b { display: block; margin-bottom: 4px; }
+  .callout p { margin: 0; font-size: .93rem; }
+
+  pre { margin: 0; padding: 16px 18px; overflow-x: auto; background: var(--code); border: 1px solid var(--line); border-radius: 12px; font: .84rem/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .log-key { margin-top: 14px; display: grid; gap: 6px; }
+  .log-key div { display: flex; gap: 12px; font-size: .9rem; }
+  .log-key dt { flex: 0 0 122px; color: var(--muted); }
+  .log-key dd { margin: 0; }
+  .log-key { display: grid; }
+  .log-key dl { display: contents; }
+  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: .84rem; }
+  footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="eyebrow">Bus RL · đọc repo</p>
+    <h1>Thuật ngữ Bus RL</h1>
+    <p class="lede">Các từ hay gặp trong lúc chạy simulator và đọc log: step, episode, rollout, seed, checkpoint. Mỗi mục nói ngắn, kèm con số thật của repo này.</p>
+  </header>
+
+  <h2>Thang đơn vị</h2>
+  <p class="section-note">Từ nhỏ đến lớn: tick → step → episode → một lần train.</p>
+  <div class="ladder">
+    <div class="rung">
+      <small>Tick</small>
+      <b>30 giây</b>
+      <span>Một nhịp mô phỏng nội bộ của kernel.</span>
+    </div>
+    <div class="rung">
+      <small>Step / timestep</small>
+      <b>120 giây · 1 quyết định</b>
+      <span>4 tick. Agent nhận observation, chọn action, nhận reward.</span>
+    </div>
+    <div class="rung">
+      <small>Episode</small>
+      <b>120 step · 240 phút</b>
+      <span>Một ngày mô phỏng, kết thúc khi hết horizon.</span>
+    </div>
+    <div class="rung">
+      <small>Run</small>
+      <b>245.760 step</b>
+      <span>2.048 episode, tức budget train của core.</span>
+    </div>
+  </div>
+
+  <h2>Thuật ngữ</h2>
+  <div class="terms">
+    <div class="term">
+      <h3>Step (timestep)</h3>
+      <p>Một quyết định điều khiển, không phải một tick và không phải một giây thực. Môi trường chạy tiếp 120 giây mô phỏng sau mỗi action.</p>
+      <p>Budget <code>total_timesteps</code> đếm bằng step. Dashboard cũng gửi đúng một step mỗi tick hiển thị.</p>
+      <p class="repo">Nơi khai báo: <code>control_interval_s = 120</code> trong config.</p>
+    </div>
+    <div class="term">
+      <h3>Episode</h3>
+      <p>Một ngày mô phỏng trọn vẹn: 240 phút, tức 120 step. Hết giờ thì episode <code>terminated</code>; đây là kết thúc thuộc nhiệm vụ, không phải cắt ngang.</p>
+      <p>245.760 bước chia 120 bằng 2.048 episode, đúng số <code>episodes_completed</code> trong metadata.</p>
+    </div>
+    <div class="term">
+      <h3>Rollout</h3>
+      <p>Một đợt thu thập kinh nghiệm trước khi cập nhật mạng. PPO gom <code>n_steps = 256</code> step × <code>n_envs = 4</code> môi trường song song = 1.024 transition, rồi chạy 4 epoch cập nhật.</p>
+      <p>Vì thế train 32 bước chưa đủ một rollout, gần như không có gì được học.</p>
+    </div>
+    <div class="term">
+      <h3>Seed</h3>
+      <p>Có hai loại, đừng lẫn:</p>
+      <p><b>Training seed</b> (<code>--seed 11</code>) quyết định khởi tạo trọng số và thứ tự lấy mẫu. Cùng config nhưng seed khác cho policy khác, nên study chạy 11/22/33 rồi báo mean ± std.</p>
+      <p><b>Scenario seed</b> nằm trong manifest của từng ngày, quyết định demand và traffic của ngày đó. Mọi controller so sánh trên cùng ngày đều gặp cùng seed này.</p>
+    </div>
+    <div class="term">
+      <h3>Validation và test</h3>
+      <p><b>Validation</b> (100 ngày) dùng để chọn checkpoint và theo dõi trong lúc train. <b>Test</b> (<code>test_id</code>, <code>test_ood_burst</code>, <code>test_ood_traffic</code>, mỗi split 200 ngày) chỉ dùng cho kết quả cuối, không được dùng để chọn model.</p>
+      <p>Chọn model trên validation rồi báo cáo trên test là cách tránh tự khen mình.</p>
+    </div>
+    <div class="term">
+      <h3>Eval và best checkpoint</h3>
+      <p>Trong lúc train, cứ <code>eval_freq = 12.288</code> step lại chấm điểm trên 100 ngày validation. Với budget 245.760, có 20 mốc chấm.</p>
+      <p><code>best.zip</code> là checkpoint có cost validation trung bình thấp nhất trong 20 mốc; hòa thì lấy mốc sớm hơn.</p>
+    </div>
+    <div class="term">
+      <h3>Checkpoint</h3>
+      <p>File <code>.zip</code> của stable-baselines3, không phải <code>.pt</code>. Bên trong có <code>policy.pth</code> (trọng số), <code>policy.optimizer.pth</code>, <code>data</code> và vài file metadata.</p>
+      <p>File <code>metadata.json</code> nằm cạnh checkpoint ghi config, hash và seed để kiểm tra tương thích khi nạp.</p>
+    </div>
+    <div class="term">
+      <h3>Policy, controller, baseline</h3>
+      <p><b>Policy</b> là mạng ra quyết định. <b>Controller</b> là thứ mà station gọi mỗi bước; có thể là policy PPO hoặc một luật cố định.</p>
+      <p><b>Baseline</b> là các luật đơn giản để so sánh: <code>fixed</code>, <code>threshold</code>, <code>proportional</code>. Trong dashboard, bộ điều phối hiển thị đúng tên này.</p>
+    </div>
+    <div class="term">
+      <h3>NOOP và action mask</h3>
+      <p>Bảng action có 221 slot. <code>NOOP</code> là "không làm gì", luôn hợp lệ. <b>Mask</b> tắt những action vi phạm điều kiện như sai phase, xe còn khách, đang cooldown.</p>
+      <p>Policy chưa học thường chọn NOOP vì đó là action luôn có mặt trong tập hợp lệ.</p>
+    </div>
+    <div class="term">
+      <h3>Rust kernel</h3>
+      <p>Simulator lõi viết bằng Rust, gọi từ Python qua PyO3. Cả train lẫn serve đều chạy trên kernel này; Python chỉ điều phối và huấn luyện.</p>
+      <p>Thiếu extension thì app báo lỗi ngay, không tự chuyển sang bản Python cũ.</p>
+    </div>
+  </div>
+
+  <h2>Đọc một dòng log</h2>
+  <p class="section-note">Mỗi tick dashboard gửi một request; server trả một dòng như sau.</p>
+  <pre>simulation 9fa7… stepped 1 decisions in 0.9 ms:
+  time_s=3240 waiting=[27, 22, 22] reserve=3
+  cost=172.2 actions=['NOOP#0'] finished=False</pre>
+  <div class="log-key">
+    <dl><dt>stepped 1 decisions</dt><dd>Đã tiến một step (120 giây mô phỏng).</dd></dl>
+    <dl><dt>time_s=3240</dt><dd>Giây mô phỏng từ đầu ngày, tức phút 54.</dd></dl>
+    <dl><dt>waiting=[...]</dt><dd>Khách đang chờ theo từng tuyến.</dd></dl>
+    <dl><dt>reserve=3</dt><dd>Số xe còn ở bãi.</dd></dl>
+    <dl><dt>cost=172.2</dt><dd>Cost của riêng khoảng vừa rồi, chưa chuẩn hóa.</dd></dl>
+    <dl><dt>actions=['NOOP#0']</dt><dd>Action đã chọn; <code>#0</code> là chỉ số trong bảng 221 slot.</dd></dl>
+  </div>
+
+  <h2>Con số trong repo</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Tham số</th><th class="num">Giá trị</th><th>Ý nghĩa</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>tick_s</code></td><td class="num">30</td><td>Nhịp mô phỏng nội bộ</td></tr>
+        <tr><td><code>control_interval_s</code></td><td class="num">120</td><td>Một step</td></tr>
+        <tr><td><code>horizon_s</code></td><td class="num">14.400</td><td>Một episode (240 phút)</td></tr>
+        <tr><td><code>n_steps</code> × <code>n_envs</code></td><td class="num">256 × 4</td><td>1.024 transition mỗi rollout</td></tr>
+        <tr><td><code>eval_freq</code></td><td class="num">12.288</td><td>20 lần chấm trong một run core</td></tr>
+        <tr><td><code>total_timesteps</code></td><td class="num">245.760</td><td>2.048 episode mỗi seed</td></tr>
+        <tr><td>Action space</td><td class="num">221</td><td>NOOP, DISPATCH, REASSIGN, SHORT_TURN, RECALL, SET_HEADWAY</td></tr>
+        <tr><td>Ngày dữ liệu</td><td class="num">500 / 100 / 200</td><td>train / validation / mỗi test split</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout">
+    <b>Vì sao model smoke toàn NOOP?</b>
+    <p>Bản smoke chỉ train 32 bước, ít hơn một rollout 1.024 transition. Trọng số gần như còn nguyên khởi tạo, nên policy chọn NOOP gần như mọi lúc. Lỗi không nằm ở wiring: cùng đường nạp đó, checkpoint core 245.760 bước ra DISPATCH và SET_HEADWAY bình thường.</p>
+  </div>
+
+  <div class="callout warn">
+    <b>Seed 11 không phải "seed tốt nhất"</b>
+    <p>Seed 11 là seed sàng lọc: thử ứng viên trên 11 trước, chỉ ứng viên đạt mới chạy 22/33. Quy định trong repo là không kết luận từ một seed. Kết quả cuối dùng trung bình cả ba seed.</p>
+  </div>
+
+  <footer>
+    Số liệu lấy từ <code>configs/</code>, <code>docs/spec/spec_v1.0.md</code> và <code>reports/</code>. Mở file này trực tiếp bằng trình duyệt.
+  </footer>
+</main>
+</body>
+</html>

@@ -106,19 +106,46 @@ HTTP for the 3D dashboard (`web/station/`, served at `/` when present). Each
 controller and returns per-route buses, the depot reserve queue and interval
 costs. Settings come from `.env` (see `.env.example`); the manifest is required.
 
+`POST /simulations` takes the controller, the split and the day
+(`{"controller": "ppo", "split": "test_ood_burst", "scenario_index": 3}`);
+`SIMULATION__SPLITS` lists the splits the station loads, and the first is the
+default. The dashboard offers the same three choices in its top bar: picking
+one starts a new simulation.
+
+### Run locally
+
+One process serves both the API and the dashboard; the page calls the API on its
+own origin, so there is no separate frontend server to start.
+
 ```bash
 uv sync --locked --extra dev --extra server
+python scripts/build_native.py        # once: builds the Rust kernel
 SIMULATION__MANIFEST_PATH=data/generated/base/manifest.json \
   uv run uvicorn bus_rl.main:app --host 127.0.0.1 --port 8000
+# open http://127.0.0.1:8000
 ```
 
-For a demo machine without the Rust toolchain, the `Dockerfile` builds the
-kernel and serves the dashboard with only the server's runtime dependencies
-(no torch); the scenario days are regenerated during the build.
+### Run with Docker
+
+The image builds the Rust kernel and regenerates the scenario days, so the demo
+machine needs no Rust toolchain and no torch.
 
 ```bash
 docker build -t bus-rl-station .
-docker run --rm -p 8000:8000 bus-rl-station   # open http://localhost:8000
+docker run --rm -p 8000:8000 bus-rl-station
+# open http://localhost:8000
+```
+
+### Serve a trained policy
+
+Point the station at a checkpoint (`metadata.json` must sit beside it); the
+dashboard selects `ppo` by default. This needs torch, so the slim Docker
+image runs the baselines only.
+
+```bash
+SIMULATION__CHECKPOINT_PATH=runs/core-11/best.zip \
+SIMULATION__MANIFEST_PATH=data/generated/base/manifest.json \
+  uv run uvicorn bus_rl.main:app --host 127.0.0.1 --port 8000
 ```
 
 The page loads three.js from a CDN, so the demo machine needs internet access.
