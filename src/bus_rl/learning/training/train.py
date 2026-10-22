@@ -4,7 +4,6 @@ from dataclasses import replace
 from pathlib import Path
 from time import perf_counter
 
-from sb3_contrib import MaskablePPO
 from stable_baselines3.common.callbacks import BaseCallback, CallbackList
 from stable_baselines3.common.vec_env import DummyVecEnv
 
@@ -12,6 +11,7 @@ from bus_rl.config import AlgorithmConfig, RunConfig
 from bus_rl.execution.environments.factory import make_env_for_run
 from bus_rl.execution.runtime import apply_runtime_settings
 from bus_rl.learning.policy import policy_kwargs
+from bus_rl.learning.training.algorithms import TRAINERS, learned_method
 from bus_rl.learning.training.callbacks import BestValidationCallback
 from bus_rl.learning.training.checkpoint import run_metadata, write_metadata
 from bus_rl.learning.training.diagnostics import TrainingDiagnosticsCallback
@@ -51,12 +51,20 @@ def make_model(
     env, seed: int, algorithm: AlgorithmConfig | None = None, *, episode_steps: int = 120
 ):
     algorithm = algorithm or AlgorithmConfig()
-    return MaskablePPO(
+    effective_steps = algorithm.n_steps
+    if algorithm.name == "reinforce":
+        if algorithm.gamma != 1 or effective_steps < episode_steps:
+            raise ValueError("REINFORCE requires gamma=1 and at least one full episode per rollout")
+        effective_steps = effective_steps // episode_steps * episode_steps
+        if algorithm.total_timesteps % (effective_steps * algorithm.n_envs):
+            raise ValueError("REINFORCE budget must contain whole episode-aligned rollouts")
+    return TRAINERS[algorithm.name](
         "MultiInputPolicy",
         env,
         gamma=algorithm.gamma,
         learning_rate=algorithm.learning_rate,
-        n_steps=algorithm.n_steps,
+        n_steps=effective_steps,
+        mask_mode=algorithm.mask_mode,
         batch_size=algorithm.batch_size,
         n_epochs=algorithm.n_epochs,
         gae_lambda=algorithm.gae_lambda,
@@ -102,7 +110,7 @@ def fit_algorithm(
     if timesteps is not None:
         updates["total_timesteps"] = timesteps
         n_envs_final = updates.get("n_envs", algorithm.n_envs)
-        if timesteps < algorithm.n_steps * n_envs_final:
+        if algorithm.name != "reinforce" and timesteps < algorithm.n_steps * n_envs_final:
             n_envs_final = n_envs if n_envs is not None else 1
             n_steps = max(2, timesteps // n_envs_final)
             updates["n_envs"] = n_envs_final
@@ -122,6 +130,15 @@ def train_run(
     forecaster=None,
     eval_limit: int | None = None,
 ) -> dict:
+    # Validate the complete-episode contract before creating an output directory.
+    if run.algorithm.name == "reinforce":
+        horizon = run.physical.horizon_s
+        interval = run.physical.control_interval_s
+        steps = run.algorithm.n_steps // (horizon // interval) * (horizon // interval)
+        if horizon % interval or steps == 0 or run.algorithm.gamma != 1:
+            raise ValueError("REINFORCE requires complete episodes and gamma=1")
+        if run.algorithm.total_timesteps % (steps * run.algorithm.n_envs):
+            raise ValueError("REINFORCE budget must contain whole episode-aligned rollouts")
     output = Path(output)
     output.mkdir(parents=True, exist_ok=False)
     apply_runtime_settings(run)
@@ -172,6 +189,22 @@ def train_run(
     metadata = run_metadata(
         run,
         {
+            "learning_schema_version": 1,
+            "method": learned_method(algorithm.name, algorithm.mask_mode),
+            "mask_mode": algorithm.mask_mode,
+            "trainer_class": type(model).__name__,
+            "trainer_version": model.trainer_version,
+            "critic_used": model.critic_used,
+            "effective_n_steps": model.n_steps,
+            "effective_n_epochs": algorithm.n_epochs if algorithm.name == "ppo" else 1,
+            "optimizer_steps": model.optimizer_steps,
+            "optimizer": {
+                "class": type(model.policy.optimizer).__name__,
+                "defaults": model.policy.optimizer.defaults,
+            },
+            "trainable_parameters": sum(
+                p.numel() for p in model.policy.parameters() if p.requires_grad
+            ),
             "seed": algorithm.seed,
             "total_timesteps_requested": algorithm.total_timesteps,
             "total_timesteps_actual": int(model.num_timesteps),

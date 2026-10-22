@@ -10,6 +10,7 @@ from stable_baselines3.common.callbacks import BaseCallback
 
 from bus_rl.evaluation.pool import make_eval_pool
 from bus_rl.evaluation.runner import evaluate_scenarios
+from bus_rl.learning.training.algorithms import learned_method
 
 
 class BestValidationCallback(BaseCallback):
@@ -47,6 +48,8 @@ class BestValidationCallback(BaseCallback):
         dones = self.locals.get("dones")
         if dones is not None:
             self.completed_episodes += int(np.sum(dones))
+        if self.run.algorithm.validation_timing == "post_update":
+            return True
         if self.run.algorithm.eval_freq <= 0:
             return True
         if self.num_timesteps >= self._next_eval:
@@ -69,7 +72,7 @@ class BestValidationCallback(BaseCallback):
         frame, _ = evaluate_scenarios(
             subset,
             self.run,
-            "ppo",
+            learned_method(self.run.algorithm.name, self.run.algorithm.mask_mode),
             model=self.model,
             model_seed=self.run.algorithm.seed,
             split="validation",
@@ -82,6 +85,7 @@ class BestValidationCallback(BaseCallback):
         self.history.append(
             {
                 "timesteps": int(self.num_timesteps),
+                "optimizer_steps": int(getattr(self.model, "optimizer_steps", 0)),
                 "seed": self.run.algorithm.seed,
                 "encoder": self.run.algorithm.encoder,
                 "history_minutes": self.run.algorithm.history_minutes,
@@ -110,8 +114,26 @@ class BestValidationCallback(BaseCallback):
             self.model.save(str(self.output / "best"))
         return cost
 
+    def _on_rollout_start(self) -> None:
+        if (
+            self.run.algorithm.validation_timing == "post_update"
+            and self.run.algorithm.eval_freq > 0
+            and self.num_timesteps >= self._next_eval
+        ):
+            self._evaluate()
+            while self._next_eval <= self.num_timesteps:
+                self._next_eval += self.run.algorithm.eval_freq
+
     def finalize(self) -> None:
-        if not self.history or self.history[-1]["timesteps"] != self.num_timesteps:
+        final_update_missing = (
+            self.run.algorithm.validation_timing == "post_update"
+            and self.history[-1].get("optimizer_steps") != getattr(self.model, "optimizer_steps", 0)
+        )
+        if (
+            not self.history
+            or self.history[-1]["timesteps"] != self.num_timesteps
+            or final_update_missing
+        ):
             self._evaluate()
         self.model.save(str(self.output / "last"))
         if self.best == float("inf"):

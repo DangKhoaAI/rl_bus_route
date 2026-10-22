@@ -164,7 +164,21 @@ def generate_report(results, output: Path, history=None, rl_method: str | None =
     frame = validate_results(pd.concat(frames, ignore_index=True))
     if rl_method is None:
         rl_method = next(
-            (name for name in ("ppo", "maskable_ppo", "core") if name in set(frame.method)), "ppo"
+            (
+                name
+                for name in (
+                    "ppo",
+                    "maskable_ppo",
+                    "a2c",
+                    "reinforce",
+                    "ppo_free",
+                    "a2c_free",
+                    "reinforce_free",
+                    "core",
+                )
+                if name in set(frame.method)
+            ),
+            "ppo",
         )
     elif rl_method not in set(frame.method):
         raise ValueError(f"RL method {rl_method!r} not found in results")

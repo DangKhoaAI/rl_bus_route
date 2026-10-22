@@ -28,7 +28,9 @@ from bus_sim.oracle.actions import ACTION_TABLE
 from bus_sim.oracle.costs import RewardConfig, add_costs
 from bus_sim.oracle.domain import StepCosts
 
-PPO_METHODS = frozenset({"ppo", "maskable_ppo"})
+PPO_METHODS = frozenset(
+    {"ppo", "maskable_ppo", "a2c", "reinforce", "ppo_free", "a2c_free", "reinforce_free"}
+)
 
 
 def make_controller(method: str, model=None, seed: int = 0):

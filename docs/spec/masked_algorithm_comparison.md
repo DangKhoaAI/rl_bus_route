@@ -1,6 +1,6 @@
 # Bổ sung REINFORCE có mask và A2C có mask
 
-Ngày: **2026-10-22**. Trạng thái: **spec đã chốt để triển khai trước**.
+Ngày: **2026-10-23**. Trạng thái: **spec đã chốt để triển khai trước**.
 
 Spec này thêm hai thuật toán để so với MaskablePPO hiện tại.
 [masking_ablation.md](masking_ablation.md) là phần mở rộng triển khai sau.
@@ -21,7 +21,7 @@ Giữ nguyên tuyến, fleet, scenarios, dynamics, reward, horizon, 221 action,
 guards và observation contract. Rust kernel vẫn từ chối action sai. Mọi
 thuật toán áp mask khi thu dữ liệu, cập nhật và đánh giá.
 
-Chưa triển khai mask-free, đổi action sai thành NOOP, penalty mới,
+Trong giai đoạn đầu chưa triển khai mask-free, đổi action sai thành NOOP, penalty mới,
 REINFORCE có learned baseline hoặc persistent recurrent policy. Không sửa
 evidence đã đóng băng trong `reports/` và `runs/`.
 
@@ -116,26 +116,29 @@ Metadata ghi `critic_used=false` và tách tổng tham số khỏi tham số th�
 
 ### 4.2 Rollout gồm episode hoàn chỉnh
 
-Episode chuẩn có K = horizon_s / control_interval_s = 120 bước. Study mới
-dùng rollout 240 bước mỗi env để REINFORCE có return đầy đủ và các arm dùng
-cùng số tương tác:
+Episode chuẩn có K = horizon_s / control_interval_s = 120 bước. Theo yêu cầu dùng đúng setup standard-v1, giữ n_steps khai báo 256.
+REINFORCE thu 240 bước thực tế mỗi env (hai ca hoàn chỉnh), là bội K lớn
+nhất không vượt 256; ghi rõ effective_n_steps. PPO/A2C vẫn thu 256 bước.
+Cùng tổng số transitions, dữ liệu, reward và runtime:
 
 | Tham số | Giá trị |
 |---|---:|
 | n_envs | 4 |
-| n_steps mỗi env | 240 |
-| Transitions/rollout | 960 |
-| Episode/env/rollout | 2 |
-| Full budget/seed | 245.760 = 256 rollout |
-| Screening budget/seed | 61.440 = 64 rollout |
-| Validation interval | 11.520 = 12 rollout |
+| n_steps khai báo | 256 |
+| n_steps thực tế PPO/A2C / REINFORCE | 256 / 240 |
+| Transitions/rollout PPO/A2C / REINFORCE | 1.024 / 960 |
+| Episode/env/rollout REINFORCE | 2 |
+| Full budget/seed | 245.760 |
+| Screening budget/seed | 61.440 |
+| Validation interval yêu cầu | 12.288 |
 | Seeds xác nhận | 11, 22, 33 |
 
 Các slot bắt đầu từ episode boundary, các scenario có cùng horizon. Tính
 return riêng từng slot và từng episode; không nối qua terminal.
 
 REINFORCE v1 yêu cầu gamma 1, horizon chia hết cho control interval,
-n_steps là bội K và total_timesteps là bội n_envs*n_steps. Request không
+n_steps ít nhất bằng K. Collector lấy floor(n_steps/K)*K bước;
+total_timesteps phải chia hết cho n_envs*effective_n_steps. Request không
 đáp ứng bị từ chối trước khi tạo output. Không đổi physical horizon để làm
 vừa budget.
 
@@ -192,8 +195,9 @@ Dùng Adam để giữ optimizer chung với PPO. Metadata mô tả rõ phiên b
 ### 5.3 PPO
 
 Giữ loss PPO-Clip của MaskablePPO hiện tại, gồm GAE, probability ratio,
-clipping, value loss và entropy. Study mới dùng batch_size 240,
-n_epochs 4: mỗi rollout tạo 4 minibatch/epoch, tổng 16 optimizer steps.
+clipping, value loss và entropy. Study mới giữ batch_size 256,
+n_epochs 4 của standard-v1: mỗi rollout PPO tạo 4 minibatch/epoch, tổng 16
+optimizer steps.
 
 Không coi PPO tắt clipping là implementation A2C/REINFORCE.
 
@@ -223,8 +227,10 @@ Luôn đánh giá trọng số sau optimizer step cuối trước khi hoàn tấ
 Callback phải phân biệt model-update version; không bỏ đánh giá cuối vì
 đã có một lần đo trước update với cùng num_timesteps.
 
-Train lại PPO control với cùng rollout/lịch validation mới. Không lấy
-checkpoint của study n_steps 256 làm control của study n_steps 240.
+Train lại PPO control cho study bổ sung. Giữ n_steps 256 như standard-v1;
+REINFORCE có effective_n_steps 240 được ghi rõ trong report. Validation
+được đo sau update ở rollout boundary đầu tiên đạt mốc yêu cầu 12.288;
+ghi step thực tế, không giả định các thuật toán cập nhật ở cùng step.
 
 ### 6.2 Metadata và tương thích
 
@@ -296,7 +302,7 @@ time. Không đặt yêu cầu thuật toán mới phải thắng PPO để đư
 6. Prediction và checkpoint cost tái lập sau save/load; scalar và native
    batch cho cùng deterministic action trace/cost.
 7. CLI/TOML chọn đúng trainer; config cũ vẫn chọn PPO. Selector sai và budget
-   REINFORCE không tròn episode bị từ chối trước khi train.
+   REINFORCE không tròn effective rollout bị từ chối trước khi train.
 8. Train → best checkpoint → evaluate → report → export/verify giữ đúng
    nhãn/hashes của ba arm.
 9. Trọng số cuối được đánh giá sau update, không bị bỏ vì trùng step count.

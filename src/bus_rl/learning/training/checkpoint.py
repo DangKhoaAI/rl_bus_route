@@ -10,10 +10,10 @@ from pathlib import Path
 from types import ModuleType
 
 import torch
-from sb3_contrib import MaskablePPO
 
 from bus_rl.config import RunConfig
 from bus_rl.execution.environments.rust.bridge import native_build_info
+from bus_rl.learning.training.algorithms import TRAINERS
 from bus_rl.provenance import (
     action_schema_hash,
     assert_physical_compatible,
@@ -113,7 +113,10 @@ def load_model(checkpoint: Path, env, config: SimConfig, backend: str | None = N
     if backend is not None:
         assert_backend_compatible(metadata, backend)
     with _legacy_model_imports():
-        model = MaskablePPO.load(str(checkpoint), env=env, device="cpu")
+        name = metadata.get("algorithm", {}).get("name", "ppo")
+        if name not in TRAINERS:
+            raise ValueError(f"unknown checkpoint algorithm: {name}")
+        model = TRAINERS[name].load(str(checkpoint), env=env, device="cpu")
     return model, metadata
 
 

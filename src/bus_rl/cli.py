@@ -21,6 +21,8 @@ def _run_config(args) -> object:
     algorithm_updates = {
         name: value
         for name in (
+            "name",
+            "mask_mode",
             "encoder",
             "history_minutes",
             "belief_prior_shape",
@@ -207,6 +209,7 @@ def cmd_evaluate(args) -> None:
     from bus_rl.evaluation.runner import evaluate_scenarios, write_results
     from bus_rl.execution.environments.factory import make_env_for_run
     from bus_rl.learning.forecasting import HistoricalForecaster
+    from bus_rl.learning.training.algorithms import learned_method
     from bus_rl.learning.training.checkpoint import load_metadata, load_model
 
     run = _run_config(args)
@@ -220,7 +223,7 @@ def cmd_evaluate(args) -> None:
         raise ValueError("physical config does not match the dataset manifest")
     model = None
     model_seed = args.seed
-    method = args.method
+    method = args.method or "ppo"
     forecaster = None
     metadata = None
     if args.checkpoint:
@@ -232,6 +235,8 @@ def cmd_evaluate(args) -> None:
             forecast=replace(run.forecast, enabled=bool(metadata.get("forecast_enabled"))),
             algorithm=replace(
                 run.algorithm,
+                name=metadata.get("algorithm", {}).get("name", "ppo"),
+                mask_mode=metadata.get("mask_mode", "apply"),
                 encoder=metadata.get("algorithm", {}).get("encoder", "mlp"),
                 history_minutes=metadata.get("algorithm", {}).get("history_minutes", 10),
                 belief_prior_shape=metadata.get("algorithm", {}).get("belief_prior_shape", 1.0),
@@ -249,7 +254,12 @@ def cmd_evaluate(args) -> None:
             Path(args.checkpoint), env, run.physical, backend=run.runtime.backend
         )
         model_seed = metadata.get("seed", model_seed)
-        method = "ppo"
+        method = learned_method(run.algorithm.name, run.algorithm.mask_mode)
+        if args.method is not None and args.method not in {
+            method,
+            "maskable_ppo" if method == "ppo" else method,
+        }:
+            raise ValueError("explicit method conflicts with checkpoint algorithm")
     else:
         forecaster = _maybe_forecaster(args, run)
     frame, traces = evaluate_scenarios(
@@ -429,7 +439,9 @@ def build_parser() -> argparse.ArgumentParser:
     profile.add_argument("--output", required=True)
     profile.set_defaults(func=cmd_profile)
 
-    train = model_actions.add_parser("train", help="train MaskablePPO (default GRU10)")
+    train = model_actions.add_parser(
+        "train", help="train masked PPO, A2C or REINFORCE (default PPO + GRU10)"
+    )
     train.add_argument(
         "--config", default="configs/train.toml", help="TOML config (default: configs/train.toml)"
     )
@@ -445,6 +457,7 @@ def build_parser() -> argparse.ArgumentParser:
     train.add_argument("--torch-threads", type=int, dest="torch_threads")
     _add_runtime_flags(train)
     _add_encoder_flags(train)
+    train.add_argument("--algo", choices=("ppo", "a2c", "reinforce"), dest="name")
     train.set_defaults(func=cmd_train)
 
     diagnose = test_actions.add_parser("diagnose", help="diagnose training and evaluation timings")
@@ -463,6 +476,7 @@ def build_parser() -> argparse.ArgumentParser:
     diagnose.add_argument("--torch-threads", type=int, dest="torch_threads")
     _add_runtime_flags(diagnose)
     _add_encoder_flags(diagnose)
+    diagnose.add_argument("--algo", choices=("ppo", "a2c", "reinforce"), dest="name")
     diagnose.set_defaults(func=cmd_diagnose)
 
     evaluate = model_actions.add_parser("evaluate", help="evaluate a saved checkpoint")
@@ -472,7 +486,7 @@ def build_parser() -> argparse.ArgumentParser:
     evaluate.add_argument("--manifest", required=True)
     evaluate.add_argument("--split", default="validation")
     evaluate.add_argument("--checkpoint")
-    evaluate.add_argument("--method", default="ppo")
+    evaluate.add_argument("--method")
     evaluate.add_argument("--seed", type=int)
     evaluate.add_argument("--output", required=True)
     evaluate.add_argument("--trace", action="store_true")

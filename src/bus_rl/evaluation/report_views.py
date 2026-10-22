@@ -161,7 +161,7 @@ def write_report_views(
         "samples remain exploratory. Point charts use explicitly labelled data-scaled axes."
     )
     controller_description = (
-        "RL uses a learned MaskablePPO controller. Fixed follows a fixed schedule; Proportional "
+        "RL uses the learned algorithm and masking mode recorded in each checkpoint. Fixed follows a fixed schedule; Proportional "
         "responds proportionally to observed demand; Threshold activates control at configured "
         "thresholds. Checkpoints are selected by the lowest post-training validation cost "
         "(earliest checkpoint on ties); test scores are not used for selection."

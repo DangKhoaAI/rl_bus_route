@@ -1,0 +1,41 @@
+# Standard evidence matrix: equal budget, fixed runtime and held-out evaluation.
+[control]
+enable_reassign = true
+enable_short_turn = true
+
+[algorithm]
+name = "a2c"
+validation_timing = "post_update"
+encoder = "gru"
+history_minutes = 10
+belief_prior_shape = 1.0
+belief_prior_rate = 1.0
+belief_decay = 1.0
+gamma = 1.0
+seed = 11
+learning_rate = 0.0003
+n_steps = 256
+n_envs = 4
+batch_size = 256
+n_epochs = 4
+ent_coef = 0.01
+vf_coef = 0.5
+max_grad_norm = 0.5
+gae_lambda = 0.95
+clip_range = 0.2
+total_timesteps = 245760
+eval_freq = 12288
+device = "cpu"
+torch_threads = 2
+diagnostics_enabled = false
+
+[runtime]
+backend = "rust"
+eval_batch_size = 16
+reuse_eval_pool = true
+native_batch = true
+validate_distributions = false
+validate_observation = true
+
+[forecast]
+enabled = false

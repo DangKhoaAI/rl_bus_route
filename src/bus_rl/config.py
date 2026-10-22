@@ -22,6 +22,9 @@ class ControlConfig:
 @dataclass(frozen=True)
 class AlgorithmConfig:
     # Small observation-encoder ablation; PPO/masking and the env contract stay unchanged.
+    name: str = "ppo"
+    mask_mode: str = "apply"
+    validation_timing: str = "legacy_step"
     encoder: str = "gru"
     history_minutes: int = 10
     belief_prior_shape: float = 1.0
@@ -52,6 +55,12 @@ class AlgorithmConfig:
     diagnostics_interval: int = 256
 
     def __post_init__(self) -> None:
+        if self.name not in {"ppo", "a2c", "reinforce"}:
+            raise ValueError(f"unknown algorithm.name: {self.name!r}")
+        if self.mask_mode not in {"apply", "free"}:
+            raise ValueError(f"unknown algorithm.mask_mode: {self.mask_mode!r}")
+        if self.validation_timing not in {"legacy_step", "post_update"}:
+            raise ValueError("unknown validation_timing")
         if self.encoder not in {"mlp", "belief", "gru", "belief_gru"}:
             raise ValueError(f"unknown algorithm.encoder: {self.encoder!r}")
         if not isinstance(self.history_minutes, int) or self.history_minutes < 10:
