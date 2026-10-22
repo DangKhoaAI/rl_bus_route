@@ -49,7 +49,7 @@
   --panel-gap: .75rem;
   /* Left column: experiment setup on top, map legend at the bottom. */
   --config-w: clamp(16rem, 17vw, 22rem);
-  --lists-h: clamp(16rem, 25vh, 26rem);
+  --lists-h: clamp(20rem, 40vh, 36rem);
 }
 html, body { height: 100%; }
 /* Floating UI is sized in rem so one root value scales it for TV: 16px up to 1777px wide (laptop, phone), ~17px at 1920, ~23px at 2560, ~35px at 3840. */
@@ -208,6 +208,7 @@ button:active { transform: scale(.98); }
 .tabs { display: flex; gap: .25rem; padding-bottom: .5rem; border-bottom: 1px solid var(--line); margin-bottom: .25rem; }
 .tabs button { border: 0; background: transparent; padding: .375rem .625rem; border-radius: .375rem; cursor: pointer; font-weight: 600; font-size: .875rem; color: var(--muted); transition: background-color .2s var(--ease), color .2s var(--ease); }
 .tabs button:hover { color: var(--ink); }
+.tab-clock { margin-left: auto; align-self: center; font: 600 .875rem var(--font-mono); color: var(--ink); font-variant-numeric: tabular-nums; }
 .tabs button[aria-selected="true"] { background: var(--panel-2); color: var(--ink); }
 .tabpanel { overflow: auto; flex: 1; min-height: 0; scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
 .tabpanel::-webkit-scrollbar { width: .375rem; }
@@ -215,7 +216,7 @@ button:active { transform: scale(.98); }
 .lists .row:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; background: var(--panel-2); }
 .qbar { width: 2.875rem; flex: none; }
 .log-code { font-family: var(--font-mono); font-size: .8rem; font-weight: 600; }
-.log-time { font-size: .8rem; min-width: 4.25rem; flex: none; align-self: flex-start; line-height: 1.4; white-space: nowrap; }
+.log-time { font-size: .8rem; min-width: 4.25rem; flex: none; font-family: var(--font-mono); align-self: flex-start; line-height: 1.4; white-space: nowrap; }
 
 /* World labels. JS writes transform every frame, so .lbl must never transition transform. */
 .lbl { position: absolute; left: 0; top: 0; transform: translate(-50%, -100%); white-space: nowrap; will-change: transform; }
@@ -367,6 +368,7 @@ button:active { transform: scale(.98); }
       <div class="tabs" role="tablist">
         <button role="tab" id="tab-buses" aria-selected="true" data-tab="buses">Xe</button>
         <button role="tab" id="tab-log" aria-selected="false" data-tab="log">Quyết định</button>
+        <span class="tab-clock" id="log-clock" aria-label="Giờ mô phỏng">--:--:--</span>
       </div>
       <div class="tabpanel" id="tabpanel" role="tabpanel"></div>
     </section>
@@ -612,8 +614,8 @@ const routeQueue = (r) => r.liveWaiting ?? 0;
 const totalWaiting = () => ROUTES.reduce((n, r) => n + routeQueue(r), 0);
 
 function logDecision(code, text, kind, t = SIM.t) {
-  SIM.log.unshift({ t, code, text, kind });
-  if (SIM.log.length > 60) SIM.log.pop();
+  SIM.log.push({ t, code, text, kind });
+  if (SIM.log.length > 200) SIM.log.shift();
 }
 
 /* ---------- three.js scene ---------- */
@@ -974,6 +976,11 @@ const clock = (t) => {
   const s = Math.max(0, Math.round(t));
   return `T+${String(Math.floor(s / 3600)).padStart(2, '0')}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}`;
 };
+// Elapsed simulated time as HH:MM:SS, for the decision log and its clock.
+const stamp = (t) => {
+  const s = Math.max(0, Math.round(t));
+  return [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60].map((n) => String(n).padStart(2, '0')).join(':');
+};
 const busDir = (b) => (b.s <= ROUTES[b.route].fwdLen + 0.5 ? 1 : -1);
 function statusOf(b) {
   if (b.mode === 'reserve') return ['Dự phòng', 'mute'];
@@ -1141,8 +1148,13 @@ function renderList() {
   if (!hasData) { patch($('#tabpanel'), '<span class="muted">Chưa có dữ liệu từ station API.</span>'); return; }
   let html;
   if (tab === 'buses') html = BUSES.map(busRow).join('');
-  else html = SIM.log.length ? SIM.log.map((l, i) => `<div class="row" style="cursor:default"><span class="muted num log-time">${clock(l.t)}</span><span class="grow"><span class="log-code">${esc(l.code)}</span><span class="sub" style="white-space:normal">${esc(l.text)}</span></span></div>`).join('') + `<div class="row muted" style="cursor:default;font-size:11px">${SIM.noop} khoảng gần đây chọn NOOP</div>` : `<span class="muted">Chưa có quyết định nào ngoài NOOP.</span>`;
-  patch($('#tabpanel'), html);
+  else html = SIM.log.length ? SIM.log.map((l, i) => `<div class="row" style="cursor:default"><span class="muted num log-time">${stamp(l.t)}</span><span class="grow"><span class="log-code">${esc(l.code)}</span><span class="sub" style="white-space:normal">${esc(l.text)}</span></span></div>`).join('') + `<div class="row muted" style="cursor:default;font-size:11px">${SIM.noop} khoảng gần đây chọn NOOP</div>` : `<span class="muted">Chưa có quyết định nào ngoài NOOP.</span>`;
+  const panel = $('#tabpanel');
+  // Follow new decisions only while the reader is already at the bottom, so scrolling
+  // back through older entries is not yanked away on the next tick.
+  const follow = panel.scrollHeight - panel.scrollTop - panel.clientHeight < 24;
+  patch(panel, html);
+  if (tab === 'log' && follow) panel.scrollTop = panel.scrollHeight;
 }
 
 function renderKPIs() {
@@ -1168,6 +1180,7 @@ function renderKPIs() {
   $('#depot-sub').textContent = `${res}/${BAYS.length} bãi đang dùng`;
   $('#depot-lbl-sub').textContent = `${res} xe dự phòng`;
   depotLbl.classList.toggle('sel', selection.kind === 'depot');
+  $('#log-clock').textContent = stamp(SIM.t);
   $('#clock').textContent = LIVE ? `${LIVE.finished ? 'Hết ca' : 'API'} ${clock(SIM.t)}` : 'Chưa kết nối';
 }
 
@@ -1204,6 +1217,7 @@ document.addEventListener('click', (e) => {
 document.querySelectorAll('.tabs button').forEach((btn) => btn.addEventListener('click', () => {
   tab = btn.dataset.tab;
   document.querySelectorAll('.tabs button').forEach((x) => x.setAttribute('aria-selected', String(x === btn)));
+  $('#tabpanel').scrollTop = tab === 'log' ? Number.MAX_SAFE_INTEGER : 0;
   renderList();
 }));
 $('#btn-buses').addEventListener('click', () => $('#tab-buses').click());
