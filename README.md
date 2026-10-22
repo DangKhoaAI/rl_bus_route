@@ -101,32 +101,15 @@ presentation-ready report in one command:
 
 ```text
 experiments/result-gru10/report/
-├── README.md                   # Key findings, figures and readable tables
-├── report.html                 # Self-contained HTML with embedded figures
-├── tables/
-│   ├── README.md               # Metric definitions and aggregation rules
-│   ├── results.csv             # Episode-level inputs
-│   ├── summary.csv             # Daily mean metrics, counts and training-seed SD
-│   ├── comparisons.csv         # RL savings vs. each baseline, paired 95% intervals
-│   ├── training.csv            # Measured reference, selected step and best cost
-│   ├── training_history.csv    # Normalized histories, when available
-│   ├── setup.csv               # Architecture, memory, budget and dataset counts
-│   └── *.md                    # Readable benchmark/comparison/training/service tables
-├── figures/
-│   ├── 01_main_result.png      # Operational Cost
-│   ├── 02_baseline_savings.png # Cost Reduction
-│   ├── 03_training_progress.png
-│   ├── 04_service_quality.png
-│   └── diagnostics/            # First-episode queue/fleet/headway illustrations, if supplied
-├── provenance/
-│   ├── README.md
-│   ├── protocol.json
-│   ├── config.json
-│   ├── verification.json      # Input/output SHA256 and metadata coverage
-│   ├── inputs/                # Original evaluation/history CSVs
-│   └── history.csv            # Training history, when available
-└── summary.json               # Legacy means by method, pooled across splits
+└── report.html  # Run configuration, test conditions and final results; embedded figures
 ```
+
+Each report is one portable HTML file. The main content shows the run setup,
+each test condition and the final cost/service comparisons. Training curves,
+full settings and input hashes are expandable inside the same document.
+Original data remain in `train/` and `eval/`; no CSV, Markdown, JSON or figure
+copies are emitted into the report folder. Study-wide `summary.csv` and
+`comparisons.csv` remain at the study root for comparisons between policies.
 
 The four main figures use short English titles, direct value labels and a
 consistent RL accent color. Cost and waiting-time comparisons use point charts
@@ -191,6 +174,7 @@ uv run bus-rl experiment run \
   --manifest data/generated/base/manifest.json \
   --output experiments/standard-v1 \
   --artifacts runs/standard-v1
+uv run --with reportlab python scripts/build_study_report.py --study runs/standard-v1
 uv run bus-rl artifact verify --path runs/standard-v1
 ```
 
@@ -207,7 +191,11 @@ Local runs follow `<study>/<policy>/<seed>/{train,eval}`; each policy has a
 A frozen protocol includes source/config/data hashes and resolved settings.
 Training diagnostics are disabled; only best checkpoints are retained after
 successful completion. Git exports omit checkpoints, optimizer state, raw
-validation telemetry and logs. Original per-day test results remain available.
+validation telemetry and logs. After consolidation, the study root contains
+`README.md`, `report.md`, `report.html`, `report.pdf` and `evidence/`. Original
+per-day results, configs and metadata stay under `evidence/`; redundant per-policy
+presentation copies are removed. The report builder checks its numbers against
+per-day results and does not retrain models.
 
 Export or verify a completed study independently:
 

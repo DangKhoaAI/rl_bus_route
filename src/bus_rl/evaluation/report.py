@@ -7,12 +7,12 @@ import shutil
 from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import numpy as np
 import pandas as pd
 
 from bus_rl.config import RunConfig
-from bus_rl.evaluation.plots import plot_fleet_gantt, plot_headways, plot_queue_heatmap
 from bus_rl.evaluation.report_data import (
     METRICS,
     compare_baselines,
@@ -112,11 +112,11 @@ def _history(path: Path, metadata: dict | None, index: int) -> pd.DataFrame:
     return frame
 
 
-def generate_report(results, output: Path, history=None, rl_method: str | None = None) -> None:
+def generate_report(results, output: Path, history=None, rl_method: str | None = None) -> dict:
     """Read one or more CSVs; pair scenarios before presenting baseline comparisons."""
     require_fresh_output(output)
     result_paths, history_paths = _paths(results), _paths(history)
-    frames, evaluations, sources, traces = [], [], {}, []
+    frames, evaluations, sources = [], [], {}
     inferred_histories = []
     for index, path in enumerate(result_paths):
         source_key = "results" if len(result_paths) == 1 else f"results_{index}"
@@ -160,15 +160,6 @@ def generate_report(results, output: Path, history=None, rl_method: str | None =
             ):
                 raise ValueError("events.jsonl SHA256 mismatch")
             sources[f"events_{index}"] = _source(events)
-            # A trace illustrates one episode only; never stitch different missions together.
-            if not traces:
-                rows = [
-                    json.loads(line) for line in events.read_text().splitlines() if line.strip()
-                ]
-                for row in rows:
-                    if traces and row["time_s"] <= traces[-1]["time_s"]:
-                        break
-                    traces.append(row)
 
     frame = validate_results(pd.concat(frames, ignore_index=True))
     if rl_method is None:
@@ -181,7 +172,6 @@ def generate_report(results, output: Path, history=None, rl_method: str | None =
     comparisons = compare_baselines(frame, rl_method)
     histories = []
     training_metadata = []
-    history_inputs = []
     seen_histories = set()
     candidates = (
         [
@@ -203,7 +193,6 @@ def generate_report(results, output: Path, history=None, rl_method: str | None =
             continue
         seen_histories.add(identity)
         sources[f"history_{len(histories)}"] = _source(path)
-        history_inputs.append(path)
         histories.append(learning)
         if metadata:
             training_metadata.append(metadata)
@@ -216,41 +205,11 @@ def generate_report(results, output: Path, history=None, rl_method: str | None =
         "recorded" if coverage == len(evaluations) else "partial" if coverage else "unavailable"
     )
 
-    tables, figures, provenance = (output / name for name in ("tables", "figures", "provenance"))
-    for directory in (tables, figures, provenance / "inputs"):
-        directory.mkdir(parents=True)
-    if len(result_paths) == 1:
-        shutil.copyfile(result_paths[0], tables / "results.csv")
-    else:
-        frame.to_csv(tables / "results.csv", index=False)
-    for index, path in enumerate(result_paths):
-        shutil.copyfile(path, provenance / "inputs" / f"results-{index:03}.csv")
-    summary.to_csv(tables / "summary.csv", index=False)
-    comparisons.to_csv(tables / "comparisons.csv", index=False)
-    training.to_csv(tables / "training.csv", index=False)
-    if histories:
-        learning.to_csv(tables / "training_history.csv", index=False)
-        for index, path in enumerate(history_inputs):
-            shutil.copyfile(path, provenance / "inputs" / f"history-{index:03}.csv")
-        if len(history_inputs) == 1:
-            shutil.copyfile(history_inputs[0], provenance / "history.csv")
-        else:
-            learning.to_csv(provenance / "history.csv", index=False)
-    render_presentation(summary, comparisons, learning, training, figures, rl_method)
-    if traces:
-        diagnostics = figures / "diagnostics"
-        diagnostics.mkdir()
-        plot_queue_heatmap(traces, diagnostics)
-        plot_fleet_gantt(traces, diagnostics)
-        plot_headways(traces, diagnostics)
     metrics = [name for name in METRICS if name in frame]
-    (output / "summary.json").write_text(
-        frame.groupby("method")[metrics].mean().to_json(indent=2) + "\n"
-    )
     single = evaluations[0] if len(evaluations) == 1 else None
-    _write_json(
-        provenance / "config.json",
-        {
+    payload = {
+        "schema_version": 3,
+        "config": {
             "status": status,
             "evaluation_config": single["config"] if single else None,
             "checkpoint_metadata": single.get("checkpoint_metadata") if single else None,
@@ -262,16 +221,11 @@ def generate_report(results, output: Path, history=None, rl_method: str | None =
                 for item in evaluations
             ],
         },
-    )
-    _write_json(
-        provenance / "protocol.json",
-        {
-            "schema_version": 2,
+        "protocol": {
             "created_at": datetime.now(UTC).isoformat(),
             "evaluation": single,
             "evaluations": evaluations,
             "rl_method": rl_method,
-            "group_by": ["split", "method"],
             "aggregation": "average model seeds per scenario day, then average days",
             "metrics": {name: METRICS[name] for name in metrics},
             "confidence_intervals": {
@@ -279,50 +233,42 @@ def generate_report(results, output: Path, history=None, rl_method: str | None =
                 "resamples": 2000,
                 "seed": 6001,
                 "level": 0.95,
-                "percentage": "ratio of resampled mean costs",
                 "training_seed_uncertainty_included": False,
                 "multiple_comparison_adjustment": False,
             },
-            "figures": "split-specific point charts with explicitly labelled data-scaled axes",
             "history_available": bool(histories),
-            "trace_available": bool(traces),
-            "trace_selection": "first episode of the first available events file"
-            if traces
-            else None,
         },
-    )
-    (tables / "README.md").write_text(
-        "# Report Tables\n\n"
-        "- `results.csv`: episode-level evaluations; original inputs are preserved in provenance/inputs/.\n"
-        "- `summary.csv`: daily mean metrics after averaging model seeds; counts and seed SD are reported separately.\n"
-        "- `comparisons.csv`: matched baseline minus RL costs, relative reductions and paired 95% intervals. Positive savings favor RL.\n"
-        "- `training.csv`: measured reference, lowest validation cost, selected step and training coverage per run.\n"
-        "- `training_history.csv`: normalized histories with real seed/encoder labels, when available.\n"
-        "- `benchmark.md`, `comparison.md`, `training.md`, `service.md`: presentation tables.\n\n"
-        "Distinct scenario hashes define paired days. All model seeds must cover identical days. Missing metric values are excluded per column. Seed SD is unavailable with fewer than two model seeds.\n\n"
-        "| Metric | Definition |\n|---|---|\n"
-        + "".join(f"| `{key}` | {METRICS[key]} |\n" for key in metrics)
-    )
-    (provenance / "README.md").write_text(
-        "# Provenance\n\n"
-        "`protocol.json` records evaluation context and aggregation rules; `config.json` preserves resolved evaluation and checkpoint settings. `verification.json` records source and artifact SHA256 hashes. Original result/history inputs are preserved in `inputs/`.\n\n"
-        "Evaluation sidecars are checked against their CSV hashes. Legacy inputs without metadata remain explicitly unavailable; no configuration is inferred. Paired scenarios are verified using both seed and tape hash. Source hashes identify evidence and do not certify simulator validity.\n"
-    )
-    write_report_views(output, frame, summary, comparisons, training, status, training_metadata)
-    _write_json(
-        provenance / "verification.json",
-        {
-            "schema_version": 2,
+        "verification": {
             "sources": sources,
             "rows": len(frame),
             "summary_rows": len(summary),
             "missing_metric_values": {name: int(frame[name].isna().sum()) for name in metrics},
             "evaluation_metadata_matches_results": True if coverage == len(evaluations) else None,
             "metadata_coverage": {"recorded": coverage, "inputs": len(evaluations)},
-            "artifacts": {
-                str(path.relative_to(output)): file_hash(path)
-                for path in sorted(output.rglob("*"))
-                if path.is_file()
-            },
         },
-    )
+        "tables": {
+            name: json.loads(table.to_json(orient="records", double_precision=15))
+            for name, table in (
+                ("summary", summary),
+                ("comparisons", comparisons),
+                ("training", training),
+            )
+        },
+    }
+    # Figures are intermediate files only. The public report is a single portable HTML.
+    with TemporaryDirectory(prefix="bus-rl-report-") as temporary:
+        figures = Path(temporary)
+        render_presentation(summary, comparisons, learning, training, figures, rl_method)
+        output.mkdir(parents=True)
+        write_report_views(
+            output,
+            frame,
+            summary,
+            comparisons,
+            training,
+            status,
+            training_metadata,
+            figures=figures,
+            payload=payload,
+        )
+    return payload

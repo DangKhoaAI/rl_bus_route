@@ -1,4 +1,0 @@
-run_id,seed,encoder,history_minutes,reference_timestep,reference_kind,reference_val_cost,best_val_cost,best_timesteps,last_timesteps,last_val_cost,validation_reduction_pct,validation_days,wall_time_s
-belief/20/seed-11,11,belief,20,0,untrained,15083.98875,13218.58125,208896,245760,14416.28625,12.366805166173311,100,121.57410952600183
-belief/20/seed-22,22,belief,20,0,untrained,16155.94375,13125.57625,86016,245760,14141.81,18.756982240669164,100,122.63088024000172
-belief/20/seed-33,33,belief,20,0,untrained,15310.64625,13215.3925,208896,245760,14357.23,13.684946512300224,100,121.69810135796432

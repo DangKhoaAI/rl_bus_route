@@ -18,6 +18,7 @@ import pandas as pd
 from bus_rl.artifacts import export_artifacts
 from bus_rl.config import load_run_config
 from bus_rl.evaluation.report import generate_report
+from bus_rl.evaluation.report_views import read_report_data
 from bus_rl.execution.scenarios.io import load_manifest
 from bus_rl.provenance import file_hash, git_status, physical_config_hash, require_fresh_output
 
@@ -229,11 +230,13 @@ def run_experiment(
                         ]
                     )
         report = output / name / "report"
-        if not (resume and (report / "provenance" / "verification.json").exists()):
+        if resume and (report / "report.html").exists():
+            report_data = read_report_data(report / "report.html")
+        else:
             print(f"[experiment] report {name}", flush=True)
-            generate_report([*evaluations, *baseline_paths], report)
+            report_data = generate_report([*evaluations, *baseline_paths], report)
         for table, rows in [("summary", all_summary), ("comparisons", all_comparisons)]:
-            frame = pd.read_csv(report / "tables" / f"{table}.csv")
+            frame = pd.DataFrame(report_data["tables"][table])
             frame.insert(0, "policy", name)
             rows.append(frame)
     pd.concat(all_summary, ignore_index=True).to_csv(output / "summary.csv", index=False)
@@ -267,7 +270,7 @@ def _write_index(output: Path, spec: dict) -> None:
     text += f"Study: `{spec['name']}`. Seeds: {', '.join(map(str, spec['seeds']))}. Evaluation conditions: {', '.join(spec['splits'])}.\n\n"
     text += "| Configuration | Evidence report |\n|---|---|\n"
     text += "".join(
-        f"| `{name}` | [{name}/report/README.md]({name}/report/README.md) |\n"
+        f"| `{name}` | [{name}/report/report.html]({name}/report/report.html) |\n"
         for name in spec["policies"]
     )
     text += "\n`summary.csv` and `comparisons.csv` consolidate every registered policy, including unsuccessful configurations. `protocol.json` freezes budgets, configs, scenario identities and implementation hashes.\n\n"

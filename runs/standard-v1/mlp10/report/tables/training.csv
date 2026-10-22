@@ -1,4 +1,0 @@
-run_id,seed,encoder,history_minutes,reference_timestep,reference_kind,reference_val_cost,best_val_cost,best_timesteps,last_timesteps,last_val_cost,validation_reduction_pct,validation_days,wall_time_s
-mlp/10/seed-11,11,mlp,10,0,untrained,16320.42,13199.1325,159744,245760,13464.355,19.12504396332938,100,93.6891364629846
-mlp/10/seed-22,22,mlp,10,0,untrained,14598.715,13113.9725,98304,245760,13507.8325,10.170364309461485,100,94.98721555201335
-mlp/10/seed-33,33,mlp,10,0,untrained,16485.17125,13213.45625,233472,245760,13347.9475,19.846411968574486,100,94.50960480899084

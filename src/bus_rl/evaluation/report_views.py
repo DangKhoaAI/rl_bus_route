@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import json
 from html import escape
 from pathlib import Path
 
@@ -88,23 +89,6 @@ def human_tables(summary, comparisons, training):
     }
 
 
-def _markdown(frame):
-    if frame.empty:
-        return "Required data were not supplied.\n"
-    clean = lambda x: str(x).replace("|", "\\|").replace("\n", " ")
-    return (
-        "| "
-        + " | ".join(map(clean, frame.columns))
-        + " |\n|"
-        + "---|" * len(frame.columns)
-        + "\n"
-        + "".join(
-            "| " + " | ".join(map(clean, row)) + " |\n"
-            for row in frame.itertuples(index=False, name=None)
-        )
-    )
-
-
 def report_findings(comparisons, training, frame):
     findings = []
     if comparisons.empty:
@@ -161,6 +145,9 @@ def write_report_views(
     training,
     metadata_status: str,
     training_metadata: list[dict],
+    *,
+    figures: Path,
+    payload: dict,
 ):
     tables = human_tables(summary, comparisons, training)
     findings = report_findings(comparisons, training, frame)
@@ -176,8 +163,8 @@ def write_report_views(
     controller_description = (
         "RL uses a learned MaskablePPO controller. Fixed follows a fixed schedule; Proportional "
         "responds proportionally to observed demand; Threshold activates control at configured "
-        "thresholds. Exact policy architecture, memory window, training budget and checkpoint "
-        "identity are recorded in provenance/config.json when available."
+        "thresholds. Checkpoints are selected by the lowest post-training validation cost "
+        "(earliest checkpoint on ties); test scores are not used for selection."
     )
     setup_rows = []
     seen = set()
@@ -215,7 +202,6 @@ def write_report_views(
             "Parameters",
         ],
     )
-    setup.to_csv(output / "tables" / "setup.csv", index=False)
     sections = [
         (
             "Operational Cost",
@@ -242,20 +228,9 @@ def write_report_views(
             tables["service"],
         ),
     ]
-    markdown = "# RL Performance Report\n\n" + "\n\n".join(findings) + "\n\n"
-    for title, image, caption, table in sections:
-        markdown += (
-            f"## {title}\n\n{caption}\n\n![{title}](figures/{image})\n\n" + _markdown(table) + "\n"
-        )
-    markdown += f"## Experimental Context\n\n{controller_description}\n\n{_markdown(setup)}\nEvaluation metadata coverage: **{metadata_status}**.\n\n## Methodology\n\n{methodology}\n\n"
-    markdown += "Machine-readable tables: `tables/summary.csv`, `tables/comparisons.csv`, `tables/training.csv`. Source hashes and configuration: `provenance/`. Trace illustrations, when supplied: `figures/diagnostics/`.\n"
-    (output / "README.md").write_text(markdown)
-    for name, table in tables.items():
-        (output / "tables" / f"{name}.md").write_text(_markdown(table))
-
     parts = []
     for title, image, caption, table in sections:
-        encoded = base64.b64encode((output / "figures" / image).read_bytes()).decode()
+        encoded = base64.b64encode((figures / image).read_bytes()).decode()
         parts.append(
             f'<section><h2>{escape(title)}</h2><p>{escape(caption)}</p><img alt="{escape(title)}" src="data:image/png;base64,{encoded}"><div class="table">{table.to_html(index=False, border=0, escape=True) if not table.empty else "<p>Required data were not supplied.</p>"}</div></section>'
         )
@@ -266,7 +241,7 @@ def write_report_views(
         ("Lower-cost RL contrasts", f"{wins} / {len(comparisons)}"),
     ]
     html = """<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RL Performance Report</title>
-<style>body{margin:0;background:#f3f5f7;color:#1c2b38;font:16px/1.6 system-ui,sans-serif}main{max-width:1280px;margin:auto;padding:48px 32px}h1{font-size:44px;line-height:1.1;margin:8px 0 16px}h2{font-size:28px;margin:0 0 12px}p{color:#475766}.eyebrow{color:#087f8c;font-weight:700;letter-spacing:.12em;font-size:12px}.cards{display:flex;gap:20px;margin:28px 0}.card{flex:1;background:white;border-top:4px solid #087f8c;padding:20px}.card strong{display:block;font-size:32px;color:#087f8c}.card span{font-size:13px;color:#475766}section{background:white;padding:32px;margin:24px 0;border:1px solid #e1e6eb}img{width:100%;height:auto;display:block}.table{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}th{text-align:left;background:#edf4f5;color:#243b45}th,td{padding:12px;border-bottom:1px solid #e5eaee}li{margin:12px 0}footer{font-size:14px;color:#56616c}@media(max-width:700px){main{padding:24px 12px}.cards{flex-direction:column}section{padding:16px}h1{font-size:32px}}@media print{body{background:white}main{padding:0}section{break-inside:avoid;border:0;padding:16px 0}}</style><main><header><div class="eyebrow">BUS FLEET CONTROL · EVALUATION</div><h1>RL Performance Report</h1><p>Training evidence, baseline comparisons and service outcomes in a controlled simulator.</p></header>"""
+<style>body{margin:0;background:#f3f5f7;color:#1c2b38;font:16px/1.6 system-ui,sans-serif}main{max-width:1280px;margin:auto;padding:48px 32px}h1{font-size:44px;line-height:1.1;margin:8px 0 16px}h2{font-size:28px;margin:0 0 12px}p{color:#475766}.eyebrow{color:#087f8c;font-weight:700;letter-spacing:.12em;font-size:12px}.cards{display:flex;gap:20px;margin:28px 0}.card{flex:1;background:white;border-top:4px solid #087f8c;padding:20px}.card strong{display:block;font-size:32px;color:#087f8c}.card span{font-size:13px;color:#475766}section{background:white;padding:32px;margin:24px 0;border:1px solid #e1e6eb}img{width:100%;height:auto;display:block}.table{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}th{text-align:left;background:#edf4f5;color:#243b45}th,td{padding:12px;border-bottom:1px solid #e5eaee}li{margin:12px 0}details{margin:24px 0;padding:16px;background:white;border:1px solid #e1e6eb}summary{cursor:pointer;font-weight:600}details section{border:0;margin:0}footer{font-size:14px;color:#56616c}@media(max-width:700px){main{padding:24px 12px}.cards{flex-direction:column}section{padding:16px}h1{font-size:32px}}@media print{body{background:white}main{padding:0}section{break-inside:avoid;border:0;padding:16px 0}}</style><main><header><div class="eyebrow">BUS FLEET CONTROL · EVALUATION</div><h1>RL Performance Report</h1><p>Training evidence, baseline comparisons and service outcomes in a controlled simulator.</p></header>"""
     html += (
         '<div class="cards">'
         + "".join(
@@ -275,11 +250,120 @@ def write_report_views(
         )
         + "</div>"
     )
+    html += _experimental_setup(setup, summary, payload, controller_description, metadata_status)
     html += (
-        "<section><h2>Key Findings</h2><ul>"
+        "<section><h2>Final Results</h2><h3>Key Findings</h3><ul>"
         + "".join(f"<li>{escape(finding)}</li>" for finding in findings)
         + "</ul></section>"
     )
-    html += "".join(parts)
-    html += f'<section><h2>Experimental Context</h2><p>{escape(controller_description)}</p><div class="table">{setup.to_html(index=False, border=0, escape=True) if not setup.empty else "<p>Training configuration was not recorded.</p>"}</div><p>Evaluation metadata coverage: {escape(metadata_status)}.</p><h2>Methodology</h2><p>{escape(methodology)}</p></section><footer>Tables, source hashes and resolved configuration are preserved alongside this self-contained report.</footer></main></html>'
+    # Keep the learning curve available without interrupting the final evaluation results.
+    html += "".join(part for i, part in enumerate(parts) if i != 2)
+    html += f"<details><summary>Training Progress</summary>{parts[2]}</details>"
+    html += f"<section><h2>How to Read the Results</h2><p>{escape(methodology)}</p></section>"
+    html += _reproducibility(payload)
+    encoded = json.dumps(payload, allow_nan=False, separators=(",", ":")).replace("<", "\\u003c")
+    html += f'<script id="report-data" type="application/json">{encoded}</script>'
+    html += "<footer>Self-contained report. Original training and evaluation files remain at their source locations.</footer></main></html>"
     (output / "report.html").write_text(html)
+
+
+def read_report_data(path: Path) -> dict:
+    """Read the embedded report data used for study aggregation and resume."""
+    marker = '<script id="report-data" type="application/json">'
+    html = path.read_text()
+    if marker not in html:
+        raise ValueError(f"report has no embedded data: {path}; regenerate the report")
+    return json.loads(html.split(marker, 1)[1].split("</script>", 1)[0])
+
+
+# These names refer to the standard simulator splits, not inferred custom conditions.
+_CONDITIONS = {
+    "train": "Standard demand and traffic; used for learning.",
+    "validation": "Standard demand and traffic; used for checkpoint selection, not an independent test.",
+    "test_id": "Standard demand and traffic, with held-out scenario seeds.",
+    "test_ood_burst": "Extra demand at one stop: 8–20 arrivals per simulation tick for 5–10 minutes, starting between minutes 30 and 150.",
+    "test_ood_traffic": "One route corridor has travel times multiplied by 1.5–2.0 for 30 minutes.",
+}
+
+
+def _experimental_setup(setup, summary, payload, description, status):
+    conditions = []
+    for split, group in summary.groupby("split", sort=False):
+        counts = "; ".join(
+            f"{METHOD_NAMES.get(row.method, row.method)}: {int(row.scenario_days)}"
+            for row in group.itertuples()
+        )
+        conditions.append(
+            {
+                "Condition": SPLIT_NAMES.get(split, split),
+                "Split": split,
+                "Standard simulator definition": _CONDITIONS.get(
+                    split, "Custom condition; see source configuration."
+                ),
+                "Days per controller": counts,
+            }
+        )
+    configurations = []
+    seen = set()
+    for item in payload["config"]["evaluations"]:
+        if item is None:
+            continue
+        config = item["config"]
+        # Seed-specific run identities are shown in setup; show each shared configuration once.
+        for group in (
+            "physical",
+            "algorithm",
+            "control",
+            "reward",
+            "forecast",
+            "shaping",
+            "runtime",
+        ):
+            for key, value in config.get(group, {}).items():
+                if group == "algorithm" and key == "seed":
+                    continue
+                identity = (config.get("source"), group, key, json.dumps(value, sort_keys=True))
+                if identity in seen:
+                    continue
+                seen.add(identity)
+                configurations.append(
+                    {
+                        "Configuration": config.get("source", "Not recorded"),
+                        "Group": group,
+                        "Setting": key,
+                        "Value": str(value),
+                    }
+                )
+    table = lambda data: data.to_html(index=False, border=0, escape=True)
+    setup_html = (
+        table(setup) if not setup.empty else "<p>Training configuration was not recorded.</p>"
+    )
+    config_html = (
+        table(pd.DataFrame(configurations))
+        if configurations
+        else "<p>Resolved configuration was not recorded.</p>"
+    )
+    return (
+        "<section><h2>Run Configuration and Test Conditions</h2>"
+        f'<p>{escape(description)}</p><div class="table">{setup_html}</div>'
+        "<h3>Test Conditions</h3><p>Valid paired comparisons require identical scenario days within each condition. "
+        "The definitions below describe the standard simulator splits; original source metadata is embedded for verification.</p>"
+        f'<div class="table">{table(pd.DataFrame(conditions))}</div>'
+        f'<details><summary>All recorded run settings</summary><div class="table">{config_html}</div></details>'
+        f"<p>Evaluation metadata coverage: {escape(status)}.</p></section>"
+    )
+
+
+def _reproducibility(payload):
+    sources = pd.DataFrame(
+        [
+            {"Input": key, "Original file": item["path"], "SHA256": item["sha256"]}
+            for key, item in payload["verification"]["sources"].items()
+        ]
+    )
+    return (
+        "<details><summary>Source files and reproducibility</summary>"
+        "<p>Inputs are kept in their original train/eval directories. This HTML embeds "
+        "the resolved configuration, aggregate tables and source hashes; it does not copy raw inputs.</p>"
+        f'<div class="table">{sources.to_html(index=False, border=0, escape=True)}</div></details>'
+    )

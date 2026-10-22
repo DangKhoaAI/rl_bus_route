@@ -8,8 +8,10 @@ are authored by humans under `reports/` using the evidence here.
 |---|---|---|
 | `standard-v1` | MLP10, GRU10, Belief20-fade; three seeds; 245,760 steps/seed | [Index](standard-v1/README.md) |
 
-Each study records config snapshots, scenario identities, training histories,
-per-day evaluations, comparison tables, figures and artifact SHA256 checksums.
+The `standard-v1/` root contains one README and one consolidated report in
+Markdown, HTML and PDF. Its `evidence/` folder records config snapshots, scenario
+identities, training histories, per-day evaluations, comparison tables and
+artifact SHA256 checksums.
 Checkpoints, optimizer state, raw validation telemetry and diagnostic logs are
 excluded. Verify with `uv run bus-rl artifact verify --path runs/standard-v1`.
 

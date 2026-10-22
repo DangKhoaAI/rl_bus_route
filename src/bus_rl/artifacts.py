@@ -14,10 +14,13 @@ LOCAL_ONLY = {"validation_metrics.csv", "progress.json"}
 
 
 def verify_artifacts(path: Path) -> dict:
-    manifest = json.loads((path / "artifacts.json").read_text())
+    manifest_path = path / "artifacts.json"
+    if not manifest_path.exists():
+        manifest_path = path / "evidence" / "artifacts.json"
+    manifest = json.loads(manifest_path.read_text())
     expected = set(manifest["files"])
     actual = {p.relative_to(path).as_posix() for p in path.rglob("*") if p.is_file()}
-    if actual != expected | {"artifacts.json"}:
+    if actual != expected | {manifest_path.relative_to(path).as_posix()}:
         raise ValueError("artifact inventory mismatch: unexpected or missing files")
     for name, item in manifest["files"].items():
         relative = Path(name)

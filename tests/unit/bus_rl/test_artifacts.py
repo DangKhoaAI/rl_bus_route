@@ -67,3 +67,35 @@ def test_git_ignore_separates_local_state_from_run_evidence():
         "experiments/standard-v1/x/train/best.zip",
         "runs/standard-v1/x/train/best.zip",
     ]
+
+
+def test_verify_bundle_with_nested_manifest_checks_report_and_evidence(tmp_path):
+    import shutil
+
+    from bus_rl.provenance import canonical_hash, file_hash
+
+    source = _completed_source(tmp_path)
+    bundle = tmp_path / "bundle"
+    export_artifacts(source, bundle)
+    old = json.loads((bundle / "artifacts.json").read_text())
+    evidence = bundle / "evidence"
+    evidence.mkdir()
+    for path in list(bundle.iterdir()):
+        if path != evidence:
+            shutil.move(str(path), evidence / path.name)
+    report = bundle / "report.pdf"
+    report.write_bytes(b"PDF fixture")
+    old["files"] = {
+        path.relative_to(bundle).as_posix(): {
+            "sha256": file_hash(path),
+            "bytes": path.stat().st_size,
+        }
+        for path in bundle.rglob("*")
+        if path.is_file() and path != evidence / "artifacts.json"
+    }
+    old["inventory_sha256"] = canonical_hash(old["files"])
+    (evidence / "artifacts.json").write_text(json.dumps(old))
+    assert verify_artifacts(bundle)["files"]["report.pdf"]["bytes"] == 11
+    report.write_bytes(b"tampered PDF")
+    with pytest.raises(ValueError, match="checksum mismatch"):
+        verify_artifacts(bundle)

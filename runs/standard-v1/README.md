@@ -1,15 +1,32 @@
-# Standard Run Evidence
+# standard-v1
 
-Study: `standard-v1`. Seeds: 11, 22, 33. Evaluation conditions: test_id, test_ood_burst, test_ood_traffic.
+Một báo cáo tổng hợp cho MLP10, GRU10 và Belief20-fade.
 
-| Configuration | Evidence report |
-|---|---|
-| `mlp10` | [mlp10/report/README.md](mlp10/report/README.md) |
-| `gru10` | [gru10/report/README.md](gru10/report/README.md) |
-| `belief20-fade` | [belief20-fade/report/README.md](belief20-fade/report/README.md) |
+- [Báo cáo Markdown](report.md): đọc ngay trong editor.
+- [Báo cáo HTML](report.html): bảng và biểu đồ, tự chứa hình ảnh.
+- [Báo cáo PDF](report.pdf): bản 6 trang để đọc, in hoặc chia sẻ.
 
-`summary.csv` and `comparisons.csv` consolidate every registered policy, including unsuccessful configurations. `protocol.json` freezes budgets, configs, scenario identities and implementation hashes.
+Ba định dạng dùng cùng nội dung và số liệu; bản Markdown trình bày bằng bảng,
+HTML/PDF có thêm biểu đồ. Báo cáo gồm thiết lập chạy, từng điều kiện test,
+kết quả cuối và cách tính. Không cần mở các file dữ liệu để đọc báo cáo.
 
-Each policy/seed contains train metadata and test evaluations. Policy-level reports aggregate all seeds. Shared baseline evaluations are under `baselines/shared/eval/`. These artifacts support the human-authored final study in `reports/`.
+`evidence/` giữ dữ liệu gốc: config, protocol, manifest kịch bản, metadata/lịch sử
+train, kết quả từng ngày và các bảng tổng hợp. Không chứa weights hoặc logs.
+Các report riêng từng policy đã được thay bằng báo cáo chung ở trên.
 
-Local checkpoint weights, validation episode telemetry and diagnostic logs are excluded from Git evidence. Regenerate tapes with `bus-rl data generate` using configs/base.toml and the split counts in configs/study.toml; compare the resulting manifest against data/manifest.json.
+Kiểm tra tính toàn vẹn từ thư mục gốc dự án:
+
+```bash
+uv run bus-rl artifact verify --path runs/standard-v1
+```
+
+Tạo lại cả ba định dạng và dọn lại bundle:
+
+```bash
+uv run --with reportlab python scripts/build_study_report.py --study runs/standard-v1
+```
+
+Chương trình kiểm tra dữ liệu, dựng đủ các định dạng ở thư mục tạm, rồi mới thay
+bundle hiện tại; bản trước đó được giữ trong `/tmp/bus-study-previous-*/`.
+Dữ liệu này là snapshot tái lập trên bộ test tham chiếu đã dùng trước đây;
+không tự thay thế kết luận lịch sử ở `reports/`.

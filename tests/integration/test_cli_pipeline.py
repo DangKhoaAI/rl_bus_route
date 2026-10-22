@@ -10,6 +10,7 @@ import pytest
 
 from bus_rl.cli import main as cli_main
 from bus_rl.evaluation.plots import render_plots
+from bus_rl.evaluation.report_views import read_report_data
 from bus_rl.provenance import file_hash, require_fresh_output
 from tests.support.paths import ROOT
 
@@ -134,35 +135,26 @@ def test_cli_smoke_writes_csv_and_rejects_existing_output(tmp_path):
             str(report_out),
         ]
     )
-    assert (report_out / "summary.json").exists()
-    assert (report_out / "figures" / "03_training_progress.png").exists()
-    assert (report_out / "figures" / "diagnostics" / "queue_heatmap.png").exists()
-    assert (report_out / "figures" / "diagnostics" / "headway.png").exists()
-    assert (report_out / "report.html").exists()
-    training = pd.read_csv(report_out / "tables" / "training.csv")
-    assert training.iloc[0]["seed"] == 11
+    assert [p.name for p in report_out.iterdir()] == ["report.html"]
+    report_data = read_report_data(report_out / "report.html")
+    training = pd.DataFrame(report_data["tables"]["training"])
+    assert training.iloc[0]["seed"] == "11"
     assert training.iloc[0]["reference_kind"] == "untrained"
-    assert (report_out / "tables" / "README.md").exists()
-    assert (report_out / "tables" / "results.csv").read_bytes() == (
-        eval_out / "results.csv"
-    ).read_bytes()
-    summary = pd.read_csv(report_out / "tables" / "summary.csv")
+    summary = pd.DataFrame(report_data["tables"]["summary"])
     assert summary.iloc[0]["total_cost_core"] == pytest.approx(results.total_cost_core.mean())
     assert summary.iloc[0]["split"] == "validation"
-    config = json.loads((report_out / "provenance" / "config.json").read_text())
+    config = report_data["config"]
     assert config["status"] == "recorded"
     assert config["checkpoint_metadata"] == metadata
-    protocol = json.loads((report_out / "provenance" / "protocol.json").read_text())
+    protocol = report_data["protocol"]
     assert protocol["evaluation"]["manifest"]["sha256"] == file_hash(data / "manifest.json")
     assert protocol["evaluation"]["checkpoint"]["sha256"] == file_hash(train_out / "best.zip")
-    verification = json.loads((report_out / "provenance" / "verification.json").read_text())
+    verification = report_data["verification"]
     assert verification["evaluation_metadata_matches_results"] is True
     assert verification["sources"]["results"]["sha256"] == file_hash(eval_out / "results.csv")
-    for artifact, digest in verification["artifacts"].items():
-        assert file_hash(report_out / artifact) == digest
-    assert (report_out / "provenance" / "history.csv").read_bytes() == (
+    assert verification["sources"]["history_0"]["sha256"] == file_hash(
         train_out / "evaluations.csv"
-    ).read_bytes()
+    )
     comparison_out = tmp_path / "comparison-report"
     cli_main(
         [
@@ -175,15 +167,19 @@ def test_cli_smoke_writes_csv_and_rejects_existing_output(tmp_path):
             str(comparison_out),
         ]
     )
-    comparisons = pd.read_csv(comparison_out / "tables" / "comparisons.csv")
+    comparison_data = read_report_data(comparison_out / "report.html")
+    comparisons = pd.DataFrame(comparison_data["tables"]["comparisons"])
     assert set(comparisons.baseline) == {"fixed", "proportional", "threshold"}
     assert set(comparisons.status) == {"insufficient_days"}
     assert comparisons.cost_saved_ci95_low.isna().all()
-    assert len(pd.read_csv(comparison_out / "tables" / "results.csv")) == 4
-    assert len(pd.read_csv(comparison_out / "tables" / "training.csv")) == 1
+    assert comparison_data["verification"]["rows"] == 4
+    assert len(comparison_data["tables"]["training"]) == 1
     html = (comparison_out / "report.html").read_text()
     assert html.count("data:image/png;base64,") == 4
     assert "Operational Cost" in html
+    assert html.index("Run Configuration and Test Conditions") < html.index("Final Results")
+    assert "All recorded run settings" in html
+    assert [p.name for p in comparison_out.iterdir()] == ["report.html"]
     assert "seed 0" not in html
     assert "independent held-out test" in html
     with pytest.raises(SystemExit) as repeated_report:
@@ -279,7 +275,8 @@ def test_report_legacy_csv_keeps_splits_separate_and_records_missing_config(tmp_
     ).to_csv(results, index=False)
     output = tmp_path / "report"
     cli_main(["report", "generate", "--results", str(results), "--output", str(output)])
-    summary = pd.read_csv(output / "tables" / "summary.csv").set_index("split")
+    report_data = read_report_data(output / "report.html")
+    summary = pd.DataFrame(report_data["tables"]["summary"]).set_index("split")
     assert summary.loc["test_id", "total_cost_core"] == 15.0
     assert summary.loc["test_ood_burst", "total_cost_core"] == 90.0
     assert summary.loc["test_id", "mean_wait"] == 2.0
@@ -287,15 +284,14 @@ def test_report_legacy_csv_keeps_splits_separate_and_records_missing_config(tmp_
     assert summary.loc["test_id", "episodes"] == 2
     assert summary.loc["test_id", "scenario_days"] == 2
     assert summary.loc["test_id", "model_seeds"] == 0
-    config = json.loads((output / "provenance" / "config.json").read_text())
+    config = report_data["config"]
     assert config["status"] == "unavailable"
     assert config["evaluation_config"] is None
     assert config["checkpoint_metadata"] is None
-    protocol = json.loads((output / "provenance" / "protocol.json").read_text())
+    protocol = report_data["protocol"]
     assert protocol["evaluation"] is None
-    assert protocol["trace_available"] is False
     assert protocol["history_available"] is False
-    verification = json.loads((output / "provenance" / "verification.json").read_text())
+    verification = report_data["verification"]
     assert verification["missing_metric_values"]["mean_wait"] == 1
     assert verification["evaluation_metadata_matches_results"] is None
 

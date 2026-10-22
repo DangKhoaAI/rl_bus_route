@@ -1,4 +1,0 @@
-Seed,Encoder,History (min),Train steps,Train days,Validation days,Routes,Buses,Parameters
-11,GRU,10,"245,760",500,100,3,12,"449,478"
-22,GRU,10,"245,760",500,100,3,12,"449,478"
-33,GRU,10,"245,760",500,100,3,12,"449,478"

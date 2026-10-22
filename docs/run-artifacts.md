@@ -7,28 +7,32 @@ accepted historical tables or protocols.
 ## Layout
 
 ```text
-experiments/                         # ignored
+experiments/                         # ignored local working state
   archive/                           # retained historical evidence and selected models
   infrastructure/native-build.json   # current local build provenance
   standard-v1/
     <policy>/<seed>/train/            # best.zip, metadata, learning/validation CSVs
     <policy>/<seed>/eval/<split>/     # results and evaluation context
-    <policy>/report/                 # technical summary across model seeds
+    <policy>/report/report.html      # technical summary across model seeds
     baselines/shared/eval/<split>/   # deterministic baseline results
-runs/                                # tracked
+runs/                                # tracked study bundles
   README.md
   standard-v1/
-    artifacts.json                   # exported inventory, byte counts and checksums
-    protocol.json                    # frozen matrix and implementation/config hashes
-    configs/                         # study, base and policy snapshots
-    data/manifest.json               # seeds, scenario hashes and tape paths; no tapes
-    <policy>/<seed>/train/            # metadata.json and evaluations.csv
-    <policy>/<seed>/eval/<split>/     # per-day results and portable training history
-    <policy>/report/                 # English figures, tables, HTML and provenance
-    baselines/shared/eval/<split>/
-    summary.csv
-    comparisons.csv
-reports/                             # final synthesis written by humans
+    README.md                        # entry point and regeneration instructions
+    report.md                        # one consolidated report, tables and narrative
+    report.html                      # same report with embedded charts
+    report.pdf                       # six-page A4 report
+    evidence/
+      artifacts.json                 # inventory for the entire study bundle
+      protocol.json                  # frozen matrix and implementation/config hashes
+      configs/                       # study, base and policy snapshots
+      data/manifest.json             # seeds and scenario hashes; no tapes
+      <policy>/<seed>/train/         # metadata.json and evaluations.csv
+      <policy>/<seed>/eval/<split>/  # per-day results and portable history
+      baselines/shared/eval/<split>/
+      summary.csv
+      comparisons.csv
+reports/                             # accepted final study, curated separately
 ```
 
 ## Standard matrix
@@ -60,13 +64,28 @@ evidence. It omits weights, optimizer state, diagnostic JSONL/logs and raw
 choice rather than silently being added to Git. The exported inventory records
 all file hashes and lists omitted local state.
 
-`artifact verify` checks the exact inventory, byte sizes and SHA256 hashes.
+After exporting the standard matrix, consolidate its presentation and move the
+original evidence into one folder:
+
+```bash
+uv run --with reportlab python scripts/build_study_report.py --study runs/standard-v1
+```
+
+The builder recomputes aggregates from per-day evaluations and checks them against
+the recorded tables before replacing anything. It retains every original evidence
+file except redundant presentation reports and README copies; the previous bundle
+is backed up under `/tmp/bus-study-previous-*/`. Re-running uses the existing
+`evidence/` folder. No training or evaluation is repeated.
+
+`artifact verify` checks the exact inventory, byte sizes and SHA256 hashes. It
+accepts both the original flat export and a study bundle whose manifest is under
+`evidence/artifacts.json`; the nested manifest covers the root reports too.
 Verification establishes artifact integrity, not policy quality. Metadata may
 record local source/checkpoint paths for provenance; those paths do not imply
 that model weights were uploaded. Data tapes are regenerated from the frozen
 base config and counts and checked against the published scenario manifest.
 
-Use the per-policy technical reports, root summary/contrast CSVs and provenance
+Use the consolidated study report and `evidence/` CSVs and provenance
 to author the final narrative under `reports/`. Preserve unfavorable outcomes,
 service trade-offs, model-seed variability and the limits of day-bootstrap CIs.
 
