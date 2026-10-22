@@ -1,0 +1,814 @@
+<!doctype html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>Điều phối đội xe buýt bằng RL</title>
+<meta name="description" content="Báo cáo kỹ thuật: điều phối 12 xe buýt trên 3 tuyến bằng PPO, so với ba luật viết tay.">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/katex.min.css">
+<style>
+@font-face { font-family: "Latin Modern"; src: url("fonts/lmroman10-regular.otf") format("opentype"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Latin Modern"; src: url("fonts/lmroman10-italic.otf") format("opentype"); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: "Latin Modern"; src: url("fonts/lmroman10-bold.otf") format("opentype"); font-weight: 700; font-style: normal; font-display: swap; }
+
+:root, :root[data-theme="dark"] {
+  --bg: #000; --ink: #fff; --dim: #a6a6a6; --rule: #333; --wash: #0d0d0d;
+  --blue: #58c4dd; --yellow: #ffff00; --red: #fc6255; --green: #83c167; --grey: #8c8c8c; --purple: #b08ac4;
+}
+:root[data-theme="light"] {
+  --bg: #fffefb; --ink: #111; --dim: #555; --rule: #d6d3cc; --wash: #f4f2ec;
+  --blue: #1c758a; --yellow: #8a6d00; --red: #c4382c; --green: #2f7d32; --grey: #666; --purple: #7a4d96;
+}
+html { font-size: clamp(20px, .5vw + 17px, 24px); background: var(--bg); scroll-behavior: smooth; }
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: "Latin Modern", "CMU Serif", "Computer Modern", "Times New Roman", serif;
+  line-height: 1.6; -webkit-font-smoothing: antialiased; -webkit-text-stroke: .3px currentColor;
+}
+::selection { background: color-mix(in srgb, var(--blue) 35%, transparent); }
+a { color: var(--blue); text-underline-offset: 3px; }
+code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .82em; }
+.b { color: var(--blue); } .y { color: var(--yellow); } .r { color: var(--red); }
+.g { color: var(--green); } .gr { color: var(--grey); } .p { color: var(--purple); }
+
+#bar { position: fixed; z-index: 6; left: 0; top: 0; height: 2px; width: 100%; background: var(--blue); transform-origin: 0 50%; transform: scaleX(0); }
+#theme { position: fixed; z-index: 6; right: 1rem; top: .8rem; font: inherit; font-size: .9rem; color: var(--dim); background: var(--bg); border: 1px solid var(--rule); padding: .25rem .7rem; cursor: pointer; border-radius: 2px; }
+#theme:hover { color: var(--ink); border-color: var(--dim); }
+#theme:focus-visible, input:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+
+article { padding: 0 max(1.25rem, 4vw); }
+section { min-height: 100dvh; display: flex; flex-direction: column; justify-content: center; max-width: 68rem; margin-inline: auto; padding: 6rem 0 4rem clamp(0px, 5vw, 4.5rem); }
+section > * { width: 100%; }
+section[data-n]::before { content: attr(data-n); display: block; color: var(--dim); font-style: italic; font-size: .95rem; margin-bottom: .5rem; }
+.title { margin-bottom: 1.8rem; }
+.title h1 { font-weight: 400; font-size: clamp(2.2rem, 4.6vw, 3.8rem); line-height: 1.1; margin: 0 0 1rem; max-width: 22ch; letter-spacing: -.005em; }
+.title p { margin: 0; color: var(--dim); font-size: .95rem; }
+.abstract { max-width: 44rem; font-size: 1.1rem; }
+.abstract h2 { font-size: .95rem; font-style: italic; font-weight: 400; color: var(--dim); margin: 0 0 .3rem; }
+h2 { font-size: clamp(2rem, 4.2vw, 3.1rem); font-weight: 400; line-height: 1.12; margin: 0 0 .6rem; max-width: 20ch; }
+h3 { font-size: 1.1rem; font-weight: 700; margin: 2rem 0 .1rem; }
+p { margin: 1.1rem 0 0; max-width: 60ch; line-height: 1.7; }
+ul.t, ol.t { margin: .9rem 0 0; padding-left: 1.6rem; max-width: 60ch; } ul.t li, ol.t li { margin: .5rem 0; line-height: 1.6; padding-left: .2rem; }
+ol.t > li::marker { color: var(--blue); font-weight: 700; }
+.algo { margin-top: 1.4rem; border: 1px solid var(--rule); background: var(--wash); max-width: 60rem; }
+.algo .ah { padding: .5rem 1rem; border-bottom: 1px solid var(--rule); font-size: .95rem; }
+.algo ol { margin: 0; padding: .6rem 1rem .8rem 3.2rem; list-style: decimal; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .8rem; line-height: 1.75; -webkit-text-stroke: 0; }
+.algo li::marker { color: var(--dim); }
+.algo li.i1 { margin-left: 1.6rem; } .algo li.i2 { margin-left: 3.2rem; } .algo li.i3 { margin-left: 4.8rem; }
+.algo .k { color: var(--blue); font-weight: 700; } .algo .c { color: var(--dim); }
+@media (min-width: 1900px) { html { font-size: 26px; } }
+@media (min-width: 2500px) { html { font-size: 32px; } }
+.rv { opacity: 0; transform: translateY(14px); transition: opacity .7s ease, transform .7s ease; }
+.rv.in { opacity: 1; transform: none; }
+.hero .abstract { margin-top: 0; }
+.leg { display: flex; flex-wrap: wrap; gap: .4rem 1.4rem; margin-top: .7rem; padding: .5rem .9rem; border: 1px solid var(--rule); background: var(--wash); font-size: .88rem; color: var(--dim); max-width: max-content; }
+.leg i { display: inline-block; vertical-align: middle; margin-right: .45rem; }
+.leg i.line { width: 1.6rem; height: 0; border-top: 3px solid; } .leg i.dash { width: 1.6rem; height: 0; border-top: 2px dashed; }
+.leg i.dot { width: .7rem; height: .7rem; border-radius: 50%; } .leg i.box { width: 1.2rem; height: .8rem; opacity: .5; } .leg i.bar { width: 1.2rem; height: .8rem; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; margin-top: .6rem; max-width: 52rem; }
+.stats div { border-top: 1.5px solid var(--ink); padding-top: .5rem; }
+.stats small { display: block; color: var(--dim); font-size: .85rem; }
+.stats b { display: block; font-weight: 400; font-size: clamp(2rem, 4.2vw, 3.4rem); line-height: 1.15; font-feature-settings: "tnum"; }
+
+figure { margin: 1.8rem 0 0; }
+figcaption { font-size: .9rem; color: var(--dim); margin-top: .6rem; }
+figcaption b { color: var(--ink); }
+video { display: block; width: 100%; height: auto; background: #000; border: 1px solid var(--rule); }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { font-family: inherit; fill: var(--ink); }
+svg .d { fill: var(--dim); }
+.ctl { display: flex; align-items: center; gap: .8rem; flex-wrap: wrap; margin-top: .6rem; color: var(--dim); font-size: .9rem; }
+input[type=range] { accent-color: var(--blue); width: min(16rem, 100%); }
+button.t { font: inherit; font-size: .9rem; color: var(--ink); background: none; border: 1px solid var(--rule); padding: .25rem .8rem; cursor: pointer; border-radius: 2px; }
+button.t:hover, button.t[aria-pressed=true] { border-color: var(--blue); color: var(--blue); }
+
+.eq { overflow-x: auto; overflow-y: hidden; margin: .6rem 0 0; padding: .2rem 0; }
+.eq .katex-display { margin: .3rem 0; }
+table { border-collapse: collapse; width: 100%; margin-top: .6rem; font-size: .93rem; font-feature-settings: "tnum"; }
+th, td { padding: .3rem .6rem; text-align: left; vertical-align: top; }
+thead th { border-top: 1.5px solid var(--ink); border-bottom: 1px solid var(--ink); font-weight: 700; }
+tbody tr:last-child td { border-bottom: 1.5px solid var(--ink); }
+td.n, th.n { text-align: right; }
+.tw { overflow-x: auto; }
+caption { caption-side: top; text-align: left; font-size: .9rem; color: var(--dim); padding-bottom: .3rem; }
+caption b { color: var(--ink); }
+
+#mask { display: grid; grid-template-columns: repeat(34, 1fr); gap: 2px; }
+#mask i { aspect-ratio: 1; background: var(--blue); transition: background .5s, opacity .5s; }
+#mask.masked i.x { background: var(--rule); opacity: .8; }
+
+#toc { position: fixed; z-index: 5; left: 0; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: .1rem; font-size: .85rem; padding: 1.2rem 3rem 1.2rem 1rem; opacity: .4; transition: opacity .2s; }
+#toc:hover, #toc:focus-within { opacity: 1; }
+#toc a { color: var(--dim); text-decoration: none; font-feature-settings: "tnum"; padding: .3rem .4rem; white-space: nowrap; display: flex; gap: .7rem; border-radius: 2px; }
+#toc a:hover, #toc a.on { color: var(--ink); }
+#toc a:hover { background: var(--wash); }
+#toc a span { display: none; }
+#toc:hover a span, #toc:focus-within a span { display: inline; }
+#toc:hover { background: var(--bg); border-right: 1px solid var(--rule); }
+@media (max-width: 900px) { #toc { display: none; } }
+.refs { font-size: .9rem; } .refs li { margin: .3rem 0; }
+footer { text-align: center; color: var(--dim); font-size: .85rem; padding: 2rem 1rem 4rem; border-top: 1px solid var(--rule); max-width: 41rem; margin: 0 auto; }
+
+@media (max-width: 760px) { section { min-height: auto; padding-left: 0; padding-block: 4.5rem 2.5rem; } #mask { grid-template-columns: repeat(17, 1fr); } }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .rv { opacity: 1; transform: none; transition: none; } }
+</style>
+</head>
+<body>
+<div id="bar"></div>
+<button id="theme" type="button" aria-label="Đổi giao diện sáng tối">Giao diện sáng</button>
+
+<nav id="toc" aria-label="Các phần"></nav>
+<article>
+<section id="s0" data-t="Tóm tắt" class="hero">
+<header class="title">
+  <h1>Điều phối đội xe buýt bằng học tăng cường: PPO so với các luật viết tay</h1>
+  <p>Báo cáo kỹ thuật &middot; mô phỏng tổng hợp, 12 xe, 3 tuyến &middot; 2026-10-22</p>
+</header>
+
+<div class="abstract" aria-label="Tóm tắt">
+  <h2>Tóm tắt</h2>
+  <p>12 xe buýt, 3 tuyến, một lệnh điều phối sau mỗi 2 phút. Chúng tôi mô hình hóa bài toán như một POMDP có mặt nạ action và so sánh một tác tử MaskablePPO với ba luật viết tay trên 200 ngày chưa từng thấy cho mỗi bộ test.</p>
+</div>
+<div class="ctl" role="group" aria-label="Chọn bộ test" id="hsets" style="margin-top:1.6rem"></div>
+<div class="stats" aria-live="polite">
+  <div><small>chi phí trung bình của PPO</small><b id="hs-ppo" class="g"></b></div>
+  <div><small id="hs-rule-name">luật tốt nhất</small><b id="hs-rule" class="gr"></b></div>
+  <div><small>PPO thấp hơn</small><b id="hs-gain" class="b"></b></div>
+</div>
+<ol class="t abstract" style="margin-top:1.6rem">
+  <li>PPO có chi phí thấp nhất ở cả ngày thường, đột biến khách và kẹt xe.</li>
+  <li>Chiến lược học được đơn giản: đưa cả 3 xe dự phòng ra tuyến ngay đầu ca, rồi chỉnh giãn cách.</li>
+  <li>Một luật hai dòng mô phỏng chiến lược đó chỉ kém PPO 0,2 đến 0,4%.</li>
+</ol>
+</section>
+
+<section id="s1" data-n="§ 1" data-t="1 Giới thiệu">
+  <h2>Giới thiệu</h2>
+  <p>Khi đội xe có hạn, câu hỏi vận hành không phải là cần bao nhiêu xe mà là đặt xe ở đâu và lúc nào. Trên cùng 12 xe, một cách điều phối cho 95% khách chờ tối đa khoảng 11 phút, cách khác thì khoảng 15 phút. Các luật thường dùng trong thực tế đều phản ứng với hàng chờ đã nhìn thấy, trong khi một lệnh gửi xe cần gần 10 phút mới có tác dụng.</p>
+  <figure>
+    <video id="net3d" src="media/network3d.mp4" poster="media/network3d.jpg" muted loop playsinline preload="metadata" aria-label="Sơ đồ 3D của mạng 3 tuyến, depot và xe, với các ký hiệu nổi trên cao"></video>
+    <figcaption><b>Hình 1.</b> Sơ đồ 3D của mạng (dựng bằng manimgx, không phải bản đồ thật). Mỗi ký hiệu nổi trên đối tượng nó mô tả: <i>n<sub>r</sub></i> số xe của tuyến, <i>λ<sub>r</sub></i>(<i>t</i>) cường độ khách đến, <i>Q<sub>r</sub></i> hàng chờ (hạt vàng), <i>F</i> = 12 đội xe tại depot (khối tím), <i>L<sub>b</sub></i> ≤ 40 tải của một xe (khối xanh).</figcaption>
+  </figure>
+  <p>Báo cáo đóng góp ba điều:</p>
+  <ol class="t">
+    <li>Một mô hình hóa điều phối đội xe có 6 loại lệnh và hàm chi phí rõ ràng.</li>
+    <li>So sánh PPO với ba luật viết tay bằng kiểm định ghép cặp theo ngày.</li>
+    <li>Phân tích sau về chiến lược mà PPO học được.</li>
+  </ol>
+
+  <h3>1.1 Hai nền tảng lý thuyết</h3>
+  <p>Đề bài là <b>điều phối xe buýt bằng học tăng cường</b>: một tác tử quan sát hệ thống, chọn lệnh, nhận chi phí, và cải thiện dần chính sách qua hàng nghìn ngày mô phỏng. Hai khái niệm làm nên báo cáo này:</p>
+  <ol class="t">
+    <li><b>POMDP, phần đề bài.</b> Quá trình quyết định Markov quan sát một phần. Hệ thống có trạng thái thật mà người điều phối không thấy hết (điểm đến của khách chờ, nhu cầu tương lai), nên mỗi lệnh phải chọn từ quan sát <i>o<sub>k</sub></i> chứ không phải từ trạng thái <i>s<sub>k</sub></i>. Mục tiêu là chính sách làm tổng chi phí kỳ vọng nhỏ nhất (§2).</li>
+    <li><b>MaskablePPO, phần lời giải.</b> Proximal Policy Optimization là thuật toán policy gradient cập nhật chính sách theo những bước ngắn nhờ hàm mục tiêu có clip. Bản có mặt nạ gạt các lệnh vi phạm ràng buộc khỏi phân phối xác suất trước khi chọn (§3).</li>
+  </ol>
+  <figure>
+    <svg id="loop" viewBox="0 0 900 290" role="img" aria-label="Vòng lặp tác tử và môi trường trong một POMDP có mặt nạ"></svg>
+    <div class="ctl"><button class="t" id="loopnext">Bước tiếp theo</button><button class="t" id="loophid" aria-pressed="false">Hiện phần bị che</button><span id="loopmsg" class="b"></span></div>
+    <figcaption><b>Hình 10.</b> Một bước điều phối. Môi trường giữ trạng thái thật; tác tử chỉ nhận <i>o<sub>k</sub></i> và mặt nạ <i>m<sub>k</sub></i>, chọn <i>a<sub>k</sub></i>, rồi nhận reward <i>r<sub>k</sub></i>.</figcaption>
+  </figure>
+</section>
+
+<section id="s2" data-n="§ 2" data-t="2 Phát biểu bài toán">
+  <h2>Phát biểu bài toán</h2>
+  <h3>2.1 Mạng lưới và nhu cầu</h3>
+  <p>Mạng gồm 3 tuyến hai chiều, mỗi tuyến 6 trạm, và một depot. Đội xe có <span class="katex-text">F = 12</span> xe, mỗi xe chở tối đa 40 người; 9 xe chạy tuyến và 3 xe dự phòng. Một ca kéo dài 240 phút, được rời rạc hóa thành 120 bước quyết định cách nhau 2 phút. Khách đến theo quá trình Poisson. Tổng cầu nền của ba tuyến (cả hai chiều) là <span class="math-inline">$b=(180,160,140)$</span> khách/giờ, và một tuyến được cộng thêm một đỉnh Gaussian:
+  </p>
+  <div class="eq">$$\begin{gathered}\lambda_r(t)=b_r\Bigl[1+(m-1)\,e^{-(t-\mu)^2/2\sigma^2}\Bigr]\mathbf 1[t<180]\quad\text{(tuyến có đỉnh)}\\ m\in[1.5,3],\quad \mu\in[45,135],\quad \sigma\in[15,30]\end{gathered}\tag{1}$$</div>
+  <p>Ba tham số <i>m</i>, <i>μ</i>, <i>σ</i> được rút ngẫu nhiên cho mỗi ngày nên mỗi ngày là một kịch bản khác; các tuyến còn lại giữ cầu nền. Dạng (1) là cách viết lại mô tả ở spec §7.1, spec không đưa công thức đóng. Từ phút 180 không có khách mới; 60 phút cuối dành để chở nốt. Điểm đến được chọn xuôi chiều với xác suất tỷ lệ <span class="math-inline">$e^{-|j-i|/2}$</span>.</p>
+  <figure>
+    <svg id="demand" viewBox="0 0 900 250" role="img" aria-label="Cường độ đến theo thời gian với một đỉnh"></svg>
+    <div class="ctl"><label for="peak">Vị trí đỉnh μ</label><input id="peak" type="range" min="45" max="135" value="90"><span id="peakv" class="b">μ = 90</span></div>
+    <figcaption><b>Hình 2.</b> Dạng của <span class="math-inline">$\lambda_r(t)$</span> theo (1). Minh họa với <i>m</i> = 2, <i>σ</i> = 20 và cầu nền 180 khách/giờ (tuyến A); hai tuyến còn lại không có đỉnh.</figcaption>
+  </figure>
+
+  <h3>2.2 Không gian action</h3>
+  <p>Tại mỗi bước, người điều phối chọn đúng một lệnh trong Bảng 1. Các ràng buộc gồm: mỗi tuyến giữ ít nhất 2 xe, mỗi xe có cooldown 20 phút, và xe đang chở khách không được chuyển. Toàn bộ không gian có 221 ô action; ô nào vi phạm ràng buộc ở trạng thái hiện tại bị mask.</p>
+  <div class="tw"><table>
+    <caption><b>Bảng 1.</b> Sáu loại lệnh và số ô action của mỗi loại (tổng 221, theo spec §5). Các ô ứng với xe hoặc tuyến không tồn tại luôn bị mask.</caption>
+    <thead><tr><th>Lệnh</th><th class="n">Số ô</th><th>Tác dụng</th></tr></thead>
+    <tbody>
+      <tr><td><code>NOOP</code></td><td class="n">1</td><td>Giữ nguyên.</td></tr>
+      <tr><td><code>DISPATCH</code></td><td class="n">64</td><td>Xe ở depot ra tuyến; mất 6 phút chạy không tải.</td></tr>
+      <tr><td><code>SET_HEADWAY</code></td><td class="n">12</td><td>Đặt giãn cách xuất bến của tuyến, một trong 15, 10 hoặc 6 phút.</td></tr>
+      <tr><td><code>REASSIGN</code></td><td class="n">64</td><td>Chuyển xe rỗng sang tuyến khác.</td></tr>
+      <tr><td><code>RECALL</code></td><td class="n">16</td><td>Cho xe về depot.</td></tr>
+      <tr><td><code>SHORT_TURN</code></td><td class="n">64</td><td>Chạy từ trạm s0 đến s3 rồi quay đầu.</td></tr>
+    </tbody>
+  </table></div>
+  <figure>
+    <div id="mask" role="img" aria-label="221 ô action, một phần bị mask"></div>
+    <div class="ctl"><button class="t" id="maskbtn" aria-pressed="false">Áp dụng mask</button></div>
+    <figcaption><b>Hình 3.</b> 221 ô action. Tỷ lệ ô bị che trong hình chỉ để minh họa cơ chế, không phải số liệu đo.</figcaption>
+  </figure>
+
+  <div class="algo"><div class="ah"><b>Thuật toán 1.</b> Một bước điều phối (mỗi 2 phút)</div><ol>
+    <li><span class="k">quan sát</span> o ← observe(state)  <span class="c">// chỉ dữ liệu đã xảy ra, không đọc tương lai</span></li>
+    <li>m ← valid_mask(state)  <span class="c">// 221 ô, 0 nếu vi phạm ràng buộc</span></li>
+    <li>a ← controller(o, m)  <span class="c">// PPO hoặc một luật viết tay</span></li>
+    <li><span class="k">nếu</span> m[a] = 0 <span class="k">thì</span> a ← NOOP</li>
+    <li>chạy mô phỏng tới mốc quyết định kế tiếp với lệnh a</li>
+    <li>c ← W + 0.25V + 0.5O + … + 2M  <span class="c">// công thức (2)</span></li>
+    <li><span class="k">trả về</span> r = −c / 3000</li>
+  </ol></div>
+  <h3>2.3 Hàm chi phí và reward</h3>
+  <p>Chi phí của một khoảng quyết định là tổng thời gian chờ cộng các khoản phạt:</p>
+  <div class="eq">$$c = W + 0.25\,V + 0.5\,O + 0.5\,C + 0.5\,C_D + X + 5\,U + 60\,E + 2\,M,\qquad c_{\text{cuối}} \mathrel{+}= 60\,N_H\tag{2}$$</div>
+  <p>Hạng tử chính là <i>W</i>, tổng passenger-minutes chờ, tức diện tích dưới đường hàng chờ (Hình 4); 10 khách chờ 5 phút đóng góp 50. Khách bỏ về (<i>E</i>) bị phạt 60, tương đương 60 phút chờ. Ý nghĩa đầy đủ của từng ký hiệu có trong Phụ lục A. Reward là
+  </p>
+  <div class="eq">$$r_k=-\frac{c_k}{3000},\qquad \gamma=1\tag{3}$$</div>
+  <p>nên với <i>γ</i> = 1, cực đại hóa tổng reward tương đương cực tiểu hóa tổng chi phí.</p>
+  <figure>
+    <svg id="area" viewBox="0 0 900 230" role="img" aria-label="Hàng chờ theo thời gian, hai kịch bản"></svg>
+    <div class="ctl"><button class="t" id="reactive" aria-pressed="true">Phản ứng sau cao điểm</button><button class="t" id="proactive" aria-pressed="false">Đi trước cao điểm</button></div>
+    <figcaption><b>Hình 4.</b> Diện tích dưới đường hàng chờ chính là <i>W</i>. Hai đường chỉ so sánh hình dạng, không có trục số.</figcaption>
+  </figure>
+
+  <h3>2.4 Quan sát một phần</h3>
+  <p>Người điều phối chỉ thấy hàng chờ, tuổi chờ, trạng thái xe, giãn cách và thời gian còn lại. Điểm đến của từng khách đang chờ và nhu cầu tương lai bị che, nên đây là một POMDP. Cùng với độ trễ gần 10 phút của lệnh gửi xe, điều này làm các luật chỉ phản ứng với hàng chờ hiện tại ra tay muộn.</p>
+  <p>Chính thức, bài toán là một POMDP hữu hạn bước $(\mathcal S,\mathcal A,\mathcal O,T,\Omega,r,\gamma)$: trạng thái thật $s_k$ gồm toàn bộ hàng chờ theo điểm đến, xe và đồng hồ; điều phối viên chỉ nhận quan sát $o_k\sim\Omega(\cdot\mid s_k)$ và chọn $a_k\in\mathcal A(o_k)$, tập lệnh hợp lệ do mặt nạ quy định. Mục tiêu là chính sách $\pi$ cực đại hóa tổng reward kỳ vọng:</p>
+  <div class="eq">$$\pi^\star=\arg\max_\pi\ \mathbb E_\pi\Bigl[\sum_{k=0}^{K-1}\gamma^k r_k\Bigr]=\arg\min_\pi\ \mathbb E_\pi\Bigl[\tfrac{1}{3000}\sum_{k=0}^{K-1}c_k\Bigr],\quad a_k\sim\pi(\cdot\mid o_k)\tag{4}$$</div>
+  <p>Vì $o_k$ không đủ để suy ra $s_k$ (không có điểm đến của khách chờ, không có nhu cầu tương lai), không có chính sách tối ưu chỉ phụ thuộc $o_k$ một cách chính xác. Tác tử xử lý điều này bằng phép xấp xỉ: nhét lịch sử khách đến 5 khoảng gần nhất vào $o_k$ và dùng MLP không nhớ, thay vì mạng hồi quy. Chúng tôi không khẳng định vector quan sát thỏa tính Markov (spec §6.2).</p>
+</section>
+
+<section id="s3" data-n="§ 3" data-t="3 Phương pháp">
+  <h2>Phương pháp</h2>
+  <h3>3.1 Các luật viết tay</h3>
+  <ol class="t">
+    <li><b>Fixed.</b> Không can thiệp; 3 xe dự phòng ở yên trong depot cả ca.</li>
+    <li><b>Threshold.</b> Khi hàng chờ tuyến A vượt 40, gửi một xe dự phòng và giảm giãn cách còn 10 phút; vượt 80 thì còn 6 phút. Tuyến cần giúp trước được chọn theo điểm khẩn cấp (5).</li>
+    <li><b>Proportional.</b> Chia xe theo lượng khách đến gần đây. Khi tổng hàng chờ đạt 120 thì dùng đủ 12 xe, chia 5, 4, 3 cho ba tuyến; giãn cách lấy xấp xỉ 38 phút chia số xe.</li>
+  </ol>
+  <div class="algo"><div class="ah"><b>Thuật toán 2.</b> Luật Threshold</div><ol>
+    <li>Q ← hàng chờ tuyến A</li>
+    <li><span class="k">nếu</span> Q &gt; 80 <span class="k">thì</span> gửi một xe dự phòng; đặt giãn cách 6 phút</li>
+    <li><span class="k">nếu không nếu</span> Q &gt; 40 <span class="k">thì</span> gửi một xe dự phòng; đặt giãn cách 10 phút</li>
+    <li><span class="k">còn lại</span> NOOP</li>
+    <li>tuyến nhận xe: <span class="k">argmax</span> u<sub>r</sub>  <span class="c">// điểm khẩn cấp (5)</span></li>
+  </ol></div>
+  <div class="eq">$$u_r=\frac{Q_r}{40\,n_r}+\frac{w_r^{\max}}{15}+\frac{g_r^{\max}}{20}\tag{5}$$</div>
+  <p>với <i>Q<sub>r</sub></i> là hàng chờ, <i>n<sub>r</sub></i> số xe, <i>w<sup>max</sup><sub>r</sub></i> thời gian chờ lâu nhất (phút) và <i>g<sup>max</sup><sub>r</sub></i> giãn cách lớn nhất (phút). Ba luật dùng tham số thiết kế tay; chúng tôi không tìm thấy bằng chứng đã tinh chỉnh trên tập validation.</p>
+
+  <h3>3.2 PPO có mask</h3>
+  <p>Tác tử là MaskablePPO. Mạng MLP có hai đầu: actor cho phân phối trên 221 ô sau khi mask, critic $V_\phi(o_k)$ ước lượng tổng reward còn lại, tức âm của chi phí còn lại chia 3000. Mặt nạ được áp lên logit của actor trước softmax (Huang và Ontañón, 2020): ô không hợp lệ nhận $-\infty$, nên xác suất đúng bằng 0 và không nhận gradient.</p>
+  <div class="eq">$$\pi_\theta(a\mid o)=\frac{m_a\,e^{z_a}}{\sum_{a'}m_{a'}\,e^{z_{a'}}},\qquad m_a\in\{0,1\},\ \textstyle\sum_a m_a\ge 1\tag{6}$$</div>
+  <p>Hàm mục tiêu thay thế có clip (Schulman và cộng sự, 2017):</p>
+  <div class="eq">$$L^{\text{CLIP}}(\theta)=\mathbb E_k\!\Bigl[\min\bigl(\rho_k A_k,\ \operatorname{clip}(\rho_k,1-\varepsilon,1+\varepsilon)\,A_k\bigr)\Bigr],\quad \rho_k=\frac{\pi_\theta(a_k\mid o_k)}{\pi_{\theta_{\text{old}}}(a_k\mid o_k)},\quad \varepsilon=0.2\tag{7}$$</div>
+  <p>Observation là một vector 1.383 chiều gồm các khối: hàng chờ theo trạm (độ dài hàng chờ, tuổi chờ trung bình và lớn nhất, số khách đã chờ từ 15 phút, khách lên xuống, khách đến gần đây), lịch sử khách đến trong 5 khoảng điều khiển gần nhất, trạng thái 16 xe (pha, tuyến, hướng, tải, thời gian còn lại, cooldown), trạng thái 4 tuyến (giãn cách mục tiêu, khoảng hở, số xe FULL và SHORT) và thời gian còn lại của ca. Các đại lượng được chuẩn hóa về cỡ 1. Mạng gồm lớp chung Linear(1383, 256)–ReLU–Linear(256, 128)–ReLU, rồi hai nhánh actor và critic mỗi nhánh một lớp 128 (Bảng 4).</p>
+  <div class="tw"><table>
+    <caption><b>Bảng 4.</b> Siêu tham số huấn luyện (<code>configs/train.toml</code>).</caption>
+    <thead><tr><th>Tham số</th><th class="n">Giá trị</th><th>Tham số</th><th class="n">Giá trị</th></tr></thead>
+    <tbody>
+      <tr><td>Learning rate</td><td class="n">3·10<sup>−4</sup></td><td>Hệ số entropy</td><td class="n">0,01</td></tr>
+      <tr><td>Số môi trường song song</td><td class="n">4</td><td>Hệ số value</td><td class="n">0,5</td></tr>
+      <tr><td><code>n_steps</code> mỗi môi trường</td><td class="n">256</td><td>GAE <i>λ</i></td><td class="n">0,95</td></tr>
+      <tr><td>Batch</td><td class="n">256</td><td>Clip <i>ε</i></td><td class="n">0,2</td></tr>
+      <tr><td>Epoch mỗi lần cập nhật</td><td class="n">4</td><td>Chuẩn gradient tối đa</td><td class="n">0,5</td></tr>
+      <tr><td>Quyết định huấn luyện</td><td class="n">245.760</td><td>Chu kỳ đánh giá (quyết định)</td><td class="n">12.288</td></tr>
+    </tbody>
+  </table></div>
+  <figure>
+    <svg id="mdemo" viewBox="0 0 900 270" role="img" aria-label="Xác suất của sáu loại lệnh trước và sau mặt nạ"></svg>
+    <div class="ctl" id="mbtns" role="group" aria-label="Chọn loại lệnh bị mask"></div>
+    <figcaption><b>Hình 11.</b> Minh họa, không phải đo từ mô hình: logit cố định của sáu loại lệnh. Bấm một loại để đánh dấu vi phạm ràng buộc; xác suất còn lại được chuẩn hóa lại theo (6).</figcaption>
+  </figure>
+  <div class="algo"><div class="ah"><b>Thuật toán 3.</b> Huấn luyện MaskablePPO</div><ol>
+    <li><span class="k">lặp</span> đến khi đủ 245.760 quyết định:</li>
+    <li class="i1"><span class="k">thu rollout</span>: 4 môi trường × 256 bước. Mỗi bước lưu (o, m, a, log π, r, V)</li>
+    <li class="i1">mỗi bước, a lấy mẫu từ π<sub>θ</sub>(·|o) đã áp mặt nạ m</li>
+    <li class="i1">tính advantage bằng GAE: δ<sub>k</sub> = r<sub>k</sub> + γV<sub>k+1</sub> − V<sub>k</sub>, A<sub>k</sub> = Σ (γλ)<sup>j</sup> δ<sub>k+j</sub></li>
+    <li class="i1"><span class="k">lặp 4 epoch</span> trên các batch 256:</li>
+    <li class="i2">ρ ← π<sub>θ</sub>(a|o, m) / π<sub>cũ</sub>(a|o, m)</li>
+    <li class="i2">L ← −min(ρA, clip(ρ, 0.8, 1.2)A) + 0.5·(V − R)² − 0.01·H(π)</li>
+    <li class="i2">θ ← bước Adam với lr 3·10<sup>−4</sup>, cắt chuẩn gradient ở 0,5</li>
+    <li class="i1">mỗi 12.288 quyết định: đánh giá trên 100 ngày validation, giữ checkpoint tốt nhất</li>
+  </ol></div>
+  <p>Advantage <i>A<sub>k</sub></i> là kết quả thực tế trừ giá trị critic dự đoán. Clip giới hạn tỷ lệ xác suất mới trên cũ trong [0,8; 1,2] nên mỗi lần cập nhật chỉ đẩy chính sách một đoạn ngắn (Hình 5).</p>
+  <figure>
+    <svg id="clip" viewBox="0 0 900 290" role="img" aria-label="Hàm mục tiêu PPO theo tỷ lệ xác suất"></svg>
+    <div class="ctl"><label for="adv">Advantage A</label><input id="adv" type="range" min="-1" max="1" step="0.05" value="1"><span id="advv" class="g">A = +1,0</span></div>
+    <figcaption><b>Hình 5.</b> Đường nét đứt là <span class="math-inline">$\rho A$</span>, đường liền xanh lá là phần được dùng trong (7), vùng xanh dương là <span class="math-inline">$[1-\varepsilon,1+\varepsilon]$</span>.</figcaption>
+  </figure>
+</section>
+
+<section id="s4" data-n="§ 4" data-t="4 Thiết lập">
+  <h2>Thiết lập thực nghiệm</h2>
+  <p>Mỗi seed huấn luyện 245.760 quyết định, tương đương khoảng 2.048 ca; chạy 3 seed. Cứ 12.288 quyết định, checkpoint được đánh giá trên 100 ngày validation và checkpoint có chi phí thấp nhất được giữ lại; chi phí tốt nhất của ba seed là 13.114,0, 13.199,1 và 13.213,5 (Hình 8). Điểm cuối của đường cong cao hơn (13.347,9 đến 13.507,8), tức đường validation dao động và việc chọn checkpoint theo validation là cần thiết. Đánh giá dùng 200 ngày chưa từng thấy cho mỗi bộ test: ngày thường, ngày đột biến khách (<code>test_ood_burst</code>) và ngày kẹt xe (traffic). Mọi phương pháp chạy cùng các ngày đó, nên hiệu chi phí được tính theo từng ngày:</p>
+  <div class="eq">$$\Delta_d = c_d^{\text{base}} - c_d^{\text{PPO}},\qquad \text{khoảng tin cậy 95\% bằng bootstrap 2.000 lần}\tag{8}$$</div>
+  <p><figure>
+    <svg id="vcurve" viewBox="0 0 900 270" role="img" aria-label="Chi phí validation theo số quyết định huấn luyện, ba seed"></svg>
+    <div class="ctl" id="vleg" role="group" aria-label="Bật tắt seed"></div>
+    <figcaption><b>Hình 8.</b> Chi phí validation của PPO theo số quyết định huấn luyện, ba seed. Đường nét đứt là Fixed (16.016,9) và Threshold (16.641,4) trên cùng tập validation. Nguồn: <code>reports/provenance/core-learning-curves.csv</code>.</figcaption>
+  </figure>
+  <p>Chi phí báo cáo là chi phí thô theo passenger-minute tương đương, chưa chia 3000; chỉ reward được chia. PPO là trung bình của 3 seed.</p>
+</section>
+
+<section id="s5" data-n="§ 5" data-t="5 Kết quả">
+  <h2>Kết quả</h2>
+  <div class="tw"><table>
+    <caption><b>Bảng 2.</b> Chi phí trung bình mỗi ngày (200 ngày mỗi bộ test), kèm chênh lệch tương đối so với PPO. Nguồn: <code>reports/tables/main_benchmark.csv</code>.</caption>
+    <thead><tr><th>Phương pháp</th><th class="n">Ngày thường</th><th class="n">Burst</th><th class="n">Traffic</th></tr></thead>
+    <tbody>
+      <tr><td>PPO</td><td class="n"><b>13.065,7</b></td><td class="n"><b>25.197,2</b></td><td class="n"><b>13.412,4</b></td></tr>
+      <tr><td>Luật hai dòng <sup>†</sup></td><td class="n">13.094,3 (+0,22%)</td><td class="n">25.289,2 (+0,37%)</td><td class="n">13.444,1 (+0,24%)</td></tr>
+      <tr><td>Fixed</td><td class="n">15.861,3 (+21,4%)</td><td class="n">33.747,4 (+33,9%)</td><td class="n">16.307,8 (+21,6%)</td></tr>
+      <tr><td>Proportional</td><td class="n">16.056,6 (+22,9%)</td><td class="n">27.980,7 (+11,0%)</td><td class="n">16.549,8 (+23,4%)</td></tr>
+      <tr><td>Threshold</td><td class="n">16.652,3 (+27,5%)</td><td class="n">26.531,9 (+5,3%)</td><td class="n">16.924,6 (+26,2%)</td></tr>
+    </tbody>
+  </table></div>
+  <p style="font-size:.85rem;color:var(--dim)">† Phân tích sau (mục 6), không phải baseline đăng ký trước.</p>
+  <figure>
+    <div class="ctl" role="group" aria-label="Chọn bộ test" id="sets" style="margin:0 0 .4rem"></div>
+    <svg id="bars" viewBox="0 0 900 270" role="img" aria-label="Chi phí trung bình theo phương pháp"></svg>
+    <div class="ctl"><button class="t" id="rel" aria-pressed="false">Hiện % so với PPO</button></div>
+    <figcaption><b>Hình 6.</b> Chi phí trung bình mỗi ngày theo phương pháp, dữ liệu như Bảng 2.</figcaption>
+  </figure>
+  <p>PPO thấp nhất ở cả ba bộ test. Trên ngày thường, hiệu Fixed − PPO là +2.795,6 với khoảng tin cậy 95% [2.759,6; 2.831,6]. Trên ngày thường, hai luật Threshold và Proportional còn tệ hơn Fixed; chúng chỉ vượt Fixed khi có đột biến khách. Trên ngày thường, thời gian chờ trung bình của PPO là 5,6 phút so với 7,1 đến 7,4 phút ở các luật khác, và P95 là 11,3 phút so với 14,7 đến 15,5 phút (Bảng 3). Lợi thế này không đồng đều giữa các bộ test: trên burst, P95 của PPO (30,9 phút) cao hơn Threshold (26,6) và Proportional (28,5), dù chi phí tổng của PPO vẫn thấp nhất, và PPO để 1,8% khách bỏ về.</p>
+  <p>Ablation trên ngày thường: bỏ <code>REASSIGN</code> làm chi phí tăng 0,5%, bỏ <code>SHORT_TURN</code> tăng 1,6%, và đặt trọng số công bằng (<code>fairness</code>) bằng 0 tăng 2,1%.</p>
+  <div class="tw"><table>
+    <caption><b>Bảng 3.</b> Thời gian chờ trung bình / P95 (phút). Nguồn: <code>baselines_summary.csv</code>, <code>main_benchmark.csv</code>.</caption>
+    <thead><tr><th>Phương pháp</th><th class="n">Ngày thường</th><th class="n">Burst</th><th class="n">Traffic</th></tr></thead>
+    <tbody>
+      <tr><td>PPO</td><td class="n">5,57 / 11,28</td><td class="n">8,07 / 30,88</td><td class="n">5,70 / 11,79</td></tr>
+      <tr><td>Fixed</td><td class="n">7,42 / 14,88</td><td class="n">10,49 / 39,13</td><td class="n">7,57 / 15,20</td></tr>
+      <tr><td>Proportional</td><td class="n">7,07 / 14,73</td><td class="n">9,08 / 28,51</td><td class="n">7,18 / 15,04</td></tr>
+      <tr><td>Threshold</td><td class="n">7,27 / 15,46</td><td class="n">9,11 / 26,64</td><td class="n">7,34 / 15,82</td></tr>
+    </tbody>
+  </table></div>
+  <figure>
+    <div class="ctl" role="group" aria-label="Chọn so sánh" id="gsets" style="margin:0 0 .4rem"></div>
+    <svg id="gain" viewBox="0 0 900 300" role="img" aria-label="Mức PPO thấp hơn từng baseline"></svg>
+    <figcaption><b>Hình 12.</b> PPO thấp hơn mỗi baseline bao nhiêu, tính từ Bảng 2 theo 1 − PPO/baseline (khác với cột chênh lệch trong bảng, lấy PPO làm mốc). Cột cao nghĩa là PPO hơn nhiều; ở burst, Threshold chỉ còn kém PPO 5,3%.</figcaption>
+  </figure>
+  <figure>
+    <div class="ctl" role="group" aria-label="Chọn đại lượng" id="wsets" style="margin:0 0 .4rem"></div>
+    <svg id="wait" viewBox="0 0 900 300" role="img" aria-label="Thời gian chờ theo phương pháp và bộ test"></svg>
+    <figcaption><b>Hình 13.</b> Thời gian chờ (phút) từ Bảng 3. Nhóm theo bộ test; chuyển giữa trung bình và P95.</figcaption>
+  </figure>
+  <figure>
+    <div class="ctl" role="group" aria-label="Chọn bộ test" id="fsets" style="margin:0 0 .4rem"></div>
+    <svg id="forest" viewBox="0 0 900 330" role="img" aria-label="Hiệu chi phí ghép cặp so với PPO, khoảng tin cậy 95%"></svg>
+    <figcaption><b>Hình 9.</b> Hiệu chi phí ghép cặp (baseline trừ PPO) theo từng bộ test, kèm khoảng tin cậy 95% bootstrap. Mọi khoảng đều nằm bên phải số 0. Nguồn: <code>baseline_contrasts.csv</code>.</figcaption>
+  </figure>
+</section>
+
+<section id="s6" data-n="§ 6" data-t="6 Phân tích hành vi">
+  <h2>Phân tích hành vi, phân tích sau</h2>
+  <p>Trên checkpoint huấn luyện lại <code>runs/core-11</code>, trace ngày 2026-10-21 cho thấy PPO ra 3 lệnh đưa xe dự phòng vào đầu ca (<code>SHORT_TURN</code> ở phút 0, <code>DISPATCH</code> ở phút 2 và 4), sau đó chủ yếu chỉnh giãn cách với 46 lần <code>SET_HEADWAY</code> trong cả ca (Hình 7).</p>
+  <figure>
+    <svg id="tl" viewBox="0 0 900 120" role="img" aria-label="Lệnh của PPO trong 8 phút đầu"></svg>
+    <div class="ctl"><label for="tmin">Phút</label><input id="tmin" type="range" min="0" max="8" step="1" value="0"><span id="tstate" class="p"></span></div>
+    <figcaption><b>Hình 7.</b> Các lệnh đưa xe dự phòng ra tuyến trong đầu ca (checkpoint <code>runs/core-11</code>). Checkpoint L3 đã đóng băng cũng đưa đủ 3 xe ra mỗi ngày nhưng chỉ có 3 lần <code>SET_HEADWAY</code>; thời điểm cụ thể của L3 chưa kiểm chứng vì raw trace không có trên máy này.</figcaption>
+  </figure>
+  <div class="algo"><div class="ah"><b>Thuật toán 4.</b> Luật hai dòng (phân tích sau)</div><ol>
+    <li><span class="k">ở phút 0</span>: DISPATCH cả 3 xe dự phòng ra tuyến</li>
+    <li>SET_HEADWAY 10 phút cho mọi tuyến; sau đó NOOP</li>
+  </ol></div>
+  <p>Từ đó chúng tôi rút gọn thành luật: <em>gửi 3 xe dự phòng ngay, đặt giãn cách 10 phút</em>. Luật đạt 13.094,3 trên ngày thường (Bảng 2). Hiệu ghép cặp so với PPO vẫn có ý nghĩa thống kê: +28,6 [16,0; 41,6] trên ngày thường, +92,0 [5,2; 192,7] trên burst và +31,6 [16,5; 47,0] trên traffic. Luật này được đặt ra sau khi đã xem hành vi của PPO và 40 ngày test, và không nằm trong protocol đăng ký trước; vì vậy nó chỉ là phân tích sau.</p>
+</section>
+
+<section id="s7" data-n="§ 7" data-t="7 Kết luận">
+  <h2>Hạn chế và kết luận</h2>
+  <p>Kết quả giới hạn trong một mô phỏng: dữ liệu nhu cầu tổng hợp, mạng 3 tuyến cố định, cảm biến hoàn hảo, không có chuyển tuyến của khách và không có kẹt xe nội sinh. Trong phạm vi đó, đi trước cao điểm thắng phản ứng sau cao điểm, và phần lớn lợi ích của PPO có thể mô tả bằng một luật đơn giản mà người vận hành đọc được.</p>
+  <p>Hệ thống chạy thật, gồm cả hai chính sách trên bản đồ 3D, có tại <a href="../">dashboard</a>.</p>
+</section>
+
+<section id="notation" data-n="Phụ lục A" data-t="A Ký hiệu">
+  <h2>Ký hiệu</h2>
+  <div class="tw"><table id="nottable">
+    <thead><tr><th>Ký hiệu</th><th>Ý nghĩa</th><th>Giá trị / đơn vị</th></tr></thead>
+    <tbody>
+      <tr><td>$F$</td><td>Số xe của đội</td><td>12 (9 chạy tuyến, 3 dự phòng)</td></tr>
+      <tr><td>$t$</td><td>Thời gian trong ca</td><td>phút, 0 đến 240; bước 2</td></tr>
+      <tr><td>$\lambda_r(t)$</td><td>Cường độ khách đến tuyến $r$</td><td>khách/giờ, công thức (1)</td></tr>
+      <tr><td>$b_r$</td><td>Nền cầu của tuyến $r$</td><td>180, 160, 140 khách/giờ</td></tr>
+      <tr><td>$Q_r$</td><td>Số khách đang chờ ở tuyến $r$</td><td>khách</td></tr>
+      <tr><td>$n_r$</td><td>Số xe đang phục vụ tuyến $r$</td><td>xe, tối thiểu 2</td></tr>
+      <tr><td>$m,\mu,\sigma$</td><td>Hệ số, tâm và độ rộng của đỉnh cầu</td><td>$[1.5,3]$; $[45,135]$ phút; $[15,30]$ phút</td></tr>
+      <tr><td>$W$</td><td>Thời gian chờ của hàng chờ</td><td>passenger-minute, hệ số 1</td></tr>
+      <tr><td>$V$</td><td>Thời gian khách ở trên xe</td><td>passenger-minute, hệ số 0,25</td></tr>
+      <tr><td>$O$</td><td>Phần tải vượt mức thoải mái (30 khách)</td><td>passenger-minute, hệ số 0,5</td></tr>
+      <tr><td>$C$</td><td>Thời gian xe hoạt động</td><td>bus-minute, hệ số 0,5</td></tr>
+      <tr><td>$C_D$</td><td>Thời gian xe chạy không tải</td><td>bus-minute, hệ số 0,5</td></tr>
+      <tr><td>$X$</td><td>Thời gian chờ của khách đã chờ từ 15 phút trở lên</td><td>passenger-minute, hệ số 1</td></tr>
+      <tr><td>$U$</td><td>Khách bị từ chối lần đầu (xe đầy)</td><td>khách, hệ số 5</td></tr>
+      <tr><td>$E$</td><td>Khách bỏ về (chờ quá 45 phút)</td><td>khách, hệ số 60</td></tr>
+      <tr><td>$M$</td><td>Số lần đổi nhiệm vụ của xe</td><td>lần, hệ số 2</td></tr>
+      <tr><td>$N_H$</td><td>Khách chưa được chở khi hết ca</td><td>khách, hệ số 60, tính một lần cuối ca</td></tr>
+      <tr><td>$c$, $r$</td><td>Chi phí, reward</td><td>$r=-c/3000$</td></tr>
+      <tr><td>$\gamma$</td><td>Hệ số chiết khấu</td><td>1</td></tr>
+      <tr><td>$\rho_k$, $A_k$</td><td>Tỷ lệ xác suất, advantage</td><td>clip trong $[1-\varepsilon,1+\varepsilon]$</td></tr>
+      <tr><td>$\varepsilon$</td><td>Biên clip PPO</td><td>0,2</td></tr>
+    </tbody>
+  </table></div>
+  <p style="font-size:.85rem;color:var(--dim)">Ký hiệu và hệ số theo spec §6.3; riêng tên gọi của $X$ khác nhau giữa các tài liệu (spec dùng $F$). Các hệ số này đang được đối chiếu với <code>costs.rs</code>.</p>
+</section>
+
+<section id="refs" data-t="Tài liệu">
+  <h2>Tài liệu tham khảo</h2>
+  <ol class="refs">
+    <li>J. Schulman, F. Wolski, P. Dhariwal, A. Radford, O. Klimov. <em>Proximal Policy Optimization Algorithms</em>. arXiv:1707.06347, 2017.</li>
+    <li>S. Huang, S. Ontañón. <em>A Closer Look at Invalid Action Masking in Policy Gradient Algorithms</em>. arXiv:2006.14171, 2020.</li>
+  </ol>
+</section>
+</article>
+<footer>Nguồn dữ liệu: <code>reports/tables/</code>, <code>configs/</code>, <code>crates/bus-sim-core</code>, <code>docs/spec/</code>. Hình có ghi "minh họa" không mang số liệu đo.</footer>
+
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/contrib/auto-render.min.js"></script>
+<script>
+const $ = (s, r = document) => r.querySelector(s);
+const NS = "http://www.w3.org/2000/svg";
+const PAINT = new Set(["fill", "stroke"]);
+const el = (tag, attrs = {}, parent) => {
+  const n = document.createElementNS(NS, tag);
+  for (const k in attrs) PAINT.has(k) ? (n.style[k] = attrs[k]) : n.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(n);
+  return n;
+};
+const C = { blue: "var(--blue)", yellow: "var(--yellow)", red: "var(--red)", green: "var(--green)", grey: "var(--grey)", purple: "var(--purple)", dim: "var(--dim)", rule: "var(--rule)" };
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const axis = (svg, x0, y0, x1, y1) => el("line", { x1: x0, y1: y0, x2: x1, y2: y1, stroke: C.dim }, svg);
+const note = (svg, x, y, s, anchor = "start") => { const t = el("text", { x, y, "text-anchor": anchor, "font-size": 17, class: "d" }, svg); t.textContent = s; return t; };
+
+/* theme toggle, persisted per viewer */
+(() => {
+  const root = document.documentElement, btn = $("#theme");
+  let saved = null; try { saved = localStorage.getItem("theme"); } catch (e) {}
+  const set = t => { root.dataset.theme = t; btn.textContent = t === "dark" ? "Giao diện sáng" : "Giao diện tối"; try { localStorage.setItem("theme", t); } catch (e) {} };
+  set(saved || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"));
+  btn.addEventListener("click", () => set(root.dataset.theme === "dark" ? "light" : "dark"));
+})();
+
+/* reading progress */
+const bar = $("#bar"); let tick = false;
+addEventListener("scroll", () => {
+  if (tick) return; tick = true;
+  requestAnimationFrame(() => { const h = document.documentElement; bar.style.transform = `scaleX(${h.scrollTop / (h.scrollHeight - h.clientHeight || 1)})`; tick = false; });
+}, { passive: true });
+
+/* math */
+addEventListener("load", () => {
+  if (!window.renderMathInElement) return;
+  renderMathInElement(document.body, { delimiters: [{ left: "$$", right: "$$", display: true }, { left: "$", right: "$", display: false }], throwOnError: false });
+});
+
+/* Fig 1: play the 3D loop only while visible */
+(() => {
+  const v = $("#net3d");
+  if (reduce) return;
+  new IntersectionObserver(([e]) => { e.isIntersecting ? v.play().catch(() => {}) : v.pause(); }, { threshold: 0.3 }).observe(v);
+})();
+
+/* Fig 2 */
+(() => {
+  const svg = $("#demand"), W = 900, L = 50, B = 205;
+  const lam = (t, p) => (t < 180 ? 180 * (1 + Math.exp(-((t - p) ** 2) / (2 * 20 ** 2))) : 0);
+  const X = t => L + (W - L - 10) * t / 240, Y = v => B - v * 0.45;
+  axis(svg, L, B, W - 10, B); axis(svg, L, 20, L, B);
+  [0, 60, 120, 180, 240].forEach(t => note(svg, X(t), B + 22, t, "middle"));
+  note(svg, W - 10, B + 42, "t (phút)", "end"); note(svg, L + 8, 28, "λ (khách/giờ), tuyến A với m = 2, σ = 20");
+  const fill = el("path", { fill: C.yellow, "fill-opacity": .18 }, svg);
+  const line = el("path", { fill: "none", stroke: C.yellow, "stroke-width": 3 }, svg);
+  el("line", { x1: X(180), x2: X(180), y1: 20, y2: B, stroke: C.red, "stroke-dasharray": "4 5" }, svg);
+  note(svg, X(180) + 6, 32, "t = 180: hết khách mới");
+  const slider = $("#peak"), out = $("#peakv");
+  const render = () => {
+    const p = +slider.value; out.textContent = "μ = " + p;
+    let d = ""; for (let t = 0; t <= 240; t += 2) d += (t ? "L" : "M") + X(t) + " " + Y(lam(t, p)) + " ";
+    line.setAttribute("d", d); fill.setAttribute("d", d + `L${X(240)} ${B} L${X(0)} ${B}Z`);
+  };
+  slider.addEventListener("input", render); render();
+})();
+
+/* Fig 3 */
+(() => {
+  const g = $("#mask"); let s = 7; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 221; i++) { const c = document.createElement("i"); if (rnd() < 0.62) c.className = "x"; g.appendChild(c); }
+  const b = $("#maskbtn");
+  b.addEventListener("click", () => b.setAttribute("aria-pressed", g.classList.toggle("masked")));
+})();
+
+/* Fig 4 */
+(() => {
+  const svg = $("#area"), L = 40, B = 195, W = 900;
+  const X = t => L + (W - L - 10) * t, Y = v => B - v * 160;
+  axis(svg, L, B, W - 10, B); axis(svg, L, 20, L, B);
+  note(svg, L + 8, 28, "khách đang chờ"); note(svg, W - 10, B + 26, "thời gian", "end");
+  const area = el("path", { fill: C.yellow, "fill-opacity": .22 }, svg);
+  const line = el("path", { fill: "none", stroke: C.yellow, "stroke-width": 3 }, svg);
+  const f = {
+    reactive: t => .15 + .85 * Math.exp(-((t - .52) ** 2) / .02) + (t > .52 ? .1 * Math.exp(-(t - .52) * 4) : 0),
+    proactive: t => .15 + .42 * Math.exp(-((t - .5) ** 2) / .02)
+  };
+  const set = k => {
+    let d = ""; for (let i = 0; i <= 120; i++) { const t = i / 120; d += (i ? "L" : "M") + X(t) + " " + Y(f[k](t)) + " "; }
+    line.setAttribute("d", d); area.setAttribute("d", d + `L${X(1)} ${B} L${X(0)} ${B}Z`);
+    $("#reactive").setAttribute("aria-pressed", k === "reactive"); $("#proactive").setAttribute("aria-pressed", k === "proactive");
+  };
+  $("#reactive").onclick = () => set("reactive"); $("#proactive").onclick = () => set("proactive"); set("reactive");
+})();
+
+/* Fig 5 */
+(() => {
+  const svg = $("#clip"), eps = .2, L = 60, R = 880, T = 20, B = 255;
+  const X = r => L + (R - L) * (r - 0.4) / 1.2, Y = v => (T + B) / 2 - v * 110;
+  const slider = $("#adv"), out = $("#advv");
+  const band = el("rect", { y: T, height: B - T, fill: C.blue, "fill-opacity": .12 }, svg);
+  const zero = el("line", { x1: L, x2: R, stroke: C.rule }, svg);
+  const full = el("path", { fill: "none", stroke: C.grey, "stroke-width": 2, "stroke-dasharray": "6 5" }, svg);
+  const used = el("path", { fill: "none", stroke: C.green, "stroke-width": 4 }, svg);
+  [.5, .8, 1, 1.2, 1.5].forEach(r => note(svg, X(r), B + 22, String(r).replace(".", ","), "middle"));
+  note(svg, R, B + 42, "ρ = π_mới / π_cũ", "end");
+  const render = () => {
+    const A = +slider.value; out.textContent = "A = " + (A >= 0 ? "+" : "−") + Math.abs(A).toFixed(1).replace(".", ",");
+    out.style.color = A >= 0 ? C.green : C.red;
+    zero.setAttribute("y1", Y(0)); zero.setAttribute("y2", Y(0));
+    band.setAttribute("x", X(1 - eps)); band.setAttribute("width", X(1 + eps) - X(1 - eps));
+    let d1 = "", d2 = "";
+    for (let i = 0; i <= 120; i++) {
+      const r = .4 + 1.2 * i / 120, cl = Math.min(Math.max(r, 1 - eps), 1 + eps);
+      d1 += (i ? "L" : "M") + X(r) + " " + Y(r * A) + " "; d2 += (i ? "L" : "M") + X(r) + " " + Y(Math.min(r * A, cl * A)) + " ";
+    }
+    full.setAttribute("d", d1); used.setAttribute("d", d2);
+  };
+  slider.addEventListener("input", render); render();
+})();
+
+/* Fig 6 */
+(() => {
+  const data = {
+    "Ngày thường": [["PPO", 13065.7, C.green], ["Luật hai dòng †", 13094.3, C.purple], ["Fixed", 15861.3, C.grey], ["Proportional", 16056.6, C.grey], ["Threshold", 16652.3, C.grey]],
+    "Burst": [["PPO", 25197.2, C.green], ["Luật hai dòng †", 25289.2, C.purple], ["Threshold", 26531.9, C.grey], ["Proportional", 27980.7, C.grey], ["Fixed", 33747.4, C.grey]],
+    "Traffic": [["PPO", 13412.4, C.green], ["Luật hai dòng †", 13444.1, C.purple], ["Fixed", 16307.8, C.grey], ["Proportional", 16549.8, C.grey], ["Threshold", 16924.6, C.grey]]
+  };
+  const fmt = v => v.toLocaleString("vi-VN", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  let relative = false;
+  $("#rel").onclick = e => { relative = !relative; e.currentTarget.setAttribute("aria-pressed", relative); draw(false); };
+  const svg = $("#bars"), box = $("#sets"), max = 34000, L = 150, R = 800, rowH = 52;
+  let cur = "Ngày thường";
+  Object.keys(data).forEach(k => {
+    const b = document.createElement("button"); b.className = "t"; b.textContent = k; b.setAttribute("aria-pressed", k === cur);
+    b.onclick = () => { cur = k; [...box.children].forEach(c => c.setAttribute("aria-pressed", c === b)); draw(true); };
+    box.appendChild(b);
+  });
+  const draw = animate => {
+    svg.replaceChildren();
+    data[cur].forEach(([name, v, col], i) => {
+      const y = 6 + i * rowH, w = (R - L) * v / max;
+      const lab = el("text", { x: L - 12, y: y + 23, "text-anchor": "end", "font-size": 17 }, svg); lab.textContent = name;
+      const r = el("rect", { x: L, y, height: 32, width: animate && !reduce ? 0 : w, fill: col }, svg);
+      const t = el("text", { x: L + w + 10, y: y + 23, "font-size": 16 }, svg); t.textContent = relative && name !== "PPO" ? "+" + ((v / data[cur][0][1] - 1) * 100).toFixed(1).replace(".", ",") + "%" : fmt(v);
+      if (animate && !reduce) { r.style.transition = "width .6s ease"; requestAnimationFrame(() => requestAnimationFrame(() => r.setAttribute("width", w))); }
+    });
+  };
+  draw(false);
+})();
+
+/* Fig 7 */
+(() => {
+  const svg = $("#tl"), x0 = 50, step = 100;
+  axis(svg, x0, 60, x0 + 8 * step, 60);
+  for (let m = 0; m <= 8; m++) { el("line", { x1: x0 + m * step, x2: x0 + m * step, y1: 56, y2: 64, stroke: C.dim }, svg); note(svg, x0 + m * step, 98, m, "middle"); }
+  note(svg, x0 + 8 * step, 116, "phút", "end");
+  [[0, "SHORT_TURN"], [2, "DISPATCH"], [4, "DISPATCH"]].forEach(([m, s]) => {
+    el("circle", { cx: x0 + m * step, cy: 60, r: 7, fill: C.purple }, svg);
+    const t = el("text", { x: x0 + m * step, y: 38, "text-anchor": "middle", "font-size": 15 }, svg); t.textContent = s;
+  });
+  const t = el("text", { x: x0 + 8 * step, y: 38, "text-anchor": "end", "font-size": 15, fill: C.green }, svg); t.textContent = "sau đó: chủ yếu SET_HEADWAY";
+  const cursor = el("line", { y1: 44, y2: 76, stroke: C.blue, "stroke-width": 3 }, svg);
+  const slider = $("#tmin"), out = $("#tstate");
+  const events = { 0: "SHORT_TURN: xe dự phòng thứ nhất ra tuyến", 2: "DISPATCH: xe dự phòng thứ hai", 4: "DISPATCH: xe dự phòng thứ ba" };
+  const move = () => {
+    const m = +slider.value; cursor.setAttribute("x1", x0 + m * step); cursor.setAttribute("x2", x0 + m * step);
+    const done = Object.keys(events).filter(k => k <= m).length;
+    out.textContent = `phút ${m}: ${events[m] || (done < 3 ? "chờ" : "SET_HEADWAY")} · ${done}/3 xe dự phòng đã ra`;
+  };
+  slider.addEventListener("input", move); move();
+})();
+
+
+/* hero: headline numbers per split */
+(() => {
+  const sets = { "Ngày thường": [13065.7, "Fixed", 15861.3], "Burst": [25197.2, "Threshold", 26531.9], "Traffic": [13412.4, "Fixed", 16307.8] };
+  const fmt = v => v.toLocaleString("vi-VN", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const box = $("#hsets");
+  const show = k => {
+    const [ppo, name, rule] = sets[k];
+    $("#hs-ppo").textContent = fmt(ppo); $("#hs-rule").textContent = fmt(rule); $("#hs-rule-name").textContent = "luật tốt nhất: " + name;
+    $("#hs-gain").textContent = ((1 - ppo / rule) * 100).toFixed(1).replace(".", ",") + "%";
+    [...box.children].forEach(c => c.setAttribute("aria-pressed", c.textContent === k));
+  };
+  Object.keys(sets).forEach(k => { const b = document.createElement("button"); b.className = "t"; b.textContent = k; b.onclick = () => show(k); box.appendChild(b); });
+  show("Ngày thường");
+})();
+
+/* Fig 10: agent-environment loop */
+(() => {
+  const svg = $("#loop");
+  const box = (x, y, w, h, title, sub) => {
+    el("rect", { x, y, width: w, height: h, fill: "none", stroke: C.rule, "stroke-width": 2 }, svg);
+    const t = el("text", { x: x + w / 2, y: y + 30, "text-anchor": "middle", "font-size": 20 }, svg); t.textContent = title;
+    const u = el("text", { x: x + w / 2, y: y + 56, "text-anchor": "middle", "font-size": 16, class: "d" }, svg); u.textContent = sub;
+  };
+  box(30, 30, 300, 230, "Môi trường", "trạng thái thật s_k");
+  box(570, 70, 300, 150, "Tác tử", "π_θ(a | o, m)");
+  const hidden = el("g", { style: "opacity:0;transition:opacity .4s" }, svg);
+  el("rect", { x: 50, y: 150, width: 260, height: 90, fill: "none", stroke: C.purple, "stroke-dasharray": "6 5", "stroke-width": 2 }, hidden);
+  [["bị che: điểm đến của khách", 182], ["bị che: nhu cầu tương lai", 210]].forEach(([t, y]) => { const e = el("text", { x: 180, y, "text-anchor": "middle", "font-size": 16, fill: C.purple }, hidden); e.textContent = t; });
+  const arrows = [[100, "o_k  quan sát", 1], [140, "m_k  mặt nạ 221 ô", 1], [200, "a_k  lệnh", -1], [240, "r_k = −c_k / 3000", -1]].map(([y, label, dir]) => {
+    const g = el("g", { style: "transition:opacity .3s" }, svg);
+    const x1 = dir > 0 ? 340 : 560, x2 = dir > 0 ? 560 : 340;
+    const line = el("line", { x1, x2, y1: y, y2: y, stroke: C.blue, "stroke-width": 3 }, g);
+    el("path", { d: `M${x2} ${y} l${-dir * 12} -7 l0 14 Z`, fill: C.blue }, g);
+    const t = el("text", { x: 450, y: y - 9, "text-anchor": "middle", "font-size": 16 }, g); t.textContent = label;
+    return { g, line };
+  });
+  const msgs = ["Môi trường chỉ đưa ra những gì cảm biến thấy: hàng chờ, tuổi chờ, xe, giãn cách.", "Mặt nạ đánh dấu ô vi phạm: cooldown 20 phút, tối thiểu 2 xe mỗi tuyến, xe đang chở khách.", "Tác tử lấy mẫu một lệnh trong các ô còn hợp lệ.", "Môi trường chạy 2 phút, tính chi phí; reward là âm của chi phí chia 3000."];
+  let step = -1;
+  const show = () => {
+    arrows.forEach((a, i) => { a.g.style.opacity = step < 0 || i === step ? 1 : .25; a.line.style.stroke = i === step ? "var(--yellow)" : "var(--blue)"; });
+    $("#loopmsg").textContent = step < 0 ? "" : `${step + 1}/4: ${msgs[step]}`;
+  };
+  $("#loopnext").onclick = () => { step = (step + 1) % 4; show(); };
+  $("#loophid").onclick = e => { const on = e.currentTarget.getAttribute("aria-pressed") !== "true"; e.currentTarget.setAttribute("aria-pressed", on); hidden.style.opacity = on ? 1 : 0; };
+  show();
+})();
+
+/* Fig 11: masked softmax demo */
+(() => {
+  const svg = $("#mdemo"), acts = [["NOOP", 0.4], ["DISPATCH", 2.0], ["SET_HEADWAY", 1.5], ["REASSIGN", 1.1], ["RECALL", -0.5], ["SHORT_TURN", 1.7]];
+  const masked = new Set(), L = 180, R = 800, rowH = 40;
+  const btns = $("#mbtns");
+  acts.forEach(([n], i) => { const b = document.createElement("button"); b.className = "t"; b.textContent = n; b.setAttribute("aria-pressed", "false"); b.onclick = () => { masked.has(i) ? masked.delete(i) : masked.add(i); b.setAttribute("aria-pressed", masked.has(i)); draw(); }; btns.appendChild(b); });
+  const draw = () => {
+    svg.replaceChildren();
+    const e = acts.map(([, z]) => Math.exp(z)), full = e.reduce((a, b) => a + b), live = e.reduce((a, v, i) => a + (masked.has(i) ? 0 : v), 0) || 1;
+    acts.forEach(([n], i) => {
+      const y = 10 + i * rowH, p0 = e[i] / full, p1 = masked.has(i) ? 0 : e[i] / live;
+      const lab = el("text", { x: L - 12, y: y + 18, "text-anchor": "end", "font-size": 17 }, svg); lab.textContent = n;
+      el("rect", { x: L, y, width: (R - L) * p0, height: 12, fill: C.grey }, svg);
+      el("rect", { x: L, y: y + 14, width: Math.max((R - L) * p1, 0), height: 12, fill: C.green }, svg);
+      const t = el("text", { x: L + (R - L) * Math.max(p0, p1) + 10, y: y + 22, "font-size": 15, class: "d" }, svg);
+      t.textContent = masked.has(i) ? "bị mask: 0%" : (p0 * 100).toFixed(0) + "% → " + (p1 * 100).toFixed(0) + "%";
+      if (masked.has(i)) el("line", { x1: L, x2: R, y1: y + 20, y2: y + 20, stroke: C.red, "stroke-dasharray": "5 5" }, svg);
+    });
+  };
+  draw();
+})();
+
+/* Fig 12: gain over baselines; Fig 13: waiting time */
+(() => {
+  const splits = ["Ngày thường", "Burst", "Traffic"];
+  const ppo = [13065.7, 25197.2, 13412.4];
+  const base = { Fixed: [15861.3, 33747.4, 16307.8], Proportional: [16056.6, 27980.7, 16549.8], Threshold: [16652.3, 26531.9, 16924.6] };
+  const svg = $("#gain"), L = 70, B = 250, T = 20, W = 900;
+  let mode = "pct";
+  const modes = { pct: "% thấp hơn", abs: "tiết kiệm (passenger-phút)" };
+  const draw = () => {
+    svg.replaceChildren();
+    const val = (b, i) => (mode === "pct" ? (1 - ppo[i] / base[b][i]) * 100 : base[b][i] - ppo[i]);
+    const max = mode === "pct" ? 40 : 9000, Y = v => B - (B - T) * v / max;
+    axis(svg, L, B, W - 10, B); axis(svg, L, T, L, B);
+    const ticks = mode === "pct" ? [0, 10, 20, 30, 40] : [0, 3000, 6000, 9000];
+    ticks.forEach(v => { note(svg, L - 8, Y(v) + 5, v.toLocaleString("vi-VN"), "end"); el("line", { x1: L, x2: W - 10, y1: Y(v), y2: Y(v), stroke: C.rule, "stroke-opacity": .5 }, svg); });
+    const gw = (W - L - 10) / 3, names = Object.keys(base), bw = gw / 5, cols = [C.grey, C.blue, C.purple];
+    splits.forEach((sp, i) => {
+      note(svg, L + gw * i + gw / 2, B + 26, sp, "middle");
+      names.forEach((b, j) => {
+        const v = val(b, i), x = L + gw * i + bw * (j + 1) - bw / 4;
+        el("rect", { x, y: Y(v), width: bw * .85, height: B - Y(v), fill: cols[j] }, svg);
+        note(svg, x + bw * .42, Y(v) - 6, mode === "pct" ? v.toFixed(1).replace(".", ",") + "%" : Math.round(v).toLocaleString("vi-VN"), "middle");
+      });
+    });
+    names.forEach((b, j) => { el("rect", { x: 440 + j * 150, y: 4, width: 12, height: 12, fill: cols[j] }, svg); const t = el("text", { x: 458 + j * 150, y: 15, "font-size": 14 }, svg); t.textContent = b; });
+  };
+  const box = $("#gsets");
+  Object.entries(modes).forEach(([k, t]) => { const b = document.createElement("button"); b.className = "t"; b.textContent = t; b.setAttribute("aria-pressed", k === mode); b.onclick = () => { mode = k; [...box.children].forEach(c => c.setAttribute("aria-pressed", c === b)); draw(); }; box.appendChild(b); });
+  draw();
+
+  const waits = { "Trung bình": { PPO: [5.57, 8.07, 5.70], Fixed: [7.42, 10.49, 7.57], Proportional: [7.07, 9.08, 7.18], Threshold: [7.27, 9.11, 7.34] },
+    "P95": { PPO: [11.28, 30.88, 11.79], Fixed: [14.88, 39.13, 15.20], Proportional: [14.73, 28.51, 15.04], Threshold: [15.46, 26.64, 15.82] } };
+  const sv = $("#wait"), wb = $("#wsets"); let metric = "Trung bình";
+  const wdraw = () => {
+    sv.replaceChildren();
+    const data = waits[metric], max = metric === "P95" ? 40 : 12, Y = v => B - (B - T) * v / max;
+    axis(sv, L, B, W - 10, B); axis(sv, L, T, L, B);
+    (metric === "P95" ? [0, 10, 20, 30, 40] : [0, 3, 6, 9, 12]).forEach(v => { note(sv, L - 8, Y(v) + 5, String(v), "end"); el("line", { x1: L, x2: W - 10, y1: Y(v), y2: Y(v), stroke: C.rule, "stroke-opacity": .5 }, sv); });
+    const gw = (W - L - 10) / 3, names = Object.keys(data), bw = gw / 6;
+    splits.forEach((sp, i) => {
+      note(sv, L + gw * i + gw / 2, B + 26, sp, "middle");
+      names.forEach((n, j) => {
+        const v = data[n][i], x = L + gw * i + bw * (j + 1) - bw / 3;
+        el("rect", { x, y: Y(v), width: bw * .85, height: B - Y(v), fill: n === "PPO" ? C.green : C.grey, "fill-opacity": n === "PPO" ? 1 : .35 + j * .15 }, sv);
+        note(sv, x + bw * .42, Y(v) - 6, v.toFixed(1).replace(".", ","), "middle");
+      });
+    });
+    names.forEach((n, j) => { el("rect", { x: 440 + j * 150, y: 4, width: 12, height: 12, fill: n === "PPO" ? C.green : C.grey, "fill-opacity": n === "PPO" ? 1 : .35 + j * .15 }, sv); const t = el("text", { x: 458 + j * 150, y: 15, "font-size": 14 }, sv); t.textContent = n; });
+  };
+  Object.keys(waits).forEach(k => { const b = document.createElement("button"); b.className = "t"; b.textContent = k; b.setAttribute("aria-pressed", k === metric); b.onclick = () => { metric = k; [...wb.children].forEach(c => c.setAttribute("aria-pressed", c === b)); wdraw(); }; wb.appendChild(b); });
+  wdraw();
+})();
+
+/* chart legends: [colour, glyph, text] per figure svg */
+(() => {
+  const legends = {
+    net3d: [["blue", "bar", "xe buýt"], ["purple", "bar", "depot và xe dự phòng"], ["yellow", "dot", "khách chờ"], ["grey", "line", "tuyến khép kín: làn đi và làn về"]],
+    loop: [["blue", "line", "dữ liệu tác tử nhận"], ["purple", "dash", "phần bị che"], ["yellow", "line", "bước đang xem"]],
+    mdemo: [["grey", "bar", "xác suất trước mask"], ["green", "bar", "sau mask"], ["red", "dash", "bị mask"]],
+    gain: [["grey", "bar", "so với Fixed"], ["blue", "bar", "so với Proportional"], ["purple", "bar", "so với Threshold"]],
+    wait: [["green", "bar", "PPO"], ["grey", "bar", "luật viết tay (ba cột xám: Fixed, Proportional, Threshold)"]],
+    demand: [["yellow", "line", "λ_r(t), cường độ khách đến"], ["red", "dash", "t = 180, hết khách mới"]],
+    area: [["yellow", "line", "hàng chờ Q(t)"], ["yellow", "box", "diện tích = W (passenger-phút chờ)"]],
+    clip: [["grey", "dash", "ρ·A, chưa clip"], ["green", "line", "min(ρA, clip(ρ)A), phần được dùng"], ["blue", "box", "vùng [1−ε, 1+ε]"]],
+    bars: [["green", "bar", "PPO"], ["purple", "bar", "luật hai dòng † (phân tích sau)"], ["grey", "bar", "luật viết tay"]],
+    tl: [["purple", "dot", "lệnh đưa xe dự phòng"], ["blue", "line", "phút đang xem"]],
+    vcurve: [["grey", "dash", "Fixed, Threshold (validation)"], ["ink", "dot", "checkpoint được chọn"]],
+    forest: [["green", "dot", "hiệu trung bình"], ["green", "line", "khoảng tin cậy 95%"]]
+  };
+  const sym = { yellow: "var(--yellow)", red: "var(--red)", green: "var(--green)", blue: "var(--blue)", grey: "var(--grey)", purple: "var(--purple)", ink: "var(--ink)" };
+  for (const [id, items] of Object.entries(legends)) {
+    const box = document.createElement("div"); box.className = "leg"; box.setAttribute("aria-label", "Chú thích");
+    items.forEach(([c, g, t]) => { const sp = document.createElement("span"); const k = document.createElement("i"); k.className = g; k.style.color = sym[c]; k.style.borderColor = sym[c]; if (g === "dot" || g === "box" || g === "bar") k.style.background = sym[c]; sp.append(k, t); box.appendChild(sp); });
+    document.getElementById(id).closest("figure").querySelector("figcaption").before(box);
+  }
+})();
+
+/* scroll reveal */
+(() => {
+  const items = document.querySelectorAll("section > :not(h2):not(header), section header");
+  items.forEach(n => n.classList.add("rv"));
+  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: 0.08, rootMargin: "0px 0px -6% 0px" });
+  items.forEach(n => io.observe(n));
+})();
+
+/* section nav */
+(() => {
+  const nav = $("#toc"), secs = [...document.querySelectorAll("section[data-t]")];
+  const links = secs.map(sec => { const a = document.createElement("a"); a.href = "#" + sec.id; a.innerHTML = `${String(secs.indexOf(sec)).padStart(2, "0")}<span>${sec.dataset.t}</span>`; nav.appendChild(a); return a; });
+  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) links.forEach((l, i) => l.classList.toggle("on", secs[i] === e.target)); }), { rootMargin: "-20% 0px -65% 0px" });
+  secs.forEach(sec => io.observe(sec));
+})();
+
+/* Fig 8: validation curves */
+(() => {
+  const svg = $("#vcurve"), L = 60, R = 880, T = 15, B = 225;
+  const seeds = {
+    "seed 11": [17551.53,15646.93,14494.52,13976.79,16820.10,14440.58,14484.77,14484.69,13726.51,13727.73,13788.44,14086.44,13199.13,14036.17,14424.24,13199.13,13282.01,13363.21,13340.88,13464.35],
+    "seed 22": [16971.68,14247.51,14052.60,14341.72,14977.97,13590.04,13823.42,13113.97,13357.37,13999.24,13247.92,13319.31,13604.09,13610.73,13610.73,13249.03,13252.81,13335.33,13465.08,13507.83],
+    "seed 33": [14433.43,15266.32,14204.08,14317.89,13751.16,14117.76,13593.69,13779.67,17383.13,17066.34,14524.77,15241.76,16951.71,16636.64,16515.84,16393.18,16348.24,14039.35,13213.46,13347.95]
+  };
+  const col = [C.green, C.blue, C.purple];
+  const X = k => L + (R - L) * (k - 1) / 19, Y = v => B - (v - 13000) / (17600 - 13000) * (B - T);
+  axis(svg, L, B, R, B); axis(svg, L, T, L, B);
+  [13000, 14000, 15000, 16000, 17000].forEach(v => { note(svg, L - 8, Y(v) + 5, v.toLocaleString("vi-VN"), "end"); el("line", { x1: L, x2: R, y1: Y(v), y2: Y(v), stroke: C.rule, "stroke-opacity": .5 }, svg); });
+  [0, 5, 10, 15, 20].forEach(k => { const kk = Math.max(k, 1); note(svg, X(kk), B + 22, k === 0 ? "12.288" : (k * 12288).toLocaleString("vi-VN"), "middle"); });
+  note(svg, R, B + 44, "số quyết định huấn luyện", "end");
+  [["Fixed", 16016.87], ["Threshold", 16641.44]].forEach(([n, v]) => {
+    el("line", { x1: L, x2: R, y1: Y(v), y2: Y(v), stroke: C.grey, "stroke-dasharray": "6 5" }, svg);
+    note(svg, R, Y(v) - 6, n, "end");
+  });
+  Object.entries(seeds).forEach(([n, ys], i) => {
+    const g = el("g", {}, svg);
+    el("path", { d: ys.map((v, k) => (k ? "L" : "M") + X(k + 1) + " " + Y(v)).join(" "), fill: "none", stroke: col[i], "stroke-width": 2.5 }, g);
+    const best = ys.indexOf(Math.min(...ys));
+    el("circle", { cx: X(best + 1), cy: Y(ys[best]), r: 5, fill: col[i] }, g);
+    const sw = document.createElement("button"); sw.className = "t"; sw.setAttribute("aria-pressed", "true");
+    sw.innerHTML = `<span style="color:${["var(--green)","var(--blue)","var(--purple)"][i]}">&#9644;</span> ${n}`;
+    sw.onclick = () => { const on = sw.getAttribute("aria-pressed") !== "true"; sw.setAttribute("aria-pressed", on); g.style.opacity = on ? 1 : .08; };
+    $("#vleg").appendChild(sw);
+  });
+  const sw = document.createElement("span"); sw.textContent = "● checkpoint được chọn"; $("#vleg").appendChild(sw);
+})();
+
+/* Fig 9: paired contrasts */
+(() => {
+  const svg = $("#forest"), L = 190, R = 860, max = 9500;
+  const rows = [
+    ["Ngày thường", "Fixed", 2795.58, 2759.56, 2831.63], ["", "Proportional", 2990.95, 2871.08, 3114.84], ["", "Threshold", 3586.60, 3450.68, 3727.75],
+    ["Burst", "Fixed", 8550.17, 8276.69, 8819.35], ["", "Proportional", 2783.56, 2184.79, 3403.50], ["", "Threshold", 1334.73, 760.76, 1927.01],
+    ["Traffic", "Fixed", 2895.35, 2849.97, 2939.43], ["", "Proportional", 3137.34, 3014.44, 3270.92], ["", "Threshold", 3512.20, 3385.10, 3638.20]
+  ];
+  const X = v => L + (R - L) * v / max, rh = 30;
+  [0, 2000, 4000, 6000, 8000].forEach(v => { el("line", { x1: X(v), x2: X(v), y1: 0, y2: rows.length * rh, stroke: C.rule, "stroke-opacity": v ? .5 : 1 }, svg); note(svg, X(v), rows.length * rh + 22, v.toLocaleString("vi-VN"), "middle"); });
+  note(svg, R, rows.length * rh + 44, "baseline − PPO (passenger-minute tương đương)", "end");
+  const groups = {}; let group = "";
+  const sel = $("#fsets");
+  ["Tất cả", "Ngày thường", "Burst", "Traffic"].forEach(k => {
+    const b = document.createElement("button"); b.className = "t"; b.textContent = k; b.setAttribute("aria-pressed", k === "Tất cả");
+    b.onclick = () => { [...sel.children].forEach(c => c.setAttribute("aria-pressed", c === b)); for (const [name, nodes] of Object.entries(groups)) nodes.forEach(n => (n.style.opacity = k === "Tất cả" || k === name ? 1 : .12)); };
+    sel.appendChild(b);
+  });
+  rows.forEach(([g, n, v, lo, hi], i) => {
+    group = g || group; const y = i * rh + rh / 2; const row = el("g", { style: "transition: opacity .3s" }, svg); (groups[group] ||= []).push(row);
+    if (g) { const t = el("text", { x: 0, y: y + 6, "font-size": 18 }, row); t.textContent = g; t.style.fontWeight = 700; }
+    const t = el("text", { x: L - 12, y: y + 6, "text-anchor": "end", "font-size": 17, class: "d" }, row); t.textContent = n;
+    el("line", { x1: X(lo), x2: X(hi), y1: y, y2: y, stroke: C.green, "stroke-width": 2 }, row);
+    el("circle", { cx: X(v), cy: y, r: 4.5, fill: C.green }, row);
+  });
+})();
+</script>
+</body>
+</html>
