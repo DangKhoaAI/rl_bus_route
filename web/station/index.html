@@ -44,9 +44,12 @@
   --gutter-r: max(clamp(1rem, 1.4vw, 2rem), env(safe-area-inset-right, 0px));
   /* Floating-card geometry: every width and offset derives from these, so cards stay aligned at any root size. */
   --edge: .875rem;
-  --panel-w: 20rem;
+  /* Wide desktop screens get a wider side panel, so route names and the cost legend fit. */
+  --panel-w: clamp(20rem, 24vw, 32rem);
   --panel-gap: .75rem;
-  --lists-h: 18rem;
+  /* Left column: experiment setup on top, map legend at the bottom. */
+  --config-w: clamp(16rem, 17vw, 22rem);
+  --lists-h: clamp(16rem, 25vh, 26rem);
 }
 html, body { height: 100%; }
 /* Floating UI is sized in rem so one root value scales it for TV: 16px up to 1777px wide (laptop, phone), ~17px at 1920, ~23px at 2560, ~35px at 3840. */
@@ -95,7 +98,7 @@ button:active { transform: scale(.98); }
 .link { height: 2.25rem; border: 0; background: transparent; color: var(--muted); font-weight: 500; padding: 0 .75rem; border-radius: .5rem; cursor: pointer; font-size: .875rem; white-space: nowrap; }
 .link:hover { color: var(--ink); background: var(--panel-2); }
 .link[aria-pressed="true"] { color: var(--ink); background: var(--panel-2); }
-.playback { display: inline-flex; align-items: center; height: 2.25rem; padding: .125rem; border: 1px solid var(--line); border-radius: .5rem; background: var(--panel); margin-left: auto; }
+.playback { display: inline-flex; align-items: center; height: 2.25rem; padding: .125rem; border: 1px solid var(--line); border-radius: .5rem; background: var(--panel); }
 .live { display: inline-flex; align-items: center; gap: .5rem; height: 1.875rem; padding: 0 .625rem; border-radius: .375rem; background: var(--ok-soft); color: var(--ok); font: 600 .8rem var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .live i { width: .4375rem; height: .4375rem; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 0 currentColor; animation: pulse 1.8s infinite; }
 .live.paused { background: var(--warn-soft); color: var(--warn); }
@@ -105,9 +108,13 @@ button:active { transform: scale(.98); }
 .speed button { display: inline-flex; align-items: center; justify-content: center; height: 1.875rem; min-width: 2.25rem; padding: 0 .5rem; border: 0; border-radius: .375rem; background: transparent; cursor: pointer; font: 600 .8rem var(--font-mono); color: var(--muted); }
 .speed button:hover { color: var(--ink); background: var(--panel-2); }
 .speed button[aria-pressed="true"] { background: var(--ink); color: #fff; }
-.who { display: flex; align-items: center; gap: .5rem; }
-.who b { display: block; font-size: .8125rem; line-height: 1.3; }
-.who small { color: var(--muted); font-size: .8rem; }
+.config { position: absolute; top: var(--edge); left: var(--gutter-l); width: var(--config-w); z-index: 3; padding: .875rem; display: flex; flex-direction: column; gap: .5rem; }
+.config h3, .map-key h3 { margin: 0; font-size: .6875rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.config label { display: grid; grid-template-columns: 6rem minmax(0, 1fr); align-items: center; gap: .5rem; font-size: .8rem; color: var(--muted); }
+.config select { height: 2rem; width: 100%; border: 1px solid var(--line); border-radius: .375rem; background: var(--panel); color: var(--ink); font: 600 .8125rem var(--font-ui); padding: 0 .375rem; cursor: pointer; }
+.config select:hover { border-color: var(--line-strong); }
+.config select:disabled { color: var(--muted); cursor: progress; }
+.config .playback { justify-content: space-between; flex-wrap: wrap; height: auto; gap: .125rem; margin-top: .25rem; }
 
 /* Stage */
 .stage { position: relative; flex: 1; min-height: 0; }
@@ -120,7 +127,7 @@ button:active { transform: scale(.98); }
 .eyebrow { font: 500 .8rem var(--font-mono); letter-spacing: .02em; color: var(--muted); }
 .muted { color: var(--muted); }
 
-.kpis { position: absolute; top: var(--edge); left: var(--gutter-l); display: flex; align-items: stretch; gap: .5rem; z-index: 3; }
+.kpis { position: absolute; top: var(--edge); left: calc(var(--gutter-l) + var(--config-w) + var(--panel-gap)); display: flex; align-items: stretch; gap: .5rem; z-index: 3; }
 .kpi { display: flex; gap: .75rem; align-items: center; padding: .875rem 1rem 1rem .875rem; min-width: 10rem; transition: box-shadow .2s var(--ease); }
 .kpi:hover { box-shadow: var(--shadow-hover); }
 .kpi .ic { width: 2.5rem; height: 2.5rem; border-radius: .5rem; background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); display: grid; place-items: center; flex: none; }
@@ -137,7 +144,7 @@ button:active { transform: scale(.98); }
 .mapctl svg { width: 1.125rem; height: 1.125rem; }
 .mapctl hr { border: 0; border-top: 1px solid var(--line); margin: .1875rem .25rem; }
 
-.side { position: absolute; top: var(--edge); right: var(--gutter-r); width: var(--panel-w); max-height: calc(100% - var(--edge) * 2 - var(--lists-h) - var(--panel-gap)); overflow: auto; padding: 1rem; z-index: 3; display: flex; flex-direction: column; gap: .75rem; }
+.side { position: absolute; top: var(--edge); right: var(--gutter-r); width: var(--panel-w); max-height: calc(100% - var(--edge) * 2 - var(--lists-h) - var(--panel-gap)); overflow: auto; padding: 1rem; z-index: 3; display: flex; flex-direction: column; gap: .5rem; }
 .side-head { display: flex; gap: .625rem; align-items: flex-start; }
 .side-head .ic { width: 2.25rem; height: 2.25rem; border-radius: .5rem; background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); display: grid; place-items: center; flex: none; }
 .side-head .ic svg { width: 1.125rem; height: 1.125rem; }
@@ -175,7 +182,6 @@ button:active { transform: scale(.98); }
 .cost-legend { display: grid; grid-template-columns: auto 1fr auto; gap: .25rem .5rem; align-items: center; font-size: .8rem; }
 .cost-legend .sw { width: .5625rem; height: .5625rem; border-radius: .1875rem; }
 .stack { display: flex; height: .625rem; border-radius: .3125rem; overflow: hidden; background: var(--line); }
-.foot { font-size: .8rem; color: var(--muted); line-height: 1.45; border-top: 1px solid var(--line); padding-top: .625rem; }
 
 /* Sidebar motion. The enter class is set only when the shown entity changes (see renderSide). */
 @keyframes side-in { from { opacity: 0; transform: translateY(.5rem); } to { opacity: 1; transform: none; } }
@@ -209,7 +215,7 @@ button:active { transform: scale(.98); }
 .lists .row:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; background: var(--panel-2); }
 .qbar { width: 2.875rem; flex: none; }
 .log-code { font-family: var(--font-mono); font-size: .8rem; font-weight: 600; }
-.log-time { font-size: .8rem; width: 2.5rem; flex: none; }
+.log-time { font-size: .8rem; min-width: 4.25rem; flex: none; align-self: flex-start; line-height: 1.4; white-space: nowrap; }
 
 /* World labels. JS writes transform every frame, so .lbl must never transition transform. */
 .lbl { position: absolute; left: 0; top: 0; transform: translate(-50%, -100%); white-space: nowrap; will-change: transform; }
@@ -233,8 +239,8 @@ button:active { transform: scale(.98); }
 .lbl-depot b { display: block; font-size: .875rem; }
 .lbl-depot small { display: block; font-size: .75rem; color: rgba(255, 255, 255, .72); }
 .lbl-depot.sel { outline: 2px solid var(--accent); outline-offset: 2px; }
-.map-key { position: absolute; left: var(--gutter-l); top: 10.25rem; z-index: 2; padding: .75rem .875rem; display: grid; grid-template-columns: auto 1fr; gap: .375rem .625rem; align-items: center; font-size: .8rem; }
-.map-key h3 { grid-column: 1 / -1; margin: .25rem 0 0; font-size: .6875rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.map-key { position: absolute; left: var(--gutter-l); bottom: var(--edge); width: var(--config-w); z-index: 2; padding: .75rem .875rem; display: grid; grid-template-columns: auto 1fr; gap: .375rem .625rem; align-items: center; font-size: .8rem; }
+.map-key h3 { grid-column: 1 / -1; margin-top: .375rem; }
 .map-key h3:first-child { margin-top: 0; }
 .map-key .sw { width: 1rem; height: .75rem; border-radius: .1875rem; border: 1px solid var(--line-strong); }
 .map-key .sym { justify-self: center; display: grid; place-items: center; color: #fff; font: 700 .625rem var(--font-mono); }
@@ -248,11 +254,8 @@ button:active { transform: scale(.98); }
 .lbl-bus u b { display: block; height: 100%; background: #fff; transition: width .3s var(--ease); }
 .lbl-bus.sel { outline: 2px solid var(--fg); }
 
-.legend-note { position: absolute; left: var(--gutter-l); top: 8rem; font: 500 .8rem var(--font-mono); color: var(--muted); z-index: 2; background: color-mix(in srgb, var(--panel) 80%, transparent); border: 1px solid var(--line); padding: .25rem .5rem; border-radius: .375rem; }
+.legend-note { position: absolute; left: calc(var(--gutter-l) + var(--config-w) + var(--panel-gap)); top: 8rem; font: 500 .8rem var(--font-mono); color: var(--muted); z-index: 2; background: color-mix(in srgb, var(--panel) 80%, transparent); border: 1px solid var(--line); padding: .25rem .5rem; border-radius: .375rem; }
 
-@media (max-width: 1400px) {
-  .who { display: none; }
-}
 @media (max-width: 1180px) {
   .kpi { min-width: 0; padding-right: 12px; }
   .search { max-width: none; }
@@ -264,11 +267,12 @@ button:active { transform: scale(.98); }
   .topbar { row-gap: 8px; }
   .toplinks { flex-wrap: wrap; }
   .playback { flex: 1 1 100%; justify-content: space-between; }
+  /* The three pickers stack, one full-width row each. */
   .depot { flex: 1 1 100%; }
   .search { max-width: none; order: 3; flex-basis: 100%; }
   .stage { display: flex; flex-direction: column; gap: 12px; padding-bottom: 16px; }
   .viewport { position: relative; inset: auto; height: 62vh; min-height: 360px; }
-  .kpis, .side, .lists, .mapctl, .legend-note { position: static; width: auto; max-height: none; max-width: none; margin-left: var(--gutter-l); margin-right: var(--gutter-r); }
+  .config, .map-key, .kpis, .side, .lists, .mapctl, .legend-note { position: static; width: auto; max-height: none; max-width: none; margin-left: var(--gutter-l); margin-right: var(--gutter-r); }
   .kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; order: -1; margin-top: 12px; }
   .kpi { flex-direction: column; align-items: flex-start; gap: 6px; padding: 10px; }
   .kpi .ic { width: 28px; height: 28px; border-radius: 8px; }
@@ -303,11 +307,22 @@ button:active { transform: scale(.98); }
     </div>
     <button class="depot" id="btn-depot" aria-label="Xem bãi đỗ Bến xe buýt ĐHQG">
       <span class="tagbox">Depot</span>
-      <span><b>Bến xe buýt ĐHQG</b><small id="depot-sub">3/6 bãi đang dùng</small></span>
+      <span><b>Bến xe buýt ĐHQG</b><small id="depot-sub">đang kết nối API</small></span>
     </button>
     <div class="toplinks">
       <button class="link" id="btn-buses">Lượt xe</button>
       <button class="link" id="btn-routes" aria-pressed="true">Sơ đồ tuyến</button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <div class="viewport" id="viewport"><div class="labels" id="labels"></div></div>
+
+    <section class="card config" aria-label="Thiết lập thí nghiệm">
+      <h3>Thiết lập thí nghiệm</h3>
+      <label>Bộ điều phối<select id="pick-controller" disabled></select></label>
+      <label>Kịch bản<select id="pick-split" disabled></select></label>
+      <label>Ngày<select id="pick-day" disabled></select></label>
       <div class="playback">
         <span class="live paused" id="live"><i></i><span id="clock">Chưa kết nối</span></span>
         <div class="speed" role="group" aria-label="Tốc độ mô phỏng">
@@ -317,25 +332,20 @@ button:active { transform: scale(.98); }
           <button data-speed="120" aria-pressed="false">120×</button>
         </div>
       </div>
-      <div class="who"><span><b>Bộ điều phối</b><small id="who-controller">—</small></span></div>
-    </div>
-  </header>
-
-  <main class="stage">
-    <div class="viewport" id="viewport"><div class="labels" id="labels"></div></div>
+    </section>
 
     <div class="kpis">
       <div class="card kpi">
         <span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="7" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14c3 0 5 2.2 5 5"/></svg></span>
-        <span><small>Khách đang chờ</small><span class="v num" id="k-wait">0</span><small id="k-wait-sub">3 tuyến</small></span>
+        <span><small>Khách đang chờ</small><span class="v num" id="k-wait"></span><small id="k-wait-sub">đang kết nối API</small></span>
       </div>
       <div class="card kpi">
         <span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="3" width="16" height="14" rx="3"/><path d="M4 11h16M8 21v-4M16 21v-4"/><circle cx="8" cy="14" r=".6"/><circle cx="16" cy="14" r=".6"/></svg></span>
-        <span><small>Xe trên tuyến</small><span class="v num" id="k-bus">0</span><small id="k-bus-sub">0 dự phòng ở bến</small></span>
+        <span><small>Xe trên tuyến</small><span class="v num" id="k-bus"></span><small id="k-bus-sub">đang kết nối API</small></span>
       </div>
       <div class="card kpi">
         <span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
-        <span><small>Cost khoảng gần nhất</small><span class="v num" id="k-age">—</span><small id="k-age-sub">tích lũy 0</small></span>
+        <span><small>Cost khoảng gần nhất</small><span class="v num" id="k-age"></span><small id="k-age-sub">đang kết nối API</small></span>
       </div>
     </div>
     <div class="legend-note" id="note">Đang kết nối station API…</div>
@@ -369,10 +379,8 @@ button:active { transform: scale(.98); }
 (() => {
 'use strict';
 
-/* ---------- physical parameters, overwritten from GET /station before the first frame ---------- */
-const PHYS = { capacity: 40, comfort: 30, controlS: 120, dwellS: 30, fleetSize: 12, headways: [6, 10, 15] };
-const F_MIN = 2;
-const START_HOUR = 6;
+/* ---------- physical parameters, filled from GET /station; never defaulted ---------- */
+const PHYS = {};
 const LANE = 1.8;
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -487,19 +495,19 @@ const HWY = { z: 78, w: 16 };
 // 50 to Bách Khoa, 08 from Bến xe ĐHQG); the three-route network itself is synthetic.
 const ROUTE_DEFS = [
   {
-    code: '33', name: 'Ga Suối Tiên ⇄ KTX khu B', color: '--r1', base: 180,
+    code: '33', name: 'Ga Suối Tiên ⇄ KTX khu B', color: '--r1',
     raw: [[-95, 58], [-110, 58], [-110, 5], [-60, 5], [-60, -55], [-95, -55]],
     stopD: [0, 40, 90, 140, 185, 213], side: [-1, 1, -1, 1, 1, 1],
     stops: ['Ga Metro Suối Tiên', 'ĐH Quốc tế', 'Nhà văn hóa Sinh viên', 'ĐH Khoa học Tự nhiên', 'Hồ Đá', 'KTX khu B'],
   },
   {
-    code: '50', name: 'KTX khu A ⇄ ĐH Bách Khoa', color: '--r2', base: 160,
+    code: '50', name: 'KTX khu A ⇄ ĐH Bách Khoa', color: '--r2',
     raw: [[95, 5], [55, 5], [55, -55], [0, -55], [0, 5], [-50, 5]],
     stopD: [0, 70, 125, 185, 235, 265], side: [1, -1, 1, 1, -1, -1],
     stops: ['KTX khu A', 'ĐH Kinh tế – Luật', 'ĐH Công nghệ Thông tin', 'Nhà điều hành ĐHQG', 'ĐH KHXH&NV', 'ĐH Bách Khoa'],
   },
   {
-    code: '08', name: 'Bến xe ĐHQG ⇄ KTX A cổng Bắc', color: '--r3', base: 140,
+    code: '08', name: 'Bến xe ĐHQG ⇄ KTX A cổng Bắc', color: '--r3',
     raw: [[-40, 58], [105, 58], [105, -55], [55, -55]],
     stopD: [0, 55, 120, 190, 235, 308], side: [-1, -1, -1, 1, 1, 1],
     stops: ['Bến xe buýt ĐHQG', 'TT Giáo dục Quốc phòng', 'Thư viện Trung tâm', 'ĐH Khoa học Sức khỏe', 'Khu Công nghệ Phần mềm', 'KTX khu A – cổng Bắc'],
@@ -547,7 +555,7 @@ const ROUTES = ROUTE_DEFS.map((d, ri) => {
   events.sort((a, b) => a.s - b.s);
   return {
     i: ri, ...d, raw, path, fwdLen, stops, events,
-    headway: 15 * 60, liveWaiting: 0,
+    headway: null, liveWaiting: null,
   };
 });
 const ALL_STOPS = ROUTES.flatMap((r) => r.stops);
@@ -555,14 +563,31 @@ const ALL_STOPS = ROUTES.flatMap((r) => r.stops);
 const SIM = {};
 // The station API session this page drives; stays null until POST /simulations answers.
 let LIVE = null;
-// The map draws 12 bus models; connectLive() rejects a larger API fleet.
-const BUSES = Array.from({ length: 12 }, (_, i) => ({ i, id: 'XE-' + String(i + 1).padStart(2, '0') }));
+// No bus exists on the map until GET /station reports the fleet size, and none is
+// visible until a snapshot places it, so an unreachable API leaves an empty map.
+let BUSES = [];
+let hasData = false;
+let liveError = null;
+
+function buildFleet(size) {
+  BUSES.forEach((b) => {
+    scene.remove(b.mesh);
+    const at = PICKABLE.indexOf(b.mesh);
+    if (at >= 0) PICKABLE.splice(at, 1);
+    b.el.remove();
+  });
+  BUSES = Array.from({ length: size }, (_, i) => ({ i, id: 'XE-' + String(i + 1).padStart(2, '0') }));
+  BUSES.forEach((b) => { makeBus(b); makeBusLabel(b); });
+}
 
 function resetSim() {
-  Object.assign(SIM, { t: 0, noop: 0, lastK: null, kIndex: 0, total: 0, abandonedTotal: 0, history: [], log: [] });
-  ROUTES.forEach((r) => { r.headway = 15 * 60; r.liveWaiting = 0; });
+  Object.assign(SIM, { t: null, noop: 0, lastK: null, kIndex: 0, total: 0, abandonedTotal: 0, history: [], log: [] });
+  ROUTES.forEach((r) => { r.headway = null; r.liveWaiting = null; });
+  hasData = false;
   BUSES.forEach((b) => {
-    Object.assign(b, { route: null, s: 0, ev: 0, mode: 'reserve', until: 0, pax: [], bay: b.i % BAYS.length, dead: null, deadS: 0, deadTo: null, recall: false, cooldown: 0 });
+    Object.assign(b, { route: null, s: 0, ev: 0, mode: null, until: 0, pax: [], bay: b.i % BAYS.length, dead: null, deadS: 0, deadTo: null, recall: false, cooldown: 0, ready: false });
+    b.mesh.visible = false;
+    b.el.style.visibility = 'hidden';
   });
 }
 
@@ -583,7 +608,7 @@ function startDeadhead(b, to, ri) {
 
 function committed(ri) { return BUSES.filter((b) => b.route === ri && !(b.mode === 'dead' && b.deadTo === 'bay')).length; }
 // The API reports waiting passengers per route only; there is no per-stop queue.
-const routeQueue = (r) => r.liveWaiting;
+const routeQueue = (r) => r.liveWaiting ?? 0;
 const totalWaiting = () => ROUTES.reduce((n, r) => n + routeQueue(r), 0);
 
 function logDecision(code, text, kind, t = SIM.t) {
@@ -817,6 +842,7 @@ function makeBus(b) {
   g.userData = { kind: 'bus', ref: b };
   // Moving buses would force a shadow-map redraw every frame.
   g.traverse((o) => { o.userData = g.userData; o.castShadow = false; });
+  g.visible = false;
   scene.add(g);
   PICKABLE.push(g);
   b.mesh = g;
@@ -874,21 +900,24 @@ $('#map-key').innerHTML = '<h3>Điểm dừng</h3>'
   + '<span class="sym dp">D</span><span>Bến trung tâm · xe dự phòng</span>'
   + '<span class="sym end">33</span><span>Trạm đầu cuối · số tuyến</span>'
   + '<span class="sym mid"></span><span>Trạm dọc tuyến</span>'
-  + '<span class="sym bus">50</span><span>Xe buýt · số tuyến đang chạy</span>';
+  + '<span class="sym bus">50</span><span>Xe buýt · số tuyến đang chạy</span>'
+  + '<h3>Tuyến</h3>'
+  + ROUTES.map((r) => `<span class="sw" style="background:var(${r.color})"></span><span>${r.code} · ${esc(r.name)}</span>`).join('');
 const depotLbl = document.createElement('button');
 depotLbl.className = 'lbl lbl-depot';
-depotLbl.innerHTML = `<i>D</i><span><b>Bến trung tâm</b><small id="depot-lbl-sub">depot · dự phòng</small></span>`;
+depotLbl.innerHTML = `<i>D</i><span><b>Bến trung tâm</b><small id="depot-lbl-sub"></small></span>`;
 depotLbl.setAttribute('aria-label', 'Bãi đỗ Bến xe buýt ĐHQG, xe dự phòng');
 depotLbl.addEventListener('click', () => select({ kind: 'depot' }, true));
 labelsEl.appendChild(depotLbl);
 const depotLblPos = new THREE.Vector3(-30, 7, 42);
-BUSES.forEach((b) => {
+function makeBusLabel(b) {
   const el = document.createElement('div');
   el.className = 'lbl lbl-bus';
   el.innerHTML = '<span></span><u><b></b></u>';
+  el.style.visibility = 'hidden';
   labelsEl.appendChild(el);
   b.el = el; b.sign = el.querySelector('span'); b.fill = el.querySelector('b');
-});
+}
 const projV = new THREE.Vector3();
 function place(el, pos, w, h) {
   projV.copy(pos).project(camera);
@@ -940,9 +969,10 @@ renderer.domElement.addEventListener('pointerup', (e) => {
 });
 
 /* ---------- derived views ---------- */
+// Seconds since the start of the simulated day, which is all the API sends.
 const clock = (t) => {
-  const m = Math.floor(t / 60) + START_HOUR * 60;
-  return `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+  const s = Math.max(0, Math.round(t));
+  return `T+${String(Math.floor(s / 3600)).padStart(2, '0')}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}`;
 };
 const busDir = (b) => (b.s <= ROUTES[b.route].fwdLen + 0.5 ? 1 : -1);
 function statusOf(b) {
@@ -969,10 +999,15 @@ const ICON = {
   check: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="m5 12 5 5 9-10"/></svg>',
   x: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
 };
+// One entry per `CostBreakdown` term; the weight is shown from `cost_weights`.
 const COST_TERMS = [
-  ['W', 'Chờ (W)', '--r1'], ['V', 'Trên xe ×0.25', '--pax'], ['O', 'Quá comfort ×0.5', '--warn'], ['C', 'Xe chạy ×0.5', '--muted'],
-  ['CD', 'Chạy rỗng ×0.5', '--reserve'], ['X', 'Chờ >15 phút', '--r2'], ['U', 'Bị từ chối ×5', '--bad'], ['E', 'Bỏ cuộc ×60', '--fg'], ['M', 'Đổi mission ×2', '--r3'],
+  ['waiting_pm', () => 'Chờ', '--r1'], ['onboard_pm', () => 'Trên xe', '--pax'], ['crowding_pm', () => 'Quá comfort', '--warn'],
+  ['active_bus_min', () => 'Xe chạy', '--muted'], ['deadhead_bus_min', () => 'Chạy rỗng', '--reserve'],
+  ['excessive_wait_pm', () => `Chờ ≥${PHYS.excessiveWaitS / 60} phút`, '--r2'], ['first_denied_count', () => 'Bị từ chối', '--bad'],
+  ['abandoned_count', () => 'Bỏ cuộc', '--fg'], ['mission_changes', () => 'Đổi mission', '--r3'],
+  ['terminal_unfinished_count', () => 'Chưa tới nơi cuối ca', '--accent'],
 ];
+const termLabel = (key, name) => { const w = PHYS.costWeights[key]; return w === 1 ? name() : `${name()} ×${w}`; };
 
 function patch(el, html) {
   const key = document.activeElement && el.contains(document.activeElement) ? document.activeElement.dataset.key : null;
@@ -984,32 +1019,30 @@ function headwayChips(r) {
   return `<span class="hw">${PHYS.headways.map((h) => `<span class="${r.headway === h * 60 ? 'on' : ''}">${h}′</span>`).join('')}</span>`;
 }
 
+function statusPill() {
+  if (!LIVE) return '<span class="pill mute">Chưa kết nối</span>';
+  if (LIVE.finished) return '<span class="pill mute">Hết ca</span>';
+  return speed > 0 ? '<span class="pill ok">Đang chạy</span>' : '<span class="pill warn">Tạm dừng</span>';
+}
+
 function sideNet() {
-  const waiting = totalWaiting();
-  const onRoute = BUSES.filter((b) => b.mode !== 'reserve' && !(b.mode === 'dead' && b.deadTo === 'bay')).length;
-  const k = SIM.lastK, fleet = PHYS.fleetSize;
+  const k = SIM.lastK;
   const costRow = k ? (() => {
     const tot = Math.max(1, k.total);
     return `<div class="stack" aria-hidden="true">${COST_TERMS.map(([key, , col]) => `<i style="width:${(k[key] / tot) * 100}%;background:var(${col})"></i>`).join('')}</div>
-      <div class="cost-legend">${COST_TERMS.filter(([key]) => k[key] > 0.05).map(([key, name, col]) => `<span class="sw" style="background:var(${col})"></span><span>${name}</span><b class="num">${k[key].toFixed(1)}</b>`).join('')}</div>`;
+      <div class="cost-legend">${COST_TERMS.filter(([key]) => k[key] > 0.05).map(([key, name, col]) => `<span class="sw" style="background:var(${col})"></span><span>${esc(termLabel(key, name))}</span><b class="num">${k[key].toFixed(1)}</b>`).join('')}</div>`;
   })() : '<span class="muted">Chưa đủ một khoảng điều khiển.</span>';
   return `
-    <div class="side-head"><span class="ic">${ICON.net}</span><div><div class="eyebrow">Mạng tuyến · ĐHQG-HCM</div><h2>Làng Đại học Dĩ An</h2></div></div>
-    <div class="statusrow"><span class="pill ok">Đang vận hành</span><span>${onRoute}/${fleet} xe trên tuyến · ${fleet - onRoute} ở bãi</span></div>
-    <div class="tiles">
-      <div class="tile"><small>Khách chờ</small><b class="num">${waiting}</b><div class="bar ${lvl(waiting / 160)}"><i style="width:${pct(waiting, 160)}"></i></div></div>
-      <div class="tile"><small>Xe hoạt động</small><b class="num">${onRoute}<em> / ${fleet}</em></b><div class="bar"><i style="width:${pct(onRoute, fleet)}"></i></div></div>
-      <div class="tile"><small>Cost khoảng k=${SIM.kIndex}</small><b class="num">${k ? k.total.toFixed(0) : '—'}</b></div>
-      <div class="tile"><small>Bỏ cuộc trong ca</small><b class="num">${SIM.abandonedTotal}</b></div>
-    </div>
+    <div class="side-head"><span class="ic">${ICON.net}</span><div><div class="eyebrow">Mạng tuyến</div><h2>Toàn mạng</h2></div></div>
+    <div class="statusrow">${statusPill()}<span>${SIM.abandonedTotal} khách bỏ cuộc trong ca</span></div>
     <div class="sec-title">Tuyến<small>headway mục tiêu</small></div>
     <div class="rows">${ROUTES.map((r) => {
       const q = routeQueue(r);
       return `<button class="row" data-key="route-${r.i}" data-sel="route:${r.i}"><span class="chip" style="background:var(${r.color})">${r.code}</span><span class="grow"><span class="name">${esc(r.name)}</span><span class="sub">${committed(r.i)} xe · ${q} khách chờ</span></span>${headwayChips(r)}</button>`;
     }).join('')}</div>
-    <div class="sec-title">Thành phần cost c<sub>k</sub><small>2 phút gần nhất</small></div>
+    <div class="sec-title">Thành phần cost c<sub>k</sub><small>${PHYS.controlS / 60} phút gần nhất</small></div>
     ${costRow}
-    <div class="foot">Bố cục Làng Đại học vẽ minh họa, không theo tỉ lệ. Vị trí xe, tải, khách chờ và cost lấy từ station API (kernel Rust, bộ điều phối <span class="mono">${esc(LIVE ? LIVE.controller : '—')}</span>): ${fleet} xe, sức chứa ${PHYS.capacity}, khoảng điều khiển ${PHYS.controlS / 60} phút. API chỉ báo khách chờ theo tuyến, không theo trạm.</div>`;
+`;
 }
 function stopRow(s) {
   const r = ROUTES[s.r];
@@ -1028,7 +1061,7 @@ function sideStop(s) {
     <div class="side-head"><span class="ic">${ICON.stop}</span><div><div class="eyebrow">Trạm ${s.k + 1} · tuyến ${r.code}</div><h2>${esc(s.name)}</h2></div><button class="x" data-sel="net" aria-label="Đóng">${ICON.x}</button></div>
     <div class="statusrow"><span>${esc(r.name)}</span></div>
     <div class="tiles"><div class="tile"><small>Khách chờ cả tuyến ${r.code}</small><b class="num">${routeQueue(r)}</b></div><div class="tile"><small>Xe trên tuyến</small><b class="num">${committed(r.i)}</b></div></div>
-    <div class="foot">API chỉ báo khách chờ theo tuyến. Khách bỏ cuộc sau 45 phút chờ; chờ quá 15 phút được tính vào thành phần X của cost.</div>`;
+`;
 }
 
 function sideBus(b) {
@@ -1036,18 +1069,18 @@ function sideBus(b) {
   const r = b.route === null ? null : ROUTES[b.route];
   const load = b.pax.length;
   const next = r && b.mode !== 'dead' ? nextStopOf(b) : null;
-  const dest = r && b.mode !== 'dead' ? (busDir(b) > 0 ? r.stops[5] : r.stops[0]) : null;
+  const dest = r && b.mode !== 'dead' ? (busDir(b) > 0 ? r.stops[r.stops.length - 1] : r.stops[0]) : null;
   return `
     <div class="side-head"><span class="ic">${ICON.bus}</span><div><div class="eyebrow">${r ? `${r.code} · ${esc(r.name)}` : 'Xe dự phòng'}</div><h2>${b.id}</h2></div><button class="x" data-sel="net" aria-label="Đóng">${ICON.x}</button></div>
     <div class="statusrow"><span class="pill ${cls}">${lab}</span>${dest ? `<span>Đến ${esc(dest.name)}</span>` : ''}</div>
     <div class="tiles">
       <div class="tile"><small>Tải</small><b class="num">${load}<em> / ${PHYS.capacity}</em></b><div class="bar ${lvl(load / PHYS.capacity)}"><i style="width:${pct(load, PHYS.capacity)}"></i></div></div>
       <div class="tile"><small>Ngưỡng thoải mái</small><b class="num">${PHYS.comfort}</b><div class="bar ${load > PHYS.comfort ? 'bad' : 'ok'}"><i style="width:${pct(load, PHYS.comfort)}"></i></div></div>
-      <div class="tile"><small>Trạm kế</small><b class="tile-txt">${next ? esc(next.name) : '—'}</b></div>
+      <div class="tile"><small>Trạm kế</small><b class="tile-txt">${next ? esc(next.name) : 'Không có'}</b></div>
       <div class="tile"><small>Cooldown điều xe</small><b class="num">${b.cooldown > SIM.t ? Math.ceil((b.cooldown - SIM.t) / 60) + ' phút' : 'Sẵn sàng'}</b></div>
     </div>
     ${b.recall ? '<div class="pill warn" style="align-self:flex-start">Sẽ về bãi khi hết khách ở đầu tuyến</div>' : ''}
-    <div class="foot">Chỉ xe rỗng đủ điều kiện mới được chuyển tuyến hoặc gọi về. Mỗi tuyến luôn giữ ít nhất ${F_MIN} xe.</div>`;
+`;
 }
 
 function sideDepot() {
@@ -1060,13 +1093,13 @@ function sideDepot() {
       <div class="tile"><small>Đang chạy rỗng</small><b class="num">${moving.length}</b></div>
     </div>
     <div class="rows">${res.concat(moving).map(busRow).join('') || '<span class="muted">Không còn xe dự phòng.</span>'}</div>
-    <div class="foot">DISPATCH đưa xe dự phòng vào tuyến, chịu cooldown 20 phút cho xe và 10 phút cho tuyến. Thời gian chạy rỗng tính vào C<sub>D</sub>.</div>`;
+`;
 }
 
 function sideRoute(r) {
   const buses = BUSES.filter((b) => b.route === r.i);
   return `
-    <div class="side-head"><span class="ic" style="background:var(${r.color});color:#fff">${ICON.net}</span><div><div class="eyebrow">Tuyến ${r.code} · ${r.base} khách/giờ cơ sở</div><h2>${esc(r.name)}</h2></div><button class="x" data-sel="net" aria-label="Đóng">${ICON.x}</button></div>
+    <div class="side-head"><span class="ic" style="background:var(${r.color});color:#fff">${ICON.net}</span><div><div class="eyebrow">Tuyến ${r.code}</div><h2>${esc(r.name)}</h2></div><button class="x" data-sel="net" aria-label="Đóng">${ICON.x}</button></div>
     <div class="statusrow"><span>Headway</span>${headwayChips(r)}<span>· ${committed(r.i)} xe</span></div>
     <div class="rows">${r.stops.map(stopRow).join('')}</div>
     <div class="sec-title">Xe trên tuyến</div>
@@ -1077,18 +1110,35 @@ function sideRoute(r) {
 // replay each tick. The enter class is therefore set only when the shown entity changes,
 // and cleared on every other re-render so the tick's fresh nodes do not animate.
 let sideShown = null;
+function sideNoData() {
+  const status = liveError
+    ? `<span class="pill bad">Mất kết nối station API</span>`
+    : `<span class="pill warn">Đang kết nối…</span>`;
+  return `
+    <div class="side-head"><span class="ic">${ICON.net}</span><div><div class="eyebrow">Bảng điều khiển</div><h2>Chưa có dữ liệu</h2></div></div>
+    <div class="statusrow">${status}</div>
+    <div class="rows"><span class="muted">${liveError ? esc(liveError) : 'Trang chỉ hiển thị số liệu do station API trả về; không có bản dự phòng.'}</span></div>`;
+}
 function renderSide() {
+  const el = $('#side');
+  if (!hasData) {
+    const state = liveError ? 'error' : 'pending';
+    el.classList.toggle('enter', sideShown !== state);
+    sideShown = state;
+    patch(el, sideNoData());
+    return;
+  }
   const s = selection;
   const html = s.kind === 'stop' ? sideStop(s.ref) : s.kind === 'bus' ? sideBus(s.ref) : s.kind === 'depot' ? sideDepot() : s.kind === 'route' ? sideRoute(s.ref) : sideNet();
   const changed = !sideShown || s.kind !== sideShown.kind || s.ref !== sideShown.ref;
   sideShown = s;
-  const el = $('#side');
   el.classList.toggle('enter', changed);
   patch(el, html);
 }
 
 let tab = 'buses';
 function renderList() {
+  if (!hasData) { patch($('#tabpanel'), '<span class="muted">Chưa có dữ liệu từ station API.</span>'); return; }
   let html;
   if (tab === 'buses') html = BUSES.map(busRow).join('');
   else html = SIM.log.length ? SIM.log.map((l, i) => `<div class="row" style="cursor:default"><span class="muted num log-time">${clock(l.t)}</span><span class="grow"><span class="log-code">${esc(l.code)}</span><span class="sub" style="white-space:normal">${esc(l.text)}</span></span></div>`).join('') + `<div class="row muted" style="cursor:default;font-size:11px">${SIM.noop} khoảng gần đây chọn NOOP</div>` : `<span class="muted">Chưa có quyết định nào ngoài NOOP.</span>`;
@@ -1096,6 +1146,14 @@ function renderList() {
 }
 
 function renderKPIs() {
+  if (!hasData) {
+    const status = liveError ? 'mất kết nối API' : 'đang kết nối API';
+    ['#k-wait', '#k-bus', '#k-age', '#depot-lbl-sub'].forEach((sel) => { $(sel).textContent = ''; });
+    ['#k-wait-sub', '#k-bus-sub', '#k-age-sub', '#depot-sub'].forEach((sel) => { $(sel).textContent = status; });
+    depotLbl.classList.toggle('sel', selection.kind === 'depot');
+    $('#clock').textContent = liveError ? 'Mất kết nối' : 'Chưa kết nối';
+    return;
+  }
   const waiting = totalWaiting();
   const ago = SIM.history.length > 5 ? SIM.history[SIM.history.length - 6].waiting : null;
   const delta = ago === null ? '' : waiting - ago;
@@ -1105,7 +1163,7 @@ function renderKPIs() {
   const res = BUSES.filter((b) => b.mode === 'reserve').length;
   $('#k-bus').innerHTML = `${onRoute}<em> / ${PHYS.fleetSize}</em>`;
   $('#k-bus-sub').textContent = `${res} dự phòng ở bến`;
-  $('#k-age').innerHTML = SIM.lastK ? `${SIM.lastK.total.toFixed(0)}` : '—';
+  $('#k-age').textContent = SIM.lastK ? SIM.lastK.total.toFixed(0) : '0';
   $('#k-age-sub').textContent = `tích lũy ${Math.round(SIM.total).toLocaleString('vi-VN')}`;
   $('#depot-sub').textContent = `${res}/${BAYS.length} bãi đang dùng`;
   $('#depot-lbl-sub').textContent = `${res} xe dự phòng`;
@@ -1123,6 +1181,7 @@ function renderPanels(force) {
     s.el.classList.toggle('sel', selection.kind === 'stop' && selection.ref === s);
   });
   BUSES.forEach((b) => {
+    if (!b.ready) return;
     b.el.style.background = routeColor(b.route);
     b.sign.textContent = b.route === null ? 'DP' : ROUTES[b.route].code;
     b.fill.style.width = pct(b.pax.length, PHYS.capacity);
@@ -1176,6 +1235,7 @@ function setSpeed(v) {
   speed = v;
   document.querySelectorAll('.speed button').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.speed === v)));
   $('#live').classList.toggle('paused', v === 0 || !LIVE || LIVE.finished);
+  if (hasData) renderPanels(true); // the status pill follows play / pause
 }
 document.querySelectorAll('.speed button').forEach((b) => b.addEventListener('click', () => setSpeed(+b.dataset.speed)));
 setSpeed(speed);
@@ -1253,49 +1313,106 @@ function summarize(data) {
 async function connectLive() {
   const layout = await api('GET', '/station');
   // The map draws a fixed campus; a different network shape cannot be placed on it.
-  if (layout.routes.length !== ROUTES.length || layout.fleet_size > BUSES.length || layout.routes.some((r) => r.stop_count !== 6)) {
+  if (layout.routes.length !== ROUTES.length || layout.routes.some((r) => r.stop_count !== ROUTE_DEFS[r.route_id].stops.length)) {
     throw new Error('station layout does not match the drawn campus');
   }
   Object.assign(PHYS, {
     capacity: layout.capacity, comfort: layout.comfort_capacity, controlS: layout.control_interval_s, dwellS: layout.dwell_s,
     fleetSize: layout.fleet_size, headways: layout.headway_options_s.map((h) => h / 60),
+    stopCount: layout.routes[0].stop_count, costWeights: layout.cost_weights, excessiveWaitS: layout.excessive_wait_s,
   });
-  const controller = layout.controllers.includes('threshold') ? 'threshold' : layout.controllers[0];
-  const snap = await api('POST', '/simulations', { controller, scenario_index: 0 });
-  resetSim();
-  LIVE = { id: snap.simulation_id, controller, stopCount: 6, finished: false, steps: 0 };
-  $('#who-controller').textContent = controller;
-  setSpeed(speed);
-  applySnapshot(snap, []);
-  setTimeout(pollLive, tickMs());
+  buildFleet(layout.fleet_size);
+  fillPickers(layout);
+  await startSimulation();
 }
 
-const tickMs = () => (PHYS.controlS * 1000) / Math.max(speed, 1);
+/* ---------- mode pickers: controller, scenario split, day ---------- */
+// Display names for `ScenarioSplit.variant`; an unknown variant shows its raw name.
+const VARIANT_LABEL = { base: 'Ngày thường', burst: 'Nhu cầu đột biến', traffic: 'Kẹt xe' };
 
-async function pollLive() {
-  if (!LIVE || LIVE.finished) return;
+const PICKERS = ['#pick-controller', '#pick-split', '#pick-day'];
+let dayCounts = {};
+
+function fillPickers(layout) {
+  const controllers = layout.controllers;
+  $('#pick-controller').innerHTML = controllers.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  $('#pick-controller').value = controllers.includes('ppo') ? 'ppo' : controllers.includes('threshold') ? 'threshold' : controllers[0];
+  // The API lists the default split first, so the select opens on it.
+  $('#pick-split').innerHTML = layout.splits.map((sp) => `<option value="${esc(sp.name)}">${esc(VARIANT_LABEL[sp.variant] ?? sp.variant)}</option>`).join('');
+  dayCounts = Object.fromEntries(layout.splits.map((sp) => [sp.name, sp.scenario_count]));
+  fillDays();
+}
+
+function fillDays() {
+  const count = dayCounts[$('#pick-split').value] ?? 0;
+  $('#pick-day').innerHTML = Array.from({ length: count }, (_, i) => `<option value="${i}">${i + 1} / ${count}</option>`).join('');
+}
+
+const setPickersDisabled = (disabled) => PICKERS.forEach((sel) => { $(sel).disabled = disabled; });
+
+// Every pick starts a fresh API simulation; the previous one is deleted so it
+// does not hold one of the server's limited sessions.
+async function startSimulation() {
+  const previous = LIVE;
+  LIVE = null; // stops the previous poll loop before its next step
+  if (previous && !previous.finished) api('DELETE', `/simulations/${previous.id}`).catch((err) => console.warn('Could not delete the previous simulation:', err.message));
+  setPickersDisabled(true);
+  const body = { controller: $('#pick-controller').value, split: $('#pick-split').value, scenario_index: +$('#pick-day').value };
+  try {
+    const snap = await api('POST', '/simulations', body);
+    resetSim();
+    LIVE = { id: snap.simulation_id, controller: snap.controller, finished: false, steps: 0 };
+    setSpeed(speed);
+    applySnapshot(snap, []);
+    const live = LIVE;
+    setTimeout(() => pollLive(live), nextPollMs());
+  } finally {
+    setPickersDisabled(false);
+  }
+}
+
+PICKERS.forEach((sel) => $(sel).addEventListener('change', () => {
+  if (sel === '#pick-split') fillDays();
+  startSimulation().catch(showOffline);
+}));
+
+const tickMs = () => (PHYS.controlS * 1000) / Math.max(speed, 1);
+// Paused, the loop rechecks often so a resume or a new pick does not wait a full interval.
+const nextPollMs = () => (speed > 0 ? tickMs() : 250);
+
+// `live` pins the loop to one simulation: a pick that replaced it ends this loop,
+// and a step answered after the switch is dropped instead of drawn on the new day.
+async function pollLive(live) {
+  if (live !== LIVE || live.finished) return;
   if (speed > 0) {
     try {
-      const res = await api('POST', `/simulations/${LIVE.id}/steps`, { decisions: 1 });
-      LIVE.steps++;
+      const res = await api('POST', `/simulations/${live.id}/steps`, { decisions: 1 });
+      if (live !== LIVE) return;
+      live.steps++;
       applySnapshot(res.snapshot, res.decisions);
     } catch (err) {
-      showOffline(err);
+      if (live === LIVE) showOffline(err);
       return;
     }
   }
-  if (!LIVE.finished) setTimeout(pollLive, speed > 0 ? tickMs() : 250);
+  if (!live.finished) setTimeout(() => pollLive(live), nextPollMs());
 }
 
 function showOffline(err) {
   LIVE = null;
+  liveError = err.message;
+  resetSim();
+  needsRender = true;
   $('#note').textContent = `Không lấy được dữ liệu từ station API: ${err.message}`;
+  $('#note').hidden = false;
   $('#live').classList.add('paused');
   renderPanels(true);
 }
 
 function applySnapshot(snap, decisions) {
   SIM.t = snap.time_s;
+  hasData = true;
+  liveError = null;
   needsRender = true;
   snap.routes.forEach((rs) => {
     const r = ROUTES[rs.route_id];
@@ -1307,10 +1424,8 @@ function applySnapshot(snap, decisions) {
   if (decisions.length) {
     const c = snap.interval_cost;
     // Weights mirror RewardConfig defaults so the cost bar matches the local view; `total` is the API's own.
-    SIM.lastK = {
-      W: c.waiting_pm, V: 0.25 * c.onboard_pm, O: 0.5 * c.crowding_pm, C: 0.5 * c.active_bus_min, CD: 0.5 * c.deadhead_bus_min,
-      X: c.excessive_wait_pm, U: 5 * c.first_denied_count, E: 60 * c.abandoned_count, M: 2 * c.mission_changes, total: c.total,
-    };
+    SIM.lastK = Object.fromEntries(COST_TERMS.map(([key]) => [key, PHYS.costWeights[key] * c[key]]));
+    SIM.lastK.total = c.total;
     SIM.kIndex += decisions.length;
     SIM.total += c.total;
     SIM.abandonedTotal += c.abandoned_count;
@@ -1319,10 +1434,10 @@ function applySnapshot(snap, decisions) {
   }
   decisions.forEach((d) => {
     if (d.kind === 'NOOP') { SIM.noop++; return; }
-    const [code, text, kind] = describeAction(d.action_index);
+    const [code, text, kind] = describeAction(d);
     logDecision(code, text, kind, d.time_s);
   });
-  $('#note').textContent = `Bố cục minh họa · station API · phiên ${LIVE.id.slice(0, 8)} · ${LIVE.steps} bước · ${clock(SIM.t)}`;
+  $('#note').hidden = true;
   if (snap.finished) {
     LIVE.finished = true;
     logDecision('END', `Kết thúc ca lúc ${clock(SIM.t)}: tổng cost ${Math.round(SIM.total).toLocaleString('vi-VN')}`, 'mute');
@@ -1338,6 +1453,9 @@ function applySnapshot(snap, decisions) {
 // and given its next leg (dwell, then the following edge) so it keeps driving between ticks.
 function placeLiveBus(b, bus, ri, queueIndex) {
   if (!b) return;
+  b.ready = true;
+  b.mesh.visible = true;
+  b.el.style.visibility = '';
   b.pax = Array.from({ length: bus.load }, () => ({ dest: -1 }));
   b.cooldown = bus.cooldown_until_s;
   b.recall = false;
@@ -1356,18 +1474,18 @@ function placeLiveBus(b, bus, ri, queueIndex) {
     return;
   }
   const r = ROUTES[ri], dir = bus.direction > 0 ? 1 : -1, len = r.path.len;
-  const k = bus.node % LIVE.stopCount;
+  const k = bus.node % PHYS.stopCount;
   const sAt = (i) => (dir > 0 ? r.stops[i].sF : r.stops[i].sB);
   const evAt = (i) => Math.max(0, r.events.findIndex((e) => e.k === i && e.dir === dir));
   // The leg after reaching stop `i`: wait `wait` seconds there, then drive to the following stop.
   const legAfter = (i, wait, edgeS) => {
     const j = i + dir;
-    return j >= 0 && j < LIVE.stopCount && edgeS > 0 ? { s: sAt(j), ev: evAt(j), wait, left: edgeS } : null;
+    return j >= 0 && j < PHYS.stopCount && edgeS > 0 ? { s: sAt(j), ev: evAt(j), wait, left: edgeS } : null;
   };
   const moving = bus.status === 'moving' || bus.status === 'crowded';
   const onRoute = b.route === ri && (b.mode === 'run' || b.mode === 'dwell' || b.mode === 'hold');
   if (moving && bus.next_node >= 0) {
-    const target = bus.next_node % LIVE.stopCount;
+    const target = bus.next_node % PHYS.stopCount;
     if (!onRoute) {
       const from = sAt(k), gap = (sAt(target) - from + len) % len;
       b.s = (from + gap * (1 - bus.remaining_s / Math.max(bus.edge_s, bus.remaining_s, 1))) % len;
@@ -1400,6 +1518,7 @@ function animateLive(now) {
   };
   let moving = false;
   BUSES.forEach((b) => {
+    if (!b.ready) return;
     if (b.mode === 'dead') {
       if (b.deadS >= b.dead.len) return;
       const f = share(b);
@@ -1423,19 +1542,17 @@ function animateLive(now) {
   return moving;
 }
 
-// Slot layout of the fixed 221-action table (bus_sim/oracle/actions.py).
-function describeAction(i) {
+// A decision names its kind and arguments (`Decision` in station/schema.py).
+function describeAction(d) {
   const bus = (n) => (BUSES[n] ? BUSES[n].id : `#${n}`);
   const route = (n) => `tuyến ${ROUTES[n] ? ROUTES[n].code : n}`;
-  if (i >= 209) {
-    const r = Math.floor((i - 209) / 3), h = PHYS.headways[(i - 209) % 3];
-    return [`SET_HEADWAY(${r},${h})`, `${route(r)} xuất bến mỗi ${h} phút`, h < 15 ? 'warn' : 'ok'];
+  if (d.kind === 'SET_HEADWAY') {
+    const h = d.headway_s / 60;
+    return [`SET_HEADWAY(${d.route_id},${h})`, `${route(d.route_id)} xuất bến mỗi ${h} phút`, h < Math.max(...PHYS.headways) ? 'warn' : 'ok'];
   }
-  if (i >= 193) return [`RECALL(${i - 193})`, `Gọi ${bus(i - 193)} về bãi`, 'mute'];
-  const kind = i >= 129 ? 'SHORT_TURN' : i >= 65 ? 'REASSIGN' : 'DISPATCH';
-  const j = i - (i >= 129 ? 129 : i >= 65 ? 65 : 1), b = Math.floor(j / 4), r = j % 4;
-  const text = { DISPATCH: `Đưa ${bus(b)} từ bãi vào ${route(r)}`, REASSIGN: `Chuyển ${bus(b)} sang ${route(r)}`, SHORT_TURN: `${bus(b)} quay đầu sớm trên ${route(r)}` }[kind];
-  return [`${kind}(${b},${r})`, text, 'info'];
+  if (d.kind === 'RECALL') return [`RECALL(${d.bus_id})`, `Gọi ${bus(d.bus_id)} về bãi`, 'mute'];
+  const text = { DISPATCH: `Đưa ${bus(d.bus_id)} từ bãi vào ${route(d.route_id)}`, REASSIGN: `Chuyển ${bus(d.bus_id)} sang ${route(d.route_id)}`, SHORT_TURN: `${bus(d.bus_id)} quay đầu sớm trên ${route(d.route_id)}` }[d.kind];
+  return [`${d.kind}(${d.bus_id},${d.route_id})`, text, 'info'];
 }
 
 addEventListener('pagehide', () => {
@@ -1481,6 +1598,7 @@ function frame(now) {
   lastDraw = now;
 
   BUSES.forEach((b) => {
+    if (!b.ready) { b.el.style.visibility = 'hidden'; return; }
     const p = busPose(b);
     b.mesh.position.set(p.x, 0, p.z);
     b.mesh.rotation.y = Math.atan2(p.hx, p.hz);
@@ -1496,7 +1614,10 @@ function frame(now) {
   ALL_STOPS.forEach((s) => place(s.el, s.lblPos, w, h));
   place(depotLbl, depotLblPos, w, h);
   const bp = new THREE.Vector3();
-  BUSES.forEach((b) => { const p = busPose(b); bp.set(p.x, 4.2, p.z); place(b.el, bp, w, h); });
+  BUSES.forEach((b) => {
+    if (!b.ready) { b.el.style.visibility = 'hidden'; return; }
+    const p = busPose(b); bp.set(p.x, 4.2, p.z); place(b.el, bp, w, h);
+  });
 }
 renderPanels(true);
 requestAnimationFrame(frame);
