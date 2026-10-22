@@ -59,6 +59,7 @@ class NativeBusDispatchEnv(gym.Env):
         control=None,
         scenario_store=None,
         validate=True,
+        arrival_memory_bins=5,
     ):
         applied = tuple(scenarios)
         if control is not None:
@@ -84,6 +85,10 @@ class NativeBusDispatchEnv(gym.Env):
                 ).items()
             }
         )
+        from bus_rl.execution.environments.arrival_memory import ArrivalMemory
+
+        self.arrival_memory = ArrivalMemory(1, arrival_memory_bins)
+        self.observation_space = self.arrival_memory.space(self.observation_space)
         # Pack scenarios once per process and share immutable tapes across envs.
         # Kernels are built lazily: a kernel retains ~240 KB of episode scratch
         # after its first episode, so eagerly creating one per scenario would
@@ -100,9 +105,14 @@ class NativeBusDispatchEnv(gym.Env):
     def scenario_index(self) -> int | None:
         return self._scenario_index
 
-    def _observation(self, raw) -> dict[str, np.ndarray]:
+    def _observation(self, raw, *, reset=False) -> dict[str, np.ndarray]:
         with TIMERS.span("env.observe"):
             observation = {key: np.asarray(value) for key, value in raw.items()}
+            if self.arrival_memory.bins > 5:
+                batched = self.arrival_memory.apply(
+                    {key: value[None] for key, value in observation.items()}, [0], reset=reset
+                )
+                observation = {key: value[0] for key, value in batched.items()}
             if self.forecaster is not None:
                 with TIMERS.span("env.forecast"):
                     forecast = self.forecaster.predict(observation, int(self.kernel.current_time_s))
@@ -125,7 +135,7 @@ class NativeBusDispatchEnv(gym.Env):
         self.kernel = self._scenario_store.kernel(index, reward=self.reward)
         result = self.kernel.reset_contract()
         self._mask = np.asarray(result["mask"], dtype=bool)
-        return self._observation(result["obs"]), {}
+        return self._observation(result["obs"], reset=True), {}
 
     def action_masks(self) -> np.ndarray:
         with TIMERS.span("env.action_masks"):
@@ -163,4 +173,5 @@ def env_from_run(scenarios, run: RunConfig, forecaster=None) -> NativeBusDispatc
         forecaster=forecaster,
         reward=run.reward,
         control=run.control,
+        arrival_memory_bins=run.arrival_memory_bins,
     )

@@ -1,0 +1,6 @@
+[algorithm]
+encoder = "belief_gru"
+history_minutes = 20
+belief_prior_shape = 0.1
+belief_prior_rate = 0.1
+belief_decay = 0.8

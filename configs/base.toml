@@ -19,3 +19,10 @@ traffic_bucket_s = 300
 # The Python oracle is deprecated and requires an explicit opt-in:
 #   runtime.legacy_python = true   (CLI: --legacy-python --backend python)
 backend = "rust"
+
+[algorithm]
+encoder = "gru"
+history_minutes = 10
+belief_prior_shape = 1.0
+belief_prior_rate = 1.0
+belief_decay = 1.0

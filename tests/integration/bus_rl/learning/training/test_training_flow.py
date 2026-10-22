@@ -1,6 +1,7 @@
 from sb3_contrib import MaskablePPO
 from torch import nn
 
+from bus_rl.config import AlgorithmConfig
 from bus_rl.execution.environments.python.environment import BusDispatchEnv
 from bus_rl.learning.policy import POLICY_KWARGS
 from bus_rl.learning.training.train import make_model
@@ -9,7 +10,7 @@ from tests.support.factories import empty_scenario
 
 def test_policy_architecture_is_shared_mlp_with_actor_critic_heads():
     env = BusDispatchEnv([empty_scenario()], empty_scenario().config)
-    model = make_model(env, seed=11)
+    model = make_model(env, seed=11, algorithm=AlgorithmConfig(encoder="mlp"))
     shared = [
         layer.out_features
         for layer in model.policy.features_extractor.mlp

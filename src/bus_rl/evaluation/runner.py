@@ -507,6 +507,12 @@ def evaluate_scenarios(
             _restore_model_rng(model, snapshot)
 
 
+def _trace_json_default(value):
+    if isinstance(value, (np.ndarray, np.generic)):
+        return value.tolist()
+    return str(value)
+
+
 def write_results(frame: pd.DataFrame, output: Path, traces: dict | None = None) -> None:
     output.mkdir(parents=True, exist_ok=True)
     frame.to_csv(output / "results.csv", index=False)
@@ -514,7 +520,11 @@ def write_results(frame: pd.DataFrame, output: Path, traces: dict | None = None)
         import json
 
         (output / "events.jsonl").write_text(
-            "\n".join(json.dumps(row, default=str) for rows in traces.values() for row in rows)
+            "\n".join(
+                json.dumps(row, default=_trace_json_default)
+                for rows in traces.values()
+                for row in rows
+            )
             + "\n"
         )
 

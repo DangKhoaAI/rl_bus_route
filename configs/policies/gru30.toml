@@ -1,0 +1,3 @@
+[algorithm]
+encoder = "gru"
+history_minutes = 30

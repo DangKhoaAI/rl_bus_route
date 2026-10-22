@@ -1,4 +1,4 @@
-"""Reproducible CLI: generate, baseline, profile, train, evaluate, report."""
+"""Noun/action CLI for data, models, baselines, reports and performance tests."""
 
 from __future__ import annotations
 
@@ -18,6 +18,19 @@ from bus_sim.oracle.costs import RewardConfig
 
 def _run_config(args) -> object:
     run = load_run_config(Path(args.config))
+    algorithm_updates = {
+        name: value
+        for name in (
+            "encoder",
+            "history_minutes",
+            "belief_prior_shape",
+            "belief_prior_rate",
+            "belief_decay",
+        )
+        if (value := getattr(args, name, None)) is not None
+    }
+    if algorithm_updates:
+        run = replace(run, algorithm=replace(run.algorithm, **algorithm_updates))
     backend = getattr(args, "backend", None)
     legacy_python = bool(getattr(args, "legacy_python", False))
     if backend:
@@ -41,6 +54,7 @@ def _run_config(args) -> object:
         runtime_updates["validate_distributions"] = bool(args.validate_distributions)
     if runtime_updates:
         run = replace(run, runtime=replace(run.runtime, **runtime_updates))
+    _ = run.arrival_memory_bins  # Reject incompatible encoder/history before creating output.
     return run
 
 
@@ -211,6 +225,11 @@ def cmd_evaluate(args) -> None:
             control=ControlConfig(**metadata["control"]),
             reward=_reward_from_metadata(metadata["reward"]),
             forecast=replace(run.forecast, enabled=bool(metadata.get("forecast_enabled"))),
+            algorithm=replace(
+                run.algorithm,
+                encoder=metadata.get("algorithm", {}).get("encoder", "mlp"),
+                history_minutes=metadata.get("algorithm", {}).get("history_minutes", 10),
+            ),
         )
         frozen = Path(args.checkpoint).parent / "forecaster.npz"
         if frozen.exists():
@@ -297,17 +316,50 @@ def _add_runtime_flags(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def _add_encoder_flags(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--encoder",
+        choices=("mlp", "gru", "belief", "belief_gru"),
+        help="policy encoder; default GRU10, explicit flags override TOML",
+    )
+    parser.add_argument(
+        "--history-minutes",
+        type=int,
+        help="arrival history in minutes (>=10, multiple of control interval; default 10)",
+    )
+    parser.add_argument("--belief-prior-shape", type=float, help="Gamma prior shape (default 1)")
+    parser.add_argument("--belief-prior-rate", type=float, help="Gamma prior rate (default 1)")
+    parser.add_argument(
+        "--belief-decay", type=float, help="old-bin weight multiplier in (0,1] (default 1)"
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="bus-rl")
-    sub = parser.add_subparsers(dest="command", required=True)
+    groups = parser.add_subparsers(dest="group", required=True)
+    data_actions = groups.add_parser("data", help="manage scenario data").add_subparsers(
+        dest="action", required=True
+    )
+    model_actions = groups.add_parser("model", help="train and evaluate policies").add_subparsers(
+        dest="action", required=True
+    )
+    baseline_actions = groups.add_parser(
+        "baseline", help="run programmed controllers"
+    ).add_subparsers(dest="action", required=True)
+    report_actions = groups.add_parser(
+        "report", help="generate plots and summaries"
+    ).add_subparsers(dest="action", required=True)
+    test_actions = groups.add_parser(
+        "test", help="diagnose and profile performance"
+    ).add_subparsers(dest="action", required=True)
 
-    generate = sub.add_parser("generate")
+    generate = data_actions.add_parser("generate", help="generate a scenario manifest and tapes")
     generate.add_argument("--config", required=True)
     generate.add_argument("--output", required=True)
     generate.add_argument("--counts")
     generate.set_defaults(func=cmd_generate)
 
-    baseline = sub.add_parser("baseline")
+    baseline = baseline_actions.add_parser("run", help="evaluate fixed and heuristic controllers")
     baseline.add_argument("--config", required=True)
     baseline.add_argument("--manifest", required=True)
     baseline.add_argument("--split", default="validation")
@@ -322,14 +374,16 @@ def build_parser() -> argparse.ArgumentParser:
     _add_runtime_flags(baseline)
     baseline.set_defaults(func=cmd_baseline)
 
-    profile = sub.add_parser("profile")
+    profile = test_actions.add_parser("profile", help="microprofile simulator execution")
     profile.add_argument("--config", required=True)
     profile.add_argument("--decisions", type=int, default=120)
     profile.add_argument("--output", required=True)
     profile.set_defaults(func=cmd_profile)
 
-    train = sub.add_parser("train")
-    train.add_argument("--config", required=True)
+    train = model_actions.add_parser("train", help="train MaskablePPO (default GRU10)")
+    train.add_argument(
+        "--config", default="configs/train.toml", help="TOML config (default: configs/train.toml)"
+    )
     train.add_argument("--manifest", required=True)
     train.add_argument("--seed", type=int)
     train.add_argument("--output", required=True)
@@ -341,10 +395,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     train.add_argument("--torch-threads", type=int, dest="torch_threads")
     _add_runtime_flags(train)
+    _add_encoder_flags(train)
     train.set_defaults(func=cmd_train)
 
-    diagnose = sub.add_parser("diagnose")
-    diagnose.add_argument("--config", required=True)
+    diagnose = test_actions.add_parser("diagnose", help="diagnose training and evaluation timings")
+    diagnose.add_argument(
+        "--config", default="configs/train.toml", help="TOML config (default: configs/train.toml)"
+    )
     diagnose.add_argument("--manifest", required=True)
     diagnose.add_argument("--seed", type=int, default=11)
     diagnose.add_argument("--output", required=True)
@@ -356,10 +413,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     diagnose.add_argument("--torch-threads", type=int, dest="torch_threads")
     _add_runtime_flags(diagnose)
+    _add_encoder_flags(diagnose)
     diagnose.set_defaults(func=cmd_diagnose)
 
-    evaluate = sub.add_parser("evaluate")
-    evaluate.add_argument("--config", required=True)
+    evaluate = model_actions.add_parser("evaluate", help="evaluate a saved checkpoint")
+    evaluate.add_argument(
+        "--config", default="configs/eval.toml", help="TOML config (default: configs/eval.toml)"
+    )
     evaluate.add_argument("--manifest", required=True)
     evaluate.add_argument("--split", default="validation")
     evaluate.add_argument("--checkpoint")
@@ -375,7 +435,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_runtime_flags(evaluate)
     evaluate.set_defaults(func=cmd_evaluate)
 
-    report = sub.add_parser("report")
+    report = report_actions.add_parser("generate", help="generate plots and a summary from results")
     report.add_argument("--results", required=True)
     report.add_argument("--output", required=True)
     report.add_argument("--history")
@@ -383,7 +443,27 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+LEGACY_COMMANDS = {
+    "generate": ("data", "generate"),
+    "train": ("model", "train"),
+    "evaluate": ("model", "evaluate"),
+    "baseline": ("baseline", "run"),
+    "report": ("report", "generate"),
+    "diagnose": ("test", "diagnose"),
+    "profile": ("test", "profile"),
+}
+
+
 def main(argv: list[str] | None = None) -> None:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    # Keep archived commands runnable, while help only advertises noun/action syntax.
+    # baseline/report are also new group names, so only rewrite their flat flag form.
+    if argv and argv[0] in LEGACY_COMMANDS:
+        flat = argv[0] not in {"baseline", "report"} or (
+            len(argv) > 1 and argv[1].startswith("--") and argv[1] != "--help"
+        )
+        if flat:
+            argv = [*LEGACY_COMMANDS[argv[0]], *argv[1:]]
     parser = build_parser()
     args = parser.parse_args(argv)
     try:

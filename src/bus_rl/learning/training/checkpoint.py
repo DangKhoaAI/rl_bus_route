@@ -32,7 +32,8 @@ def run_metadata(run: RunConfig, extra: dict | None = None) -> dict:
     payload = {
         "obs_version": 2,
         "action_schema_hash": action_schema_hash(),
-        "obs_schema_hash": observation_schema_hash(run.physical),
+        "obs_schema_hash": observation_schema_hash(run.physical, run.arrival_memory_bins),
+        "arrival_memory_bins": run.arrival_memory_bins,
         "physical_config": asdict(run.physical),
         "physical_config_hash": physical_config_hash(run.physical),
         "control": asdict(run.control),
@@ -61,7 +62,7 @@ def run_metadata(run: RunConfig, extra: dict | None = None) -> dict:
         "native_build": native_build_info() if run.runtime.backend == "rust" else None,
         # R0-R2 parity is accepted, so checkpoints may cross backends once the
         # contract hashes below match.
-        "backend_parity_verified": True,
+        "backend_parity_verified": run.arrival_memory_bins <= 5,
     }
     if extra:
         payload.update(extra)

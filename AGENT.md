@@ -34,7 +34,7 @@ src/
     ├── learning/        # baselines, forecasting, policy, training/{train,callbacks,checkpoint,diagnose}
     ├── evaluation/      # runner, pool, summary, statistics, plots, profile
     ├── config.py        # RunConfig / RuntimeConfig / dataclass TOML mapping
-    ├── cli.py           # generate | baseline | profile | train | diagnose | evaluate | report
+    ├── cli.py           # data generate | model train/evaluate | baseline run | report generate | test diagnose/profile
     └── provenance.py    # hashes + fresh-output guards
 crates/
 ├── bus-sim-core/        # pure Rust kernel (no PyO3); `cargo test -p bus-sim-core`
