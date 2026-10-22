@@ -87,37 +87,88 @@ To collect a complete run under `runs/result-gru10/`:
 ```bash
 uv run bus-rl model train --manifest data/generated/base/manifest.json --output runs/result-gru10/train
 uv run bus-rl model evaluate --manifest data/generated/base/manifest.json --checkpoint runs/result-gru10/train/best.zip --split test_id --trace --output runs/result-gru10/eval
-uv run bus-rl report generate --results runs/result-gru10/eval/results.csv --history runs/result-gru10/train/evaluations.csv --output runs/result-gru10/report
+uv run bus-rl baseline run --config configs/eval.toml --manifest data/generated/base/manifest.json --split test_id --methods fixed,proportional,threshold --output runs/result-gru10/baselines
+uv run bus-rl report generate --results runs/result-gru10/eval/results.csv runs/result-gru10/baselines/results.csv --output runs/result-gru10/report
 ```
 
 Each `--output` must be a fresh path; parent folders are created automatically.
 
-`report generate` creates the complete folder layout in one command:
+`report generate` accepts multiple RL/baseline CSVs and creates an English,
+presentation-ready report in one command:
 
 ```text
 runs/result-gru10/report/
-├── README.md
+├── README.md                   # Key findings, figures and readable tables
+├── report.html                 # Self-contained HTML with embedded figures
 ├── tables/
-│   ├── README.md          # Metric definitions and aggregation rules
-│   ├── results.csv        # Exact copy of the evaluated episode rows
-│   └── summary.csv        # Mean metrics and counts by split/method
-├── figures/               # Cost, wait, learning and trace PNGs
+│   ├── README.md               # Metric definitions and aggregation rules
+│   ├── results.csv             # Episode-level inputs
+│   ├── summary.csv             # Daily mean metrics, counts and training-seed SD
+│   ├── comparisons.csv         # RL savings vs. each baseline, paired 95% intervals
+│   ├── training.csv            # Measured reference, selected step and best cost
+│   ├── training_history.csv    # Normalized histories, when available
+│   ├── setup.csv               # Architecture, memory, budget and dataset counts
+│   └── *.md                    # Readable benchmark/comparison/training/service tables
+├── figures/
+│   ├── 01_main_result.png      # Operational Cost
+│   ├── 02_baseline_savings.png # Cost Reduction
+│   ├── 03_training_progress.png
+│   ├── 04_service_quality.png
+│   └── diagnostics/            # First-episode queue/fleet/headway illustrations, if supplied
 ├── provenance/
 │   ├── README.md
-│   ├── protocol.json      # Recorded evaluation context and report rules
-│   ├── config.json        # Resolved evaluation config + checkpoint metadata
-│   ├── verification.json  # Input SHA256, row counts and output hashes
-│   └── history.csv        # Only when --history is supplied
-└── summary.json           # Legacy means by method, pooled across splits
+│   ├── protocol.json
+│   ├── config.json
+│   ├── verification.json      # Input/output SHA256 and metadata coverage
+│   ├── inputs/                # Original evaluation/history CSVs
+│   └── history.csv            # Training history, when available
+└── summary.json               # Legacy means by method, pooled across splits
 ```
 
-`model evaluate` and `baseline run` save `evaluation.json` beside `results.csv`;
-the report automatically reads it and checks the results hash. Older CSVs still
-work, with configuration explicitly marked unavailable. Tables preserve splits;
-figures pool the supplied rows. Missing history/traces produce placeholder plots;
-use `--history` and evaluate with `--trace` for those figures. Report generation
-summarizes supplied evaluations; it does not train or evaluate models itself.
-Choose `--output reports/<name>` to create the same bundle under `reports/`.
+The four main figures use short English titles, direct value labels and a
+consistent RL accent color. Cost and waiting-time comparisons use point charts
+with explicitly labelled data-scaled axes. Cost-reduction charts show both
+positive and negative results with a zero reference and paired confidence
+intervals. Tables and findings preserve service trade-offs, including worse P95
+wait even when aggregate cost improves.
+
+Training records a real step-zero validation measurement, the seed, encoder and
+memory window, plus every subsequent validation score. Step zero is a reference
+only; checkpoint selection retains the lowest **post-training** validation cost
+with earliest-checkpoint tie breaking. Metadata preserves initial/final/best
+scores, selected step, data counts/hashes and checkpoint/history hashes.
+
+`model evaluate` saves `evaluation.json` and a portable `training_history.csv`
+next to `results.csv`; report generation automatically loads and verifies them.
+`baseline run` also records evaluation metadata. Explicit histories are supported
+for older runs or separate archives:
+
+```bash
+uv run bus-rl report generate \
+  --results runs/core-11/eval/results.csv runs/core-22/eval/results.csv runs/baselines/results.csv \
+  --history runs/core-11/evaluations.csv runs/core-22/evaluations.csv \
+  --output reports/comparison
+```
+
+Pass one CSV per method/seed/split, or a combined CSV. `--rl-method` selects the
+RL method when automatic detection (`ppo`, `maskable_ppo`, `core`) is unsuitable.
+All compared models must cover identical scenario days with matching seeds and
+tape hashes; duplicate or partially matched inputs fail before report output is
+created. Missing scenario identity yields an explicitly unavailable contrast.
+
+Savings are `100 × (baseline − RL) / baseline`. The report averages model seeds
+within each day before a paired day bootstrap (2,000 resamples, seed 6001), and
+recomputes the percentage ratio on each resample. Intervals exclude training-seed
+uncertainty and are not adjusted for multiple comparisons. A single day cannot
+produce a significance claim. Validation scores remain labelled as model-selection
+data, rather than independent test evidence.
+
+Older CSVs remain supported, with missing configuration explicitly marked.
+Histories without step zero use their first recorded evaluation as reference;
+no untrained score or seed is fabricated. Training/comparison panels explicitly
+indicate missing inputs. Trace images are generated only when traces are supplied.
+Report generation summarizes existing artifacts; it does not train or evaluate
+models. Choose `--output reports/<name>` to create the same bundle under `reports/`.
 
 ## Policy selection
 

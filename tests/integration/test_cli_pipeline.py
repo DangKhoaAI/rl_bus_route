@@ -65,6 +65,13 @@ def test_cli_smoke_writes_csv_and_rejects_existing_output(tmp_path):
     assert metadata["total_timesteps_actual"] >= 32
     assert metadata["algorithm"]["encoder"] == "gru"
     assert metadata["algorithm"]["history_minutes"] == 10
+    history = pd.read_csv(train_out / "evaluations.csv")
+    assert history.iloc[0].timesteps == 0
+    assert set(history.seed) == {11}
+    assert metadata["initial_val_cost"] == history.iloc[0].val_cost
+    eligible = history[history.checkpoint_eligible]
+    assert metadata["best_timesteps"] == eligible.loc[eligible.val_cost.idxmin(), "timesteps"]
+    assert metadata["best_checkpoint_sha256"] == file_hash(train_out / "best.zip")
 
     eval_out = tmp_path / "eval"
     cli_main(
@@ -123,16 +130,18 @@ def test_cli_smoke_writes_csv_and_rejects_existing_output(tmp_path):
             "generate",
             "--results",
             str(eval_out / "results.csv"),
-            "--history",
-            str(train_out / "evaluations.csv"),
             "--output",
             str(report_out),
         ]
     )
     assert (report_out / "summary.json").exists()
-    assert (report_out / "figures" / "learning_curves.png").exists()
-    assert (report_out / "figures" / "queue_heatmap.png").exists()
-    assert (report_out / "figures" / "headway.png").exists()
+    assert (report_out / "figures" / "03_training_progress.png").exists()
+    assert (report_out / "figures" / "diagnostics" / "queue_heatmap.png").exists()
+    assert (report_out / "figures" / "diagnostics" / "headway.png").exists()
+    assert (report_out / "report.html").exists()
+    training = pd.read_csv(report_out / "tables" / "training.csv")
+    assert training.iloc[0]["seed"] == 11
+    assert training.iloc[0]["reference_kind"] == "untrained"
     assert (report_out / "tables" / "README.md").exists()
     assert (report_out / "tables" / "results.csv").read_bytes() == (
         eval_out / "results.csv"
@@ -154,6 +163,29 @@ def test_cli_smoke_writes_csv_and_rejects_existing_output(tmp_path):
     assert (report_out / "provenance" / "history.csv").read_bytes() == (
         train_out / "evaluations.csv"
     ).read_bytes()
+    comparison_out = tmp_path / "comparison-report"
+    cli_main(
+        [
+            "report",
+            "generate",
+            "--results",
+            str(eval_out / "results.csv"),
+            str(baseline_out / "results.csv"),
+            "--output",
+            str(comparison_out),
+        ]
+    )
+    comparisons = pd.read_csv(comparison_out / "tables" / "comparisons.csv")
+    assert set(comparisons.baseline) == {"fixed", "proportional", "threshold"}
+    assert set(comparisons.status) == {"insufficient_days"}
+    assert comparisons.cost_saved_ci95_low.isna().all()
+    assert len(pd.read_csv(comparison_out / "tables" / "results.csv")) == 4
+    assert len(pd.read_csv(comparison_out / "tables" / "training.csv")) == 1
+    html = (comparison_out / "report.html").read_text()
+    assert html.count("data:image/png;base64,") == 4
+    assert "Operational Cost" in html
+    assert "seed 0" not in html
+    assert "independent held-out test" in html
     with pytest.raises(SystemExit) as repeated_report:
         cli_main(
             [
@@ -256,11 +288,9 @@ def test_report_legacy_csv_keeps_splits_separate_and_records_missing_config(tmp_
     assert summary.loc["test_id", "scenario_days"] == 2
     assert summary.loc["test_id", "model_seeds"] == 0
     config = json.loads((output / "provenance" / "config.json").read_text())
-    assert config == {
-        "status": "unavailable",
-        "evaluation_config": None,
-        "checkpoint_metadata": None,
-    }
+    assert config["status"] == "unavailable"
+    assert config["evaluation_config"] is None
+    assert config["checkpoint_metadata"] is None
     protocol = json.loads((output / "provenance" / "protocol.json").read_text())
     assert protocol["evaluation"] is None
     assert protocol["trace_available"] is False

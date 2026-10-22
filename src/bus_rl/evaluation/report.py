@@ -1,4 +1,4 @@
-"""Generate a report bundle and preserve the evidence behind its tables."""
+"""Generate an auditable presentation report from training and evaluation artifacts."""
 
 from __future__ import annotations
 
@@ -12,19 +12,17 @@ import numpy as np
 import pandas as pd
 
 from bus_rl.config import RunConfig
-from bus_rl.evaluation.plots import render_plots
+from bus_rl.evaluation.plots import plot_fleet_gantt, plot_headways, plot_queue_heatmap
+from bus_rl.evaluation.report_data import (
+    METRICS,
+    compare_baselines,
+    summarize_results,
+    summarize_training,
+    validate_results,
+)
+from bus_rl.evaluation.report_plots import render_presentation
+from bus_rl.evaluation.report_views import write_report_views
 from bus_rl.provenance import file_hash, git_status, require_fresh_output
-
-METRICS = {
-    "total_cost_core": "Core-weighted synthetic operational cost; lower is better.",
-    "mean_wait": "Mean observed passenger wait, minutes (includes censored waits).",
-    "p95_wait": "Episode P95 passenger wait, minutes; summary is the mean of episode P95s.",
-    "worst_route_mean_wait": "Worst route's mean wait in each episode, minutes.",
-    "completed_share": "Completed passengers / generated passengers, fraction [0, 1].",
-    "unfinished_share": "Waiting or onboard passengers / generated passengers, fraction [0, 1].",
-    "abandoned_share": "Abandoned passengers / generated passengers, fraction [0, 1].",
-    "unique_denied_share": "Passengers denied boarding at least once / generated passengers.",
-}
 
 
 def _write_json(path: Path, payload: dict) -> None:
@@ -43,12 +41,21 @@ def write_evaluation_metadata(
     checkpoint: Path | None = None,
     checkpoint_metadata: dict | None = None,
 ) -> None:
-    """Link resolved CLI config and checkpoint metadata to this exact results CSV."""
+    """Bind configuration, model identity and portable training history to evaluation."""
     sha, dirty = git_status()
+    history = None
+    if checkpoint is not None:
+        original = checkpoint.parent / "evaluations.csv"
+        if original.exists():
+            recorded_hash = (checkpoint_metadata or {}).get("evaluations_sha256")
+            if recorded_hash and recorded_hash != file_hash(original):
+                raise ValueError("training history does not match checkpoint metadata")
+            shutil.copyfile(original, output / "training_history.csv")
+            history = {**_source(original), "artifact": "training_history.csv"}
     _write_json(
         output / "evaluation.json",
         {
-            "schema_version": 1,
+            "schema_version": 2,
             "created_at": datetime.now(UTC).isoformat(),
             "git_sha": sha,
             "git_dirty": dirty,
@@ -56,7 +63,11 @@ def write_evaluation_metadata(
             "manifest": _source(manifest),
             "checkpoint": _source(checkpoint) if checkpoint else None,
             "checkpoint_metadata": checkpoint_metadata,
+            "training_history": history,
             "results_sha256": file_hash(output / "results.csv"),
+            "events_sha256": file_hash(output / "events.jsonl")
+            if (output / "events.jsonl").exists()
+            else None,
             "rows": len(frame),
             "splits": sorted(frame["split"].dropna().unique().tolist()),
             "methods": sorted(frame["method"].dropna().unique().tolist()),
@@ -64,142 +75,250 @@ def write_evaluation_metadata(
     )
 
 
-def generate_report(results: Path, output: Path, history: Path | None = None) -> None:
-    """Write tables/, figures/ and provenance/ from one evaluation CSV."""
-    require_fresh_output(output)
-    frame = pd.read_csv(results)
-    required = {"method", "total_cost_core", "mean_wait"}
-    if missing := required - set(frame.columns):
-        raise ValueError(f"report results missing columns: {', '.join(sorted(missing))}")
-    if frame.empty or frame["method"].isna().any():
-        raise ValueError("report requires non-empty results with a method on every row")
-    metrics = [name for name in METRICS if name in frame]
-    for name in metrics:
+def _paths(value) -> list[Path]:
+    if value is None:
+        return []
+    return [Path(value)] if isinstance(value, (str, Path)) else [Path(path) for path in value]
+
+
+def _history(path: Path, metadata: dict | None, index: int) -> pd.DataFrame:
+    frame = pd.read_csv(path, dtype={"seed": "string"})
+    if frame.empty or not {"timesteps", "val_cost"}.issubset(frame):
+        raise ValueError("report history requires non-empty timesteps and val_cost columns")
+    for name in ("timesteps", "val_cost"):
         frame[name] = pd.to_numeric(frame[name], errors="raise")
-        if np.isinf(frame[name].to_numpy(dtype=float)).any():
-            raise ValueError(f"report metric {name} contains infinite values")
-    if frame["total_cost_core"].isna().any():
-        raise ValueError("report total_cost_core must be present on every row")
+        if not np.isfinite(frame[name]).all() or (frame[name] < 0).any():
+            raise ValueError(f"invalid training history {name}")
+    metadata = metadata or {}
+    expected = metadata.get("evaluations_sha256")
+    if expected and file_hash(path) != expected:
+        raise ValueError("training history SHA256 mismatch")
+    algorithm = metadata.get("algorithm", {})
+    if "seed" not in frame:
+        frame["seed"] = str(metadata.get("seed", f"unknown-{index + 1}"))
+    if "encoder" not in frame:
+        frame["encoder"] = algorithm.get("encoder", "unknown")
+    if "history_minutes" not in frame:
+        frame["history_minutes"] = algorithm.get("history_minutes", np.nan)
+    frame["run_id"] = (
+        frame.encoder.astype("string").fillna("unknown")
+        + "/"
+        + frame.history_minutes.astype("string").fillna("unknown")
+        + "/seed-"
+        + frame.seed.astype("string").fillna("unknown")
+    )
+    if frame.duplicated(["run_id", "timesteps"]).any():
+        raise ValueError("duplicate training timestep for the same run")
+    return frame
 
-    sources = {"results": _source(results)}
-    evaluation_path = results.parent / "evaluation.json"
-    evaluation = None
-    if evaluation_path.exists():
-        evaluation = json.loads(evaluation_path.read_text())
-        if evaluation.get("results_sha256") != sources["results"]["sha256"]:
-            raise ValueError("evaluation.json does not match results.csv (SHA256 mismatch)")
-        sources["evaluation"] = _source(evaluation_path)
-    events = results.parent / "events.jsonl"
-    traces = []
-    if events.exists():
-        sources["events"] = _source(events)
-        traces = [json.loads(line) for line in events.read_text().splitlines() if line.strip()]
-    learning = None
-    if history is not None:
-        sources["history"] = _source(history)
-        learning = pd.read_csv(history)
-        if not {"timesteps", "val_cost"}.issubset(learning.columns):
-            raise ValueError("report history requires timesteps and val_cost columns")
-        if "seed" not in learning:
-            learning["seed"] = 0
 
-    groups = [name for name in ("split", "method") if name in frame]
-    grouped = frame.groupby(groups, dropna=False)
-    summary = grouped[metrics].mean()
-    summary.insert(0, "episodes", grouped.size())
-    if "scenario_seed" in frame:
-        summary.insert(1, "scenario_days", grouped["scenario_seed"].nunique())
-    if "model_seed" in frame:
-        summary.insert(
-            2 if "scenario_seed" in frame else 1, "model_seeds", grouped["model_seed"].nunique()
+def generate_report(results, output: Path, history=None, rl_method: str | None = None) -> None:
+    """Read one or more CSVs; pair scenarios before presenting baseline comparisons."""
+    require_fresh_output(output)
+    result_paths, history_paths = _paths(results), _paths(history)
+    frames, evaluations, sources, traces = [], [], {}, []
+    inferred_histories = []
+    for index, path in enumerate(result_paths):
+        source_key = "results" if len(result_paths) == 1 else f"results_{index}"
+        sources[source_key] = _source(path)
+        frames.append(
+            pd.read_csv(
+                path,
+                dtype={
+                    "scenario_seed": "string",
+                    "scenario_hash": "string",
+                    "model_seed": "string",
+                },
+            )
         )
+        evaluation_path = path.parent / "evaluation.json"
+        evaluation = None
+        if evaluation_path.exists():
+            evaluation = json.loads(evaluation_path.read_text())
+            if evaluation.get("results_sha256") != sources[source_key]["sha256"]:
+                raise ValueError("evaluation.json does not match results.csv (SHA256 mismatch)")
+            sources["evaluation" if len(result_paths) == 1 else f"evaluation_{index}"] = _source(
+                evaluation_path
+            )
+            recorded = evaluation.get("training_history")
+            if recorded:
+                relative = Path(recorded["artifact"])
+                if relative.is_absolute() or ".." in relative.parts:
+                    raise ValueError("invalid training_history artifact path")
+                candidate = path.parent / relative
+                if file_hash(candidate) != recorded["sha256"]:
+                    raise ValueError("evaluation training history SHA256 mismatch")
+                inferred_histories.append((candidate, evaluation.get("checkpoint_metadata")))
+        evaluations.append(evaluation)
+        events = path.parent / "events.jsonl"
+        if events.exists():
+            digest = file_hash(events)
+            if (
+                evaluation
+                and evaluation.get("events_sha256")
+                and digest != evaluation["events_sha256"]
+            ):
+                raise ValueError("events.jsonl SHA256 mismatch")
+            sources[f"events_{index}"] = _source(events)
+            # A trace illustrates one episode only; never stitch different missions together.
+            if not traces:
+                rows = [
+                    json.loads(line) for line in events.read_text().splitlines() if line.strip()
+                ]
+                for row in rows:
+                    if traces and row["time_s"] <= traces[-1]["time_s"]:
+                        break
+                    traces.append(row)
+
+    frame = validate_results(pd.concat(frames, ignore_index=True))
+    if rl_method is None:
+        rl_method = next(
+            (name for name in ("ppo", "maskable_ppo", "core") if name in set(frame.method)), "ppo"
+        )
+    elif rl_method not in set(frame.method):
+        raise ValueError(f"RL method {rl_method!r} not found in results")
+    summary = summarize_results(frame)
+    comparisons = compare_baselines(frame, rl_method)
+    histories = []
+    training_metadata = []
+    history_inputs = []
+    seen_histories = set()
+    candidates = (
+        [
+            (
+                path,
+                json.loads((path.parent / "metadata.json").read_text())
+                if (path.parent / "metadata.json").exists()
+                else None,
+            )
+            for path in history_paths
+        ]
+        if history_paths
+        else inferred_histories
+    )
+    for index, (path, metadata) in enumerate(candidates):
+        learning = _history(path, metadata, index)
+        identity = (file_hash(path), tuple(sorted(learning.run_id.unique())))
+        if identity in seen_histories:
+            continue
+        seen_histories.add(identity)
+        sources[f"history_{len(histories)}"] = _source(path)
+        history_inputs.append(path)
+        histories.append(learning)
+        if metadata:
+            training_metadata.append(metadata)
+    learning = pd.concat(histories, ignore_index=True) if histories else pd.DataFrame()
+    if not learning.empty and learning.duplicated(["run_id", "timesteps"]).any():
+        raise ValueError("conflicting training histories for the same encoder/model seed")
+    training = summarize_training(learning)
+    coverage = sum(item is not None for item in evaluations)
+    status = (
+        "recorded" if coverage == len(evaluations) else "partial" if coverage else "unavailable"
+    )
 
     tables, figures, provenance = (output / name for name in ("tables", "figures", "provenance"))
-    for directory in (tables, figures, provenance):
+    for directory in (tables, figures, provenance / "inputs"):
         directory.mkdir(parents=True)
-    shutil.copyfile(results, tables / "results.csv")
-    summary.to_csv(tables / "summary.csv")
-    render_plots(frame, figures, traces=traces, history=learning)
-    if history is not None:
-        shutil.copyfile(history, provenance / "history.csv")
-
-    # Retain the original pooled JSON interface for consumers of the old report command.
-    legacy_metrics = [
-        name for name in ("total_cost_core", "mean_wait", "abandoned_share") if name in frame
-    ]
+    if len(result_paths) == 1:
+        shutil.copyfile(result_paths[0], tables / "results.csv")
+    else:
+        frame.to_csv(tables / "results.csv", index=False)
+    for index, path in enumerate(result_paths):
+        shutil.copyfile(path, provenance / "inputs" / f"results-{index:03}.csv")
+    summary.to_csv(tables / "summary.csv", index=False)
+    comparisons.to_csv(tables / "comparisons.csv", index=False)
+    training.to_csv(tables / "training.csv", index=False)
+    if histories:
+        learning.to_csv(tables / "training_history.csv", index=False)
+        for index, path in enumerate(history_inputs):
+            shutil.copyfile(path, provenance / "inputs" / f"history-{index:03}.csv")
+        if len(history_inputs) == 1:
+            shutil.copyfile(history_inputs[0], provenance / "history.csv")
+        else:
+            learning.to_csv(provenance / "history.csv", index=False)
+    render_presentation(summary, comparisons, learning, training, figures, rl_method)
+    if traces:
+        diagnostics = figures / "diagnostics"
+        diagnostics.mkdir()
+        plot_queue_heatmap(traces, diagnostics)
+        plot_fleet_gantt(traces, diagnostics)
+        plot_headways(traces, diagnostics)
+    metrics = [name for name in METRICS if name in frame]
     (output / "summary.json").write_text(
-        frame.groupby("method", dropna=False)[legacy_metrics].mean().to_json(indent=2) + "\n"
+        frame.groupby("method")[metrics].mean().to_json(indent=2) + "\n"
     )
-    (tables / "README.md").write_text(
-        "# Tables\n\n"
-        "- `results.csv`: exact copy of input; one row per evaluated episode/model.\n"
-        "- `summary.csv`: arithmetic means grouped by " + ", ".join(groups) + ".\n\n"
-        "Each episode row has equal weight; missing metric values are excluded per column.\n"
-        "No confidence intervals or paired comparisons are inferred.\n\n"
-        "`episodes` counts rows; `scenario_days` counts distinct scenario seeds when available;\n"
-        "`model_seeds` counts non-null model seeds (0 for unseeded baselines).\n"
-        "Counts do not establish that methods used identical scenario tapes.\n\n"
-        "| Metric | Meaning |\n|---|---|\n"
-        + "".join(f"| `{name}` | {METRICS[name]} |\n" for name in metrics)
-        + "\nSee the original result columns for scenario hashes, seeds and cost components.\n"
-    )
+    single = evaluations[0] if len(evaluations) == 1 else None
     _write_json(
         provenance / "config.json",
         {
-            "status": "recorded" if evaluation else "unavailable",
-            "evaluation_config": evaluation["config"] if evaluation else None,
-            "checkpoint_metadata": evaluation.get("checkpoint_metadata") if evaluation else None,
+            "status": status,
+            "evaluation_config": single["config"] if single else None,
+            "checkpoint_metadata": single.get("checkpoint_metadata") if single else None,
+            "training_runs": training_metadata,
+            "evaluations": [
+                {"config": item["config"], "checkpoint_metadata": item.get("checkpoint_metadata")}
+                if item
+                else None
+                for item in evaluations
+            ],
         },
     )
     _write_json(
         provenance / "protocol.json",
         {
-            "schema_version": 1,
+            "schema_version": 2,
             "created_at": datetime.now(UTC).isoformat(),
-            "evaluation": evaluation,
-            "group_by": groups,
-            "aggregation": "arithmetic mean over episode rows; skip missing values per metric",
+            "evaluation": single,
+            "evaluations": evaluations,
+            "rl_method": rl_method,
+            "group_by": ["split", "method"],
+            "aggregation": "average model seeds per scenario day, then average days",
             "metrics": {name: METRICS[name] for name in metrics},
-            "confidence_intervals": "not computed",
-            "figures": "pooled across input splits; trace plots use supplied events.jsonl",
-            "history_available": history is not None,
+            "confidence_intervals": {
+                "method": "paired day bootstrap; seeds averaged within day",
+                "resamples": 2000,
+                "seed": 6001,
+                "level": 0.95,
+                "percentage": "ratio of resampled mean costs",
+                "training_seed_uncertainty_included": False,
+                "multiple_comparison_adjustment": False,
+            },
+            "figures": "split-specific point charts with explicitly labelled data-scaled axes",
+            "history_available": bool(histories),
             "trace_available": bool(traces),
+            "trace_selection": "first episode of the first available events file"
+            if traces
+            else None,
         },
+    )
+    (tables / "README.md").write_text(
+        "# Report Tables\n\n"
+        "- `results.csv`: episode-level evaluations; original inputs are preserved in provenance/inputs/.\n"
+        "- `summary.csv`: daily mean metrics after averaging model seeds; counts and seed SD are reported separately.\n"
+        "- `comparisons.csv`: matched baseline minus RL costs, relative reductions and paired 95% intervals. Positive savings favor RL.\n"
+        "- `training.csv`: measured reference, lowest validation cost, selected step and training coverage per run.\n"
+        "- `training_history.csv`: normalized histories with real seed/encoder labels, when available.\n"
+        "- `benchmark.md`, `comparison.md`, `training.md`, `service.md`: presentation tables.\n\n"
+        "Distinct scenario hashes define paired days. All model seeds must cover identical days. Missing metric values are excluded per column. Seed SD is unavailable with fewer than two model seeds.\n\n"
+        "| Metric | Definition |\n|---|---|\n"
+        + "".join(f"| `{key}` | {METRICS[key]} |\n" for key in metrics)
     )
     (provenance / "README.md").write_text(
         "# Provenance\n\n"
-        "- `protocol.json`: aggregation rules and recorded evaluation context, when available.\n"
-        "- `config.json`: resolved evaluation config and original checkpoint metadata.\n"
-        "- `verification.json`: source paths/SHA256, row counts and report artifact hashes.\n"
-        "- `history.csv`: exact learning-history input, if supplied via `--history`.\n\n"
-        "The evaluation sidecar is checked against the results SHA256. Old CSVs without\n"
-        "`evaluation.json` are supported, but their config/protocol is unknown.\n"
-        "Source hashes identify inputs at report time; they do not certify policy quality\n"
-        "or revalidate the original simulator, manifest tapes or checkpoint.\n"
+        "`protocol.json` records evaluation context and aggregation rules; `config.json` preserves resolved evaluation and checkpoint settings. `verification.json` records source and artifact SHA256 hashes. Original result/history inputs are preserved in `inputs/`.\n\n"
+        "Evaluation sidecars are checked against their CSV hashes. Legacy inputs without metadata remain explicitly unavailable; no configuration is inferred. Paired scenarios are verified using both seed and tape hash. Source hashes identify evidence and do not certify simulator validity.\n"
     )
-    (output / "README.md").write_text(
-        "# Evaluation report\n\n"
-        "- [Tables](tables/README.md): episode results and summary by split/method.\n"
-        "- [Figures](figures/): costs, waiting CDF, learning curve and trace plots.\n"
-        "- [Provenance](provenance/README.md): configuration, protocol and source hashes.\n\n"
-        "`summary.json` retains the legacy means by method, pooled across splits.\n"
-        "Use `tables/summary.csv` for split-specific results. Figure cost/CDF summaries\n"
-        "are also pooled across splits. Missing history/trace inputs produce placeholder plots.\n\n"
-        + (
-            "Evaluation configuration was recorded by the CLI.\n"
-            if evaluation
-            else "Evaluation configuration is unavailable: no evaluation.json accompanied the CSV.\n"
-        )
-    )
+    write_report_views(output, frame, summary, comparisons, training, status, training_metadata)
     _write_json(
         provenance / "verification.json",
         {
-            "schema_version": 1,
+            "schema_version": 2,
             "sources": sources,
             "rows": len(frame),
             "summary_rows": len(summary),
             "missing_metric_values": {name: int(frame[name].isna().sum()) for name in metrics},
-            "evaluation_metadata_matches_results": True if evaluation else None,
+            "evaluation_metadata_matches_results": True if coverage == len(evaluations) else None,
+            "metadata_coverage": {"recorded": coverage, "inputs": len(evaluations)},
             "artifacts": {
                 str(path.relative_to(output)): file_hash(path)
                 for path in sorted(output.rglob("*"))

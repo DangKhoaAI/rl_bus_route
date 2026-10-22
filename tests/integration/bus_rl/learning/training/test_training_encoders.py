@@ -74,7 +74,11 @@ def test_encoders_train_reload_and_match_scalar_native_batch(tmp_path, encoder, 
         ]
     # Loading the earlier best checkpoint must reproduce its callback evaluation.
     history = pd.read_csv(output / "evaluations.csv")
-    assert batched["total_cost_core"].mean() == pytest.approx(history["val_cost"].min())
+    assert history.iloc[0].timesteps == 0
+    assert not history.iloc[0].checkpoint_eligible
+    eligible = history[history.checkpoint_eligible]
+    assert batched["total_cost_core"].mean() == pytest.approx(eligible["val_cost"].min())
+    assert batched["total_cost_core"].mean() == pytest.approx(metadata["best_val_cost"])
 
 
 def test_long_history_matches_native_five_bins_and_resets_after_terminal():

@@ -15,6 +15,7 @@ from bus_rl.learning.policy import policy_kwargs
 from bus_rl.learning.training.callbacks import BestValidationCallback
 from bus_rl.learning.training.checkpoint import run_metadata, write_metadata
 from bus_rl.learning.training.diagnostics import TrainingDiagnosticsCallback
+from bus_rl.provenance import canonical_hash, file_hash
 
 
 class ProgressCallback(BaseCallback):
@@ -177,6 +178,23 @@ def train_run(
             "episodes_completed": validation.completed_episodes,
             "wall_time_s": wall,
             "best_val_cost": None if validation.best == float("inf") else validation.best,
+            "best_timesteps": validation.best_timesteps,
+            "initial_val_cost": validation.history[0]["val_cost"],
+            "final_val_cost": validation.history[-1]["val_cost"],
+            "checkpoint_selection": "lowest post-training validation core cost; ties keep earliest; step 0 is reference only",
+            "train_days": len(train_scenarios),
+            "validation_days": len(val_scenarios or train_scenarios[:1]),
+            "validation_days_used": len(validation._subset()),
+            "train_scenarios_hash": canonical_hash(
+                [(scenario.seed, scenario.scenario_hash) for scenario in train_scenarios]
+            ),
+            "validation_scenarios_hash": canonical_hash(
+                [(scenario.seed, scenario.scenario_hash) for scenario in validation._subset()]
+            ),
+            "evaluations_sha256": file_hash(output / "evaluations.csv"),
+            "validation_metrics_sha256": file_hash(output / "validation_metrics.csv"),
+            "best_checkpoint_sha256": file_hash(output / "best.zip"),
+            "last_checkpoint_sha256": file_hash(output / "last.zip"),
             "policy_parameters": sum(parameter.numel() for parameter in model.policy.parameters()),
         },
     )

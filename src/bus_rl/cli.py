@@ -276,9 +276,7 @@ def cmd_evaluate(args) -> None:
 def cmd_report(args) -> None:
     from bus_rl.evaluation.report import generate_report
 
-    generate_report(
-        Path(args.results), Path(args.output), Path(args.history) if args.history else None
-    )
+    generate_report(args.results, Path(args.output), args.history, rl_method=args.rl_method)
 
 
 def _add_runtime_flags(parser: argparse.ArgumentParser) -> None:
@@ -434,9 +432,16 @@ def build_parser() -> argparse.ArgumentParser:
     report = report_actions.add_parser(
         "generate", help="generate tables, figures and provenance from results"
     )
-    report.add_argument("--results", required=True)
+    report.add_argument("--results", required=True, nargs="+", help="RL and baseline result CSVs")
     report.add_argument("--output", required=True)
-    report.add_argument("--history")
+    report.add_argument(
+        "--history",
+        nargs="+",
+        help="training histories; otherwise loaded from evaluation artifacts",
+    )
+    report.add_argument(
+        "--rl-method", help="method treated as RL (default: infer ppo/maskable_ppo/core)"
+    )
     report.set_defaults(func=cmd_report)
     return parser
 
