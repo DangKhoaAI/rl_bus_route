@@ -73,14 +73,14 @@ Commands use `bus-rl <noun> <action>`:
 | `model train` | Train a policy and save best/last checkpoints |
 | `model evaluate` | Evaluate a checkpoint and write results/traces |
 | `baseline run` | Evaluate fixed/threshold/proportional controllers |
-| `report generate` | Generate plots and a summary from results |
+| `report generate` | Generate a report bundle: tables, figures and provenance |
 | `test diagnose` | Diagnose training and evaluation timings |
 | `test profile` | Run the historical simulator microprofiler |
 
 Use `bus-rl model --help` or `bus-rl model train --help` for a group or action.
 Flat legacy commands such as `train`, `evaluate` and `generate` remain accepted
 as aliases so archived command lines still run. New documentation uses the
-grouped names. Flags, config precedence and output artifacts are unchanged.
+grouped names. Flags and config precedence are unchanged.
 
 To collect a complete run under `runs/result-gru10/`:
 
@@ -91,6 +91,33 @@ uv run bus-rl report generate --results runs/result-gru10/eval/results.csv --his
 ```
 
 Each `--output` must be a fresh path; parent folders are created automatically.
+
+`report generate` creates the complete folder layout in one command:
+
+```text
+runs/result-gru10/report/
+├── README.md
+├── tables/
+│   ├── README.md          # Metric definitions and aggregation rules
+│   ├── results.csv        # Exact copy of the evaluated episode rows
+│   └── summary.csv        # Mean metrics and counts by split/method
+├── figures/               # Cost, wait, learning and trace PNGs
+├── provenance/
+│   ├── README.md
+│   ├── protocol.json      # Recorded evaluation context and report rules
+│   ├── config.json        # Resolved evaluation config + checkpoint metadata
+│   ├── verification.json  # Input SHA256, row counts and output hashes
+│   └── history.csv        # Only when --history is supplied
+└── summary.json           # Legacy means by method, pooled across splits
+```
+
+`model evaluate` and `baseline run` save `evaluation.json` beside `results.csv`;
+the report automatically reads it and checks the results hash. Older CSVs still
+work, with configuration explicitly marked unavailable. Tables preserve splits;
+figures pool the supplied rows. Missing history/traces produce placeholder plots;
+use `--history` and evaluate with `--trace` for those figures. Report generation
+summarizes supplied evaluations; it does not train or evaluate models itself.
+Choose `--output reports/<name>` to create the same bundle under `reports/`.
 
 ## Policy selection
 

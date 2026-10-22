@@ -96,6 +96,7 @@ def cmd_generate(args) -> None:
 
 
 def cmd_baseline(args) -> None:
+    from bus_rl.evaluation.report import write_evaluation_metadata
     from bus_rl.evaluation.runner import evaluate_scenarios, write_results
 
     run = _run_config(args)
@@ -119,7 +120,9 @@ def cmd_baseline(args) -> None:
         traces.update({(method, index): rows for index, rows in method_traces.items()})
     import pandas as pd
 
-    write_results(pd.concat(frames, ignore_index=True), output, traces or None)
+    frame = pd.concat(frames, ignore_index=True)
+    write_results(frame, output, traces or None)
+    write_evaluation_metadata(output, frame, run, Path(args.manifest))
 
 
 def cmd_profile(args) -> None:
@@ -200,6 +203,7 @@ def _reward_from_metadata(payload: dict) -> RewardConfig:
 
 
 def cmd_evaluate(args) -> None:
+    from bus_rl.evaluation.report import write_evaluation_metadata
     from bus_rl.evaluation.runner import evaluate_scenarios, write_results
     from bus_rl.execution.environments.factory import make_env_for_run
     from bus_rl.learning.forecasting import HistoricalForecaster
@@ -218,6 +222,7 @@ def cmd_evaluate(args) -> None:
     model_seed = args.seed
     method = args.method
     forecaster = None
+    metadata = None
     if args.checkpoint:
         metadata = load_metadata(Path(args.checkpoint))
         run = replace(
@@ -229,6 +234,9 @@ def cmd_evaluate(args) -> None:
                 run.algorithm,
                 encoder=metadata.get("algorithm", {}).get("encoder", "mlp"),
                 history_minutes=metadata.get("algorithm", {}).get("history_minutes", 10),
+                belief_prior_shape=metadata.get("algorithm", {}).get("belief_prior_shape", 1.0),
+                belief_prior_rate=metadata.get("algorithm", {}).get("belief_prior_rate", 1.0),
+                belief_decay=metadata.get("algorithm", {}).get("belief_decay", 1.0),
             ),
         )
         frozen = Path(args.checkpoint).parent / "forecaster.npz"
@@ -255,34 +263,22 @@ def cmd_evaluate(args) -> None:
         trace_index=0 if args.trace else None,
     )
     write_results(frame, output, traces or None)
+    write_evaluation_metadata(
+        output,
+        frame,
+        run,
+        Path(args.manifest),
+        Path(args.checkpoint) if args.checkpoint else None,
+        metadata,
+    )
 
 
 def cmd_report(args) -> None:
-    import pandas as pd
+    from bus_rl.evaluation.report import generate_report
 
-    from bus_rl.evaluation.plots import render_plots
-
-    output = Path(args.output)
-    require_fresh_output(output)
-    frame = pd.read_csv(args.results)
-    traces = []
-    events = Path(args.results).parent / "events.jsonl"
-    if events.exists():
-        traces = [json.loads(line) for line in events.read_text().splitlines() if line]
-    history = None
-    if args.history:
-        history = pd.read_csv(args.history)
-        if "seed" not in history.columns:
-            history["seed"] = 0
-    render_plots(frame, output, traces=traces, history=history)
-    summary = frame.groupby("method", dropna=False)[
-        [
-            column
-            for column in ("total_cost_core", "mean_wait", "abandoned_share")
-            if column in frame
-        ]
-    ].mean(numeric_only=True)
-    (output / "summary.json").write_text(summary.to_json(indent=2))
+    generate_report(
+        Path(args.results), Path(args.output), Path(args.history) if args.history else None
+    )
 
 
 def _add_runtime_flags(parser: argparse.ArgumentParser) -> None:
@@ -435,7 +431,9 @@ def build_parser() -> argparse.ArgumentParser:
     _add_runtime_flags(evaluate)
     evaluate.set_defaults(func=cmd_evaluate)
 
-    report = report_actions.add_parser("generate", help="generate plots and a summary from results")
+    report = report_actions.add_parser(
+        "generate", help="generate tables, figures and provenance from results"
+    )
     report.add_argument("--results", required=True)
     report.add_argument("--output", required=True)
     report.add_argument("--history")
