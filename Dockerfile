@@ -37,7 +37,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     gymnasium==1.3.0 \
     fastapi==0.143.5 \
     pydantic-settings==2.16.0 \
-    uvicorn==0.54.0
+    uvicorn==0.54.0 \
+    rich==15.0.0
 WORKDIR /app
 COPY configs ./configs
 COPY src/bus_rl ./src/bus_rl
@@ -47,11 +48,13 @@ COPY --from=native /build/bus_sim_native.so ./src/bus_sim_native.so
 # The scenario days are gitignored but deterministic: regenerate the held-out
 # days the station replays instead of copying a local data/ folder.
 RUN python -m bus_rl.cli generate --config configs/base.toml \
-        --output data/generated/base --counts validation=2
+        --output data/generated/base \
+        --counts validation=2,test_ood_burst=2,test_ood_traffic=2
 RUN useradd --create-home --uid 10001 station
 USER station
 ENV SERVER__HOST=0.0.0.0 \
-    SIMULATION__MANIFEST_PATH=data/generated/base/manifest.json
+    SIMULATION__MANIFEST_PATH=data/generated/base/manifest.json \
+    SIMULATION__SPLITS='["validation","test_ood_burst","test_ood_traffic"]'
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"

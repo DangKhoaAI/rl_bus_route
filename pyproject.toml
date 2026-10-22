@@ -28,6 +28,7 @@ dev = [
 server = [
     "fastapi>=0.143.5",
     "pydantic-settings>=2.16.0",
+    "rich>=13.9",
     "uvicorn>=0.54.0",
 ]
 
