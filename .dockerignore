@@ -8,5 +8,6 @@
 !src/bus_rl
 !src/bus_sim
 !web/station
+!web/intro
 crates/**/target
 **/__pycache__

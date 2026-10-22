@@ -2,7 +2,7 @@
 # Station demo: the live 3D dashboard and its simulation API in one image.
 #
 #   docker build -t bus-rl-station .
-#   docker run --rm -p 8000:8000 bus-rl-station      # open http://localhost:8000
+#   docker run --rm -p 8000:8000 bus-rl-station      # open http://localhost:8000/intro/ and /visualize/
 #
 # The runtime stage carries only what the station server imports (numpy, gymnasium,
 # the FastAPI stack and the native kernel); torch and the training stack stay out.
@@ -44,6 +44,7 @@ COPY configs ./configs
 COPY src/bus_rl ./src/bus_rl
 COPY src/bus_sim ./src/bus_sim
 COPY web/station ./web/station
+COPY web/intro ./web/intro
 COPY --from=native /build/bus_sim_native.so ./src/bus_sim_native.so
 # The scenario days are gitignored but deterministic: regenerate the held-out
 # days the station replays instead of copying a local data/ folder.
@@ -52,8 +53,9 @@ RUN python -m bus_rl.cli generate --config configs/base.toml \
         --counts validation=2,test_ood_burst=2,test_ood_traffic=2
 RUN useradd --create-home --uid 10001 station
 USER station
+# The slim image has no torch and no checkpoint, so it serves the baselines only.
 ENV SERVER__HOST=0.0.0.0 \
-    SIMULATION__MANIFEST_PATH=data/generated/base/manifest.json \
+    SIMULATION__CHECKPOINT_PATH= \
     SIMULATION__SPLITS='["validation","test_ood_burst","test_ood_traffic"]'
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s \
