@@ -1,10 +1,10 @@
 # standard-v1
 
-Một báo cáo tổng hợp cho MLP10, GRU10 và Belief20-fade.
+Một báo cáo tổng hợp cho RL-MLP10, RL-GRU10 và RL-Belief20-fade.
 
 - [Báo cáo Markdown](report.md): đọc ngay trong editor.
 - [Báo cáo HTML](report.html): bảng và biểu đồ, tự chứa hình ảnh.
-- [Báo cáo PDF](report.pdf): bản 6 trang để đọc, in hoặc chia sẻ.
+- [Báo cáo PDF](report.pdf): bản để đọc, in hoặc chia sẻ.
 
 Ba định dạng dùng cùng nội dung và số liệu; bản Markdown trình bày bằng bảng,
 HTML/PDF có thêm biểu đồ. Báo cáo gồm thiết lập chạy, từng điều kiện test,

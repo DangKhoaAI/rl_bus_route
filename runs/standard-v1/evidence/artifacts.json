@@ -2,8 +2,8 @@
   "created_at": "2026-10-22T09:10:07.587109+00:00",
   "files": {
     "README.md": {
-      "bytes": 1542,
-      "sha256": "8bbbae1c7c78058247389e89dd28852fc22aabbd2808a9458315098c80ca208c"
+      "bytes": 1543,
+      "sha256": "ba0fbb51f7f5b12163e4b69ca3fadd4d0fbb027e2fc1b12dcfd97d03fdd5bb31"
     },
     "evidence/baselines/shared/eval/test_id/evaluation.json": {
       "bytes": 2562,
@@ -470,19 +470,19 @@
       "sha256": "dcb0b3ddef3f46d04201501500e2dc73f3511fc7c752d9d4398940aa786ab42c"
     },
     "report.html": {
-      "bytes": 352098,
-      "sha256": "e4bade9f97d0367eee83c149747c3e657ee680255c7f87598e13f568a3bc35e0"
+      "bytes": 398969,
+      "sha256": "e1de06417cbbd3de4693222aef017b4e9288d8831d8aff7b9fd69f38e59e6436"
     },
     "report.md": {
-      "bytes": 11063,
-      "sha256": "7c0e6b5cddcf35b85267a730c7895d446ced2ba49ece81284c44d99b6ac85722"
+      "bytes": 12806,
+      "sha256": "0be6ad657ffce6833324bdfad56102752d06f58a716c558345b74b9ce2604bad"
     },
     "report.pdf": {
-      "bytes": 336835,
-      "sha256": "6ab5ab937c5df2b64105c4de2b646c5445c1d4cd86cb894cd4b8b7d41ce3b09e"
+      "bytes": 363432,
+      "sha256": "6d41b393642be0089e2232302c49d05e3ae42110a703d40cb8b87d71506e2e06"
     }
   },
-  "inventory_sha256": "a140fd0e1cc15d2166df0f28c13dbbd5dba97fe9d6c48c61b24d3e67296b0e9b",
+  "inventory_sha256": "6751c6e8a198ce7b9d792efffbd400d2db53b2d0a80d40051768567f3c099ff0",
   "layout": "study-report-v1",
   "local_only": [
     {
@@ -597,6 +597,6 @@
   "purpose": "Reproducible evidence for human-authored final reports",
   "schema_version": 1,
   "source": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/Code/experiments/standard-v1",
-  "total_bytes": 3834644,
-  "updated_at": "2026-10-22T10:42:25.781364+00:00"
+  "total_bytes": 3909856,
+  "updated_at": "2026-10-22T12:02:59.636648+00:00"
 }

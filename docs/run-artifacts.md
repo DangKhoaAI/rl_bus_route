@@ -21,7 +21,7 @@ runs/                                # tracked study bundles
     README.md                        # entry point and regeneration instructions
     report.md                        # one consolidated report, tables and narrative
     report.html                      # same report with embedded charts
-    report.pdf                       # six-page A4 report
+    report.pdf                       # A4 report
     evidence/
       artifacts.json                 # inventory for the entire study bundle
       protocol.json                  # frozen matrix and implementation/config hashes
