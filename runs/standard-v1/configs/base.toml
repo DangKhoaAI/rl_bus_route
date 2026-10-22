@@ -1,0 +1,28 @@
+[physical]
+route_count = 3
+stops_per_route = 6
+fleet_size = 12
+capacity = 40
+comfort_capacity = 30
+tick_s = 30
+control_interval_s = 120
+horizon_s = 14400
+demand_end_s = 10800
+
+[generation]
+base_route_hourly_demand = [180, 160, 140]
+traffic_log_std = 0.15
+traffic_bucket_s = 300
+
+[runtime]
+# The native Rust kernel is the default and the maintained path.
+# The Python oracle is deprecated and requires an explicit opt-in:
+#   runtime.legacy_python = true   (CLI: --legacy-python --backend python)
+backend = "rust"
+
+[algorithm]
+encoder = "gru"
+history_minutes = 10
+belief_prior_shape = 1.0
+belief_prior_rate = 1.0
+belief_decay = 1.0

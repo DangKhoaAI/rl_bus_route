@@ -1,0 +1,4 @@
+run_id,seed,encoder,history_minutes,reference_timestep,reference_kind,reference_val_cost,best_val_cost,best_timesteps,last_timesteps,last_val_cost,validation_reduction_pct,validation_days,wall_time_s
+gru/10/seed-11,11,gru,10,0,untrained,18075.75375,13189.805,172032,245760,14359.73125,27.03040115270435,100,131.86314992798725
+gru/10/seed-22,22,gru,10,0,untrained,16574.59125,13157.1675,147456,245760,13850.5725,20.61844964050019,100,133.17397382599302
+gru/10/seed-33,33,gru,10,0,untrained,15482.52375,13311.75125,208896,245760,13322.07,14.020792314302122,100,132.5854174689739

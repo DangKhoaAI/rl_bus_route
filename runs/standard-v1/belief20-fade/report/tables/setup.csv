@@ -1,0 +1,4 @@
+Seed,Encoder,History (min),Train steps,Train days,Validation days,Routes,Buses,Parameters
+11,BELIEF,20,"245,760",500,100,3,12,"448,830"
+22,BELIEF,20,"245,760",500,100,3,12,"448,830"
+33,BELIEF,20,"245,760",500,100,3,12,"448,830"

@@ -1,0 +1,169 @@
+{
+  "artifacts": {
+    "README.md": "70e4ee58add65ab778bcb5aca32f41ac846304e8f20849793b990bd8a835c516",
+    "figures/01_main_result.png": "05df9824a7ed14fd16a64b0900b03d7817f43b852d53e311b9b5182d27217d44",
+    "figures/02_baseline_savings.png": "36409a75be1e18f9042a953a87155c87f83fc6a967426d4863e752f8dd8283cc",
+    "figures/03_training_progress.png": "f62a43fe806759556c7454162bd546c3cfa4b884410eb91730591090cc6b6c48",
+    "figures/04_service_quality.png": "29c14d74782473c7bc86ee87da35d910c4840384375fa449529e3157b10b9079",
+    "provenance/README.md": "612b107147fe5a2623a73a41d7b0a1d8c1c95ac73366d6ad221d96f72e7eea62",
+    "provenance/config.json": "7096f207aa5bf17c18ea014e9ab07ce8097415e7318e8325083b73d76f53564a",
+    "provenance/history.csv": "fb0b83cf763655511eabcf11a9d147d0fb9144bfc0b7e7e861dadd731aba6fbc",
+    "provenance/inputs/history-000.csv": "dfa8fd89515b477a7c0e11cdc0fb94967a25aaa0641c90f975561e44406a02c8",
+    "provenance/inputs/history-001.csv": "b907778f71ed431d6715c678580f73c9b410946ce8561e7db446d2decb1af8dd",
+    "provenance/inputs/history-002.csv": "e2bc3362dbe3dc6ab29b2b12e11895d477a05b9483f5517050e045d9400fc4c6",
+    "provenance/inputs/results-000.csv": "1bf42c50b1998e8aa3418c6899601d0df98b61b7922c02040122b26818ac2ab4",
+    "provenance/inputs/results-001.csv": "6db635a477b0ea6cfc4ef692e6335785853da98110ff17aa61ee8870ba223a7b",
+    "provenance/inputs/results-002.csv": "396edf1b93d394331e33eb002c90516c7eba77ca6613aeb1f06d4fc6d5908c05",
+    "provenance/inputs/results-003.csv": "3b633f0695f720d68a70ed04d2f30ae5f2de4031f1d7bf288a455f0724c04b83",
+    "provenance/inputs/results-004.csv": "23a523144f3b213f8c9a40181fa6bc616e79c7a5653550ef8fbd5693c1d26056",
+    "provenance/inputs/results-005.csv": "dd4258103940d59a4dce46cc436f0516f7d899571fccbd6c8dc720bebd4e6aa7",
+    "provenance/inputs/results-006.csv": "52774abdf2144ca0127939940ab9931a71ae32051885274cd6081fcbb7f17372",
+    "provenance/inputs/results-007.csv": "8e80757743fed4b5f926cd2e4c1012d1174ba85d4f350ebe4622c50fb2f1e86d",
+    "provenance/inputs/results-008.csv": "922a74651639eb0ee299d1f6047a39a1e2faea95ddfb520fac03786d4e84cca2",
+    "provenance/inputs/results-009.csv": "3ff9c21dd4b02b7bdf302f163e995ff9258652829d5db673377e1c721ec521d0",
+    "provenance/inputs/results-010.csv": "2043056f3c06d0bc19ce159ea6599e715c2ff8a805d3df16a1f005f1dd6d66df",
+    "provenance/inputs/results-011.csv": "eb216306170981ebe93da465b4a367a35110af5b9ddbfdf983bf5cdbf66e14ae",
+    "provenance/protocol.json": "6fad7b21829f4d641b3d04a89f6e00e51a483d812778b5db218a13d1686a3d62",
+    "report.html": "f56d485271fd4534ddcff69095246730fe4277fbc16452b5ba8573f25490ad77",
+    "summary.json": "1eac52c8c4a0d8913b30ee1baf00a753bd49a7eec7d83f3b9f368da36083e3e4",
+    "tables/README.md": "deb67b56f30aae441f8648fca62ac4d5433aacda98951bcf45d113098aa57215",
+    "tables/benchmark.md": "1579f1f3373ab322210917ca25956c54a57d40c98e70724773af29b14aab15f8",
+    "tables/comparison.md": "90f854a0f4ce4967424b55dc3d0c0a568502662ad8f04a986e1cb66013a3b721",
+    "tables/comparisons.csv": "1257f49a6dd00505c1ef9d0123435eeab79e53044381fa163a2599bca1d8d3b0",
+    "tables/results.csv": "160d6821ca7df424a1ce0ffd858e9bf9f75d1619e8840822a8cce79b1e672a1b",
+    "tables/service.md": "d4857f8a63af48fe15765a15d86e0eb06eca33928983bc4823377206e727c61a",
+    "tables/setup.csv": "1cf115dd61be377ecbeb9ad76ab5a3517b5199aec87f822b4bd9a25b597ab706",
+    "tables/summary.csv": "be956c1c83f43579999384c93747291083f002bf2bce69f465b679ab70fc0813",
+    "tables/training.csv": "8381b0fdf6c9e5a37943444070039056f97076ba60b51a16564df04637c9db14",
+    "tables/training.md": "c8f42b941a3c776a5c08f04c3689bc4212a2eedb8adfce1abbb78f6598789759",
+    "tables/training_history.csv": "fb0b83cf763655511eabcf11a9d147d0fb9144bfc0b7e7e861dadd731aba6fbc"
+  },
+  "evaluation_metadata_matches_results": true,
+  "metadata_coverage": {
+    "inputs": 12,
+    "recorded": 12
+  },
+  "missing_metric_values": {
+    "abandoned_share": 0,
+    "completed_share": 0,
+    "mean_wait": 0,
+    "p95_wait": 0,
+    "total_cost_core": 0,
+    "unfinished_share": 0,
+    "unique_denied_share": 0,
+    "worst_route_mean_wait": 0
+  },
+  "rows": 3600,
+  "schema_version": 2,
+  "sources": {
+    "evaluation_0": {
+      "path": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/Code/experiments/standard-v1/mlp10/11/eval/test_id/evaluation.json",
+      "sha256": "000427f4f879369fd04ea2c9d24a9e971096bfbd072adb66ab7d574350563578"
+    },
+    "evaluation_1": {
+      "path": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/Code/experiments/standard-v1/mlp10/11/eval/test_ood_burst/evaluation.json",
+      "sha256": "2f9dca344d63cbb9a2aae2a69a87d608028e27c83848941faeb4ceb0df4756f0"
+    },
+    "evaluation_10": {
+      "path": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/Code/experiments/standard-v1/baselines/shared/eval/test_ood_burst/evaluation.json",
+      "sha256": "9f32ec4b1f03a8e2ef6f03c9e9ca252e107643650b8f3d4f9abe8e5364ae0c0a"
+    },
+    "evaluation_11": {
+      "path": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/Code/experiments/standard-v1/baselines/shared/eval/test_ood_traffic/evaluation.json",
+      "sha256": "b373cb922ad05cf811f509a52de7a8fdb56adc128ac91dcace1994a8de4658c1"
+    },
+    "evaluation_2": {
+      "path": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/Code/experiments/standard-v1/mlp10/11/eval/test_ood_traffic/evaluation.json",
+      "sha256": "f5e6a84f95fa518382ec9e043eeea5c92bf4b81954a86f83ed0a89ea7e495b36"
+    },
+    "evaluation_3": {
+      "path": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/Code/experiments/standard-v1/mlp10/22/eval/test_id/evaluation.json",
+      "sha256": "4b3a3ac05c69148b76cb4a7dfefb17e0c813d776e5c22bbb1ace92f712df0ae0"
+    },
+    "evaluation_4": {
+      "path": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/Code/experiments/standard-v1/mlp10/22/eval/test_ood_burst/evaluation.json",
+      "sha256": "724c594111a21309020a03b563d5f907ee59bc801754aa60940a2dd260e57022"
+    },
+    "evaluation_5": {
+      "path": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/Code/experiments/standard-v1/mlp10/22/eval/test_ood_traffic/evaluation.json",
+      "sha256": "839dc397e57b658075c4d722e158ce4a38dfd432cd32b571725e8ba930444d17"
+    },
+    "evaluation_6": {
+      "path": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/Code/experiments/standard-v1/mlp10/33/eval/test_id/evaluation.json",
+      "sha256": "356f309ececac02443f63d9300ccfff6f84b687c1a8eaacf3dc5e83353604cc3"
+    },
+    "evaluation_7": {
+      "path": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/Code/experiments/standard-v1/mlp10/33/eval/test_ood_burst/evaluation.json",
+      "sha256": "f30a22a72606860ec2875bc6672acafe325c580fb9a473add1ac66cde1248bc3"
+    },
+    "evaluation_8": {
+      "path": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/Code/experiments/standard-v1/mlp10/33/eval/test_ood_traffic/evaluation.json",
+      "sha256": "df9a04ec0e021d75a54b3f95d1825c62ee582ebfa0f32b93a30e48478c68cdcf"
+    },
+    "evaluation_9": {
+      "path": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/Code/experiments/standard-v1/baselines/shared/eval/test_id/evaluation.json",
+      "sha256": "06e906bd5fe1904dae055626d49a026876a1cfe87ae73fecf61b9fb6fc5918a3"
+    },
+    "history_0": {
+      "path": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/Code/experiments/standard-v1/mlp10/11/eval/test_id/training_history.csv",
+      "sha256": "dfa8fd89515b477a7c0e11cdc0fb94967a25aaa0641c90f975561e44406a02c8"
+    },
+    "history_1": {
+      "path": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/Code/experiments/standard-v1/mlp10/22/eval/test_id/training_history.csv",
+      "sha256": "b907778f71ed431d6715c678580f73c9b410946ce8561e7db446d2decb1af8dd"
+    },
+    "history_2": {
+      "path": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/Code/experiments/standard-v1/mlp10/33/eval/test_id/training_history.csv",
+      "sha256": "e2bc3362dbe3dc6ab29b2b12e11895d477a05b9483f5517050e045d9400fc4c6"
+    },
+    "results_0": {
+      "path": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/Code/experiments/standard-v1/mlp10/11/eval/test_id/results.csv",
+      "sha256": "1bf42c50b1998e8aa3418c6899601d0df98b61b7922c02040122b26818ac2ab4"
+    },
+    "results_1": {
+      "path": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/Code/experiments/standard-v1/mlp10/11/eval/test_ood_burst/results.csv",
+      "sha256": "6db635a477b0ea6cfc4ef692e6335785853da98110ff17aa61ee8870ba223a7b"
+    },
+    "results_10": {
+      "path": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/Code/experiments/standard-v1/baselines/shared/eval/test_ood_burst/results.csv",
+      "sha256": "2043056f3c06d0bc19ce159ea6599e715c2ff8a805d3df16a1f005f1dd6d66df"
+    },
+    "results_11": {
+      "path": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/Code/experiments/standard-v1/baselines/shared/eval/test_ood_traffic/results.csv",
+      "sha256": "eb216306170981ebe93da465b4a367a35110af5b9ddbfdf983bf5cdbf66e14ae"
+    },
+    "results_2": {
+      "path": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/Code/experiments/standard-v1/mlp10/11/eval/test_ood_traffic/results.csv",
+      "sha256": "396edf1b93d394331e33eb002c90516c7eba77ca6613aeb1f06d4fc6d5908c05"
+    },
+    "results_3": {
+      "path": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/Code/experiments/standard-v1/mlp10/22/eval/test_id/results.csv",
+      "sha256": "3b633f0695f720d68a70ed04d2f30ae5f2de4031f1d7bf288a455f0724c04b83"
+    },
+    "results_4": {
+      "path": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/Code/experiments/standard-v1/mlp10/22/eval/test_ood_burst/results.csv",
+      "sha256": "23a523144f3b213f8c9a40181fa6bc616e79c7a5653550ef8fbd5693c1d26056"
+    },
+    "results_5": {
+      "path": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/Code/experiments/standard-v1/mlp10/22/eval/test_ood_traffic/results.csv",
+      "sha256": "dd4258103940d59a4dce46cc436f0516f7d899571fccbd6c8dc720bebd4e6aa7"
+    },
+    "results_6": {
+      "path": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/Code/experiments/standard-v1/mlp10/33/eval/test_id/results.csv",
+      "sha256": "52774abdf2144ca0127939940ab9931a71ae32051885274cd6081fcbb7f17372"
+    },
+    "results_7": {
+      "path": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/Code/experiments/standard-v1/mlp10/33/eval/test_ood_burst/results.csv",
+      "sha256": "8e80757743fed4b5f926cd2e4c1012d1174ba85d4f350ebe4622c50fb2f1e86d"
+    },
+    "results_8": {
+      "path": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/Code/experiments/standard-v1/mlp10/33/eval/test_ood_traffic/results.csv",
+      "sha256": "922a74651639eb0ee299d1f6047a39a1e2faea95ddfb520fac03786d4e84cca2"
+    },
+    "results_9": {
+      "path": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/Code/experiments/standard-v1/baselines/shared/eval/test_id/results.csv",
+      "sha256": "3ff9c21dd4b02b7bdf302f163e995ff9258652829d5db673377e1c721ec521d0"
+    }
+  },
+  "summary_rows": 12
+}
