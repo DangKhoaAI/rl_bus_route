@@ -1,0 +1,659 @@
+{
+  "created_at": "2026-10-22T17:16:09.197369+00:00",
+  "data": "manifest.json identifies regenerable scenario tapes; tapes remain local",
+  "evaluation": "Train all registered policies/seeds before evaluating test splits; no test-driven tuning",
+  "git_dirty": true,
+  "git_sha": "90326c0cf6767756b4f2e10021af529c71b4f5c5",
+  "plan": {
+    "base_config_sha256": "50cfd11ab411df5d2cd1ab1a171c9e9dd50a588382820c4ea23675db46787689",
+    "baseline_config_sha256": "55d87107958ebb911ee169645859ab50fa8eab9ffd615907c960e71919d40aab",
+    "config_sha256": {
+      "a2c_apply": "b98c08928583e28bb484e5cdba29a20f8a749aecc60c116222d346c68901ec08",
+      "a2c_free": "5ee0bb69ac0a2cecb874b2bb048e146fb2a7bfaf13ad67a8953e97811c42bf4b",
+      "ppo_apply": "156aafe9c7b453653c97e1046ec4181e583a41aeeffddde35ab4459f4a8a353d",
+      "ppo_free": "3ca2cdaf8afea2ead4e40300599d995cd69c6857358567f07559255b0f42a817",
+      "reinforce_apply": "745491b31c1e2c4d5eb8e471682574cb8a83609f3d13df0f218e53d449703cfe",
+      "reinforce_free": "ad6d83e09298c88d92000711443a2be1408304089af24bfe5b3969fc8c4b2340"
+    },
+    "manifest_sha256": "abecff223150f4fc004f62b30069436f7ea839d999ec5f1c955c1eb884744e61",
+    "schema_version": 1,
+    "source_sha256": {
+      "crates/bus-sim-core/src/actions.rs": "de45ecf22229d661b7e6652a740c5303a8d38eba922dcc3145b6c925df15dd40",
+      "crates/bus-sim-core/src/costs.rs": "14e8c36fa70e0c912fd4dc693a521a3837232d0820ef18ee845c8a91713e6114",
+      "crates/bus-sim-core/src/dispatcher.rs": "bd1ada19346afe13f9164eb474c881161c376618b2c25c8c0b0f25deb8cec6d0",
+      "crates/bus-sim-core/src/domain.rs": "44136c1bcbdc3437083daddacf3e938716e426cded0f514fe7a0a21a53f727dd",
+      "crates/bus-sim-core/src/engine.rs": "1652bd3128b6f6d365800355385cdd3774d867a7a4028ac1ce199117b8184486",
+      "crates/bus-sim-core/src/error.rs": "4a7a0769e84b9b85297c78fe4d80e15d0652283bdc5dcb8bde8b833b9cf46bf6",
+      "crates/bus-sim-core/src/guards.rs": "6d6bf96f043baf616e641802124c0afc9c4a3996723f7de1b870dabf8244aadf",
+      "crates/bus-sim-core/src/lib.rs": "19163544d3e4b97123b2aee20a64d1e8b9286223a19d7e163059d0ba15fba78f",
+      "crates/bus-sim-core/src/observation.rs": "027de5515473646b8aabc87281e20915a9086aa4ce1b7367d6f9977dd16e99e8",
+      "crates/bus-sim-core/src/passengers.rs": "a45570bbe1c9817f2d7150010a6aa1f29b5cafb3ae1e1077d9c5173b2ca48e98",
+      "crates/bus-sim-core/src/snapshot.rs": "a5c90955aba1b1a472947994be86086af41ac5bf2cf7ab3faf461e856f87cbd6",
+      "crates/bus-sim-core/src/travel.rs": "83d6cdc099f3aa8811fbcdfd9f0cfaba47718fc777e2144a96c5500ee4dc7760",
+      "crates/bus-sim-core/src/vehicles.rs": "d1b1ff1b2eac8d30a4396a57bc1a0827820f5c06df5ff2dbc9a9f1fa4c6b2016",
+      "crates/bus-sim-python/src/lib.rs": "1ecbcd5c6c01ac6d81a0cbf413dfc98362bd384ed687c42614016df0922079f7",
+      "src/bus_rl/__init__.py": "8cdacb1b90c306d1c03747f43fd772c5acc8ec74435fa8900c601a58d4382368",
+      "src/bus_rl/artifacts.py": "77bd9ddc79213345144d0b342500d488c3678bada0116fd87cd39109222cde34",
+      "src/bus_rl/cli.py": "b64c1b18359ce6c2d7e9f7ba9536893809f712f92baf4a253f75486024248dc7",
+      "src/bus_rl/config.py": "284c8c8d6fa2cc9522df195f13174bd72422ea8f9e00e9269e0fa43b91fdb1a1",
+      "src/bus_rl/evaluation/__init__.py": "fdc6a24ca0cf16b94028f9019be3663228b575efa029dbbeb6deb40f9bae2af3",
+      "src/bus_rl/evaluation/plots.py": "a4b71f1ed0887f257d030a6a304bcfe6e54493cb400e33b155d556c595e5c601",
+      "src/bus_rl/evaluation/pool.py": "f53cc38e6921bd2d1e57dd9c8b9dac4d469d6ce354a79912dd8505295399f34a",
+      "src/bus_rl/evaluation/profile.py": "3816a09752e2d56078017f3653e9851da3309f044dea142cd91a5fc03c6ee29c",
+      "src/bus_rl/evaluation/report.py": "d5001f19f2e820cdf684e3bdba905f44cf24af39ec7bfe72df8f0a590fc3cad9",
+      "src/bus_rl/evaluation/report_data.py": "1f742f275b5b1077012500a806745de0663a20de4a43a6ad74e2706223bb89ff",
+      "src/bus_rl/evaluation/report_plots.py": "2bc8c504a32757e5e8de689588868f9f57af332298f0373ba439c6017b2bbd6c",
+      "src/bus_rl/evaluation/report_views.py": "7f3620f1003ffbf8d3fd1d5b3a676c71e47d8da83eecceffbc9b025053e220a7",
+      "src/bus_rl/evaluation/runner.py": "26786ff94df00a0960764ac20b6ccbc02721ae33b284907e0780a9cbede3f01f",
+      "src/bus_rl/evaluation/statistics.py": "54a3b8156f8c98cf2ec683220c1f3d7f0bba8023aabe885079940f1054c7b89d",
+      "src/bus_rl/evaluation/summary.py": "46d7d6b88847cccb7517f0978c1724a02862ba36d1f4b76c2248b54569567db1",
+      "src/bus_rl/execution/__init__.py": "42fbf872d9c51c1cd49ecac9474037fc35bcb8f8076acf4c9ccc76a472f14360",
+      "src/bus_rl/execution/environments/__init__.py": "9199c601937c3cc8479505781b79cd34343a5408520ead19d3ade0cd2875fe65",
+      "src/bus_rl/execution/environments/action_execution.py": "b00f9f30b2c316fb54750716aea339e31744949c51e04cfd149b1e9bb6b553f5",
+      "src/bus_rl/execution/environments/arrival_memory.py": "daf6f24380d34f71d45f62f5c80ffae975531535396477a90b2e8caafc1a9cce",
+      "src/bus_rl/execution/environments/factory.py": "64846553d2eacee74e7ca01f898509608eeacd46bbd14c3bffd09f69afc8a5b8",
+      "src/bus_rl/execution/environments/python/__init__.py": "e6a7b83c4c8351a454af07bd88a8361c2e07c430e4f567b827b04c8121e7d127",
+      "src/bus_rl/execution/environments/python/environment.py": "9715df8595e5f138c6de0f350dd87a8b1fb6b2be89d2606ce2219503a9d8e917",
+      "src/bus_rl/execution/environments/rust/__init__.py": "599b7b06738568f6498e25da1378c9093155e3d5ed2e5596d2110cc8ddefaae1",
+      "src/bus_rl/execution/environments/rust/batch.py": "98c7b8326113492563cf5a8a52ec6c37cb08404a6dc4a96f9280f1269409f4a9",
+      "src/bus_rl/execution/environments/rust/bridge.py": "76194fb91240e9f7fa75c68fd310c6d7d266805740f904790a9cdd1a3227cf44",
+      "src/bus_rl/execution/environments/rust/environment.py": "93ac97fa541f6b02e8673c4fad9d2ed3fe1438e4a4261aa8f6700ac4d364796d",
+      "src/bus_rl/execution/runtime.py": "e0edcdfd980f80df92d1c44ddebc1ec8c835c2042c6d7c59e16d8be461c75817",
+      "src/bus_rl/execution/scenarios/__init__.py": "aee8f62a040fdadd8ee248fdc97c95dadfd730e38b16c1a9dacac432fbd604af",
+      "src/bus_rl/execution/scenarios/generation.py": "56057bf03c093e43a5570132650ff469dcc27a36b205fc510eca7f2c41d55252",
+      "src/bus_rl/execution/scenarios/io.py": "35bbbcabb237eb1182e1e45432fa0ec7afe75c9c8bbc36af661bfc5f0d5167cc",
+      "src/bus_rl/execution/timing.py": "ef8474d1211bde13d159f7ed9349fffa969bc8fb7c1f604b63a2e26598c7517d",
+      "src/bus_rl/experiments.py": "bc9600826868b328181f176065f48ed0da290adc4c776b88da3524a3f594d269",
+      "src/bus_rl/learning/__init__.py": "3e7875a7ac3d88a28fe3f5fed50921da330a7a545427115e07d2227a748127ea",
+      "src/bus_rl/learning/baselines/__init__.py": "de5091c9e0f6b69df095c20a8dec278bbb255c30f6b15589cde620438bf970d9",
+      "src/bus_rl/learning/baselines/fixed.py": "a6dced8ffea7388c801d1ea4d1d5b42b2914b877cb1d11981e757d6a698f6197",
+      "src/bus_rl/learning/baselines/proportional.py": "dadb6963f9a5d9de324ce6f33f16ec6b9be09e6b2ab3a210fbb58e3e9fd9f77b",
+      "src/bus_rl/learning/baselines/random.py": "5f5aae77f2a64db7c4f93e8c76fbf63180b5a1619ac849da2f1d10a4573aec15",
+      "src/bus_rl/learning/baselines/threshold.py": "3ab44ef88b3e4ccf48fc5ea19aca794f9f081d49a4eb485a16fae18279594513",
+      "src/bus_rl/learning/forecasting.py": "180054aa49f60162626956712ccf67acd5fa2ce2c30b8785be8be966e3f4f114",
+      "src/bus_rl/learning/policy.py": "b7d22fdd7d65a6e7581345c071df9e44a21f133e823fc41b6349aa931e266ad4",
+      "src/bus_rl/learning/shaping.py": "757632378f72d39df10cfc61eb1cd39e94c09da42507d7e89322b99a6978be31",
+      "src/bus_rl/learning/training/__init__.py": "2f38b59dee4a2388cdcdff281daebb2cc8be18021570eeff2fd70b11f1ad5bfb",
+      "src/bus_rl/learning/training/algorithms.py": "91035a6ed155a6a410303074e33a9640e31992676e89cf097486f4e3830105cc",
+      "src/bus_rl/learning/training/callbacks.py": "e06bea6b162972693981b38e7533ea3b01f4d9cfbca57d84b1cd9cf40dd2e687",
+      "src/bus_rl/learning/training/checkpoint.py": "e73c89857a1900ffac969a710ce7ae71c48c3cea39daf2e484e9b5ee9842cbb8",
+      "src/bus_rl/learning/training/diagnose.py": "d6c7dd6ae9bb427a3aea13a3ae1e7983227a42f1d50459dbeb146f14a2ec6b09",
+      "src/bus_rl/learning/training/diagnostics.py": "5ea99e4d4a3089ad2dbb20063bb3d6ffcda223d117daa1a75cb1be5444aaf3e7",
+      "src/bus_rl/learning/training/train.py": "e32df91119a3a9ef5a659694abc65e9c07173dec47f05dc2c0efc843471ae820",
+      "src/bus_rl/provenance.py": "d2e9933acabe7f8c45d2b859bc38a12caff8852fd95000a31c64a68aafe852f3",
+      "src/bus_sim/__init__.py": "a9f2437a36af71c9f77d72d39b49b6b1fa32c2cd99d8094a6e71271db3b742dd",
+      "src/bus_sim/oracle/__init__.py": "565a9cc5cf8ad5f7c1a2e0588cb3b485428c239132e812658adfe1941d43618e",
+      "src/bus_sim/oracle/actions.py": "ceb1cfbadd5569f320861bc06ab60cc7c3816a103e145033447be96652f72de8",
+      "src/bus_sim/oracle/costs.py": "3c804cf4c66bedd9b95e0b52f799fe6d2d733eef8e0888e80c58da894283c903",
+      "src/bus_sim/oracle/dispatcher.py": "e799544e30bb1f89d8eccf0acedbfe7a2cb4ec5a79ca7ef9e7dd07e617b67fe5",
+      "src/bus_sim/oracle/domain.py": "8f7000aac9d7dc6e2b30987b6acac3c326d5bf9774b201df00b3ca772d6f6b17",
+      "src/bus_sim/oracle/engine.py": "226ac24ef917279d9732f94afffe3980f5b6f1ec766d19b1d6282ce142519044",
+      "src/bus_sim/oracle/guards.py": "561f8ae26968441d22eff11dd57773ef626610f4188a585598aa4716fbd5d8aa",
+      "src/bus_sim/oracle/observation.py": "66483a80dcfd3b167c0139411ae11ad660ed4eb136c079440278254682d55da4",
+      "src/bus_sim/oracle/passengers.py": "a538a11bef18feac05b32673ddf11d42b7bf37b4ef57fd7a14d6442d63ae52e6",
+      "src/bus_sim/oracle/travel.py": "e0c7d71109220f3b0a82bf3cebbfbb730a80cae8a6df68d93b1e277b0df3e9f8",
+      "src/bus_sim/oracle/vehicles.py": "f01e597b2bd71c87665346dddb3eb971d4c024f2c25751246abc5d3b6b5a8638",
+      "src/bus_sim/parity/__init__.py": "78099c36f06e620a701cd103c8f904dfc00735bf2b5b2f30370be90bdd3ef155",
+      "src/bus_sim/parity/controllers.py": "f2abd1ad321d00746040eedfc77b0f47e90ce3846a16ae26b53d591a35751d16",
+      "src/bus_sim/parity/scenarios.py": "98188c4201398d4668108272ac2f38ca5f659417bf00f57b261d927ecfe03f5f",
+      "src/bus_sim/parity/snapshot.py": "251122a2e2fc001f303524497613be96411e66fb93e062a9deedba622d992c6f",
+      "src/bus_sim_native.so": "d6bf15516113dff6de9d6332deb98d2f5e9eee047cb916ec8f1b131193462eea",
+      "uv.lock": "5ed56349910166b5fe6232c3d79c8421c6714e8cc8504cc5ac785d68f4ddb530"
+    },
+    "spec": {
+      "baseline_config": "configs/studies/baselines.toml",
+      "baselines": [
+        "fixed",
+        "proportional",
+        "threshold"
+      ],
+      "counts": {
+        "test_id": 200,
+        "test_ood_burst": 200,
+        "test_ood_traffic": 200,
+        "train": 500,
+        "validation": 100
+      },
+      "jobs": 3,
+      "name": "standard-v1-masking",
+      "policies": {
+        "a2c_apply": "configs/studies/masking/a2c-apply.toml",
+        "a2c_free": "configs/studies/masking/a2c-free.toml",
+        "ppo_apply": "configs/studies/masking/ppo-apply.toml",
+        "ppo_free": "configs/studies/masking/ppo-free.toml",
+        "reinforce_apply": "configs/studies/masking/reinforce-apply.toml",
+        "reinforce_free": "configs/studies/masking/reinforce-free.toml"
+      },
+      "schema_version": 1,
+      "seeds": [
+        11,
+        22,
+        33
+      ],
+      "splits": [
+        "test_id",
+        "test_ood_burst",
+        "test_ood_traffic"
+      ]
+    }
+  },
+  "resolved_configs": {
+    "a2c_apply": {
+      "action_execution": {
+        "invalid_action": "noop"
+      },
+      "algorithm": {
+        "batch_size": 256,
+        "belief_decay": 1.0,
+        "belief_prior_rate": 1.0,
+        "belief_prior_shape": 1.0,
+        "clip_range": 0.2,
+        "device": "cpu",
+        "diagnostics_enabled": false,
+        "diagnostics_interval": 256,
+        "encoder": "gru",
+        "ent_coef": 0.01,
+        "eval_freq": 12288,
+        "gae_lambda": 0.95,
+        "gamma": 1.0,
+        "history_minutes": 10,
+        "learning_rate": 0.0003,
+        "mask_mode": "apply",
+        "max_grad_norm": 0.5,
+        "n_envs": 4,
+        "n_epochs": 4,
+        "n_steps": 256,
+        "name": "a2c",
+        "seed": 11,
+        "target_kl": null,
+        "torch_threads": 2,
+        "total_timesteps": 245760,
+        "validation_timing": "post_update",
+        "vf_coef": 0.5
+      },
+      "control": {
+        "enable_reassign": true,
+        "enable_short_turn": true
+      },
+      "forecast": {
+        "enabled": false
+      },
+      "physical": {
+        "capacity": 40,
+        "comfort_capacity": 30,
+        "control_interval_s": 120,
+        "demand_end_s": 10800,
+        "dwell_s": 30,
+        "fleet_size": 12,
+        "horizon_s": 14400,
+        "layover_s": 120,
+        "patience_s": 2700,
+        "route_count": 3,
+        "schema_version": 2,
+        "stops_per_route": 6,
+        "tick_s": 30,
+        "traffic_bucket_s": 300
+      },
+      "reward": {
+        "abandoned": 60.0,
+        "active": 0.5,
+        "crowding": 0.5,
+        "deadhead": 0.5,
+        "fairness": 1.0,
+        "first_denied": 5.0,
+        "mission": 2.0,
+        "n_ref": 3000.0,
+        "onboard": 0.25,
+        "unfinished": 60.0,
+        "waiting": 1.0
+      },
+      "runtime": {
+        "backend": "rust",
+        "eval_batch_size": 16,
+        "legacy_python": false,
+        "native_batch": true,
+        "reuse_eval_pool": true,
+        "validate_distributions": false,
+        "validate_observation": true
+      },
+      "shaping": {
+        "enabled": false,
+        "excess_weight": 5.0,
+        "n_ref": 3000.0,
+        "queue_weight": 2.0
+      },
+      "source": "configs/studies/masking/a2c-apply.toml"
+    },
+    "a2c_free": {
+      "action_execution": {
+        "invalid_action": "noop"
+      },
+      "algorithm": {
+        "batch_size": 256,
+        "belief_decay": 1.0,
+        "belief_prior_rate": 1.0,
+        "belief_prior_shape": 1.0,
+        "clip_range": 0.2,
+        "device": "cpu",
+        "diagnostics_enabled": false,
+        "diagnostics_interval": 256,
+        "encoder": "gru",
+        "ent_coef": 0.01,
+        "eval_freq": 12288,
+        "gae_lambda": 0.95,
+        "gamma": 1.0,
+        "history_minutes": 10,
+        "learning_rate": 0.0003,
+        "mask_mode": "free",
+        "max_grad_norm": 0.5,
+        "n_envs": 4,
+        "n_epochs": 4,
+        "n_steps": 256,
+        "name": "a2c",
+        "seed": 11,
+        "target_kl": null,
+        "torch_threads": 2,
+        "total_timesteps": 245760,
+        "validation_timing": "post_update",
+        "vf_coef": 0.5
+      },
+      "control": {
+        "enable_reassign": true,
+        "enable_short_turn": true
+      },
+      "forecast": {
+        "enabled": false
+      },
+      "physical": {
+        "capacity": 40,
+        "comfort_capacity": 30,
+        "control_interval_s": 120,
+        "demand_end_s": 10800,
+        "dwell_s": 30,
+        "fleet_size": 12,
+        "horizon_s": 14400,
+        "layover_s": 120,
+        "patience_s": 2700,
+        "route_count": 3,
+        "schema_version": 2,
+        "stops_per_route": 6,
+        "tick_s": 30,
+        "traffic_bucket_s": 300
+      },
+      "reward": {
+        "abandoned": 60.0,
+        "active": 0.5,
+        "crowding": 0.5,
+        "deadhead": 0.5,
+        "fairness": 1.0,
+        "first_denied": 5.0,
+        "mission": 2.0,
+        "n_ref": 3000.0,
+        "onboard": 0.25,
+        "unfinished": 60.0,
+        "waiting": 1.0
+      },
+      "runtime": {
+        "backend": "rust",
+        "eval_batch_size": 16,
+        "legacy_python": false,
+        "native_batch": true,
+        "reuse_eval_pool": true,
+        "validate_distributions": false,
+        "validate_observation": true
+      },
+      "shaping": {
+        "enabled": false,
+        "excess_weight": 5.0,
+        "n_ref": 3000.0,
+        "queue_weight": 2.0
+      },
+      "source": "configs/studies/masking/a2c-free.toml"
+    },
+    "ppo_apply": {
+      "action_execution": {
+        "invalid_action": "noop"
+      },
+      "algorithm": {
+        "batch_size": 256,
+        "belief_decay": 1.0,
+        "belief_prior_rate": 1.0,
+        "belief_prior_shape": 1.0,
+        "clip_range": 0.2,
+        "device": "cpu",
+        "diagnostics_enabled": false,
+        "diagnostics_interval": 256,
+        "encoder": "gru",
+        "ent_coef": 0.01,
+        "eval_freq": 12288,
+        "gae_lambda": 0.95,
+        "gamma": 1.0,
+        "history_minutes": 10,
+        "learning_rate": 0.0003,
+        "mask_mode": "apply",
+        "max_grad_norm": 0.5,
+        "n_envs": 4,
+        "n_epochs": 4,
+        "n_steps": 256,
+        "name": "ppo",
+        "seed": 11,
+        "target_kl": null,
+        "torch_threads": 2,
+        "total_timesteps": 245760,
+        "validation_timing": "post_update",
+        "vf_coef": 0.5
+      },
+      "control": {
+        "enable_reassign": true,
+        "enable_short_turn": true
+      },
+      "forecast": {
+        "enabled": false
+      },
+      "physical": {
+        "capacity": 40,
+        "comfort_capacity": 30,
+        "control_interval_s": 120,
+        "demand_end_s": 10800,
+        "dwell_s": 30,
+        "fleet_size": 12,
+        "horizon_s": 14400,
+        "layover_s": 120,
+        "patience_s": 2700,
+        "route_count": 3,
+        "schema_version": 2,
+        "stops_per_route": 6,
+        "tick_s": 30,
+        "traffic_bucket_s": 300
+      },
+      "reward": {
+        "abandoned": 60.0,
+        "active": 0.5,
+        "crowding": 0.5,
+        "deadhead": 0.5,
+        "fairness": 1.0,
+        "first_denied": 5.0,
+        "mission": 2.0,
+        "n_ref": 3000.0,
+        "onboard": 0.25,
+        "unfinished": 60.0,
+        "waiting": 1.0
+      },
+      "runtime": {
+        "backend": "rust",
+        "eval_batch_size": 16,
+        "legacy_python": false,
+        "native_batch": true,
+        "reuse_eval_pool": true,
+        "validate_distributions": false,
+        "validate_observation": true
+      },
+      "shaping": {
+        "enabled": false,
+        "excess_weight": 5.0,
+        "n_ref": 3000.0,
+        "queue_weight": 2.0
+      },
+      "source": "configs/studies/masking/ppo-apply.toml"
+    },
+    "ppo_free": {
+      "action_execution": {
+        "invalid_action": "noop"
+      },
+      "algorithm": {
+        "batch_size": 256,
+        "belief_decay": 1.0,
+        "belief_prior_rate": 1.0,
+        "belief_prior_shape": 1.0,
+        "clip_range": 0.2,
+        "device": "cpu",
+        "diagnostics_enabled": false,
+        "diagnostics_interval": 256,
+        "encoder": "gru",
+        "ent_coef": 0.01,
+        "eval_freq": 12288,
+        "gae_lambda": 0.95,
+        "gamma": 1.0,
+        "history_minutes": 10,
+        "learning_rate": 0.0003,
+        "mask_mode": "free",
+        "max_grad_norm": 0.5,
+        "n_envs": 4,
+        "n_epochs": 4,
+        "n_steps": 256,
+        "name": "ppo",
+        "seed": 11,
+        "target_kl": null,
+        "torch_threads": 2,
+        "total_timesteps": 245760,
+        "validation_timing": "post_update",
+        "vf_coef": 0.5
+      },
+      "control": {
+        "enable_reassign": true,
+        "enable_short_turn": true
+      },
+      "forecast": {
+        "enabled": false
+      },
+      "physical": {
+        "capacity": 40,
+        "comfort_capacity": 30,
+        "control_interval_s": 120,
+        "demand_end_s": 10800,
+        "dwell_s": 30,
+        "fleet_size": 12,
+        "horizon_s": 14400,
+        "layover_s": 120,
+        "patience_s": 2700,
+        "route_count": 3,
+        "schema_version": 2,
+        "stops_per_route": 6,
+        "tick_s": 30,
+        "traffic_bucket_s": 300
+      },
+      "reward": {
+        "abandoned": 60.0,
+        "active": 0.5,
+        "crowding": 0.5,
+        "deadhead": 0.5,
+        "fairness": 1.0,
+        "first_denied": 5.0,
+        "mission": 2.0,
+        "n_ref": 3000.0,
+        "onboard": 0.25,
+        "unfinished": 60.0,
+        "waiting": 1.0
+      },
+      "runtime": {
+        "backend": "rust",
+        "eval_batch_size": 16,
+        "legacy_python": false,
+        "native_batch": true,
+        "reuse_eval_pool": true,
+        "validate_distributions": false,
+        "validate_observation": true
+      },
+      "shaping": {
+        "enabled": false,
+        "excess_weight": 5.0,
+        "n_ref": 3000.0,
+        "queue_weight": 2.0
+      },
+      "source": "configs/studies/masking/ppo-free.toml"
+    },
+    "reinforce_apply": {
+      "action_execution": {
+        "invalid_action": "noop"
+      },
+      "algorithm": {
+        "batch_size": 256,
+        "belief_decay": 1.0,
+        "belief_prior_rate": 1.0,
+        "belief_prior_shape": 1.0,
+        "clip_range": 0.2,
+        "device": "cpu",
+        "diagnostics_enabled": false,
+        "diagnostics_interval": 256,
+        "encoder": "gru",
+        "ent_coef": 0.01,
+        "eval_freq": 12288,
+        "gae_lambda": 0.95,
+        "gamma": 1.0,
+        "history_minutes": 10,
+        "learning_rate": 0.0003,
+        "mask_mode": "apply",
+        "max_grad_norm": 0.5,
+        "n_envs": 4,
+        "n_epochs": 4,
+        "n_steps": 256,
+        "name": "reinforce",
+        "seed": 11,
+        "target_kl": null,
+        "torch_threads": 2,
+        "total_timesteps": 245760,
+        "validation_timing": "post_update",
+        "vf_coef": 0.5
+      },
+      "control": {
+        "enable_reassign": true,
+        "enable_short_turn": true
+      },
+      "forecast": {
+        "enabled": false
+      },
+      "physical": {
+        "capacity": 40,
+        "comfort_capacity": 30,
+        "control_interval_s": 120,
+        "demand_end_s": 10800,
+        "dwell_s": 30,
+        "fleet_size": 12,
+        "horizon_s": 14400,
+        "layover_s": 120,
+        "patience_s": 2700,
+        "route_count": 3,
+        "schema_version": 2,
+        "stops_per_route": 6,
+        "tick_s": 30,
+        "traffic_bucket_s": 300
+      },
+      "reward": {
+        "abandoned": 60.0,
+        "active": 0.5,
+        "crowding": 0.5,
+        "deadhead": 0.5,
+        "fairness": 1.0,
+        "first_denied": 5.0,
+        "mission": 2.0,
+        "n_ref": 3000.0,
+        "onboard": 0.25,
+        "unfinished": 60.0,
+        "waiting": 1.0
+      },
+      "runtime": {
+        "backend": "rust",
+        "eval_batch_size": 16,
+        "legacy_python": false,
+        "native_batch": true,
+        "reuse_eval_pool": true,
+        "validate_distributions": false,
+        "validate_observation": true
+      },
+      "shaping": {
+        "enabled": false,
+        "excess_weight": 5.0,
+        "n_ref": 3000.0,
+        "queue_weight": 2.0
+      },
+      "source": "configs/studies/masking/reinforce-apply.toml"
+    },
+    "reinforce_free": {
+      "action_execution": {
+        "invalid_action": "noop"
+      },
+      "algorithm": {
+        "batch_size": 256,
+        "belief_decay": 1.0,
+        "belief_prior_rate": 1.0,
+        "belief_prior_shape": 1.0,
+        "clip_range": 0.2,
+        "device": "cpu",
+        "diagnostics_enabled": false,
+        "diagnostics_interval": 256,
+        "encoder": "gru",
+        "ent_coef": 0.01,
+        "eval_freq": 12288,
+        "gae_lambda": 0.95,
+        "gamma": 1.0,
+        "history_minutes": 10,
+        "learning_rate": 0.0003,
+        "mask_mode": "free",
+        "max_grad_norm": 0.5,
+        "n_envs": 4,
+        "n_epochs": 4,
+        "n_steps": 256,
+        "name": "reinforce",
+        "seed": 11,
+        "target_kl": null,
+        "torch_threads": 2,
+        "total_timesteps": 245760,
+        "validation_timing": "post_update",
+        "vf_coef": 0.5
+      },
+      "control": {
+        "enable_reassign": true,
+        "enable_short_turn": true
+      },
+      "forecast": {
+        "enabled": false
+      },
+      "physical": {
+        "capacity": 40,
+        "comfort_capacity": 30,
+        "control_interval_s": 120,
+        "demand_end_s": 10800,
+        "dwell_s": 30,
+        "fleet_size": 12,
+        "horizon_s": 14400,
+        "layover_s": 120,
+        "patience_s": 2700,
+        "route_count": 3,
+        "schema_version": 2,
+        "stops_per_route": 6,
+        "tick_s": 30,
+        "traffic_bucket_s": 300
+      },
+      "reward": {
+        "abandoned": 60.0,
+        "active": 0.5,
+        "crowding": 0.5,
+        "deadhead": 0.5,
+        "fairness": 1.0,
+        "first_denied": 5.0,
+        "mission": 2.0,
+        "n_ref": 3000.0,
+        "onboard": 0.25,
+        "unfinished": 60.0,
+        "waiting": 1.0
+      },
+      "runtime": {
+        "backend": "rust",
+        "eval_batch_size": 16,
+        "legacy_python": false,
+        "native_batch": true,
+        "reuse_eval_pool": true,
+        "validate_distributions": false,
+        "validate_observation": true
+      },
+      "shaping": {
+        "enabled": false,
+        "excess_weight": 5.0,
+        "n_ref": 3000.0,
+        "queue_weight": 2.0
+      },
+      "source": "configs/studies/masking/reinforce-free.toml"
+    }
+  },
+  "selection": "Minimum post-training validation cost; earliest tie; step zero is reference only"
+}

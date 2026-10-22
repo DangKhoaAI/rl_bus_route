@@ -1,9 +1,9 @@
 # Bổ sung REINFORCE có mask và A2C có mask
 
-Ngày: **2026-10-23**. Trạng thái: **spec đã chốt để triển khai trước**.
+Ngày: **2026-10-23**. Trạng thái: **đã triển khai và chạy xác nhận standard-v1**.
 
 Spec này thêm hai thuật toán để so với MaskablePPO hiện tại.
-[masking_ablation.md](masking_ablation.md) là phần mở rộng triển khai sau.
+[masking_ablation.md](masking_ablation.md) là phần mở rộng được triển khai sau phần nền này.
 Không cần triển khai spec thứ hai để nghiệm thu spec này.
 
 ## 1. Mục tiêu và phạm vi
@@ -21,9 +21,11 @@ Giữ nguyên tuyến, fleet, scenarios, dynamics, reward, horizon, 221 action,
 guards và observation contract. Rust kernel vẫn từ chối action sai. Mọi
 thuật toán áp mask khi thu dữ liệu, cập nhật và đánh giá.
 
-Trong giai đoạn đầu chưa triển khai mask-free, đổi action sai thành NOOP, penalty mới,
-REINFORCE có learned baseline hoặc persistent recurrent policy. Không sửa
-evidence đã đóng băng trong `reports/` và `runs/`.
+Phạm vi nền này không gồm mask-free, đổi action sai thành NOOP, penalty mới,
+REINFORCE có learned baseline hoặc persistent recurrent policy. Phần mask-free
+thuộc spec mở rộng. Evidence lịch sử trong `reports/` giữ nguyên; kết quả mới
+được bổ sung vào `runs/standard-v1` theo yêu cầu chạy xác nhận, giữ nguyên mọi
+file evidence gốc.
 
 ## 2. Hiện trạng và thiết kế tích hợp
 
@@ -237,7 +239,7 @@ ghi step thực tế, không giả định các thuật toán cập nhật ở c
 Lưu tối thiểu:
 
 ```text
-learning_schema_version = 1
+learning_schema_version = 2
 algorithm.name, mask_mode=apply, trainer_class, trainer_version
 encoder, history_minutes, critic_used, optimizer, effective hyperparameters
 rollout_steps, completed_episodes, optimizer_steps
@@ -249,6 +251,8 @@ physical/control/reward/obs/action hashes, dataset identity, seeds
 Checkpoint cũ thiếu algorithm.name được nhận diện PPO + apply. Giữ
 schema/physical checks và legacy import mapping. Checkpoint mới load đúng
 trainer; class không biết phải báo lỗi thay vì load nhầm thành PPO.
+Schema 2 được dùng chung với execution metadata của phần mở rộng masking;
+checkpoint cũ thiếu section này vẫn khôi phục apply/error.
 
 ### 6.3 Evaluator và diagnostics
 
@@ -314,9 +318,19 @@ CLI/report tương ứng. Dùng env Rust, không thêm test cho oracle deprecate
 Chạy Ruff và full pytest theo AGENT.md khi triển khai. Nếu không sửa
 Rust/FFI thì không cần đổi kernel chỉ để thêm trainer.
 
-Hoàn thành khi pipeline ba arm và các kiểm tra đạt, có smoke artifacts
-kiểm chứng được. Spec này chưa phải bằng chứng trainer đã được triển khai
-hoặc thí nghiệm đã chạy.
+Pipeline ba arm, kiểm tra toán học, checkpoint round-trip và scalar/native
+parity đã đạt. Đã chạy screening 61.440 transitions cho từng arm seed 11,
+sau đó chạy đầy đủ 245.760 transitions với seeds 11/22/33 trong ma trận A/B.
+Không thay hyperparameter sau screening.
+
+Evidence có mask tương ứng tại
+[`runs/standard-v1/evidence/reinforce/apply`](../../runs/standard-v1/evidence/reinforce/apply),
+[`a2c/apply`](../../runs/standard-v1/evidence/a2c/apply) và
+[`ppo/apply`](../../runs/standard-v1/evidence/ppo/apply).
+Mỗi seed có metadata/lịch sử validation và 200 ngày cho từng split test.
+[`report.html`](../../runs/standard-v1/report.html) phần III so sánh trực tiếp
+ba thuật toán với PPO control được train lại; không dùng PPO snapshot cũ
+để kết luận hiệu quả thuật toán.
 
 ## 9. Nguồn đối chiếu
 

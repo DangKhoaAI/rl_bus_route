@@ -1,6 +1,7 @@
 # A/B action masking: apply và free
 
-Ngày: **2026-10-22**. Trạng thái: **thiết kế đã chốt, triển khai sau**.
+Ngày thiết kế: **2026-10-22**. Cập nhật: **2026-10-23**.
+Trạng thái: **đã triển khai, chạy đủ 18 lần train và xuất evidence**.
 
 Phụ thuộc [masked_algorithm_comparison.md](masked_algorithm_comparison.md).
 Spec trước phải hoàn thành pipeline REINFORCE/A2C/PPO có mask trước khi
@@ -309,6 +310,59 @@ apply cho free vì cùng algorithm name.
 Hoàn thành khi hai mode chạy xuyên suốt ba trainer, CLI/checkpoint/report
 không trộn nhãn và các kiểm tra đạt. Chạy Ruff/full pytest; nếu thay Rust
 hoặc FFI ngoài thiết kế adapter này thì phải thêm gates theo AGENT.md.
+
+### 8.1 Kết quả nghiệm thu
+
+- Triển khai thuật toán nền: commit `926d254`; apply/free và NOOP adapter:
+  commit `90326c0`. Rust kernel/FFI không đổi.
+- Chạy đủ REINFORCE/A2C/PPO × apply/free × seeds 11/22/33; mỗi lần train
+  245.760 transitions, 2.048 episode. Dùng manifest của standard-v1:
+  train 500 ngày, validation 100 ngày và 200 ngày cho từng split test.
+- Protocol lưu mã nguồn/hashes thực sự dùng khi chạy tại commit `90326c0`.
+  Các sửa sau lần chạy chỉ bổ sung kiểm tra cấu hình REINFORCE không hợp lệ,
+  diagnostics opt-in và công cụ báo cáo; preset xác nhận tắt diagnostics.
+- Giữ nguyên byte của evidence cũ. Evidence mới chia một thư mục/thuật toán:
+  [`reinforce`](../../runs/standard-v1/evidence/reinforce),
+  [`a2c`](../../runs/standard-v1/evidence/a2c),
+  [`ppo`](../../runs/standard-v1/evidence/ppo); bên trong là mode/seed/train,eval.
+- Config, protocol, screening và bảng tổng hợp mới nằm tại
+  [`evidence/extensions/masking`](../../runs/standard-v1/evidence/extensions/masking).
+  Không thay bảng tổng hợp của snapshot gốc.
+- Trace cố định seed 11, test_id, ca index 0 cho cả sáu nhánh được lưu trong
+  `eval/test_id/decisions.csv` và sidecar JSON. Đã chạy lại 200 ngày test_id
+  mỗi nhánh để xác nhận chính xác cost, mean/P95 wait và invalid rate.
+- Báo cáo chung cập nhật phần III trong
+  [`report.html`](../../runs/standard-v1/report.html), kèm Markdown/PDF.
+  Có paired CI, seed spread, chỉ số phục vụ, request sai, NOOP và thời gian chạy.
+- Ruff check/format đạt; full pytest: **120 passed, 53 skipped**. Tests có
+  return/GAE tính tay, optimizer-step count, diagnostics cả hai mode,
+  invalid→NOOP qua đủ 120 bước, buffer giữ requested action, checkpoint
+  round-trip và scalar/native parity. CLI smoke train/evaluate free đạt;
+  checkpoint PPO lịch sử tái lập chính xác các chỉ số phục vụ/cost trên
+  200 ngày test_id so với evidence cũ.
+- Artifact verify đạt **356 file, 9,1 MiB**; **116 file evidence gốc** giữ
+  nguyên checksum. HTML kiểm tra desktop/mobile; các trang PDF bổ sung
+  đã render để kiểm tra bố cục.
+
+Lệnh tái lập từ root repo, sau khi dựng native extension và có dataset:
+
+```bash
+uv run bus-rl experiment run \
+  --config configs/studies/masking-ablation.toml \
+  --manifest data/generated/base/manifest.json \
+  --output experiments/standard-v1-masking
+
+uv run python scripts/capture_masking_decisions.py \
+  --source experiments/standard-v1-masking
+
+uv run bus-rl artifact verify --path runs/standard-v1
+uv run --with reportlab python scripts/build_study_report.py --study runs/standard-v1
+```
+
+`experiment run` yêu cầu output mới; thư mục local hiện có được giữ để tải
+checkpoint. Công cụ import lần đầu là `scripts/extend_standard_study.py`,
+nhận `--study`, `--source`, `--screening`; nó từ chối chồng lần nữa lên
+extension đã tồn tại và giữ bundle cũ trong `/tmp` trước khi thay thế.
 
 ## 9. Nguồn đối chiếu
 

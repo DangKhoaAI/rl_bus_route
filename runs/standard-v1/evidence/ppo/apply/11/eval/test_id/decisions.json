@@ -1,0 +1,11 @@
+{
+  "algorithm": "ppo",
+  "checkpoint_sha256": "3f24b81e758b06da2cedf627175a50588695cecb1e68f6757c8bce3c122a832d",
+  "decisions_sha256": "d1acf28b8576f081ccfca90f3165c1ad4fe7efb8443af3b8dd5471e782e527ae",
+  "mask_mode": "apply",
+  "repeated_200_day_evaluation_matches": true,
+  "scenario_hash": "f4e25517e5992fea6eaa1deb262321d9f6310bc703d3a3001954c7c46c71a78f",
+  "scenario_seed": 5874776132901884234,
+  "selection": "seed 11, test_id, manifest scenario index 0; fixed for all six arms",
+  "steps": 120
+}
