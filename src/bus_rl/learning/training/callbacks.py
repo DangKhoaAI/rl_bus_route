@@ -126,7 +126,8 @@ class BestValidationCallback(BaseCallback):
 
     def finalize(self) -> None:
         final_update_missing = (
-            self.run.algorithm.validation_timing == "post_update"
+            bool(self.history)
+            and self.run.algorithm.validation_timing == "post_update"
             and self.history[-1].get("optimizer_steps") != getattr(self.model, "optimizer_steps", 0)
         )
         if (

@@ -74,6 +74,15 @@ class AlgorithmConfig:
 
 
 @dataclass(frozen=True)
+class ActionExecutionConfig:
+    invalid_action: str = "error"
+
+    def __post_init__(self):
+        if self.invalid_action not in {"error", "noop"}:
+            raise ValueError("action_execution.invalid_action must be error or noop")
+
+
+@dataclass(frozen=True)
 class ForecastConfig:
     enabled: bool = False
 
@@ -171,6 +180,25 @@ class RunConfig:
     runtime: RuntimeConfig = field(default_factory=RuntimeConfig)
     shaping: ShapingConfig = field(default_factory=ShapingConfig)
 
+    action_execution: ActionExecutionConfig = field(default_factory=ActionExecutionConfig)
+
+    def __post_init__(self):
+        if self.algorithm.mask_mode == "free" and self.action_execution.invalid_action != "noop":
+            raise ValueError("mask-free requires action_execution.invalid_action=noop")
+        if self.algorithm.mask_mode == "free" and self.runtime.backend != "rust":
+            raise ValueError("mask-free requires the maintained Rust backend")
+
+    @property
+    def action_execution_hash(self):
+        return canonical_hash(
+            {
+                **asdict(self.action_execution),
+                "version": 1,
+                "invalid_penalty": 0,
+                "advance_interval": True,
+            }
+        )
+
     @property
     def arrival_memory_bins(self) -> int:
         # Keep the native five-bin contract unless extended memory is requested.
@@ -211,6 +239,8 @@ def _deep_merge(base: dict, override: dict) -> dict:
 
 def _from_section(cls, payload: dict):
     allowed = {item.name for item in fields(cls)}
+    if cls is AlgorithmConfig and (unknown := set(payload) - allowed):
+        raise ValueError(f"unknown algorithm configuration fields: {sorted(unknown)}")
     return cls(**{key: value for key, value in payload.items() if key in allowed})
 
 
@@ -225,6 +255,7 @@ def load_run_config(path: Path, project_root: Path | None = None) -> RunConfig:
     physical_payload = merged.get("physical", {})
     return RunConfig(
         physical=_from_section(SimConfig, physical_payload),
+        action_execution=_from_section(ActionExecutionConfig, merged.get("action_execution", {})),
         control=_from_section(ControlConfig, merged.get("control", {})),
         reward=_from_section(RewardConfig, merged.get("reward", {})),
         algorithm=_from_section(AlgorithmConfig, merged.get("algorithm", {})),

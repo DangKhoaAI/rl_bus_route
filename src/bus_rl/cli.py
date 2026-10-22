@@ -9,7 +9,7 @@ from dataclasses import replace
 from pathlib import Path
 from time import perf_counter
 
-from bus_rl.config import ControlConfig, load_run_config, parse_counts
+from bus_rl.config import ActionExecutionConfig, ControlConfig, load_run_config, parse_counts
 from bus_rl.execution.scenarios.generation import generate_manifest
 from bus_rl.execution.scenarios.io import load_manifest, load_split, save_manifest
 from bus_rl.provenance import physical_config_hash, require_fresh_output
@@ -30,6 +30,7 @@ def _run_config(args) -> object:
             "belief_decay",
         )
         if (value := getattr(args, name, None)) is not None
+        and not (name == "mask_mode" and getattr(args, "checkpoint", None))
     }
     if algorithm_updates:
         run = replace(run, algorithm=replace(run.algorithm, **algorithm_updates))
@@ -230,6 +231,9 @@ def cmd_evaluate(args) -> None:
         metadata = load_metadata(Path(args.checkpoint))
         run = replace(
             run,
+            action_execution=ActionExecutionConfig(
+                invalid_action=metadata.get("action_execution", {}).get("invalid_action", "error")
+            ),
             control=ControlConfig(**metadata["control"]),
             reward=_reward_from_metadata(metadata["reward"]),
             forecast=replace(run.forecast, enabled=bool(metadata.get("forecast_enabled"))),
@@ -253,6 +257,8 @@ def cmd_evaluate(args) -> None:
         model, metadata = load_model(
             Path(args.checkpoint), env, run.physical, backend=run.runtime.backend
         )
+        if args.mask_mode is not None and args.mask_mode != run.algorithm.mask_mode:
+            raise ValueError("explicit mask mode conflicts with checkpoint")
         model_seed = metadata.get("seed", model_seed)
         method = learned_method(run.algorithm.name, run.algorithm.mask_mode)
         if args.method is not None and args.method not in {
@@ -458,6 +464,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_runtime_flags(train)
     _add_encoder_flags(train)
     train.add_argument("--algo", choices=("ppo", "a2c", "reinforce"), dest="name")
+    train.add_argument("--mask-mode", choices=("apply", "free"), dest="mask_mode")
     train.set_defaults(func=cmd_train)
 
     diagnose = test_actions.add_parser("diagnose", help="diagnose training and evaluation timings")
@@ -477,6 +484,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_runtime_flags(diagnose)
     _add_encoder_flags(diagnose)
     diagnose.add_argument("--algo", choices=("ppo", "a2c", "reinforce"), dest="name")
+    diagnose.add_argument("--mask-mode", choices=("apply", "free"), dest="mask_mode")
     diagnose.set_defaults(func=cmd_diagnose)
 
     evaluate = model_actions.add_parser("evaluate", help="evaluate a saved checkpoint")
@@ -496,6 +504,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     evaluate.add_argument("--torch-threads", type=int, dest="torch_threads")
     _add_runtime_flags(evaluate)
+    evaluate.add_argument("--mask-mode", choices=("apply", "free"), dest="mask_mode")
     evaluate.set_defaults(func=cmd_evaluate)
 
     report = report_actions.add_parser(

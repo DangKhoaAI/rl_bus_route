@@ -15,6 +15,7 @@ import numpy as np
 
 from bus_rl.config import RunConfig
 from bus_rl.evaluation.summary import from_native_payload
+from bus_rl.execution.environments.action_execution import execute_requests
 from bus_rl.execution.environments.rust.bridge import shared_store
 from bus_rl.execution.timing import TIMERS
 from bus_sim.oracle.costs import RewardConfig
@@ -60,6 +61,8 @@ class NativeBusDispatchEnv(gym.Env):
         scenario_store=None,
         validate=True,
         arrival_memory_bins=5,
+        invalid_action="error",
+        mask_mode="apply",
     ):
         applied = tuple(scenarios)
         if control is not None:
@@ -74,6 +77,8 @@ class NativeBusDispatchEnv(gym.Env):
         if not applied:
             raise ValueError("at least one scenario is required")
         self.scenarios, self.config = applied, config
+        self.invalid_action, self.mask_mode = invalid_action, mask_mode
+        self.last_action_info = None
         self.forecaster = forecaster
         self.reward = reward or RewardConfig()
         self.action_space = gym.spaces.Discrete(221)
@@ -130,6 +135,7 @@ class NativeBusDispatchEnv(gym.Env):
         index = (options or {}).get(
             "scenario_index", int(self.np_random.integers(len(self.scenarios)))
         )
+        self.last_action_info = None
         self._scenario_index = index
         self.scenario = self.scenarios[index]
         self.kernel = self._scenario_store.kernel(index, reward=self.reward)
@@ -146,7 +152,15 @@ class NativeBusDispatchEnv(gym.Env):
 
     def step(self, action_index):
         with TIMERS.span("env.step"):
-            result = self.kernel.step_contract(int(action_index))
+            feasibility_mask = self.action_masks()
+            actions, info = execute_requests(
+                np.asarray([action_index]),
+                feasibility_mask[None],
+                invalid_action=self.invalid_action,
+                mask_mode=self.mask_mode,
+            )
+            result = self.kernel.step_contract(int(actions[0]))
+            self.last_action_info = info[0]
             self._mask = np.asarray(result["mask"], dtype=bool)
             observation = self._observation(result["obs"])
             costs = _step_costs(result["costs"])
@@ -155,7 +169,11 @@ class NativeBusDispatchEnv(gym.Env):
             float(result["reward"]),
             bool(result["terminated"]),
             bool(result["truncated"]),
-            {"costs": costs},
+            {
+                "costs": costs,
+                "action_execution": self.last_action_info,
+                "feasibility_mask": feasibility_mask,
+            },
         )
 
     def summary_inputs(self):
@@ -174,4 +192,6 @@ def env_from_run(scenarios, run: RunConfig, forecaster=None) -> NativeBusDispatc
         reward=run.reward,
         control=run.control,
         arrival_memory_bins=run.arrival_memory_bins,
+        invalid_action=run.action_execution.invalid_action,
+        mask_mode=run.algorithm.mask_mode,
     )

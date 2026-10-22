@@ -93,7 +93,7 @@ def mask_metrics(mask, action: int | None = None) -> dict:
     return row
 
 
-def probability_metrics(probabilities, mask, action: int | None = None) -> dict:
+def probability_metrics(probabilities, mask, action: int | None = None, mask_mode="apply") -> dict:
     """Compute entropy and family probability mass on the valid support only."""
     valid = _as_one_dimensional_mask(mask)
     probs = np.asarray(probabilities, dtype=np.float64)
@@ -102,9 +102,9 @@ def probability_metrics(probabilities, mask, action: int | None = None) -> dict:
     require_finite("masked probabilities", probs)
     if np.any(probs < -1e-7):
         raise ValueError("masked probabilities contain a negative value")
-    if np.any(np.abs(probs[~valid]) > 1e-6):
+    if mask_mode == "apply" and np.any(np.abs(probs[~valid]) > 1e-6):
         raise ValueError("masked probabilities assign mass to an invalid action")
-    support = np.where(valid, probs, 0.0)
+    support = np.where(valid, probs, 0.0) if mask_mode == "apply" else probs
     total = float(support.sum())
     if not np.isfinite(total) or not np.isclose(total, 1.0, atol=1e-5):
         raise ValueError(f"valid probability mass must sum to one, got {total}")
@@ -113,8 +113,12 @@ def probability_metrics(probabilities, mask, action: int | None = None) -> dict:
     entropy = float(-np.sum(positive * np.log(positive))) if positive.size else 0.0
     row = {
         "valid_action_count": k,
-        "entropy": 0.0 if k == 1 else entropy,
-        "normalized_entropy": None if k == 1 else entropy / np.log(k),
+        "entropy": 0.0 if k == 1 and mask_mode == "apply" else entropy,
+        "invalid_probability_mass": float(probs[~valid].sum()),
+        "normalized_entropy_full_support": entropy / np.log(len(probs)),
+        "normalized_entropy": (None if k == 1 else entropy / np.log(k))
+        if mask_mode == "apply"
+        else entropy / np.log(len(probs)),
         "families": {},
     }
     for family, family_mask in _FAMILY_INDEX.items():
@@ -201,6 +205,10 @@ class TrainingDiagnosticsCallback(BaseCallback):
         masks = self.locals.get("action_masks")
         actions = self.locals.get("actions")
         if masks is None:
+            infos = self.locals.get("infos", [])
+            if infos and all("feasibility_mask" in info for info in infos):
+                masks = np.stack([info["feasibility_mask"] for info in infos])
+        if masks is None:
             self._write(
                 {
                     "kind": "availability",
@@ -266,7 +274,12 @@ class TrainingDiagnosticsCallback(BaseCallback):
                     tensor_obs = observation
                 else:
                     tensor_obs = obs_as_tensor(observation, self.model.device)
-                distribution = self.model.policy.get_distribution(tensor_obs, action_masks=masks)
+                distribution = self.model.policy.get_distribution(
+                    tensor_obs,
+                    action_masks=masks
+                    if getattr(self.model, "mask_mode", "apply") == "apply"
+                    else None,
+                )
                 categorical = distribution.distribution
                 probabilities = categorical.probs.detach().cpu().numpy()
                 logits = categorical.logits.detach().cpu().numpy()
@@ -275,12 +288,16 @@ class TrainingDiagnosticsCallback(BaseCallback):
                     probabilities[index],
                     masks[index],
                     None if actions is None else int(actions[index]),
+                    mask_mode=getattr(self.model, "mask_mode", "apply"),
                 )
                 for index in range(len(masks))
             ]
+            row["invalid_probability_mass_mean"] = float(
+                np.mean([item["invalid_probability_mass"] for item in probability_rows])
+            )
             row["available"] = True
             row["entropy_mean"] = float(np.mean([item["entropy"] for item in probability_rows]))
-            normalized = [item["normalized_entropy"] for item in probability_rows]
+            normalized = [item["normalized_entropy_full_support"] for item in probability_rows]
             normalized = [value for value in normalized if value is not None]
             row["normalized_entropy_mean"] = float(np.mean(normalized)) if normalized else None
             row["probability_family_mass"] = {
@@ -312,12 +329,13 @@ class TrainingDiagnosticsCallback(BaseCallback):
         finite_checks = {}
         for name in ("rewards", "values", "log_probs", "advantages", "returns"):
             value = getattr(buffer, name, None)
-            if value is not None:
+            if value is not None and (name != "values" or getattr(self.model, "critic_used", True)):
                 finite_checks[name] = require_finite(f"rollout {name}", value)
         distributions = {
             name: distribution_summary(f"rollout {name}", value)
             for name in ("rewards", "values", "advantages", "returns")
             if (value := getattr(buffer, name, None)) is not None
+            and (name != "values" or getattr(self.model, "critic_used", True))
         }
         self._write(
             {

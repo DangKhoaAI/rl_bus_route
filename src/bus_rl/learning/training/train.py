@@ -65,8 +65,10 @@ def make_model(
         learning_rate=algorithm.learning_rate,
         n_steps=effective_steps,
         mask_mode=algorithm.mask_mode,
-        batch_size=algorithm.batch_size,
-        n_epochs=algorithm.n_epochs,
+        batch_size=algorithm.batch_size
+        if algorithm.name == "ppo"
+        else effective_steps * algorithm.n_envs,
+        n_epochs=algorithm.n_epochs if algorithm.name == "ppo" else 1,
         gae_lambda=algorithm.gae_lambda,
         clip_range=algorithm.clip_range,
         ent_coef=algorithm.ent_coef,
@@ -189,13 +191,17 @@ def train_run(
     metadata = run_metadata(
         run,
         {
-            "learning_schema_version": 1,
+            "learning_schema_version": 2,
             "method": learned_method(algorithm.name, algorithm.mask_mode),
             "mask_mode": algorithm.mask_mode,
             "trainer_class": type(model).__name__,
             "trainer_version": model.trainer_version,
             "critic_used": model.critic_used,
             "effective_n_steps": model.n_steps,
+            "effective_batch_size": model.batch_size,
+            "effective_normalize_advantage": model.normalize_advantage
+            if model.critic_used
+            else False,
             "effective_n_epochs": algorithm.n_epochs if algorithm.name == "ppo" else 1,
             "optimizer_steps": model.optimizer_steps,
             "optimizer": {
@@ -234,4 +240,5 @@ def train_run(
     if forecaster is not None:
         forecaster.save(output / "forecaster.npz")
     write_metadata(output, metadata)
+    env.close()
     return metadata

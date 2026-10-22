@@ -15,6 +15,7 @@ from bus_rl.evaluation.summary import (
     from_python_state,
     summarize_inputs,
 )
+from bus_rl.execution.environments.action_execution import ActionCounters
 from bus_rl.execution.environments.factory import make_env_for_run
 from bus_rl.execution.runtime import apply_runtime_settings
 from bus_rl.execution.timing import TIMERS
@@ -91,6 +92,11 @@ def _trace_row(env, action_kind: str, action_index: int | None = None) -> dict:
     row["action"] = action_kind
     if action_index is not None:
         row["action_index"] = int(action_index)
+    execution = getattr(env, "last_action_info", None)
+    if execution:
+        row.update(execution)
+        row["action_index"] = execution["executed_action_index"]
+        row["action"] = ACTION_TABLE[row["action_index"]].kind
     return row
 
 
@@ -168,6 +174,7 @@ def rollout(
     reward_sum = 0.0
     costs = StepCosts()
     rows: list[dict] = []
+    action_counts = ActionCounters()
 
     while True:
         with TIMERS.span("eval.action_mask"):
@@ -175,6 +182,16 @@ def rollout(
         with TIMERS.span("eval.infer"):
             action = controller.act(observation, mask)
         observation, reward, terminated, truncated, info = env.step(action)
+        action_counts.add(
+            info.get(
+                "action_execution",
+                {
+                    "requested_action_index": action,
+                    "executed_action_index": action,
+                    "requested_action_valid": bool(mask[action]),
+                },
+            )
+        )
         reward_sum += float(reward)
         costs = add_costs(costs, info["costs"])
         if trace:
@@ -185,6 +202,7 @@ def rollout(
         metrics = summarize_inputs(
             env.summary_inputs(), env.scenario, costs, reward_sum, env.reward
         )
+    metrics.update(action_counts.metrics())
     metrics["wall_s"] = perf_counter() - started
     metrics["scenario_index"] = scenario_index
     return metrics, rows
@@ -263,6 +281,7 @@ def _evaluate_batched(
                     "costs": StepCosts(),
                     "done": False,
                     "rows": [],
+                    "action_counts": ActionCounters(),
                     "started": started,
                     "trace": _want_trace(scenario_index, trace_index, trace_all),
                 }
@@ -284,6 +303,7 @@ def _evaluate_batched(
             for slot, action in zip(active, actions, strict=True):
                 env = slot["env"]
                 observation, reward, terminated, truncated, info = env.step(action)
+                slot["action_counts"].add(info["action_execution"])
                 slot["observation"] = observation
                 slot["reward_sum"] += float(reward)
                 slot["costs"] = add_costs(slot["costs"], info["costs"])
@@ -302,6 +322,7 @@ def _evaluate_batched(
                         slot["reward_sum"],
                         env.reward,
                     )
+                metrics.update(slot["action_counts"].metrics())
                 metrics["wall_s"] = perf_counter() - slot["started"]
                 metrics["scenario_index"] = slot["scenario_index"]
                 metrics["method"] = method
@@ -317,10 +338,14 @@ def _evaluate_batched(
     return pd.DataFrame.from_records(records), traces
 
 
-def _native_trace_row(pool, slot: int, action_index: int) -> dict:
+def _native_trace_row(pool, slot: int, action_index: int, execution=None) -> dict:
     row = dict(pool.kernel.trace_snapshot(slot))
     row["action"] = ACTION_TABLE[int(action_index)].kind
     row["action_index"] = int(action_index)
+    if execution:
+        row.update(execution)
+        row["action_index"] = execution["executed_action_index"]
+        row["action"] = ACTION_TABLE[row["action_index"]].kind
     return row
 
 
@@ -362,6 +387,7 @@ def _evaluate_batched_native(
                     "costs": StepCosts(),
                     "done": False,
                     "rows": [],
+                    "action_counts": ActionCounters(),
                     "started": perf_counter(),
                     "trace": _want_trace(scenario_index, trace_index, trace_all),
                 }
@@ -392,6 +418,8 @@ def _evaluate_batched_native(
             step_masks = np.asarray(result["mask"])
             for position, slot_state in enumerate(active):
                 slot = slot_state["slot"]
+                execution = result["action_execution"][position]
+                slot_state["action_counts"].add(execution)
                 slot_state["observation"] = {
                     key: value[position] for key, value in step_obs.items()
                 }
@@ -401,7 +429,9 @@ def _evaluate_batched_native(
                 )
                 masks[slot] = step_masks[position]
                 if slot_state["trace"]:
-                    slot_state["rows"].append(_native_trace_row(pool, slot, int(actions[position])))
+                    slot_state["rows"].append(
+                        _native_trace_row(pool, slot, int(actions[position]), execution)
+                    )
                 if not (bool(step_terminated[position]) or bool(step_truncated[position])):
                     continue
                 slot_state["done"] = True
@@ -414,6 +444,7 @@ def _evaluate_batched_native(
                         slot_state["reward_sum"],
                         run.reward,
                     )
+                metrics.update(slot_state["action_counts"].metrics())
                 metrics["wall_s"] = perf_counter() - slot_state["started"]
                 metrics["scenario_index"] = scenario_index
                 metrics["method"] = method
@@ -543,7 +574,8 @@ def mean_cost(
     frame, _ = evaluate_scenarios(
         subset,
         run,
-        "ppo",
+        getattr(model, "algorithm_name", "ppo")
+        + ("_free" if getattr(model, "mask_mode", "apply") == "free" else ""),
         model=model,
         model_seed=run.algorithm.seed,
         forecaster=forecaster,

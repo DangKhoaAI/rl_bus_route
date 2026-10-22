@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from bus_rl.config import load_run_config
+from bus_rl.config import ActionExecutionConfig, load_run_config
 from bus_rl.evaluation.runner import evaluate_scenarios
 from bus_rl.execution.scenarios.generation import generate_scenario
 from bus_rl.learning.training.checkpoint import load_model
@@ -15,7 +15,8 @@ pytestmark = pytest.mark.native
 
 
 @pytest.mark.parametrize("name", ["reinforce", "a2c"])
-def test_algorithm_train_reload_final_update_and_batch_parity(tmp_path, name):
+@pytest.mark.parametrize("mode", ["apply", "free"])
+def test_algorithm_train_reload_final_update_and_batch_parity(tmp_path, name, mode):
     pytest.importorskip("bus_sim_native")
     run = load_run_config(Path("configs/studies/gru10.toml"))
     run = replace(
@@ -23,6 +24,7 @@ def test_algorithm_train_reload_final_update_and_batch_parity(tmp_path, name):
         algorithm=replace(
             run.algorithm,
             name=name,
+            mask_mode=mode,
             n_envs=1,
             n_steps=120,
             batch_size=120,
@@ -32,6 +34,7 @@ def test_algorithm_train_reload_final_update_and_batch_parity(tmp_path, name):
             validation_timing="post_update",
         ),
         runtime=replace(run.runtime, eval_batch_size=2),
+        action_execution=ActionExecutionConfig(invalid_action="noop"),
     )
     scenarios = [generate_scenario(seed, run.physical) for seed in [81001, 81002]]
     out = tmp_path / name
@@ -40,13 +43,15 @@ def test_algorithm_train_reload_final_update_and_batch_parity(tmp_path, name):
     assert meta["optimizer_steps"] == 2
     assert meta["effective_n_epochs"] == 1
     model, _ = load_model(out / "best.zip", None, run.physical, backend="rust")
-    batched, traces = evaluate_scenarios(scenarios, run, name, model=model, trace_all=True)
+    method = name if mode == "apply" else f"{name}_free"
+    assert model.mask_mode == mode
+    batched, traces = evaluate_scenarios(scenarios, run, method, model=model, trace_all=True)
     scalar_run = replace(run, runtime=replace(run.runtime, native_batch=False, eval_batch_size=1))
     scalar, scalar_traces = evaluate_scenarios(
-        scenarios, scalar_run, name, model=model, trace_all=True
+        scenarios, scalar_run, method, model=model, trace_all=True
     )
     np.testing.assert_array_equal(batched.total_cost_core, scalar.total_cost_core)
-    assert set(batched.method) == {name}
+    assert set(batched.method) == {method}
     for index in range(2):
         assert [row["action_index"] for row in traces[index]] == [
             row["action_index"] for row in scalar_traces[index]

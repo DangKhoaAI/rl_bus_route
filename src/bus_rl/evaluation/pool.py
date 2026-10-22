@@ -51,6 +51,8 @@ def eval_pool_key(scenarios, run: RunConfig, forecaster=None) -> tuple:
         bool(run.runtime.validate_observation),
         int(run.runtime.eval_batch_size),
         bool(run.runtime.native_batch),
+        run.action_execution_hash,
+        run.algorithm.mask_mode,
         run.control_hash,
         run.reward_hash,
         physical_config_hash(run.physical),
