@@ -47,17 +47,30 @@ class ProgressCallback(BaseCallback):
         return True
 
 
-def make_model(
-    env, seed: int, algorithm: AlgorithmConfig | None = None, *, episode_steps: int = 120
-):
-    algorithm = algorithm or AlgorithmConfig()
+def effective_rollout_steps(algorithm: AlgorithmConfig, episode_steps: int) -> int:
     effective_steps = algorithm.n_steps
     if algorithm.name == "reinforce":
-        if algorithm.gamma != 1 or effective_steps < episode_steps:
+        if episode_steps <= 0 or algorithm.gamma != 1 or effective_steps < episode_steps:
             raise ValueError("REINFORCE requires gamma=1 and at least one full episode per rollout")
         effective_steps = effective_steps // episode_steps * episode_steps
         if algorithm.total_timesteps % (effective_steps * algorithm.n_envs):
             raise ValueError("REINFORCE budget must contain whole episode-aligned rollouts")
+    return effective_steps
+
+
+def validate_training_setup(run: RunConfig) -> None:
+    if run.algorithm.name == "reinforce":
+        horizon, interval = run.physical.horizon_s, run.physical.control_interval_s
+        if interval <= 0 or horizon < interval or horizon % interval:
+            raise ValueError("REINFORCE requires complete episodes with a positive step count")
+        effective_rollout_steps(run.algorithm, horizon // interval)
+
+
+def make_model(
+    env, seed: int, algorithm: AlgorithmConfig | None = None, *, episode_steps: int = 120
+):
+    algorithm = algorithm or AlgorithmConfig()
+    effective_steps = effective_rollout_steps(algorithm, episode_steps)
     return TRAINERS[algorithm.name](
         "MultiInputPolicy",
         env,
@@ -133,14 +146,7 @@ def train_run(
     eval_limit: int | None = None,
 ) -> dict:
     # Validate the complete-episode contract before creating an output directory.
-    if run.algorithm.name == "reinforce":
-        horizon = run.physical.horizon_s
-        interval = run.physical.control_interval_s
-        steps = run.algorithm.n_steps // (horizon // interval) * (horizon // interval)
-        if horizon % interval or steps == 0 or run.algorithm.gamma != 1:
-            raise ValueError("REINFORCE requires complete episodes and gamma=1")
-        if run.algorithm.total_timesteps % (steps * run.algorithm.n_envs):
-            raise ValueError("REINFORCE budget must contain whole episode-aligned rollouts")
+    validate_training_setup(run)
     output = Path(output)
     output.mkdir(parents=True, exist_ok=False)
     apply_runtime_settings(run)

@@ -18,7 +18,7 @@ from bus_rl.evaluation.runner import mean_cost
 from bus_rl.execution.runtime import apply_runtime_settings
 from bus_rl.execution.timing import TIMERS
 from bus_rl.learning.training.checkpoint import run_metadata, write_metadata
-from bus_rl.learning.training.train import make_env, make_model
+from bus_rl.learning.training.train import make_env, make_model, validate_training_setup
 
 
 class DiagnoseCallback(BaseCallback):
@@ -137,6 +137,7 @@ def diagnose_train(
     *,
     eval_limit: int = 10,
 ) -> dict:
+    validate_training_setup(run)
     output = Path(output)
     output.mkdir(parents=True, exist_ok=False)
     apply_runtime_settings(run)
