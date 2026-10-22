@@ -295,7 +295,7 @@ recreated. Start at `reports/README.md`; the final result is
 ## Station API
 
 `src/bus_rl/station/` serves live native simulations of one held-out day over
-HTTP for the 3D dashboard (`web/station/`, served at `/` when present). Each
+HTTP for the 3D dashboard (`web/station/`, served at `/visualize/` when present; `/` redirects to `/intro/`). Each
 `POST /simulations/{id}/steps` advances N control intervals with a baseline
 controller and returns per-route buses, the depot reserve queue and interval
 costs. Settings come from `.env` (see `.env.example`); the manifest is required.
@@ -316,7 +316,7 @@ uv sync --locked --extra dev --extra server
 python scripts/build_native.py        # once: builds the Rust kernel
 SIMULATION__MANIFEST_PATH=data/generated/base/manifest.json \
   uv run uvicorn bus_rl.main:app --host 127.0.0.1 --port 8000
-# open http://127.0.0.1:8000
+# open http://127.0.0.1:8000/intro/ and /visualize/
 ```
 
 ### Run with Docker
@@ -327,7 +327,7 @@ machine needs no Rust toolchain and no torch.
 ```bash
 docker build -t bus-rl-station .
 docker run --rm -p 8000:8000 bus-rl-station
-# open http://localhost:8000
+# open http://localhost:8000/intro/ and /visualize/
 ```
 
 ### Serve a trained policy

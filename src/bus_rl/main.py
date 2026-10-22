@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from rich.logging import RichHandler
 
@@ -128,10 +129,26 @@ def health() -> dict:
     return {"status": "ok"}
 
 
-# The dashboard ships separately under `web/`; serve it same-origin when present.
-# The intro page sits beside it and must mount first, since "/" matches every path.
+@app.get("/", include_in_schema=False)
+def root() -> RedirectResponse:
+    return RedirectResponse("/intro/")
+
+
+# The pages ship separately under `web/`; serve them same-origin when present so the
+# dashboard calls the API without CORS.
 intro_directory = Path(app_config.server.static_dir).parent / "intro"
 if intro_directory.is_dir():
     app.mount("/intro", StaticFiles(directory=intro_directory, html=True), name="intro")
 if Path(app_config.server.static_dir).is_dir():
-    app.mount("/", StaticFiles(directory=app_config.server.static_dir, html=True), name="web")
+    app.mount(
+        "/visualize",
+        StaticFiles(directory=app_config.server.static_dir, html=True),
+        name="visualize",
+    )
+
+
+if __name__ == "__main__":
+    # `python -m bus_rl.main` binds where `server` settings say, so `.env` alone sets the port.
+    import uvicorn
+
+    uvicorn.run(app, host=app_config.server.host, port=app_config.server.port)

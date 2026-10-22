@@ -19,10 +19,12 @@ class LogSettings(BaseModel):
 
 class SimulationSettings(BaseModel):
     config_path: str = "configs/eval.toml"
-    # Required: the API replays real held-out days, never an invented dataset.
-    manifest_path: str
-    # Optional trained policy served as the `ppo` controller; empty keeps baselines only.
-    checkpoint_path: str | None = None
+    # The API replays real held-out days, never an invented dataset; this is where
+    # `bus-rl generate --output data/generated/base` writes them.
+    manifest_path: str = "data/generated/base/manifest.json"
+    # Trained policy served as the `ppo` controller, relative to the working directory (repo root);
+    # empty keeps baselines only.
+    checkpoint_path: str | None = "runs/core-11/best.zip"
     # Manifest splits the station can replay; the first is the default for a new
     # simulation. Held-out splits only: `train` days are what the policy learned on.
     splits: list[str] = Field(default_factory=lambda: ["validation"], min_length=1)
@@ -34,7 +36,7 @@ class AppConfig(BaseSettings):
     app_title: str = "Bus RL Station API"
     server: ServerSettings = Field(default_factory=ServerSettings)
     log: LogSettings = Field(default_factory=LogSettings)
-    simulation: SimulationSettings
+    simulation: SimulationSettings = Field(default_factory=SimulationSettings)
 
     model_config = SettingsConfigDict(
         env_file=".env",
