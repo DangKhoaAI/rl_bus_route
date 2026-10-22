@@ -6,7 +6,7 @@ each core seed, take the three days with the highest ``total_cost_core`` at that
 checkpoint, breaking ties by ascending ``scenario_index``.
 
 Raw decision traces are large, so they are written to the gitignored
-``runs/rl-improvement/l3-failure-traces/`` tree; the committed evidence is a
+``experiments/archive/rl-improvement/l3-failure-traces/`` tree; the committed evidence is a
 compact digest with action-family counts, peak queues and the trace path.
 
 Run:  uv run python scripts/l3_failure_traces.py
@@ -28,7 +28,7 @@ from bus_rl.learning.training.checkpoint import load_metadata, load_model
 from bus_sim.oracle.costs import RewardConfig
 
 ROOT = Path(__file__).resolve().parents[1]
-RUNS = ROOT / "runs" / "rl-improvement"
+RUNS = ROOT / "experiments" / "archive" / "rl-improvement"
 RAW = RUNS / "l3-failure-traces"
 EVIDENCE = ROOT / "reports" / "provenance"
 MANIFEST = ROOT / "data" / "generated" / "base" / "manifest.json"

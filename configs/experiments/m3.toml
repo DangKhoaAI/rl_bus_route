@@ -1,3 +1,6 @@
 [control]
 enable_reassign = true
 enable_short_turn = true
+
+[algorithm]
+encoder = "mlp"

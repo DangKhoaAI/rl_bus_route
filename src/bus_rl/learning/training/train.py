@@ -11,10 +11,11 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 from bus_rl.config import AlgorithmConfig, RunConfig
 from bus_rl.execution.environments.factory import make_env_for_run
 from bus_rl.execution.runtime import apply_runtime_settings
-from bus_rl.learning.policy import POLICY_KWARGS
+from bus_rl.learning.policy import policy_kwargs
 from bus_rl.learning.training.callbacks import BestValidationCallback
 from bus_rl.learning.training.checkpoint import run_metadata, write_metadata
 from bus_rl.learning.training.diagnostics import TrainingDiagnosticsCallback
+from bus_rl.provenance import canonical_hash, file_hash
 
 
 class ProgressCallback(BaseCallback):
@@ -46,7 +47,9 @@ class ProgressCallback(BaseCallback):
         return True
 
 
-def make_model(env, seed: int, algorithm: AlgorithmConfig | None = None):
+def make_model(
+    env, seed: int, algorithm: AlgorithmConfig | None = None, *, episode_steps: int = 120
+):
     algorithm = algorithm or AlgorithmConfig()
     return MaskablePPO(
         "MultiInputPolicy",
@@ -64,7 +67,13 @@ def make_model(env, seed: int, algorithm: AlgorithmConfig | None = None):
         target_kl=algorithm.target_kl,
         seed=seed,
         device=algorithm.device,
-        policy_kwargs=POLICY_KWARGS,
+        policy_kwargs=policy_kwargs(
+            algorithm.encoder,
+            episode_steps,
+            belief_prior_shape=algorithm.belief_prior_shape,
+            belief_prior_rate=algorithm.belief_prior_rate,
+            belief_decay=algorithm.belief_decay,
+        ),
         verbose=0,
     )
 
@@ -132,7 +141,12 @@ def train_run(
         from bus_rl.learning.shaping import PotentialShapingVecEnv
 
         env = PotentialShapingVecEnv(env, run.shaping, algorithm.gamma)
-    model = make_model(env, algorithm.seed, algorithm)
+    model = make_model(
+        env,
+        algorithm.seed,
+        algorithm,
+        episode_steps=run.physical.horizon_s // run.physical.control_interval_s,
+    )
     validation = BestValidationCallback(
         val_scenarios or train_scenarios[:1],
         run,
@@ -164,6 +178,24 @@ def train_run(
             "episodes_completed": validation.completed_episodes,
             "wall_time_s": wall,
             "best_val_cost": None if validation.best == float("inf") else validation.best,
+            "best_timesteps": validation.best_timesteps,
+            "initial_val_cost": validation.history[0]["val_cost"],
+            "final_val_cost": validation.history[-1]["val_cost"],
+            "checkpoint_selection": "lowest post-training validation core cost; ties keep earliest; step 0 is reference only",
+            "train_days": len(train_scenarios),
+            "validation_days": len(val_scenarios or train_scenarios[:1]),
+            "validation_days_used": len(validation._subset()),
+            "train_scenarios_hash": canonical_hash(
+                [(scenario.seed, scenario.scenario_hash) for scenario in train_scenarios]
+            ),
+            "validation_scenarios_hash": canonical_hash(
+                [(scenario.seed, scenario.scenario_hash) for scenario in validation._subset()]
+            ),
+            "evaluations_sha256": file_hash(output / "evaluations.csv"),
+            "validation_metrics_sha256": file_hash(output / "validation_metrics.csv"),
+            "best_checkpoint_sha256": file_hash(output / "best.zip"),
+            "last_checkpoint_sha256": file_hash(output / "last.zip"),
+            "policy_parameters": sum(parameter.numel() for parameter in model.policy.parameters()),
         },
     )
     if forecaster is not None:

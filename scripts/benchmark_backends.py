@@ -45,8 +45,8 @@ from bus_sim.oracle.costs import RewardConfig
 from bus_sim.parity.controllers import CoverageController
 from bus_sim.parity.scenarios import CATALOG, build_scenario, run_config
 
-REPORT_DIR = ROOT / "reports" / "rust-migration"
-REFERENCE = ROOT / "runs" / "diagnose-after" / "last.zip"
+REPORT_DIR = ROOT / "experiments" / "rust-migration"
+REFERENCE = ROOT / "experiments" / "archive" / "diagnose-after" / "last.zip"
 SIM_WORKLOADS = ["zero_m3", "normal_m3", "peak_m3", "burst_m3", "traffic_m3"]
 TICKS_PER_DECISION = 4
 BACKENDS = ("python", "rust")

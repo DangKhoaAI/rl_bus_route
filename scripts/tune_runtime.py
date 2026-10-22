@@ -6,7 +6,7 @@ Runs a small, same-condition comparison for Python and Rust:
 - fixed-checkpoint eval at those thread counts,
 - observation-validation cost at the env level and end-to-end.
 
-Writes ``reports/archive/infrastructure/rust-migration/artifacts/runtime-tuning.json``. Not an acceptance run.
+Writes ``experiments/rust-migration/artifacts/runtime-tuning.json``. Not an acceptance run.
 """
 
 from __future__ import annotations
@@ -39,8 +39,8 @@ from bus_rl.learning.training.train import make_env, make_model
 from bus_sim.oracle.costs import RewardConfig
 from bus_sim.parity.controllers import CoverageController
 
-REPORT_DIR = ROOT / "reports" / "archive" / "infrastructure" / "rust-migration" / "artifacts"
-REFERENCE = ROOT / "runs" / "diagnose-after" / "last.zip"
+REPORT_DIR = ROOT / "experiments" / "rust-migration" / "artifacts"
+REFERENCE = ROOT / "experiments" / "archive" / "diagnose-after" / "last.zip"
 BACKENDS = ("python", "rust")
 
 

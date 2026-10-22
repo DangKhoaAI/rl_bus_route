@@ -4,10 +4,9 @@
 Usage:
     python scripts/build_native.py [--release] [--output PATH]
 
-Writes a provenance record (default `reports/archive/infrastructure/rust-migration/artifacts/native-build.json`)
+Writes a local provenance record (default `experiments/infrastructure/native-build.json`)
 with toolchain versions, the git revision, the shared-object hash and import
-check used by R1+ evidence. Use `--output` for a new kernel revision so the
-frozen R4 record stays intact.
+check used by R1+ evidence. Frozen accepted records remain under reports/.
 """
 
 from __future__ import annotations
@@ -23,7 +22,7 @@ import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-REPORT = ROOT / "reports" / "archive" / "infrastructure" / "rust-migration" / "artifacts" / "native-build.json"
+REPORT = ROOT / "experiments" / "infrastructure" / "native-build.json"
 
 
 def _run(command: list[str]) -> str:
@@ -42,7 +41,7 @@ def main() -> None:
         "--output",
         type=Path,
         default=REPORT,
-        help="provenance record to write (default: the frozen rust-migration record)",
+        help="local provenance record to write",
     )
     args = parser.parse_args()
     profile = "release" if args.release else "debug"

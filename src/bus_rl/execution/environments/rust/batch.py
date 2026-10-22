@@ -20,6 +20,7 @@ import numpy as np
 from gymnasium.utils import seeding
 from stable_baselines3.common.vec_env import VecEnv
 
+from bus_rl.execution.environments.arrival_memory import ArrivalMemory
 from bus_rl.execution.environments.rust.bridge import shared_store
 from bus_sim.oracle.domain import initial_state
 from bus_sim.oracle.observation import observe, validate_observation
@@ -145,7 +146,12 @@ class NativeBatchVecEnv(VecEnv):
         n_envs = int(run.algorithm.n_envs)
         self.kernel = NativeBatchKernel(applied, n_envs, reward=run.reward)
         self._actions = np.zeros(n_envs, dtype=np.int64)
-        super().__init__(n_envs, _observation_space(applied, forecaster), gym.spaces.Discrete(221))
+        self.arrival_memory = ArrivalMemory(n_envs, run.arrival_memory_bins)
+        super().__init__(
+            n_envs,
+            self.arrival_memory.space(_observation_space(applied, forecaster)),
+            gym.spaces.Discrete(221),
+        )
         # Construction reset mirrors `make_env`: seed each slot and draw one
         # scenario. `learn()` then calls reset() once more; no extra draw here.
         self._np_random = []
@@ -156,6 +162,7 @@ class NativeBatchVecEnv(VecEnv):
             indices.append(int(generator.integers(len(self.scenarios))))
         slots = list(range(n_envs))
         obs_raw, _mask = self.kernel.reset(slots, indices)
+        obs_raw = self.arrival_memory.apply(obs_raw, slots, reset=True)
         self._obs = postprocess_observations(
             obs_raw,
             times=self.kernel.current_times(slots),
@@ -186,6 +193,7 @@ class NativeBatchVecEnv(VecEnv):
                 self._np_random[slot], _ = seeding.np_random(seed)
             indices.append(int(self._np_random[slot].integers(len(self.scenarios))))
         obs_raw, _mask = self.kernel.reset(slots, indices)
+        obs_raw = self.arrival_memory.apply(obs_raw, slots, reset=True)
         self._obs = postprocess_observations(
             obs_raw,
             times=self.kernel.current_times(slots),
@@ -206,6 +214,7 @@ class NativeBatchVecEnv(VecEnv):
         slots = list(range(self.num_envs))
         result = self.kernel.step(slots, self._actions.tolist())
         obs_raw = {key: np.asarray(value) for key, value in result["obs"].items()}
+        obs_raw = self.arrival_memory.apply(obs_raw, slots)
         # `DummyVecEnv.buf_rews` is float32; match it for bit-identical parity.
         rewards = np.asarray(result["reward"], dtype=np.float32)
         terminated = np.asarray(result["terminated"], dtype=bool)
@@ -225,6 +234,7 @@ class NativeBatchVecEnv(VecEnv):
             reset_slots = [slot for slot in slots if dones[slot]]
             indices = [self._select(slot) for slot in reset_slots]
             reset_raw, _mask = self.kernel.reset(reset_slots, indices)
+            reset_raw = self.arrival_memory.apply(reset_raw, reset_slots, reset=True)
             for position, slot in enumerate(reset_slots):
                 for key, value in reset_raw.items():
                     obs_raw[key][slot] = np.asarray(value)[position]
@@ -300,6 +310,7 @@ class NativeBatchEvalPool:
         self.batch_size = min(requested, len(scenarios))
         self.key = eval_pool_key(scenarios, run, forecaster)
         self.kernel = NativeBatchKernel(applied, self.batch_size, reward=run.reward)
+        self.arrival_memory = ArrivalMemory(self.batch_size, run.arrival_memory_bins)
         self.validate = bool(run.runtime.validate_observation)
         self.closed = False
 
@@ -318,6 +329,7 @@ class NativeBatchEvalPool:
 
     def reset(self, slots, scenario_indices):
         obs_raw, mask = self.kernel.reset(slots, scenario_indices)
+        obs_raw = self.arrival_memory.apply(obs_raw, slots, reset=True)
         obs = postprocess_observations(
             obs_raw,
             times=self.kernel.current_times(slots),
@@ -327,7 +339,9 @@ class NativeBatchEvalPool:
         return obs, mask
 
     def step(self, slots, actions) -> dict:
-        return self.kernel.step(slots, actions)
+        result = self.kernel.step(slots, actions)
+        result["obs"] = self.arrival_memory.apply(result["obs"], slots)
+        return result
 
     def close(self) -> None:
         if self.closed:

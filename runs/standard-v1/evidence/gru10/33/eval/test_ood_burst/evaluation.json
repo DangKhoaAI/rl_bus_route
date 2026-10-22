@@ -1,0 +1,262 @@
+{
+  "checkpoint": {
+    "path": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/Code/experiments/standard-v1/gru10/33/train/best.zip",
+    "sha256": "a3c7e0c1912db5167c1b7207452f2b916a281c14b86ab586e26b054f9bb0cd9e"
+  },
+  "checkpoint_metadata": {
+    "action_schema_hash": "ff62ae3cfa7478758a5370e575dbfc3c15729c0ea10a3ccbb2bd7a207cab761a",
+    "algorithm": {
+      "batch_size": 256,
+      "belief_decay": 1.0,
+      "belief_prior_rate": 1.0,
+      "belief_prior_shape": 1.0,
+      "clip_range": 0.2,
+      "device": "cpu",
+      "diagnostics_enabled": false,
+      "diagnostics_interval": 256,
+      "encoder": "gru",
+      "ent_coef": 0.01,
+      "eval_freq": 12288,
+      "gae_lambda": 0.95,
+      "gamma": 1.0,
+      "history_minutes": 10,
+      "learning_rate": 0.0003,
+      "max_grad_norm": 0.5,
+      "n_envs": 4,
+      "n_epochs": 4,
+      "n_steps": 256,
+      "seed": 33,
+      "target_kl": null,
+      "torch_threads": 2,
+      "total_timesteps": 245760,
+      "vf_coef": 0.5
+    },
+    "arrival_memory_bins": 5,
+    "backend": "rust",
+    "backend_parity_verified": true,
+    "best_checkpoint_sha256": "a3c7e0c1912db5167c1b7207452f2b916a281c14b86ab586e26b054f9bb0cd9e",
+    "best_timesteps": 208896,
+    "best_val_cost": 13311.75125,
+    "checkpoint_selection": "lowest post-training validation core cost; ties keep earliest; step 0 is reference only",
+    "config_source": "configs/studies/gru10.toml",
+    "control": {
+      "enable_reassign": true,
+      "enable_short_turn": true
+    },
+    "control_hash": "ff53d8cecf390343bc48e899644e2c7a995f3865977c051e0c765857300ef9fb",
+    "device": "cpu",
+    "episodes_completed": 2048,
+    "eval_batch_size": 16,
+    "evaluations_sha256": "2fd87061cd8f1569493582075f6ac4bd4a925b9a0d02c9abc9fadfba51c388a7",
+    "final_val_cost": 13322.07,
+    "forecast_enabled": false,
+    "git_dirty": true,
+    "git_sha": "1c81fb20f2ff7f0a5b898a3648b0aea6d15be254",
+    "initial_val_cost": 15482.52375,
+    "last_checkpoint_sha256": "23b9555924b7d785391e5921d9a92a90ff4d296ed443adcfbb682a332bf8b24b",
+    "lock_hash": "5ed56349910166b5fe6232c3d79c8421c6714e8cc8504cc5ac785d68f4ddb530",
+    "native_batch": true,
+    "native_build": {
+      "build_record_matches_runtime": [],
+      "build_records": {
+        "runtime-optimization": {
+          "cargo": "cargo 1.97.1 (c980f4866 2026-06-30)",
+          "crate_version": "0.1.0",
+          "git": {
+            "dirty": true,
+            "sha": "3d0a2ac3a8656e9991c654ef208b1b822df73186"
+          },
+          "library_sha256": "2d5fa9e3d7672966277efbdba9fc179bdfe6cd8e3bd72f3b60e730d65192fe26",
+          "report": "reports/archive/infrastructure/runtime-optimization/artifacts/native-build-o2.json",
+          "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)"
+        },
+        "rust-migration": {
+          "cargo": "cargo 1.97.1 (c980f4866 2026-06-30)",
+          "crate_version": "0.1.0",
+          "git": {
+            "dirty": true,
+            "sha": "d47ec6010e2e89ea740c31b41b970c5f44bff26e"
+          },
+          "library_sha256": "aedc4faa4c434fd1f9565f08586332da0560e09d6349eef7dfebf961eb75bab2",
+          "report": "reports/archive/infrastructure/rust-migration/artifacts/native-build.json",
+          "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)"
+        }
+      },
+      "cargo": "cargo 1.97.1 (c980f4866 2026-06-30)",
+      "crate": "bus-sim-python",
+      "crate_version": "0.1.0",
+      "git_sha": "3d0a2ac3a8656e9991c654ef208b1b822df73186",
+      "library_sha256": "d6bf15516113dff6de9d6332deb98d2f5e9eee047cb916ec8f1b131193462eea",
+      "library_sha256_runtime": "d6bf15516113dff6de9d6332deb98d2f5e9eee047cb916ec8f1b131193462eea",
+      "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)"
+    },
+    "obs_schema_hash": "fa07e9254e5f5474db32935332bea7a40ddbadf7c6538defdedbdc51322397e2",
+    "obs_version": 2,
+    "physical_config": {
+      "capacity": 40,
+      "comfort_capacity": 30,
+      "control_interval_s": 120,
+      "demand_end_s": 10800,
+      "dwell_s": 30,
+      "fleet_size": 12,
+      "horizon_s": 14400,
+      "layover_s": 120,
+      "patience_s": 2700,
+      "route_count": 3,
+      "schema_version": 2,
+      "stops_per_route": 6,
+      "tick_s": 30,
+      "traffic_bucket_s": 300
+    },
+    "physical_config_hash": "fad7a03b35b999d33b672357b439a9bf34899e8bf814bbe98077446ef4a5d4b2",
+    "policy_parameters": 449478,
+    "reuse_eval_pool": true,
+    "reward": {
+      "abandoned": 60.0,
+      "active": 0.5,
+      "crowding": 0.5,
+      "deadhead": 0.5,
+      "fairness": 1.0,
+      "first_denied": 5.0,
+      "mission": 2.0,
+      "n_ref": 3000.0,
+      "onboard": 0.25,
+      "unfinished": 60.0,
+      "waiting": 1.0
+    },
+    "reward_hash": "649504d863e8fc09e16091f4a213db496277b3cc9ced69f72faa6343043f0a71",
+    "runtime": {
+      "backend": "rust",
+      "eval_batch_size": 16,
+      "legacy_python": false,
+      "native_batch": true,
+      "reuse_eval_pool": true,
+      "validate_distributions": false,
+      "validate_observation": true
+    },
+    "seed": 33,
+    "shaping": {
+      "enabled": false,
+      "excess_weight": 5.0,
+      "n_ref": 3000.0,
+      "queue_weight": 2.0
+    },
+    "torch": "2.14.0+cpu",
+    "torch_distribution_validate_args": false,
+    "torch_threads": 2,
+    "torch_threads_actual": 2,
+    "total_timesteps_actual": 245760,
+    "total_timesteps_requested": 245760,
+    "train_days": 500,
+    "train_scenarios_hash": "4bddd10c43ba356a9f3a99401d94a054ea5c81574b4bee181aa403e7bf96e0f0",
+    "validate_distributions": false,
+    "validate_observation": true,
+    "validation_days": 100,
+    "validation_days_used": 100,
+    "validation_metrics_sha256": "ae860bbcfefd5e9ec1fdeda30409541c43c71e311cb265f1edbf64884f38aad6",
+    "validation_scenarios_hash": "ebf0e8ed1832ef842fd1413e4928b2e9808a711f1b79771924e6bb37bf8482de",
+    "wall_time_s": 132.8204059669515
+  },
+  "config": {
+    "algorithm": {
+      "batch_size": 256,
+      "belief_decay": 1.0,
+      "belief_prior_rate": 1.0,
+      "belief_prior_shape": 1.0,
+      "clip_range": 0.2,
+      "device": "cpu",
+      "diagnostics_enabled": false,
+      "diagnostics_interval": 256,
+      "encoder": "gru",
+      "ent_coef": 0.01,
+      "eval_freq": 12288,
+      "gae_lambda": 0.95,
+      "gamma": 1.0,
+      "history_minutes": 10,
+      "learning_rate": 0.0003,
+      "max_grad_norm": 0.5,
+      "n_envs": 4,
+      "n_epochs": 4,
+      "n_steps": 256,
+      "seed": 11,
+      "target_kl": null,
+      "torch_threads": 2,
+      "total_timesteps": 245760,
+      "vf_coef": 0.5
+    },
+    "control": {
+      "enable_reassign": true,
+      "enable_short_turn": true
+    },
+    "forecast": {
+      "enabled": false
+    },
+    "physical": {
+      "capacity": 40,
+      "comfort_capacity": 30,
+      "control_interval_s": 120,
+      "demand_end_s": 10800,
+      "dwell_s": 30,
+      "fleet_size": 12,
+      "horizon_s": 14400,
+      "layover_s": 120,
+      "patience_s": 2700,
+      "route_count": 3,
+      "schema_version": 2,
+      "stops_per_route": 6,
+      "tick_s": 30,
+      "traffic_bucket_s": 300
+    },
+    "reward": {
+      "abandoned": 60.0,
+      "active": 0.5,
+      "crowding": 0.5,
+      "deadhead": 0.5,
+      "fairness": 1.0,
+      "first_denied": 5.0,
+      "mission": 2.0,
+      "n_ref": 3000.0,
+      "onboard": 0.25,
+      "unfinished": 60.0,
+      "waiting": 1.0
+    },
+    "runtime": {
+      "backend": "rust",
+      "eval_batch_size": 16,
+      "legacy_python": false,
+      "native_batch": true,
+      "reuse_eval_pool": true,
+      "validate_distributions": false,
+      "validate_observation": true
+    },
+    "shaping": {
+      "enabled": false,
+      "excess_weight": 5.0,
+      "n_ref": 3000.0,
+      "queue_weight": 2.0
+    },
+    "source": "configs/studies/gru10.toml"
+  },
+  "created_at": "2026-10-22T09:09:43.104196+00:00",
+  "events_sha256": null,
+  "git_dirty": true,
+  "git_sha": "1c81fb20f2ff7f0a5b898a3648b0aea6d15be254",
+  "manifest": {
+    "path": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/Code/data/generated/base/manifest.json",
+    "sha256": "abecff223150f4fc004f62b30069436f7ea839d999ec5f1c955c1eb884744e61"
+  },
+  "methods": [
+    "ppo"
+  ],
+  "results_sha256": "ed9f0c03aa7980fe587cc0e5da55288a1884a5b8e047d4cf4dd50c78fd3ffc7b",
+  "rows": 200,
+  "schema_version": 2,
+  "splits": [
+    "test_ood_burst"
+  ],
+  "training_history": {
+    "artifact": "training_history.csv",
+    "path": "/home/khoa/KHOA/FPTStudy/Semester8/REL/Project/Code/experiments/standard-v1/gru10/33/train/evaluations.csv",
+    "sha256": "2fd87061cd8f1569493582075f6ac4bd4a925b9a0d02c9abc9fadfba51c388a7"
+  }
+}

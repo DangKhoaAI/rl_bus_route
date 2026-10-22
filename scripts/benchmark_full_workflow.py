@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """O5 multi-repetition full-workflow benchmark (paired, interleaved).
 
-Runs `bus_rl.cli train` as separate processes for each variant, rotating the
+Runs `bus_rl.cli model train` as separate processes for each variant, rotating the
 variant order between repetitions so host drift cannot favour one variant.
 Reports median/min/max wall and RSS, and checks that every run is bit-identical
 to the reference baseline (validation curve + policy/optimizer tensors).
@@ -31,8 +31,8 @@ from stable_baselines3.common.save_util import load_from_zip_file
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "configs" / "experiments" / "core-threads2.toml"
 MANIFEST = ROOT / "data" / "generated" / "base" / "manifest.json"
-RUNS = ROOT / "runs" / "runtime-optimization" / "full-reps"
-REPORT = ROOT / "reports" / "runtime-optimization" / "full-workflow-reps.json"
+RUNS = ROOT / "experiments" / "runtime-optimization" / "full-reps"
+REPORT = ROOT / "experiments" / "runtime-optimization" / "full-workflow-reps.json"
 
 VARIANTS: dict[str, list[str]] = {
     "baseline": [],
@@ -73,6 +73,7 @@ def _run_once(variant: str, repetition: int) -> dict:
         sys.executable,
         "-m",
         "bus_rl.cli",
+        "model",
         "train",
         "--config",
         str(CONFIG),

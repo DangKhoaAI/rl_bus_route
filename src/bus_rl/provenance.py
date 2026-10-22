@@ -25,9 +25,9 @@ def action_schema_hash() -> str:
     return canonical_hash([asdict(action) for action in ACTION_TABLE])
 
 
-def observation_schema_hash(config: SimConfig | None = None) -> str:
+def observation_schema_hash(config: SimConfig | None = None, memory_bins: int = 5) -> str:
     del config
-    return canonical_hash(
+    base = canonical_hash(
         {
             "stops": [[4, 2, 8, 7], "float32"],
             "arrival_history": [[4, 2, 8, 5], "float32"],
@@ -39,6 +39,15 @@ def observation_schema_hash(config: SimConfig | None = None) -> str:
             "route_valid": [[4], "float32"],
             "context": [[3], "float32"],
             "obs_version": 2,
+        }
+    )
+    if memory_bins <= 5:
+        return base
+    return canonical_hash(
+        {
+            "native_schema_hash": base,
+            "arrival_memory": [[4, 2, 8, memory_bins], "float32"],
+            "arrival_memory_version": 1,
         }
     )
 
@@ -93,5 +102,7 @@ def assert_schema_compatible(metadata: dict, config: SimConfig) -> None:
         raise ValueError("observation schema version mismatch")
     if metadata.get("action_schema_hash") != action_schema_hash():
         raise ValueError("action schema hash mismatch")
-    if metadata.get("obs_schema_hash") != observation_schema_hash(config):
+    if metadata.get("obs_schema_hash") != observation_schema_hash(
+        config, metadata.get("arrival_memory_bins", 5)
+    ):
         raise ValueError("observation schema hash mismatch")

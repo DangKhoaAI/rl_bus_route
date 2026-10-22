@@ -23,6 +23,7 @@ class BestValidationCallback(BaseCallback):
         self.forecaster = forecaster
         self.eval_limit = eval_limit
         self.best = float("inf")
+        self.best_timesteps = None
         self.completed_episodes = 0
         self.history: list[dict] = []
         self.validation_rows: list[dict] = []
@@ -39,6 +40,8 @@ class BestValidationCallback(BaseCallback):
         from time import perf_counter
 
         self._started = perf_counter()
+        # Measure the actual untrained policy instead of extrapolating a step-zero score.
+        self._evaluate(select_checkpoint=False)
 
     def _on_step(self) -> bool:
         dones = self.locals.get("dones")
@@ -51,7 +54,7 @@ class BestValidationCallback(BaseCallback):
             self._next_eval += self.run.algorithm.eval_freq
         return True
 
-    def _evaluate(self) -> float:
+    def _evaluate(self, *, select_checkpoint: bool = True) -> float:
         subset = self._subset()
         pool = None
         if self.run.runtime.reuse_eval_pool:
@@ -75,16 +78,20 @@ class BestValidationCallback(BaseCallback):
         )
         elapsed = perf_counter() - started
         cost = float(frame["total_cost_core"].mean())
-        is_best = cost < self.best
+        is_best = select_checkpoint and cost < self.best
         self.history.append(
             {
                 "timesteps": int(self.num_timesteps),
+                "seed": self.run.algorithm.seed,
+                "encoder": self.run.algorithm.encoder,
+                "history_minutes": self.run.algorithm.history_minutes,
                 "val_cost": cost,
                 "val_days": len(frame),
                 "elapsed_wall_s": elapsed,
                 "train_elapsed_wall_s": perf_counter() - self._started,
                 "completed_episodes": self.completed_episodes,
                 "best_checkpoint": bool(is_best),
+                "checkpoint_eligible": select_checkpoint,
             }
         )
         for row in frame.to_dict(orient="records"):
@@ -99,6 +106,7 @@ class BestValidationCallback(BaseCallback):
         # Strict less-than: a tie keeps the earlier checkpoint.
         if is_best:
             self.best = cost
+            self.best_timesteps = int(self.num_timesteps)
             self.model.save(str(self.output / "best"))
         return cost
 

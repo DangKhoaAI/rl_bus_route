@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import tomllib
 import warnings
 from dataclasses import asdict, dataclass, field, fields
@@ -20,6 +21,12 @@ class ControlConfig:
 
 @dataclass(frozen=True)
 class AlgorithmConfig:
+    # Small observation-encoder ablation; PPO/masking and the env contract stay unchanged.
+    encoder: str = "gru"
+    history_minutes: int = 10
+    belief_prior_shape: float = 1.0
+    belief_prior_rate: float = 1.0
+    belief_decay: float = 1.0
     gamma: float = 1.0
     seed: int = 11
     learning_rate: float = 3.0e-4
@@ -43,6 +50,18 @@ class AlgorithmConfig:
     # L0 study telemetry is opt-in so historical configs retain their behavior.
     diagnostics_enabled: bool = False
     diagnostics_interval: int = 256
+
+    def __post_init__(self) -> None:
+        if self.encoder not in {"mlp", "belief", "gru", "belief_gru"}:
+            raise ValueError(f"unknown algorithm.encoder: {self.encoder!r}")
+        if not isinstance(self.history_minutes, int) or self.history_minutes < 10:
+            raise ValueError("algorithm.history_minutes must be an integer >= 10")
+        for name in ("belief_prior_shape", "belief_prior_rate", "belief_decay"):
+            value = getattr(self, name)
+            if not math.isfinite(value) or value <= 0:
+                raise ValueError(f"algorithm.{name} must be finite and positive")
+        if self.belief_decay > 1:
+            raise ValueError("algorithm.belief_decay must be <= 1")
 
 
 @dataclass(frozen=True)
@@ -142,6 +161,20 @@ class RunConfig:
     source: str
     runtime: RuntimeConfig = field(default_factory=RuntimeConfig)
     shaping: ShapingConfig = field(default_factory=ShapingConfig)
+
+    @property
+    def arrival_memory_bins(self) -> int:
+        # Keep the native five-bin contract unless extended memory is requested.
+        if self.algorithm.history_minutes == 10:
+            return 5
+        seconds = self.algorithm.history_minutes * 60
+        if seconds % self.physical.control_interval_s:
+            raise ValueError("history_minutes must be a multiple of the control interval")
+        if self.runtime.backend != "rust":
+            raise ValueError("extended arrival memory requires the maintained Rust backend")
+        if self.algorithm.encoder == "mlp":
+            raise ValueError("extended memory requires a belief or GRU encoder")
+        return max(5, seconds // self.physical.control_interval_s)
 
     @property
     def control_hash(self) -> str:

@@ -34,7 +34,7 @@ src/
     ├── learning/        # baselines, forecasting, policy, training/{train,callbacks,checkpoint,diagnose}
     ├── evaluation/      # runner, pool, summary, statistics, plots, profile
     ├── config.py        # RunConfig / RuntimeConfig / dataclass TOML mapping
-    ├── cli.py           # generate | baseline | profile | train | diagnose | evaluate | report
+    ├── cli.py           # data generate | model train/evaluate | baseline run | report generate | test diagnose/profile
     └── provenance.py    # hashes + fresh-output guards
 crates/
 ├── bus-sim-core/        # pure Rust kernel (no PyO3); `cargo test -p bus-sim-core`
@@ -43,7 +43,9 @@ tests/                   # see tests/README.md for the naming rules
 configs/                 # TOML runs; `base.toml` is merged under every other config
 scripts/                 # build_native, benchmarks, profiling, tune
 docs/                    # specs, plans, research
-reports/                 # curated evidence; start at reports/README.md
+experiments/             # IGNORED local state; historical raw runs under archive/
+runs/                    # TRACKED standard evidence exports (no weights/logs)
+reports/                 # human-authored final evidence; start at reports/README.md
 ```
 
 **Live-path caveat:** the Rust wrapper still imports a few oracle modules as the
@@ -61,10 +63,14 @@ uv run python scripts/build_native.py    # required: builds src/bus_sim_native.s
 
 `scripts/build_native.py` runs `cargo build -p bus-sim-python --release`, copies
 `target/release/libbus_sim_native.so` to `src/bus_sim_native.so`, verifies import,
-and writes provenance to `reports/archive/infrastructure/rust-migration/artifacts/native-build.json`.
+and writes local provenance to `experiments/infrastructure/native-build.json`; accepted historical records stay frozen under `reports/`.
 
-`src/bus_sim_native.so`, `data/generated/`, `runs/`, `target/`, `.venv/` are
-gitignored — never commit them.
+`src/bus_sim_native.so`, `data/generated/`, `experiments/`, `target/`, `.venv/` are
+gitignored — never commit them. `runs/` contains only verified evidence exports
+from `bus-rl experiment run --artifacts ...` or `bus-rl artifact export`. Model
+weights, raw validation telemetry and diagnostic logs stay local. Standard configs
+are in `configs/studies/`; use `bus-rl artifact verify --path runs/<study>` before
+committing evidence. Human final reports are assembled from `runs/` into `reports/`.
 
 ## Quality gates
 
