@@ -20,6 +20,7 @@ this directory; use [`../README.md`](../README.md) and
 | [`experiments-ledger.md`](experiments-ledger.md) | Human-readable change ledger with status and result |
 | [`core-learning-curves.csv`](core-learning-curves.csv) | L0 core learning-curve points |
 | [`core_learning_curves.png`](core_learning_curves.png) | L0 core learning-curve plot |
+| [`intro-sources.md`](intro-sources.md) | Source and verification status for each number in the Vietnamese intro page |
 
 ## Trust chain
 
