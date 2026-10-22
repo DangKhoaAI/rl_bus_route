@@ -76,19 +76,22 @@ Commands use `bus-rl <noun> <action>`:
 | `report generate` | Generate a report bundle: tables, figures and provenance |
 | `test diagnose` | Diagnose training and evaluation timings |
 | `test profile` | Run the historical simulator microprofiler |
+| `experiment run` | Run a fixed policy/seed matrix and export Git evidence |
+| `artifact export` | Export completed evidence without model state or logs |
+| `artifact verify` | Verify the exported inventory and SHA256 checksums |
 
 Use `bus-rl model --help` or `bus-rl model train --help` for a group or action.
 Flat legacy commands such as `train`, `evaluate` and `generate` remain accepted
 as aliases so archived command lines still run. New documentation uses the
 grouped names. Flags and config precedence are unchanged.
 
-To collect a complete run under `runs/result-gru10/`:
+To collect a complete run under `experiments/result-gru10/`:
 
 ```bash
-uv run bus-rl model train --manifest data/generated/base/manifest.json --output runs/result-gru10/train
-uv run bus-rl model evaluate --manifest data/generated/base/manifest.json --checkpoint runs/result-gru10/train/best.zip --split test_id --trace --output runs/result-gru10/eval
-uv run bus-rl baseline run --config configs/eval.toml --manifest data/generated/base/manifest.json --split test_id --methods fixed,proportional,threshold --output runs/result-gru10/baselines
-uv run bus-rl report generate --results runs/result-gru10/eval/results.csv runs/result-gru10/baselines/results.csv --output runs/result-gru10/report
+uv run bus-rl model train --manifest data/generated/base/manifest.json --output experiments/result-gru10/train
+uv run bus-rl model evaluate --manifest data/generated/base/manifest.json --checkpoint experiments/result-gru10/train/best.zip --split test_id --trace --output experiments/result-gru10/eval
+uv run bus-rl baseline run --config configs/eval.toml --manifest data/generated/base/manifest.json --split test_id --methods fixed,proportional,threshold --output experiments/result-gru10/baselines
+uv run bus-rl report generate --results experiments/result-gru10/eval/results.csv experiments/result-gru10/baselines/results.csv --output experiments/result-gru10/report
 ```
 
 Each `--output` must be a fresh path; parent folders are created automatically.
@@ -97,7 +100,7 @@ Each `--output` must be a fresh path; parent folders are created automatically.
 presentation-ready report in one command:
 
 ```text
-runs/result-gru10/report/
+experiments/result-gru10/report/
 ├── README.md                   # Key findings, figures and readable tables
 ├── report.html                 # Self-contained HTML with embedded figures
 ├── tables/
@@ -145,8 +148,8 @@ for older runs or separate archives:
 
 ```bash
 uv run bus-rl report generate \
-  --results runs/core-11/eval/results.csv runs/core-22/eval/results.csv runs/baselines/results.csv \
-  --history runs/core-11/evaluations.csv runs/core-22/evaluations.csv \
+  --results experiments/core-11/eval/results.csv experiments/core-22/eval/results.csv experiments/baselines/results.csv \
+  --history experiments/core-11/evaluations.csv experiments/core-22/evaluations.csv \
   --output reports/comparison
 ```
 
@@ -168,7 +171,62 @@ Histories without step zero use their first recorded evaluation as reference;
 no untrained score or seed is fabricated. Training/comparison panels explicitly
 indicate missing inputs. Trace images are generated only when traces are supplied.
 Report generation summarizes existing artifacts; it does not train or evaluate
-models. Choose `--output reports/<name>` to create the same bundle under `reports/`.
+models. Use `experiment run --artifacts runs/<study>` to export reproducible evidence; the final report under `reports/` is authored separately.
+
+## Local experiments and Git artifacts
+
+Three directories have distinct roles:
+
+| Directory | Contents | Git policy |
+|---|---|---|
+| `experiments/` | Local checkpoints, intermediate evaluation data and exploratory runs | Ignored |
+| `runs/` | Fixed, reproducible evidence exports: configs, metadata, CSVs, figures and technical summaries | Tracked |
+| `reports/` | Human-authored final study assembled from the evidence | Tracked |
+
+Run the standard matrix and publish its compact evidence locally:
+
+```bash
+uv run bus-rl experiment run \
+  --config configs/studies/standard.toml \
+  --manifest data/generated/base/manifest.json \
+  --output experiments/standard-v1 \
+  --artifacts runs/standard-v1
+uv run bus-rl artifact verify --path runs/standard-v1
+```
+
+The fixed matrix uses MLP10, GRU10 and Belief20-fade, seeds 11/22/33,
+245,760 transitions per seed, 500 training days and 100 validation days.
+All training finishes before evaluating the three 200-day test splits. Shared
+Fixed/Proportional/Threshold evaluations use exactly the same scenario tapes.
+Three isolated training processes run concurrently; model RNG state is never shared.
+This is a reproducibility snapshot on the established reference dataset, not a
+newly unseen test set or an automatic replacement for the accepted final study.
+
+Local runs follow `<study>/<policy>/<seed>/{train,eval}`; each policy has a
+`report/` aggregating all seeds. Baselines use `baselines/shared/eval/`.
+A frozen protocol includes source/config/data hashes and resolved settings.
+Training diagnostics are disabled; only best checkpoints are retained after
+successful completion. Git exports omit checkpoints, optimizer state, raw
+validation telemetry and logs. Original per-day test results remain available.
+
+Export or verify a completed study independently:
+
+```bash
+uv run bus-rl artifact export --source experiments/standard-v1 --output runs/standard-v1-copy
+uv run bus-rl artifact verify --path runs/standard-v1-copy
+```
+
+Every output must be fresh. `experiment run --resume` can reuse completed stages
+only when the frozen configuration, dataset and implementation still match.
+Tracked evidence contains no model weights; reevaluation requires the local
+best checkpoint or retraining from the recorded configuration.
+
+Historical raw runs were moved from `runs/` to `experiments/archive/`. Important
+benchmark data and selected checkpoints remain available there. Diagnostics,
+redundant final checkpoints, performance-probe weights and superseded demos were
+removed; `experiments/cleanup-20261022.json` records the local cleanup inventory.
+Accepted historical evidence under `reports/` remains frozen. See
+[run artifacts](docs/run-artifacts.md) for the directory contract.
 
 ## Policy selection
 
@@ -181,17 +239,17 @@ and `model evaluate` (defaults: `configs/train.toml`, `configs/train.toml`,
 
 ```bash
 # Default: GRU10
-uv run bus-rl model train --manifest data/generated/base/manifest.json --output runs/gru10
+uv run bus-rl model train --manifest data/generated/base/manifest.json --output experiments/gru10
 
 # Override with flags
-uv run bus-rl model train --manifest data/generated/base/manifest.json --output runs/mlp --encoder mlp
-uv run bus-rl model train --manifest data/generated/base/manifest.json --output runs/gru30 --encoder gru --history-minutes 30
+uv run bus-rl model train --manifest data/generated/base/manifest.json --output experiments/mlp --encoder mlp
+uv run bus-rl model train --manifest data/generated/base/manifest.json --output experiments/gru30 --encoder gru --history-minutes 30
 
 # Or use a ready-to-run TOML preset
-uv run bus-rl model train --manifest data/generated/base/manifest.json --output runs/belief20-fade --config configs/policies/belief20-fade.toml
+uv run bus-rl model train --manifest data/generated/base/manifest.json --output experiments/belief20-fade --config configs/policies/belief20-fade.toml
 
 # Evaluation restores encoder/history from the chosen checkpoint
-uv run bus-rl model evaluate --manifest data/generated/base/manifest.json --checkpoint runs/gru10/best.zip --output runs/gru10/eval
+uv run bus-rl model evaluate --manifest data/generated/base/manifest.json --checkpoint experiments/gru10/best.zip --output experiments/gru10/eval
 ```
 
 Presets under `configs/policies/`: `mlp`, `gru10`, `gru20`, `gru30`, `belief20`,
@@ -222,19 +280,19 @@ uv run bus-rl data generate --config configs/base.toml --output data/generated/b
 Baselines, profiler, pilot (12,288 transitions), and evaluation:
 
 ```bash
-uv run bus-rl baseline run --config configs/eval.toml --manifest data/generated/base/manifest.json --split validation --methods fixed,threshold,proportional --output runs/baselines
-uv run bus-rl test profile --config configs/pilot.toml --decisions 120 --output runs/profile
-uv run bus-rl model train --manifest data/generated/base/manifest.json --config configs/pilot.toml --seed 11 --output runs/pilot-11
-uv run bus-rl model evaluate --config configs/eval.toml --checkpoint runs/pilot-11/best.zip --manifest data/generated/base/manifest.json --split validation --output runs/pilot-11/eval
-uv run bus-rl report generate --results runs/pilot-11/eval/results.csv --output reports/core-11
+uv run bus-rl baseline run --config configs/eval.toml --manifest data/generated/base/manifest.json --split validation --methods fixed,threshold,proportional --output experiments/baselines
+uv run bus-rl test profile --config configs/pilot.toml --decisions 120 --output experiments/profile
+uv run bus-rl model train --manifest data/generated/base/manifest.json --config configs/pilot.toml --seed 11 --output experiments/pilot-11
+uv run bus-rl model evaluate --config configs/eval.toml --checkpoint experiments/pilot-11/best.zip --manifest data/generated/base/manifest.json --split validation --output experiments/pilot-11/eval
+uv run bus-rl report generate --results experiments/pilot-11/eval/results.csv --output experiments/pilot-11/report
 ```
 
 Core M3 (245,760 transitions, seeds 11/22/33):
 
 ```bash
-uv run bus-rl model train --manifest data/generated/base/manifest.json --config configs/experiments/core.toml --seed 11 --output runs/core-11
-uv run bus-rl model train --manifest data/generated/base/manifest.json --config configs/experiments/core.toml --seed 22 --output runs/core-22
-uv run bus-rl model train --manifest data/generated/base/manifest.json --config configs/experiments/core.toml --seed 33 --output runs/core-33
+uv run bus-rl model train --manifest data/generated/base/manifest.json --config configs/experiments/core.toml --seed 11 --output experiments/core-11
+uv run bus-rl model train --manifest data/generated/base/manifest.json --config configs/experiments/core.toml --seed 22 --output experiments/core-22
+uv run bus-rl model train --manifest data/generated/base/manifest.json --config configs/experiments/core.toml --seed 33 --output experiments/core-33
 ```
 
 Ablations use `configs/experiments/{no_reassign,no_short,fairness_zero}.toml`
@@ -242,7 +300,7 @@ with the same tapes, 221-slot table, and compute. Forecast experiment:
 `configs/experiments/forecast.toml` (historical time-bin mean + recent
 correction; no future tape).
 
-Large artifacts (`data/generated/`, `runs/*.zip`) are gitignored and must be
+Large artifacts (`data/generated/`, `experiments/*.zip`) are gitignored and must be
 recreated. Start at `reports/README.md`; the final result is
 `reports/README.md`.
 
@@ -270,7 +328,7 @@ uv run pytest -m native -q           # Python↔Rust interface contract
 
 ```bash
 uv run bus-rl model evaluate --config configs/eval.toml --manifest data/generated/base/manifest.json \
-  --split validation --method threshold --output runs/eval-rust
+  --split validation --method threshold --output experiments/eval-rust
 ```
 
 Running without the extension fails loudly. The deprecated Python oracle needs
@@ -278,7 +336,7 @@ an explicit opt-in and warns when used:
 
 ```bash
 uv run bus-rl model evaluate --config configs/eval.toml --manifest data/generated/base/manifest.json \
-  --split validation --method threshold --output runs/eval-py \
+  --split validation --method threshold --output experiments/eval-py \
   --backend python --legacy-python
 ```
 

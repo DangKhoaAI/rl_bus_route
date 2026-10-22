@@ -3,7 +3,13 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 data/generated/
-runs/
+experiments/
+# Reproducible evidence is tracked under runs/; large raw state stays local.
+runs/**/*.zip
+runs/**/*.pth
+runs/**/*.npz
+runs/**/training_diagnostics.jsonl
+runs/**/*.log
 *.py[cod]
 target/
 src/bus_sim_native.so

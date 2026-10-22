@@ -1,0 +1,11 @@
+# Same simulator and metric; programmed controllers use scalar evaluation.
+[algorithm]
+torch_threads = 2
+
+[runtime]
+backend = "rust"
+eval_batch_size = 1
+reuse_eval_pool = false
+native_batch = false
+validate_distributions = false
+validate_observation = true

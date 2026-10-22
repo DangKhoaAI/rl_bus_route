@@ -279,6 +279,32 @@ def cmd_report(args) -> None:
     generate_report(args.results, Path(args.output), args.history, rl_method=args.rl_method)
 
 
+def cmd_experiment(args) -> None:
+    from bus_rl.experiments import run_experiment
+
+    run_experiment(
+        Path(args.config),
+        Path(args.manifest),
+        Path(args.output),
+        Path(args.artifacts) if args.artifacts else None,
+        args.resume,
+    )
+
+
+def cmd_artifact_export(args) -> None:
+    from bus_rl.artifacts import export_artifacts
+
+    result = export_artifacts(Path(args.source), Path(args.output))
+    print(f"Exported {len(result['files'])} files ({result['total_bytes'] / 1024**2:.1f} MiB)")
+
+
+def cmd_artifact_verify(args) -> None:
+    from bus_rl.artifacts import verify_artifacts
+
+    result = verify_artifacts(Path(args.path))
+    print(f"Verified {len(result['files'])} files ({result['total_bytes'] / 1024**2:.1f} MiB)")
+
+
 def _add_runtime_flags(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--eval-batch-size",
@@ -346,6 +372,35 @@ def build_parser() -> argparse.ArgumentParser:
     test_actions = groups.add_parser(
         "test", help="diagnose and profile performance"
     ).add_subparsers(dest="action", required=True)
+    experiment_actions = groups.add_parser(
+        "experiment", help="run fixed experiment matrices"
+    ).add_subparsers(dest="action", required=True)
+    artifact_actions = groups.add_parser(
+        "artifact", help="export and verify Git evidence"
+    ).add_subparsers(dest="action", required=True)
+
+    experiment = experiment_actions.add_parser(
+        "run", help="train, evaluate and export a fixed matrix"
+    )
+    experiment.add_argument("--config", default="configs/studies/standard.toml")
+    experiment.add_argument("--manifest", default="data/generated/base/manifest.json")
+    experiment.add_argument("--output", required=True)
+    experiment.add_argument("--artifacts", help="fresh Git evidence path, normally under runs/")
+    experiment.add_argument(
+        "--resume",
+        action="store_true",
+        help="reuse completed stages only when the frozen plan matches",
+    )
+    experiment.set_defaults(func=cmd_experiment)
+    export = artifact_actions.add_parser(
+        "export", help="export evidence without weights or diagnostic logs"
+    )
+    export.add_argument("--source", required=True)
+    export.add_argument("--output", required=True)
+    export.set_defaults(func=cmd_artifact_export)
+    verify = artifact_actions.add_parser("verify", help="verify all exported evidence checksums")
+    verify.add_argument("--path", required=True)
+    verify.set_defaults(func=cmd_artifact_verify)
 
     generate = data_actions.add_parser("generate", help="generate a scenario manifest and tapes")
     generate.add_argument("--config", required=True)

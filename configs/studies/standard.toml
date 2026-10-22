@@ -1,0 +1,19 @@
+schema_version = 1
+name = "standard-v1"
+jobs = 3
+seeds = [11, 22, 33]
+splits = ["test_id", "test_ood_burst", "test_ood_traffic"]
+baselines = ["fixed", "proportional", "threshold"]
+baseline_config = "configs/studies/baselines.toml"
+
+[counts]
+train = 500
+validation = 100
+test_id = 200
+test_ood_burst = 200
+test_ood_traffic = 200
+
+[policies]
+mlp10 = "configs/studies/mlp10.toml"
+gru10 = "configs/studies/gru10.toml"
+belief20-fade = "configs/studies/belief20-fade.toml"

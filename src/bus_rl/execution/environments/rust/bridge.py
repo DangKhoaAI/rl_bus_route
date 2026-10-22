@@ -170,15 +170,36 @@ def native_build_info(root: Path | None = None) -> dict | None:
 
     `library_sha256` is the hash of `src/bus_sim_native.so` on disk, not the hash in a
     build record: the two differ whenever the kernel is rebuilt without
-    refreshing `reports/rust-migration/native-build.json` (kept frozen for R4).
+    refreshing the local build record. Accepted historical records stay frozen.
     `build_record_matches_runtime` names which record, if any, describes the
     running binary.
     """
     root = Path(root) if root else PROJECT_ROOT
-    report = root / "reports" / "rust-migration" / "native-build.json"
-    o2_report = root / "reports" / "runtime-optimization" / "native-build-o2.json"
+    report = (
+        root
+        / "reports"
+        / "archive"
+        / "infrastructure"
+        / "rust-migration"
+        / "artifacts"
+        / "native-build.json"
+    )
+    o2_report = (
+        root
+        / "reports"
+        / "archive"
+        / "infrastructure"
+        / "runtime-optimization"
+        / "artifacts"
+        / "native-build-o2.json"
+    )
+    local_report = root / "experiments" / "infrastructure" / "native-build.json"
     records: dict[str, dict] = {}
-    for name, path in (("runtime-optimization", o2_report), ("rust-migration", report)):
+    for name, path in (
+        ("local", local_report),
+        ("runtime-optimization", o2_report),
+        ("rust-migration", report),
+    ):
         if not Path(path).exists():
             continue
         payload = json.loads(Path(path).read_text())

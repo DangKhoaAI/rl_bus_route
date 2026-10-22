@@ -2,8 +2,8 @@
 """Regenerate the L3 T9 held-out tables and plots from raw runs.
 
 Raw inputs (gitignored):
-  runs/rl-improvement/l3-t9/<arm>/<seed>/train-20260913-r2/   training runs
-  runs/rl-improvement/l3-eval-fixed/<arm>/<seed>/<split>/     held-out evals
+  experiments/archive/rl-improvement/l3-t9/<arm>/<seed>/train-20260913-r2/   training runs
+  experiments/archive/rl-improvement/l3-eval-fixed/<arm>/<seed>/<split>/     held-out evals
 Curated outputs:
   reports/tables/*.csv
   reports/figures/*.png
@@ -27,7 +27,7 @@ import pandas as pd
 from bus_rl.evaluation.statistics import paired_bootstrap
 
 ROOT = Path(__file__).resolve().parents[1]
-RUNS = ROOT / "runs" / "rl-improvement"
+RUNS = ROOT / "experiments" / "archive" / "rl-improvement"
 TABLES = ROOT / "reports" / "tables"
 PLOTS = ROOT / "reports" / "figures"
 PROVENANCE = ROOT / "reports" / "provenance"

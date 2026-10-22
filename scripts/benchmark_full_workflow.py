@@ -31,8 +31,8 @@ from stable_baselines3.common.save_util import load_from_zip_file
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "configs" / "experiments" / "core-threads2.toml"
 MANIFEST = ROOT / "data" / "generated" / "base" / "manifest.json"
-RUNS = ROOT / "runs" / "runtime-optimization" / "full-reps"
-REPORT = ROOT / "reports" / "runtime-optimization" / "full-workflow-reps.json"
+RUNS = ROOT / "experiments" / "runtime-optimization" / "full-reps"
+REPORT = ROOT / "experiments" / "runtime-optimization" / "full-workflow-reps.json"
 
 VARIANTS: dict[str, list[str]] = {
     "baseline": [],

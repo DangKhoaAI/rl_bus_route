@@ -49,8 +49,8 @@ from bus_rl.provenance import file_hash, git_status, lock_hash
 from bus_sim.oracle.costs import RewardConfig, add_costs
 from bus_sim.oracle.domain import StepCosts
 
-REPORT_DIR = ROOT / "reports" / "runtime-optimization"
-REFERENCE = ROOT / "runs" / "diagnose-after" / "last.zip"
+REPORT_DIR = ROOT / "experiments" / "runtime-optimization"
+REFERENCE = ROOT / "experiments" / "archive" / "diagnose-after" / "last.zip"
 CORE = ROOT / "configs" / "experiments" / "core-threads2.toml"
 BATCH_SIZES = (1, 4, 8, 16, 32)
 
@@ -147,7 +147,15 @@ def collect_provenance(threads_actual: int) -> dict:
         diff_stat = _run(["git", "diff", "--stat"])
     except subprocess.CalledProcessError:
         diff_stat = ""
-    native_path = ROOT / "reports" / "rust-migration" / "native-build.json"
+    native_path = (
+        ROOT
+        / "reports"
+        / "archive"
+        / "infrastructure"
+        / "rust-migration"
+        / "artifacts"
+        / "native-build.json"
+    )
     native = json.loads(native_path.read_text()) if native_path.exists() else None
     library = ROOT / "src" / "bus_sim_native.so"
     return {
@@ -298,7 +306,7 @@ def measure_unprofiled(repetitions: int, transitions: int, eval_days: int) -> di
 
     ckpt_save = []
     ckpt_load = []
-    tmp = ROOT / "runs" / "runtime-optimization" / "o0-ckpt"
+    tmp = ROOT / "experiments" / "runtime-optimization" / "o0-ckpt"
     tmp.mkdir(parents=True, exist_ok=True)
     from sb3_contrib import MaskablePPO
 
