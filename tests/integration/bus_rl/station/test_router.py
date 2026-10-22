@@ -24,11 +24,12 @@ def client(tmp_path_factory, monkeypatch_module):
             "--output",
             str(data),
             "--counts",
-            "train=1,validation=1,test_id=1",
+            "train=1,validation=1,test_id=1,test_ood_burst=1",
         ]
     )
     monkeypatch_module.chdir(ROOT)
     monkeypatch_module.setenv("SIMULATION__MANIFEST_PATH", str(data / "manifest.json"))
+    monkeypatch_module.setenv("SIMULATION__SPLITS", '["validation", "test_ood_burst"]')
     monkeypatch_module.setenv("SIMULATION__MAX_SESSIONS", "2")
     monkeypatch_module.setenv("SIMULATION__MAX_DECISIONS_PER_CALL", "200")
     import bus_rl.app_config
@@ -88,9 +89,79 @@ def test_simulation_runs_a_full_day_then_rejects_more_steps(client):
     assert client.get(f"/simulations/{simulation_id}").status_code == 404
 
 
+def test_snapshot_serves_spec_counters_queues_and_departures(client):
+    layout = client.get("/station").json()
+    assert layout["splits"] == [
+        {"name": "validation", "variant": "base", "scenario_count": 1},
+        {"name": "test_ood_burst", "variant": "burst", "scenario_count": 1},
+    ]
+    assert layout["demand_end_s"] == 10_800
+    assert layout["service_guard_s"] == 1200
+    assert layout["excessive_wait_s"] == 900
+    assert (layout["enable_reassign"], layout["enable_short_turn"]) == (True, True)
+
+    simulation_id = client.post("/simulations", json={"controller": "threshold"}).json()[
+        "simulation_id"
+    ]
+    try:
+        start = client.get(f"/simulations/{simulation_id}").json()
+        assert start["finish_reason"] is None
+        assert len(start["stop_queues"]) == 3 * 2 * 6
+        assert sum(cell["waiting"] for cell in start["stop_queues"]) == 0
+        assert start["counters"]["generated"] == 0
+        assert {clock["route_id"] for clock in start["departures"]} == {0, 1, 2}
+        assert all(clock["violates_guard"] is False for clock in start["departures"])
+
+        stepped = client.post(f"/simulations/{simulation_id}/steps", json={"decisions": 40}).json()
+        snapshot = stepped["snapshot"]
+        counters = snapshot["counters"]
+        assert counters["generated"] == (
+            counters["waiting"]
+            + counters["onboard"]
+            + counters["completed"]
+            + counters["abandoned"]
+        )
+        assert sum(cell["waiting"] for cell in snapshot["stop_queues"]) == counters["waiting"]
+        assert sum(cell["waiting"] for cell in snapshot["stop_queues"]) == sum(
+            route["waiting"] for route in snapshot["routes"]
+        )
+        assert len(stepped["decisions"]) == 40
+        assert all(decision["cost"] >= 0 for decision in stepped["decisions"])
+        assert snapshot["interval_cost"]["total"] == stepped["decisions"][-1]["cost"]
+        weighted = sum(
+            weight * snapshot["interval_cost"][term]
+            for term, weight in layout["cost_weights"].items()
+        )
+        assert weighted == pytest.approx(snapshot["interval_cost"]["total"])
+        assert all(
+            (decision["kind"] == "SET_HEADWAY") == (decision["headway_s"] is not None)
+            for decision in stepped["decisions"]
+        )
+
+        rest = client.post(f"/simulations/{simulation_id}/steps", json={"decisions": 200}).json()
+        assert rest["snapshot"]["finish_reason"] == "horizon"
+        assert rest["snapshot"]["counters"]["generated"] > 0
+    finally:
+        client.delete(f"/simulations/{simulation_id}")
+
+
+def test_simulation_replays_the_requested_split_and_controller(client):
+    default = client.post("/simulations", json={"controller": "fixed"}).json()
+    burst = client.post(
+        "/simulations", json={"controller": "proportional", "split": "test_ood_burst"}
+    ).json()
+    try:
+        assert (default["split"], default["controller"]) == ("validation", "fixed")
+        assert (burst["split"], burst["controller"]) == ("test_ood_burst", "proportional")
+    finally:
+        for snapshot in (default, burst):
+            client.delete(f"/simulations/{snapshot['simulation_id']}")
+
+
 def test_errors_map_to_http_status(client):
     assert client.post("/simulations", json={"controller": "nope"}).status_code == 404
     assert client.post("/simulations", json={"scenario_index": 5}).status_code == 422
+    assert client.post("/simulations", json={"split": "train"}).status_code == 404
     assert client.post("/simulations/missing/steps", json={"decisions": 1}).status_code == 404
 
     first = client.post("/simulations", json={}).json()["simulation_id"]

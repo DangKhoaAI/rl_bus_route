@@ -36,9 +36,9 @@ def create_simulation(
     service: ServiceDependency,
 ) -> SimulationSnapshot:
     try:
-        return service.create(body.controller, body.scenario_index)
-    except KeyError:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, f"unknown controller {body.controller!r}")
+        return service.create(body.controller, body.split, body.scenario_index)
+    except KeyError as error:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, error.args[0])
     except IndexError:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_CONTENT,

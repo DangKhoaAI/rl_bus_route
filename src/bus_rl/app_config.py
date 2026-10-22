@@ -21,7 +21,11 @@ class SimulationSettings(BaseModel):
     config_path: str = "configs/eval.toml"
     # Required: the API replays real held-out days, never an invented dataset.
     manifest_path: str
-    split: str = "validation"
+    # Optional trained policy served as the `ppo` controller; empty keeps baselines only.
+    checkpoint_path: str | None = None
+    # Manifest splits the station can replay; the first is the default for a new
+    # simulation. Held-out splits only: `train` days are what the policy learned on.
+    splits: list[str] = Field(default_factory=lambda: ["validation"], min_length=1)
     max_sessions: int = Field(8, ge=1)
     max_decisions_per_call: int = Field(120, ge=1)
 
