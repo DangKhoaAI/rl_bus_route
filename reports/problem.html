@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bài toán · RL điều phối xe buýt</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<style>
+:root{--bg:#f3f6fa;--ink:#16263e;--muted:#52637a;--line:#dce4ee;--blue:#255bd7;--teal:#087e70;--warn:#94530d;--white:#fff}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif}a{color:var(--blue);text-underline-offset:3px}header,main,footer{max-width:1160px;margin:auto;padding:0 28px}header{padding-top:45px}.eyebrow{font-size:12px;letter-spacing:2px;font-weight:750;text-transform:uppercase;color:var(--blue)}h1{font-size:clamp(32px,4.7vw,57px);line-height:1.12;letter-spacing:-2px;max-width:900px;margin:17px 0 22px}h2{font-size:29px;letter-spacing:-.7px;line-height:1.25;margin:0 0 12px}h3{font-size:19px;margin:0 0 10px}p{margin:0 0 14px}.lead{font-size:19px;max-width:850px;color:var(--muted)}nav{display:flex;gap:10px;flex-wrap:wrap;margin:25px 0 32px}nav a{background:white;padding:8px 15px;border:1px solid var(--line);border-radius:24px;text-decoration:none;font-size:14px}.hero{background:var(--ink);color:white;padding:30px;border-radius:18px}.hero p{color:#dce7fa;max-width:890px}.hero strong{color:#96e7d5}.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:24px}.kpi{border-top:1px solid #506077;padding-top:14px}.kpi b{display:block;font-size:35px;line-height:1.3;color:#96e7d5}.kpi span{font-size:14px;color:#dce7fa}section{margin:48px 0;scroll-margin-top:20px}.intro{color:var(--muted);max-width:900px;margin-bottom:22px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.grid>*{min-width:0}.two{grid-template-columns:repeat(2,1fr)}.card{padding:24px;background:white;border:1px solid var(--line);border-radius:14px}.tag{font-size:11px;font-weight:750;letter-spacing:1px;text-transform:uppercase;color:var(--teal);display:block;margin-bottom:12px}.small{font-size:13px;color:var(--muted)}.note{padding:17px 20px;border-left:4px solid var(--blue);background:#eaf0ff;margin:20px 0;border-radius:0 8px 8px 0}.warning{border-color:#c58027;background:#fff3df;color:#70450f}.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:white}.table-wrap.wrap table{white-space:normal}table{width:100%;border-collapse:collapse;white-space:nowrap;font-size:14px}th,td{text-align:right;padding:14px 17px;border-bottom:1px solid var(--line)}th:first-child,td:first-child{text-align:left}thead{background:#e9eff8}tbody tr:last-child td{border-bottom:0}.diagram{background:white;border:1px solid var(--line);border-radius:14px;padding:22px;margin:0 0 12px}.diagram pre.mermaid{margin:0;text-align:center;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.5;color:var(--muted);white-space:pre-wrap}.read{display:grid;grid-template-columns:1fr 1fr;gap:20px;background:white;border:1px solid var(--line);border-radius:14px;padding:20px 24px}.read p{margin:0;font-size:15px}.read b{color:var(--blue)}ul{padding-left:21px;margin:10px 0}li{margin:7px 0}details{background:white;border:1px solid var(--line);border-radius:10px;margin:12px 0;padding:16px 20px}summary{cursor:pointer;font-weight:700}details p,details ul{margin-top:14px}.formula{background:white;border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:16px 0;overflow-x:auto}.eq-note{font-size:14px;color:var(--muted);margin:-4px 0 18px}.verdict{font-size:20px;border-top:3px solid var(--teal);padding-top:22px}.step{color:var(--blue);font-weight:750;font-size:13px;display:block;margin-bottom:10px}footer{padding-bottom:35px;color:var(--muted);font-size:13px}a:focus-visible,summary:focus-visible{outline:3px solid var(--blue);outline-offset:4px}@media(max-width:800px){.grid,.two,.read{grid-template-columns:1fr}.formula{font-size:.88em}table{white-space:normal}.kpis{gap:10px}.kpi b{font-size:27px}header,main,footer{padding-left:18px;padding-right:18px}.hero{padding:23px}h1{letter-spacing:-1px}.diagram{padding:14px}}@media(max-width:480px){.kpis{grid-template-columns:1fr}.kpi b{font-size:32px}section{margin:35px 0}}@media print{body{background:white;font-size:11pt}header,main,footer{max-width:none;padding:0}nav{display:none}.hero{background:white;color:var(--ink);border:1px solid var(--line)}.hero p,.hero strong,.kpi b,.kpi span{color:var(--ink)}section{margin:24px 0}.card,.diagram,.read{break-inside:avoid}.table-wrap{overflow:visible}table{white-space:normal}a{color:inherit}details{display:block}}
+</style>
+</head>
+<body>
+<header>
+<div class="eyebrow">Bus fleet control / Bài toán / Nghiên cứu mô phỏng</div>
+<h1>Điều phối đội xe buýt<br>theo nhu cầu biến động</h1>
+<p class="lead">Có 12 xe và 3 tuyến cố định, nhu cầu khách thay đổi theo giờ, và không thể tăng số xe. Bài toán là tìm <b>một quy tắc quyết định</b> chỉ dùng thông tin hiện có, để giảm chờ đợi, quá đông và khách bỏ cuộc mà vẫn kiểm soát chi phí vận hành. Trang này giải thích bài toán bằng các sơ đồ luồng và các công thức chính.</p>
+<nav aria-label="Mục lục"><a href="#tom-tat">30 giây</a><a href="#tong-the">1 · Tổng thể</a><a href="#vong-lap">2 · Vòng lặp quyết định</a><a href="#mo-hinh">3 · Chuỗi mô hình hoá</a><a href="#bien">4 · Các biến</a><a href="#xe">5 · Vòng đời xe</a><a href="#action">6 · Action và mask</a><a href="#chi-phi">7 · Chi phí</a><a href="#huan-luyen">8 · Huấn luyện</a><a href="#rl">9 · RL dùng thế nào</a><a href="#cong-thuc">10 · Công thức</a><a href="#tham-chieu">Tham chiếu</a><a href="#pham-vi">Phạm vi</a></nav>
+</header>
+<main>
+
+<section class="hero" id="tom-tat" aria-label="Tóm tắt bài toán">
+<div class="eyebrow" style="color:#96e7d5">Bài toán trong 30 giây</div>
+<h2 style="margin-top:12px">Phân bổ lại đội xe đang có,<br>không phải thiết kế tuyến mới.</h2>
+<p>Mạng lưới, số tuyến và số trạm đã cho trước. Mỗi 2 phút, controller chọn <strong>một</strong> hành động: đưa xe dự phòng vào tuyến, chuyển xe giữa các tuyến, thu hồi xe về depot, cho xe quay đầu sớm, hoặc đổi khoảng cách xuất bến mục tiêu. Kết quả cuối ca được đo bằng một hàm chi phí tổng hợp: <strong>thấp hơn là tốt hơn</strong>.</p>
+<div class="kpis"><div class="kpi"><b>12 xe · 3 tuyến</b><span>9 xe chạy đều trên 3 tuyến, 3 xe dự phòng ở depot; sức chứa 40 khách/xe</span></div><div class="kpi"><b>120 quyết định</b><span>Ca 240 phút, ra quyết định mỗi 120 giây; 60 phút cuối chỉ phục vụ khách tồn</span></div><div class="kpi"><b>221 action slot</b><span>6 loại quyết định được mã hoá thành 221 slot, chọn qua action mask</span></div></div>
+</section>
+
+<section id="vi-sao-kho">
+<span class="tag">Bối cảnh trước khi xem sơ đồ</span>
+<h2>Bốn đặc điểm quyết định toàn bộ phần mô hình hoá</h2>
+<div class="grid two">
+<div class="card"><span class="step">01 / NGOẠI SINH</span><h3>Nhu cầu không biết trước</h3><p>Khách đến theo cường độ thay đổi trong ngày, có cao điểm; giao thông làm thời gian di chuyển dài ngắn khác nhau. Controller phản ứng được với chúng nhưng không chọn được giá trị của chúng.</p></div>
+<div class="card"><span class="step">02 / TỔNG BẰNG KHÔNG</span><h3>Đội xe hữu hạn</h3><p>Tổng số xe cố định. Đưa thêm xe cho tuyến đang quá tải nghĩa là lấy xe từ tuyến khác hoặc từ quỹ dự phòng, nên mọi quyết định đều có phía được và phía mất.</p></div>
+<div class="card"><span class="step">03 / ĐỘ TRỄ</span><h3>Quyết định không có hiệu lực ngay</h3><p>Xe chuyển tuyến phải chạy deadhead tới nơi mới phục vụ được; mỗi xe và mỗi tuyến có cooldown; đặt headway thấp chỉ tạo ra yêu cầu, cần xe có mặt mới thực sự xuất bến.</p></div>
+<div class="card"><span class="step">04 / THẤY MỘT PHẦN</span><h3>Không quan sát được toàn bộ trạng thái</h3><p>Controller thấy queue, tuổi chờ, tải xe, headway và lịch sử arrivals, nhưng không thấy đích đến chi tiết của khách đang chờ, không thấy seed scenario và không thấy nhu cầu tương lai.</p></div>
+</div>
+</section>
+
+<section id="tong-the">
+<span class="tag">Sơ đồ 1 / Tổng thể</span>
+<h2>Ai tác động lên ai trong một ca vận hành</h2>
+<p class="intro">Bốn nhóm đầu vào cố định hoặc ngoại sinh chảy vào simulator. Simulator tạo observation cho controller; controller trả về một quyết định; quyết định quay lại làm thay đổi chính simulator. Chi phí chỉ được tính sau khi hành động đã có hiệu lực.</p>
+<div class="diagram"><pre class="mermaid">
+flowchart LR
+  NET["Mạng 3 tuyến · 6 trạm · 2 hướng"]
+  FLEET["12 xe · 9 chạy đều · 3 dự phòng"]
+  DEM["Nhu cầu khách theo giờ, có cao điểm"]
+  TRA["Giao thông biến động theo thời gian"]
+  SIM["Simulator · tick 30 giây · dispatcher tự vận hành"]
+  OBS["Observation o_k và action mask m_k"]
+  POL["Controller · chọn đúng một quyết định"]
+  ACT["Quyết định u_k"]
+  COST["Chi phí của khoảng 2 phút"]
+  OBJ["Objective · tổng chi phí cả ca 240 phút"]
+  NET --> SIM
+  FLEET --> SIM
+  DEM --> SIM
+  TRA --> SIM
+  SIM --> OBS
+  OBS --> POL
+  POL --> ACT
+  ACT --> SIM
+  SIM --> COST
+  COST --> OBJ
+  classDef input fill:#eef2f7,stroke:#aab8ce,color:#52637a
+  class NET,FLEET,DEM,TRA input
+</pre></div>
+<div class="read"><p><b>Cách đọc:</b> vòng kín nằm ở giữa — quyết định quay lại simulator, nên mỗi bước phụ thuộc vào các bước trước. Không có mũi tên nào từ nhu cầu tương lai đi vào controller.</p><p><b>Điểm mấu chốt:</b> controller không điều khiển trực tiếp chuyến xe. Nó điều khiển <i>điều kiện</i> để dispatcher bên trong simulator tạo ra chuyến.</p></div>
+</section>
+
+<section id="vong-lap">
+<span class="tag">Sơ đồ 2 / Một bước quyết định</span>
+<h2>Một lần ra quyết định diễn ra theo thứ tự nào</h2>
+<p class="intro">Chuỗi này lặp 120 lần cho một ca. Thứ tự quan trọng: mask được đưa ra cùng observation, action được giải mã trước khi simulator thực thi, và chi phí chỉ được trả về sau khi khoảng thời gian đã trôi qua.</p>
+<div class="diagram"><pre class="mermaid">
+sequenceDiagram
+  participant C as Controller
+  participant E as Môi trường
+  participant S as Simulator
+  Note over C,S: Lặp 120 lần, mỗi lần 120 giây
+  E->>C: observation o_k và action mask m_k
+  C->>E: action a_k đã chọn trong các slot hợp lệ
+  E->>S: giải mã a_k thành quyết định u_k
+  S->>S: thực thi u_k rồi chạy tiếp 120 giây theo tick 30 giây
+  S-->>E: trạng thái mới và chi phí của khoảng
+  E-->>C: reward r_k và observation của bước kế tiếp
+</pre></div>
+<div class="read"><p><b>Cách đọc:</b> mỗi vòng chỉ có một action được thực thi. Muốn điều hai xe phải dùng hai bước, tức là mất thêm 2 phút.</p><p><b>Điểm mấu chốt:</b> reward của bước k đến sau khi 120 giây đã trôi qua, nên controller không thể sửa một quyết định đã thực thi.</p></div>
+</section>
+
+<section id="mo-hinh">
+<span class="tag">Sơ đồ 3 / Chuỗi mô hình hoá</span>
+<h2>Từ trạng thái đến quy tắc cần tìm</h2>
+<p class="intro">Đây là chuỗi lập luận biến bài toán vận hành thành bài toán tối ưu: trạng thái sinh ra tập quyết định khả thi, quyết định đổi trạng thái, trạng thái mới sinh chi phí, và chi phí là thứ cần tối thiểu hoá.</p>
+<div class="diagram"><pre class="mermaid">
+flowchart TD
+  S["State s_k · thời gian, khách, xe, dispatcher"]
+  FEAS["Tập quyết định khả thi U của s_k"]
+  MASK["Mask · loại bỏ quyết định không hợp lệ"]
+  U["Quyết định u_k"]
+  DYN["Dynamics · s_k+1 = f của s_k, u_k và nhiễu omega_k"]
+  CK["Chi phí c_k của khoảng vừa qua"]
+  OBJ["Objective · min tổng chi phí cộng 60 nhân N_H"]
+  MU["Quy tắc μ · ánh xạ thông tin được phép biết thành quyết định"]
+  S --> FEAS
+  FEAS --> MASK
+  MASK --> U
+  U --> DYN
+  DYN --> CK
+  CK --> OBJ
+  OBJ --> MU
+  MU -.->|"điều khiển ở bước tiếp theo"| U
+</pre></div>
+<div class="read"><p><b>Cách đọc:</b> nhánh liền nét là diễn biến của hệ thống; đường nét đứt là phần con người thiết kế, tức quy tắc điều khiển cần tìm.</p><p><b>Điểm mấu chốt:</b> N_H là khách còn chờ hoặc còn trên xe khi hết ca. Không có số hạng này, quy tắc tối ưu sẽ dồn khách sang phần cuối ca.</p></div>
+</section>
+
+<section id="bien">
+<span class="tag">Sơ đồ 4 / Các biến</span>
+<h2>Các biến của bài toán và chúng đi vào đâu</h2>
+<p class="intro">Biến của bài toán chia làm năm nhóm. Bốn nhóm đầu mô tả cái đang tồn tại và cái đang thay đổi; nhóm thứ ba là ngoại sinh, tức là thứ controller chỉ chịu được chứ không chọn được. Cả năm nhóm gộp lại thành state, state chi phối tập quyết định khả thi, và quyết định sinh ra chi phí.</p>
+<div class="diagram"><pre class="mermaid">
+flowchart TB
+  G1["Nhóm 1 · Mạng lưới và đội xe"]
+  G2["Nhóm 2 · Thời gian và luật vận hành"]
+  G3["Nhóm 3 · Nhu cầu và giao thông"]
+  G4["Nhóm 4 · Trạng thái hành khách"]
+  G5["Nhóm 5 · Trạng thái xe và điều phối"]
+  S["State s_k · gộp cả năm nhóm"]
+  OBS["Observation o_k · phần controller thực sự thấy"]
+  U["Action u_k · chọn trong tập khả thi của s_k"]
+  CK["Chi phí c_k · chín thành phần"]
+  OBJ["Objective · tổng cả ca cộng khách tồn"]
+  G1 --> S
+  G2 --> S
+  G3 --> S
+  G4 --> S
+  G5 --> S
+  S --> OBS
+  S --> U
+  OBS --> U
+  U --> CK
+  CK --> OBJ
+  classDef group fill:#eef2f7,stroke:#aab8ce,color:#52637a
+  classDef latent fill:#fff3df,stroke:#c58027,color:#70450f
+  class G1,G2,G4,G5 group
+  class G3 latent
+</pre></div>
+<div class="read"><p><b>Cách đọc:</b> mũi tên từ state sang observation là mũi tên hẹp lại — controller không thấy hết state. Ô màu vàng là nhóm biến ngoại sinh, phần lớn không quan sát được.</p><p><b>Điểm mấu chốt:</b> biến không nằm trong observation vẫn tác động lên chi phí. Đó là lý do bài toán là quyết định dưới quan sát bộ phận, không phải tối ưu có đầy đủ thông tin.</p></div>
+
+<h3 style="margin-top:34px">Nhóm 1 · Mạng lưới và đội xe</h3>
+<p class="small" style="margin-bottom:12px">Những gì tồn tại và không đổi trong một ca. Đây là ràng buộc cứng của bài toán, không phải biến quyết định.</p>
+<div class="table-wrap wrap"><table><thead><tr><th>Ký hiệu</th><th style="text-align:left">Ý nghĩa</th><th style="text-align:left">Giá trị setup</th></tr></thead><tbody>
+<tr><td>G = (V, E)</td><td style="text-align:left">Mạng gồm nút và cạnh, tức hạ tầng cho trước</td><td style="text-align:left">3 tuyến, 6 trạm mỗi tuyến</td></tr>
+<tr><td>R · n<sub>r</sub></td><td style="text-align:left">Số tuyến và số trạm trên một tuyến</td><td style="text-align:left">3 · 6</td></tr>
+<tr><td>d ∈ {+1, −1}</td><td style="text-align:left">Hướng chạy trên tuyến</td><td style="text-align:left">cả hai hướng đều phục vụ</td></tr>
+<tr><td>v<sub>dep</sub></td><td style="text-align:left">Vị trí depot, nơi xe dự phòng nằm chờ</td><td style="text-align:left">một depot</td></tr>
+<tr><td>F</td><td style="text-align:left">Tổng số xe của đội</td><td style="text-align:left">12 · 9 chạy đều, 3 dự phòng</td></tr>
+<tr><td>C<sub>b</sub> · C<sub>b</sub><sup>comfort</sup></td><td style="text-align:left">Sức chứa tối đa và ngưỡng tải thoải mái của một xe</td><td style="text-align:left">40 · 30 khách</td></tr>
+<tr><td>τ̄<sub>e</sub></td><td style="text-align:left">Thời gian chạy nền trên một cạnh, chưa tính giao thông</td><td style="text-align:left">180 giây mỗi cặp trạm liền kề</td></tr>
+<tr><td>P<sub>r</sub><sup>short</sup></td><td style="text-align:left">Hành trình short-turn được phép trên tuyến</td><td style="text-align:left">s0 tới s3 rồi quay lại theo đúng thứ tự s0</td></tr>
+</tbody></table></div>
+
+<h3 style="margin-top:30px">Nhóm 2 · Thời gian và luật vận hành</h3>
+<p class="small" style="margin-bottom:12px">Khung thời gian và các giới hạn biến bài toán liên tục thành bài toán ra quyết định rời rạc.</p>
+<div class="table-wrap wrap"><table><thead><tr><th>Ký hiệu</th><th style="text-align:left">Ý nghĩa</th><th style="text-align:left">Giá trị setup</th></tr></thead><tbody>
+<tr><td>δ · Δ</td><td style="text-align:left">Độ dài một tick mô phỏng và khoảng giữa hai lần ra quyết định</td><td style="text-align:left">30 giây · 120 giây</td></tr>
+<tr><td>H · K = H/Δ</td><td style="text-align:left">Độ dài ca và số bước quyết định trong ca</td><td style="text-align:left">240 phút · 120 bước</td></tr>
+<tr><td>H<sub>D</sub></td><td style="text-align:left">Thời điểm ngừng sinh khách mới, để còn thời gian phục vụ khách tồn</td><td style="text-align:left">phút 180</td></tr>
+<tr><td>τ<sup>dwell</sup> · τ<sup>layover</sup></td><td style="text-align:left">Thời gian dừng ở trạm và nghỉ bắt buộc ở đầu tuyến</td><td style="text-align:left">30 giây · 120 giây</td></tr>
+<tr><td>τ<sup>patience</sup> · τ<sup>excess</sup></td><td style="text-align:left">Ngưỡng khách bỏ cuộc và ngưỡng bị coi là chờ quá lâu</td><td style="text-align:left">45 phút · 15 phút</td></tr>
+<tr><td>h<sub>0</sub> · tập headway · h<sub>min</sub> · h<sub>guard</sub></td><td style="text-align:left">Headway ban đầu, tập headway được chọn, khoảng cách xuất bến tối thiểu, và ngưỡng dùng cho điều kiện bảo vệ dịch vụ</td><td style="text-align:left">15 phút · {6, 10, 15} · 2 phút · 20 phút</td></tr>
+<tr><td>F<sub>min</sub></td><td style="text-align:left">Số xe FULL tối thiểu phải giữ trên mỗi tuyến</td><td style="text-align:left">2 xe</td></tr>
+<tr><td>τ<sup>alloc</sup> · τ<sup>headway</sup></td><td style="text-align:left">Cooldown sau khi đổi nhiệm vụ xe và sau khi đổi headway</td><td style="text-align:left">20 phút · 10 phút</td></tr>
+</tbody></table></div>
+
+<h3 style="margin-top:30px">Nhóm 3 · Nhu cầu và giao thông</h3>
+<p class="small" style="margin-bottom:12px">Ngoại sinh: controller chịu tác động nhưng không chọn được giá trị. Phần lớn nhóm này không nằm trong observation.</p>
+<div class="table-wrap wrap"><table><thead><tr><th>Ký hiệu</th><th style="text-align:left">Ý nghĩa</th><th style="text-align:left">Giá trị setup</th></tr></thead><tbody>
+<tr><td>λ<sub>r,d,i</sub>(t)</td><td style="text-align:left">Cường độ khách đến trạm i, tuyến r, hướng d tại thời điểm t</td><td style="text-align:left">thay đổi theo giờ trong ngày</td></tr>
+<tr><td>λ̄<sub>r</sub></td><td style="text-align:left">Demand cơ sở của tuyến, tính cho cả hai hướng</td><td style="text-align:left">180 · 160 · 140 khách mỗi giờ</td></tr>
+<tr><td>p<sub>r,d,i,j</sub></td><td style="text-align:left">Xác suất khách ở i muốn đi tới j, tức phân bố đích đến</td><td style="text-align:left">giảm theo khoảng cách trạm</td></tr>
+<tr><td>A<sub>r,d,i,j</sub>(t)</td><td style="text-align:left">Số khách thực tế xuất hiện trong một tick</td><td style="text-align:left">rút ngẫu nhiên theo λ</td></tr>
+<tr><td>m<sub>peak</sub> · μ<sub>peak</sub> · σ<sub>peak</sub></td><td style="text-align:left">Hệ số tăng cao điểm, thời điểm đỉnh và độ rộng đỉnh</td><td style="text-align:left">1,5 tới 3,0 · phút 45 tới 135 · 15 tới 30 phút</td></tr>
+<tr><td>ξ<sub>e,ℓ</sub></td><td style="text-align:left">Hệ số giao thông trên cạnh e, bucket thời gian ℓ</td><td style="text-align:left">lognormal, chặn trong 0,7 tới 2,5</td></tr>
+<tr><td>τ<sub>e</sub>(t)</td><td style="text-align:left">Thời gian đi thực tế trên cạnh, bằng thời gian nền nhân hệ số giao thông rồi làm tròn theo tick</td><td style="text-align:left">tính ra từ τ̄<sub>e</sub> và ξ</td></tr>
+</tbody></table></div>
+
+<h3 style="margin-top:30px">Nhóm 4 · Trạng thái hành khách</h3>
+<p class="small" style="margin-bottom:12px">Thay đổi từng tick. Cần cả số lượng lẫn tuổi chờ: 20 khách mới đến và 20 khách đã chờ 40 phút là hai mức khẩn cấp khác nhau.</p>
+<div class="table-wrap wrap"><table><thead><tr><th>Ký hiệu</th><th style="text-align:left">Ý nghĩa</th><th style="text-align:left">Ghi chú</th></tr></thead><tbody>
+<tr><td>Q<sub>r,d,i,j</sub>(t)</td><td style="text-align:left">Số khách đang chờ, tách theo tuyến, hướng, trạm đi và trạm đến</td><td style="text-align:left">tăng khi khách đến, giảm khi lên xe hoặc bỏ cuộc</td></tr>
+<tr><td>a<sub>p</sub> · w<sub>p</sub>(t)</td><td style="text-align:left">Thời điểm khách p đến trạm và tuổi chờ hiện tại của p</td><td style="text-align:left">tuổi chờ vào thẳng observation</td></tr>
+<tr><td>χ<sub>p</sub>(t)</td><td style="text-align:left">Trạng thái của khách: đang chờ, đang trên xe, đã hoàn thành, hoặc đã bỏ cuộc</td><td style="text-align:left">bốn trạng thái loại trừ nhau</td></tr>
+<tr><td>η<sub>p</sub>(t)</td><td style="text-align:left">Khách đã từng bị từ chối lên xe vì hết chỗ hay chưa</td><td style="text-align:left">chỉ tính lần đầu, không lặp lại mỗi lần</td></tr>
+<tr><td>B · E</td><td style="text-align:left">Số khách lên xe và số khách bỏ cuộc trong một tick</td><td style="text-align:left">hai dòng chảy ra khỏi queue</td></tr>
+<tr><td>N<sub>waiting</sub> · N<sub>onboard</sub> · N<sub>completed</sub> · N<sub>abandoned</sub> · N<sub>generated</sub></td><td style="text-align:left">Tổng số khách theo từng trạng thái, và tổng số khách đã xuất hiện</td><td style="text-align:left">bất biến: tổng sinh ra bằng tổng bốn trạng thái kia</td></tr>
+</tbody></table></div>
+
+<h3 style="margin-top:30px">Nhóm 5 · Trạng thái xe và điều phối</h3>
+<p class="small" style="margin-bottom:12px">Xác định xe nào đang làm gì, và vì thế quyết định nào là khả thi.</p>
+<div class="table-wrap wrap"><table><thead><tr><th>Ký hiệu</th><th style="text-align:left">Ý nghĩa</th><th style="text-align:left">Ghi chú</th></tr></thead><tbody>
+<tr><td>x<sub>b</sub> · z<sub>b</sub> · d<sub>b</sub></td><td style="text-align:left">Vị trí, tuyến được gán và hướng chạy của xe b</td><td style="text-align:left">vị trí có thể là nút hoặc cạnh đang đi</td></tr>
+<tr><td>L<sub>b</sub></td><td style="text-align:left">Số khách đang trên xe</td><td style="text-align:left">luôn trong khoảng 0 tới C<sub>b</sub></td></tr>
+<tr><td>φ<sub>b</sub></td><td style="text-align:left">Phase của xe: depot idle, deadhead, terminal idle, moving, dwell, layover</td><td style="text-align:left">quyết định sai phase bị mask</td></tr>
+<tr><td>p<sub>b</sub></td><td style="text-align:left">Pattern đang chạy: FULL hoặc SHORT</td><td style="text-align:left">short-turn trở về FULL khi xong</td></tr>
+<tr><td>ρ<sub>b</sub></td><td style="text-align:left">Thời gian còn lại của movement, dwell hoặc layover hiện tại</td><td style="text-align:left">cho biết xe rảnh lúc nào</td></tr>
+<tr><td>c<sub>b</sub></td><td style="text-align:left">Cooldown phân bổ còn lại của xe</td><td style="text-align:left">chặn đổi nhiệm vụ liên tục</td></tr>
+<tr><td>P<sub>b</sub></td><td style="text-align:left">Tập khách đang trên xe, kèm đích đến của từng người</td><td style="text-align:left">dùng để quyết định có cho xe rời tuyến được không</td></tr>
+<tr><td>h<sub>r</sub> · ℓ<sup>ANY</sup> · ℓ<sup>FULL</sup> · c<sub>r</sub><sup>h</sup></td><td style="text-align:left">Headway mục tiêu của tuyến, thời điểm xuất bến gần nhất của luồng dịch vụ, và cooldown đổi headway</td><td style="text-align:left">ℓ<sup>FULL</sup> là cơ sở của điều kiện bảo vệ dịch vụ</td></tr>
+</tbody></table></div>
+
+<h3 style="margin-top:34px">Gộp lại thành state, action và objective</h3>
+<div class="table-wrap wrap"><table><thead><tr><th>Đại lượng</th><th style="text-align:left">Cấu tạo</th></tr></thead><tbody>
+<tr><td>State s<sub>k</sub></td><td style="text-align:left">Thời gian, hồ sơ khách, trạng thái từng xe, trạng thái dispatcher, và phần ngoại sinh mô tả dynamics</td></tr>
+<tr><td>Dynamics</td><td style="text-align:left">s<sub>k+1</sub> = f(s<sub>k</sub>, u<sub>k</sub>, ω<sub>k</sub>), với ω<sub>k</sub> là arrivals và giao thông trong khoảng</td></tr>
+<tr><td>Action u<sub>k</sub></td><td style="text-align:left">Bộ bốn (κ<sub>k</sub>, b<sub>k</sub>, r<sub>k</sub>, h<sub>k</sub>): loại quyết định, xe, tuyến, headway. Các trường sau chỉ có nghĩa khi loại quyết định cần chúng</td></tr>
+<tr><td>Chi phí c<sub>k</sub></td><td style="text-align:left">W chờ · V trên xe · O quá thoải mái · C vận hành · C<sub>D</sub> deadhead · X chờ lâu · U bị từ chối · E bỏ cuộc · M đổi nhiệm vụ, mỗi thứ nhân trọng số riêng</td></tr>
+<tr><td>Objective</td><td style="text-align:left">min kỳ vọng của tổng c<sub>k</sub> cộng 60 nhân N<sub>H</sub>, với N<sub>H</sub> là khách còn chờ hoặc còn trên xe khi hết ca</td></tr>
+</tbody></table></div>
+<div class="note warning"><b>Biến không nằm trong observation:</b> cường độ khách λ, phân bố đích p, hệ số giao thông ξ và mọi giá trị tương lai của chúng. Controller chỉ thấy queue, tuổi chờ, tải, vị trí, headway, lịch sử arrivals đã xảy ra, và thời gian còn lại. Vì vậy đây là quyết định dưới quan sát bộ phận.</div>
+
+<h3 style="margin-top:34px">Biến phía lời giải</h3>
+<p class="small" style="margin-bottom:12px">Các ký hiệu thuộc phần học, không thuộc bài toán vận hành. Chúng chỉ dùng để tạo ra quy tắc μ.</p>
+<div class="table-wrap wrap"><table><thead><tr><th>Ký hiệu</th><th style="text-align:left">Ý nghĩa</th><th style="text-align:left">Giá trị setup</th></tr></thead><tbody>
+<tr><td>o<sub>k</sub> · m<sub>k</sub> · a<sub>k</sub></td><td style="text-align:left">Observation, action mask, và chỉ số action được chọn</td><td style="text-align:left">mask luôn có NOOP trước khi hết ca</td></tr>
+<tr><td>θ · φ</td><td style="text-align:left">Tham số của actor và của critic</td><td style="text-align:left">MLP 256 rồi 128</td></tr>
+<tr><td>π<sub>θ</sub>(a | o, m) · V<sub>φ</sub>(o)</td><td style="text-align:left">Phân phối xác suất trên action hợp lệ, và ước lượng giá trị từ observation</td><td style="text-align:left">action không hợp lệ có xác suất bằng 0</td></tr>
+<tr><td>γ · λ<sub>GAE</sub> · ε</td><td style="text-align:left">Discount, tham số GAE, và biên clip của PPO</td><td style="text-align:left">1,0 · 0,95 · 0,2</td></tr>
+<tr><td>α</td><td style="text-align:left">Learning rate</td><td style="text-align:left">3 × 10<sup>−4</sup></td></tr>
+<tr><td>N<sub>ref</sub></td><td style="text-align:left">Hằng số chuẩn hoá reward; reward bằng âm c<sub>k</sub> chia N<sub>ref</sub></td><td style="text-align:left">3.000</td></tr>
+<tr><td>n<sub>env</sub> · n<sub>step</sub> · n<sub>batch</sub> · n<sub>epoch</sub></td><td style="text-align:left">Số môi trường, số bước thu thập mỗi môi trường, kích thước minibatch, số lượt cập nhật trên một rollout</td><td style="text-align:left">4 · 256 · 256 · 4</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="xe">
+<span class="tag">Sơ đồ 5 / Vòng đời một xe</span>
+<h2>Xe đi qua những phase nào, và quyết định nào chen vào được</h2>
+<p class="intro">Mọi quyết định đều gắn với phase hiện tại của xe. Đây là lý do action mask tồn tại: một quyết định đúng về ý định nhưng sai phase thì không thể thực thi.</p>
+<div class="diagram"><pre class="mermaid">
+stateDiagram-v2
+  state "Depot idle · nằm ở depot" as DepotIdle
+  state "Deadhead · chạy rỗng tới nơi mới" as Deadhead
+  state "Terminal idle · chờ xuất bến" as TerminalIdle
+  state "Moving · đang chạy giữa hai trạm" as Moving
+  state "Dwell · dừng trả và đón khách" as Dwell
+  state "Layover · nghỉ bắt buộc ở đầu tuyến" as Layover
+  [*] --> DepotIdle
+  DepotIdle --> Deadhead: DISPATCH hoặc REASSIGN
+  Deadhead --> TerminalIdle: tới trạm đầu của tuyến
+  TerminalIdle --> Moving: xuất bến theo headway mục tiêu
+  Moving --> Dwell: tới một trạm giữa tuyến
+  Dwell --> Moving: tiếp tục hành trình
+  Moving --> Layover: tới endpoint
+  Layover --> TerminalIdle: nghỉ 120 giây
+  TerminalIdle --> DepotIdle: RECALL
+  TerminalIdle --> Deadhead: REASSIGN sang tuyến khác
+  note right of Moving
+    SHORT_TURN giao một hành trình ngắn s0 tới s3 rồi quay lại theo đúng thứ tự,
+    sau đó xe trở về pattern FULL
+  end note
+</pre></div>
+<div class="read"><p><b>Cách đọc:</b> chỉ các chuyển tiếp có nhãn DISPATCH, REASSIGN và RECALL mới do controller tạo, gồm ba mũi tên: vào deadhead, về depot và sang tuyến khác. Phần còn lại do dispatcher tự chạy.</p><p><b>Điểm mấu chốt:</b> deadhead và layover đều tốn thời gian thật, nên một quyết định đúng vẫn có thể về đích quá muộn để cứu cao điểm.</p></div>
+</section>
+
+<section id="action">
+<span class="tag">Sơ đồ 6 / Action space</span>
+<h2>Từ 221 slot đến một quyết định được thực thi</h2>
+<p class="intro">Sáu loại quyết định được mã hoá thành 221 slot. Mask lọc theo phase, cooldown, vị trí và điều kiện bảo vệ dịch vụ trước khi policy chọn.</p>
+<div class="diagram"><pre class="mermaid">
+flowchart TD
+  SLOT["221 action slot · sáu loại quyết định"]
+  CHK{"Hợp lệ với state hiện tại?"}
+  Z["Mask 0 · xác suất chọn bằng 0"]
+  ONE["Mask 1 · policy có thể chọn"]
+  T1["NOOP"]
+  T2["DISPATCH b, r"]
+  T3["REASSIGN b, r"]
+  T4["RECALL b"]
+  T5["SHORT_TURN b, r"]
+  T6["SET_HEADWAY r, h"]
+  G["Donor guard và fleet floor"]
+  H["Chỉ đổi mục tiêu điều phối"]
+  EXE["Simulator thực thi theo thời gian thật"]
+  SLOT --> CHK
+  CHK -->|không| Z
+  CHK -->|có| ONE
+  ONE --> T1
+  ONE --> T2
+  ONE --> T3
+  ONE --> T4
+  ONE --> T5
+  ONE --> T6
+  T2 --> G
+  T3 --> G
+  T4 --> G
+  T5 --> G
+  T6 --> H
+  G --> EXE
+  H --> EXE
+  T1 --> EXE
+</pre></div>
+<div class="read"><p><b>Cách đọc:</b> nhánh bên trái là loại bỏ, nhánh bên phải là được phép chọn. Chỉ các quyết định di chuyển xe mới đi qua donor guard, tức điều kiện giữ ít nhất 2 xe FULL committed trên tuyến và còn một xe FULL ready ở đúng đầu tuyến nguồn.</p><p><b>Điều kiện của từng loại:</b> NOOP luôn hợp lệ trước khi hết ca. DISPATCH chỉ khi xe đang ở depot idle. REASSIGN chỉ giữa hai tuyến khác nhau. RECALL và SHORT_TURN cần xe rỗng đủ điều kiện. SET_HEADWAY bị mask nếu trùng target hiện tại hoặc đang trong cooldown 10 phút.</p></div>
+<p class="small" style="margin-top:12px">Encoding: NOOP 1 · DISPATCH 64 · REASSIGN 64 · SHORT_TURN 64 · RECALL 16 · SET_HEADWAY 12, cộng lại là 221 slot. Các giới hạn tensor như 4 tuyến, 16 xe, 8 trạm thuộc phần encoding của lời giải, không phải quy luật vận hành.</p>
+</section>
+
+<section id="chi-phi">
+<span class="tag">Sơ đồ 7 / Chi phí và objective</span>
+<h2>Chi phí được ghép từ đâu và trọng số nằm ở đâu</h2>
+<p class="intro">Mỗi khoảng 2 phút sinh ra một chi phí có trọng số. Tổng của chúng, cộng phạt khách tồn cuối ca, chính là objective mà lời giải phải tối thiểu hoá.</p>
+<div class="diagram"><pre class="mermaid">
+flowchart LR
+  TERMS["Chín thành phần chi phí mỗi khoảng 2 phút<br/>W chờ 1 · V trên xe 0,25 · O quá thoải mái 0,5<br/>C vận hành 0,5 · C_D deadhead 0,5 · M đổi nhiệm vụ 2<br/>X chờ quá 15 phút 1 · U bị từ chối 5 · E bỏ cuộc 60"]
+  CK["c_k · tổng có trọng số của khoảng"]
+  TOT["Tổng cả ca · Σ c_k cộng 60 nhân N_H"]
+  OBJ["Objective · min theo quy tắc μ"]
+  RW["Reward huấn luyện · r_k bằng âm c_k chia 3000"]
+  TERMS --> CK
+  CK --> TOT
+  TOT --> OBJ
+  TOT --> RW
+</pre></div>
+<div class="read"><p><b>Cách đọc:</b> chín thành phần gộp thành <i>c<sub>k</sub></i>, cộng dồn cả ca rồi cộng phạt khách tồn cuối ca thành objective. Reward huấn luyện chỉ là objective này chia cho 3.000 và đổi dấu.</p><p><b>Điểm mấu chốt:</b> một khách bỏ cuộc tính bằng 60 lần một passenger-minute chờ. Đây là chỉ số vận hành tổng hợp do người làm nghiên cứu chọn, không phải chi phí tài chính; đổi trọng số là đổi bài toán.</p></div>
+<div class="table-wrap" style="margin-top:14px"><table><thead><tr><th>Thành phần</th><th style="text-align:left">Đo cái gì</th><th>Trọng số</th></tr></thead><tbody>
+<tr><td>W · chờ</td><td style="text-align:left">Tổng passenger-minutes khách phải chờ</td><td>1</td></tr>
+<tr><td>V · trên xe</td><td style="text-align:left">Tổng passenger-minutes đang ngồi trên xe</td><td>0,25</td></tr>
+<tr><td>O · quá thoải mái</td><td style="text-align:left">Passenger-minutes vượt ngưỡng 30 khách/xe</td><td>0,5</td></tr>
+<tr><td>C · vận hành</td><td style="text-align:left">Bus-minutes ngoài depot</td><td>0,5</td></tr>
+<tr><td>C_D · deadhead</td><td style="text-align:left">Bus-minutes chạy rỗng để tái vị trí</td><td>0,5</td></tr>
+<tr><td>X · chờ lâu</td><td style="text-align:left">Passenger-minutes của khách đã chờ quá 15 phút</td><td>1</td></tr>
+<tr><td>U · bị từ chối</td><td style="text-align:left">Số khách lần đầu không lên được xe vì đầy</td><td>5</td></tr>
+<tr><td>E · bỏ cuộc</td><td style="text-align:left">Số khách bỏ cuộc sau khi chờ quá lâu</td><td>60</td></tr>
+<tr><td>M · đổi nhiệm vụ</td><td style="text-align:left">Số lần thay đổi nhiệm vụ xe được chấp nhận</td><td>2</td></tr>
+<tr><td>N_H · khách tồn</td><td style="text-align:left">Khách còn chờ hoặc còn trên xe khi hết ca</td><td>60</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="huan-luyen">
+<span class="tag">Sơ đồ 8 / Vòng lặp huấn luyện</span>
+<h2>Lời giải được tạo ra như thế nào</h2>
+<p class="intro">Bài toán không có công thức đóng, nên quy tắc μ được học từ tương tác với simulator. Vòng lặp dưới đây chỉ là quá trình tạo ra lời giải; mục tiêu tối ưu vẫn là chi phí ở sơ đồ 6.</p>
+<div class="diagram"><pre class="mermaid">
+flowchart LR
+  RO["Thu rollout · 4 môi trường nhân 256 bước"]
+  ADV["Tính advantage bằng GAE với lambda 0,95"]
+  UPD["Cập nhật PPO · 4 epoch · minibatch 256 · clip 0,2"]
+  VAL["Đánh giá trên 100 ngày validation"]
+  CKPT["Checkpoint policy tốt nhất"]
+  RO --> ADV
+  ADV --> UPD
+  UPD --> VAL
+  VAL -->|"chưa hết ngân sách 245.760 transitions"| RO
+  VAL --> CKPT
+</pre></div>
+<div class="read"><p><b>Cách đọc:</b> mũi tên quay lại là vòng học. Điều kiện dừng không phải "cost bằng 0" mà là hết ngân sách transitions đã đăng ký trước.</p><p><b>Điểm mấu chốt:</b> checkpoint được chọn theo validation, không theo tập test. Tập test chỉ dùng một lần để báo cáo kết quả.</p></div>
+</section>
+
+<section id="rl">
+<span class="tag">Sơ đồ 9 / RL được dùng như thế nào</span>
+<h2>RL chỉ thay đúng một chỗ: hàm chọn quyết định</h2>
+<p class="intro">Luật mask, hàm chi phí, động học của simulator, các baseline và cả cách mã hoá observation đều cố định do người thiết kế. Thứ duy nhất được học là trọng số của mạng quyết định chọn action nào. Phần này tách rõ cái gì học, học bằng tín hiệu gì, và lúc dùng thì chạy ra sao.</p>
+<div class="diagram"><pre class="mermaid">
+flowchart LR
+  OBS["Observation o_k"] --> FEAT["Trích feature · MLP chung 256 rồi 128"]
+  FEAT --> ACT["Actor · logits cho 221 slot"]
+  MASK["Action mask · môi trường cấp"] --> ACT
+  FEAT --> CRI["Critic · giá trị V của observation"]
+  ACT --> PICK["Chọn action trong các slot hợp lệ"]
+  PICK --> DEC["Giải mã thành quyết định u_k"]
+  DEC --> SIM["Simulator · luật chơi và chi phí cố định"]
+  SIM --> REW["Reward r_k"]
+  REW --> UPD["PPO cập nhật trọng số"]
+  CRI --> UPD
+  classDef learned fill:#eaf0ff,stroke:#255bd7,color:#16263e
+  classDef fixed fill:#eef2f7,stroke:#aab8ce,color:#52637a
+  class FEAT,ACT,CRI,UPD learned
+  class OBS,MASK,PICK,DEC,SIM,REW fixed
+</pre></div>
+<div class="read"><p><b>Cách đọc:</b> ô xanh là phần học được, ô xám là phần cố định. Sơ đồ vẽ một lượt theo thời gian; vòng quay lại đầu ca đã có ở sơ đồ 2 nên ở đây lược bỏ cho gọn. Trọng số chỉ đổi ở bốn ô xanh, và chỉ trong lúc huấn luyện.</p><p><b>Điểm mấu chốt:</b> mask do môi trường cấp chứ không phải do mạng học. Vì vậy policy không bao giờ phải học cách tránh quyết định bất khả thi; nó chỉ học cách chọn trong phần còn lại.</p></div>
+
+<h3 style="margin-top:34px">Một action được chọn như thế nào</h3>
+<p class="small" style="margin-bottom:14px">Actor trả về một điểm số cho cả 221 slot. Mask biến slot không hợp lệ thành không thể chọn, phần còn lại được chuẩn hoá thành phân phối xác suất.</p>
+<div class="diagram"><pre class="mermaid">
+flowchart LR
+  F["Feature của observation"] --> L["Logits cho 221 slot"]
+  L --> MM["Đặt logit của slot không hợp lệ thành âm vô cùng"]
+  MM --> N["Chuẩn hoá lại thành phân phối xác suất"]
+  N --> S1["Khi huấn luyện · lấy mẫu theo xác suất"]
+  N --> S2["Khi đánh giá · chọn slot xác suất cao nhất"]
+  S1 --> D["Chỉ số action a_k"]
+  S2 --> D
+  D --> U["Quyết định vận hành u_k"]
+  classDef learned fill:#eaf0ff,stroke:#255bd7,color:#16263e
+  classDef fixed fill:#eef2f7,stroke:#aab8ce,color:#52637a
+  class L,N learned
+  class F,MM,S1,S2,D,U fixed
+</pre></div>
+<div class="read"><p><b>Cách đọc:</b> huấn luyện lấy mẫu để còn khám phá; đánh giá lấy slot cao nhất để kết quả lặp lại được. Hai chế độ dùng chung một mask.</p><p><b>Điểm mấu chốt:</b> nếu đánh giá mà không truyền mask thì con số thu được không hợp lệ, vì policy có thể chọn một slot vốn bị chặn.</p></div>
+
+<h3 style="margin-top:34px">Thành phần nào học được, thành phần nào không</h3>
+<div class="table-wrap wrap"><table><thead><tr><th>Học được</th><th style="text-align:left">Cố định, do người thiết kế</th></tr></thead><tbody>
+<tr><td>Trọng số MLP trích feature</td><td style="text-align:left">Luật mask: phase, cooldown, vị trí, donor guard, fleet floor</td></tr>
+<tr><td>Trọng số nhánh actor</td><td style="text-align:left">Trọng số của chín thành phần chi phí và phạt khách tồn cuối ca</td></tr>
+<tr><td>Trọng số nhánh critic</td><td style="text-align:left">Động học simulator: arrivals, giao thông, boarding, bỏ cuộc, deadhead</td></tr>
+<tr><td>Cách phân bổ xác suất trên slot hợp lệ</td><td style="text-align:left">Dispatcher tự vận hành theo headway mục tiêu</td></tr>
+<tr><td></td><td style="text-align:left">Cách mã hoá observation và action thành tensor</td></tr>
+<tr><td></td><td style="text-align:left">Siêu tham số, ngân sách huấn luyện, quy tắc chọn checkpoint</td></tr>
+<tr><td></td><td style="text-align:left">Ba baseline theo quy tắc dùng để so sánh</td></tr>
+</tbody></table></div>
+
+<h3 style="margin-top:34px">RL ở đây thuộc nhóm nào, và vì sao điều đó quan trọng</h3>
+<div class="table-wrap wrap"><table><thead><tr><th>Trục phân loại</th><th style="text-align:left">Thuộc nhóm</th><th style="text-align:left">Nghĩa là gì trong bài toán này</th></tr></thead><tbody>
+<tr><td>Model-free hay model-based</td><td style="text-align:left">Model-free</td><td style="text-align:left">Không dùng simulator để thử các tương lai trước khi quyết định. Simulator chỉ đóng vai môi trường cung cấp trải nghiệm, nên có simulator không biến PPO thành model-based</td></tr>
+<tr><td>On-policy hay off-policy</td><td style="text-align:left">On-policy</td><td style="text-align:left">Học từ rollout của chính policy vừa chạy; sau vài lượt cập nhật thì rollout đó bị bỏ và thu dữ liệu mới</td></tr>
+<tr><td>Value-based hay policy-based</td><td style="text-align:left">Tối ưu policy trực tiếp</td><td style="text-align:left">Actor biểu diễn trực tiếp xác suất chọn action, không suy ra policy từ bảng giá trị</td></tr>
+<tr><td>Actor-critic</td><td style="text-align:left">Actor-critic</td><td style="text-align:left">Critic chỉ tồn tại để giúp actor học. Lúc dùng, chỉ cần actor; critic không tham gia ra quyết định</td></tr>
+<tr><td>Thông tin trạng thái</td><td style="text-align:left">Quan sát bộ phận</td><td style="text-align:left">Critic ước lượng giá trị từ observation chứ không từ state đầy đủ, nên bản thân ước lượng đã có sai số</td></tr>
+</tbody></table></div>
+
+<h3 style="margin-top:34px">Tín hiệu học đến từ đâu</h3>
+<p class="small" style="margin-bottom:14px">Reward không phải một hàm mới. Nó chính là chi phí của bài toán, đổi dấu và chia cho một hằng số dương, nên tối đa hoá reward tương đương tối thiểu hoá chi phí.</p>
+<div class="table-wrap wrap"><table><thead><tr><th>Thành phần</th><th style="text-align:left">Công thức và giá trị</th></tr></thead><tbody>
+<tr><td>Reward mỗi bước</td><td style="text-align:left">r<sub>k</sub> bằng âm c<sub>k</sub> chia N<sub>ref</sub>, với N<sub>ref</sub> = 3.000</td></tr>
+<tr><td>Phạt cuối ca</td><td style="text-align:left">Ở bước cuối, cộng thêm âm 60 lần số khách còn chờ hoặc còn trên xe, cũng chia N<sub>ref</sub></td></tr>
+<tr><td>Discount γ</td><td style="text-align:left">1,0 vì horizon hữu hạn và objective là tổng chứ không phải tổng chiết khấu</td></tr>
+<tr><td>Giá trị khởi tạo cuối horizon</td><td style="text-align:left">0, không bootstrap qua khỏi ca</td></tr>
+<tr><td>Shaping</td><td style="text-align:left">Không dùng trong cấu hình cuối; một phương án potential-based đã thử và bị loại theo quy tắc đánh giá</td></tr>
+<tr><td>Entropy</td><td style="text-align:left">Hệ số 0,01, chỉ để duy trì khám phá trong lúc học</td></tr>
+</tbody></table></div>
+
+<h3 style="margin-top:34px">Kiến trúc và công thức huấn luyện</h3>
+<div class="table-wrap wrap"><table><thead><tr><th>Hạng mục</th><th style="text-align:left">Giá trị</th></tr></thead><tbody>
+<tr><td>Mạng</td><td style="text-align:left">MaskablePPO với MultiInputPolicy; các tensor của observation được flatten rồi đi qua MLP chung 256 rồi 128; actor và critic mỗi nhánh 128; actor xuất 221 logit, critic xuất một số vô hướng</td></tr>
+<tr><td>Bộ nhớ</td><td style="text-align:left">Không recurrent, không graph neural network. Lịch sử arrivals được đưa sẵn vào feature thay vì để mạng tự nhớ</td></tr>
+<tr><td>Mask trong mạng</td><td style="text-align:left">Logit của slot không hợp lệ bị đặt thành âm vô cùng trước khi lấy categorical; NOOP giữ cho tập hợp lệ luôn khác rỗng</td></tr>
+<tr><td>Loss</td><td style="text-align:left">Âm của objective PPO đã clip, cộng 0,5 lần sai số value, trừ 0,01 lần entropy</td></tr>
+<tr><td>Hai chế độ lấy mẫu</td><td style="text-align:left">Lúc huấn luyện actor lấy mẫu theo xác suất; lúc đánh giá chọn slot có xác suất cao nhất</td></tr>
+<tr><td>Ngân sách</td><td style="text-align:left">245.760 transitions mỗi seed, tương đương 2.048 episode đầy đủ; seed 11, 22, 33</td></tr>
+<tr><td>Checkpoint</td><td style="text-align:left">Đánh giá mỗi 12.288 transitions trên 100 ngày validation; giữ checkpoint có cost trung bình tốt nhất, bằng nhau thì lấy sớm nhất</td></tr>
+</tbody></table></div>
+
+<h3 style="margin-top:34px">Lúc dùng thì chạy ra sao</h3>
+<div class="grid two">
+<div class="card"><h3>Chu trình sử dụng</h3><ul><li>Nạp checkpoint, dựng môi trường đánh giá.</li><li>Mỗi bước: nhận observation và mask, chọn action hợp lệ có xác suất cao nhất, giải mã thành một quyết định vận hành.</li><li>Không cập nhật trọng số, không cần critic, không cần simulator để thử phương án.</li><li>Chuỗi 120 quyết định tạo ra một ca vận hành, và cost của ca đó là con số được báo cáo.</li></ul></div>
+<div class="card"><h3>Điều RL không làm trong nghiên cứu này</h3><ul><li>Không lập kế hoạch bằng cách mô phỏng các phương án tương lai.</li><li>Không học luật mask hay trọng số chi phí; đổi trọng số là đổi bài toán chứ không phải đổi thuật toán.</li><li>Không thấy nhu cầu tương lai; biến thể có dự báo arrivals đã bị loại.</li><li>Không tổng quát hoá sang mạng tuyến mới, vì ID trạm và tuyến được flatten cố định.</li></ul></div>
+</div>
+<div class="note"><b>Ba phương án đã thử và bị loại:</b> GAE lambda 0,98 và 1,0, dự báo arrivals nhân quả 15 phút, và potential-based reward shaping. Cả ba đều cho validation cost cao hơn core theo quy tắc đánh giá đã đăng ký trước, nên kết quả cuối là PPO core gốc. Chi tiết ở <a href="README.md">reports/README.md</a>.</div>
+</section>
+
+<section id="cong-thuc">
+<span class="tag">Sơ đồ 10 / Công thức toán</span>
+<h2>Các công thức, đọc từng bước</h2>
+<p class="intro">Công thức của repo chia làm ba nhóm: mô tả hệ thống tiến hoá ra sao, định nghĩa cái gì là tốt, và quy định cách học. Mỗi công thức dưới đây đi kèm một dòng đọc bằng lời.</p>
+<div class="diagram"><pre class="mermaid">
+flowchart TB
+  E1["Dynamics · trạng thái tiến hoá thế nào"]
+  E2["Chi phí khoảng · c_k gồm chín thành phần"]
+  E3["Objective · tối thiểu tổng chi phí cả ca"]
+  E4["Reward · đổi dấu và chuẩn hoá chi phí"]
+  E5["Advantage · ước lượng bằng GAE"]
+  E6["PPO loss · clip tỉ lệ xác suất và entropy"]
+  E7["Trọng số mới · actor và critic"]
+  E1 --> E2
+  E2 --> E3
+  E3 --> E4
+  E4 --> E5
+  E5 --> E6
+  E6 --> E7
+  E7 -.->|"vòng huấn luyện"| E1
+</pre></div>
+<div class="read"><p><b>Cách đọc:</b> ba ô đầu thuộc bài toán vận hành, bốn ô sau thuộc phần học. Ô sau dùng kết quả của ô trước, nên sai một chỗ là sai cả chuỗi.</p><p><b>Điểm mấu chốt:</b> chi phí và objective do người thiết kế và cố định. Chỉ phần từ reward trở đi là thứ thuật toán tối ưu trong lúc học.</p></div>
+
+<h3 style="margin-top:34px">Nhóm A · Hệ thống tiến hoá thế nào</h3>
+<div class="formula">\[ s_{k+1} = f\big(s_k,\; u_k,\; \omega_k\big) \]</div>
+<p class="eq-note"><b>Đọc là:</b> trạng thái ở bước sau phụ thuộc trạng thái hiện tại, quyết định vừa chọn, và nhiễu ngoại sinh <i>ω</i> gồm khách mới đến và giao thông trong hai phút tới. Lúc ra quyết định, controller chưa biết <i>ω</i>.</p>
+<div class="formula">\[ Q_{r,d,i,j}(t+\delta) = Q_{r,d,i,j}(t) + A_{r,d,i,j}(t) - B_{r,d,i,j}(t) - E_{r,d,i,j}(t) \]</div>
+<p class="eq-note"><b>Đọc là:</b> hàng chờ tăng khi khách mới đến, giảm khi khách lên được xe hoặc bỏ cuộc. Không có số hạng nào khác, nên không khách nào tự biến mất khỏi mô hình.</p>
+<div class="formula">\[ L_b(t+\delta) = L_b(t) - D_b(t) + B_b(t) \]</div>
+<p class="eq-note"><b>Đọc là:</b> tải của xe giảm khi khách xuống và tăng khi khách lên. Đây là công thức ở mức tick 30 giây, không phải mức bước quyết định 120 giây.</p>
+<div class="formula">\[ u_k \in \mathcal{U}(s_k) \]</div>
+<p class="eq-note"><b>Đọc là:</b> tập quyết định không cố định mà phụ thuộc trạng thái. Đây chính là thứ action mask biểu diễn: một slot có thể hợp lệ ở bước này và bất khả thi ở bước khác.</p>
+<div class="formula">\[ 0 \le L_b(t) \le C_b, \qquad N_{\mathrm{gen}} = N_{\mathrm{wait}} + N_{\mathrm{onboard}} + N_{\mathrm{completed}} + N_{\mathrm{abandoned}} \]</div>
+<p class="eq-note"><b>Đọc là:</b> hai bất biến luôn đúng. Chúng không dùng để tối ưu mà để kiểm tra simulator có làm mất khách hay vượt sức chứa hay không.</p>
+
+<h3 style="margin-top:34px">Nhóm B · Cái gì là tốt</h3>
+<div class="formula">\[ W_k = \frac{1}{60}\int_{t_k}^{t_k+\Delta} N_{\mathrm{waiting}}(t)\, dt, \qquad O_k = \frac{1}{60}\int_{t_k}^{t_k+\Delta} \sum_b \max\big(0,\; L_b(t) - C_b^{\mathrm{comfort}}\big)\, dt \]</div>
+<p class="eq-note"><b>Đọc là:</b> chi phí không đếm số người mà đếm <i>passenger-minutes</i> — số người nhân với số phút. Tích phân cộng dồn số người qua từng tick, chia 60 để ra phút. Vì vậy 10 khách chờ 5 phút tạo <i>W</i> bằng 50, đúng bằng 1 khách chờ 50 phút.</p>
+<div class="formula">\[ c_k = W_k + 0{,}25V_k + 0{,}5O_k + 0{,}5C_k + 0{,}5C_{D,k} + X_k + 5U_k + 60E_k + 2M_k \]</div>
+<p class="eq-note"><b>Đọc là:</b> chi phí của một khoảng hai phút là tổng chín thành phần, mỗi thành phần nhân một trọng số. Hệ số đứng trước chính là mức đánh đổi giữa các mục tiêu.</p>
+<div class="table-wrap wrap" style="margin-bottom:20px"><table><thead><tr><th>Thành phần</th><th style="text-align:left">Đo bằng gì</th><th>Trọng số</th><th style="text-align:left">Ví dụ để hình dung</th></tr></thead><tbody>
+<tr><td>W · chờ</td><td style="text-align:left">Passenger-minutes đang chờ</td><td>1</td><td style="text-align:left">10 khách chờ 5 phút cho W bằng 50</td></tr>
+<tr><td>V · trên xe</td><td style="text-align:left">Passenger-minutes đang ngồi trên xe</td><td>0,25</td><td style="text-align:left">Ngồi trên xe bị tính nhẹ hơn đứng chờ 4 lần</td></tr>
+<tr><td>O · quá thoải mái</td><td style="text-align:left">Passenger-minutes vượt ngưỡng 30 khách/xe</td><td>0,5</td><td style="text-align:left">Xe chở 40 trong 2 phút cho O bằng 20</td></tr>
+<tr><td>C · vận hành</td><td style="text-align:left">Bus-minutes ngoài depot, kể cả layover</td><td>0,5</td><td style="text-align:left">9 xe chạy 2 phút cho C bằng 18</td></tr>
+<tr><td>C<sub>D</sub> · deadhead</td><td style="text-align:left">Bus-minutes chạy rỗng để tái vị trí</td><td>0,5</td><td style="text-align:left">Xe chuyển tuyến chạy rỗng 8 phút cho C<sub>D</sub> bằng 8</td></tr>
+<tr><td>X · chờ lâu</td><td style="text-align:left">Passenger-minutes của khách đã chờ từ 15 phút trở lên</td><td>1</td><td style="text-align:left">Khách chờ 20 phút thì toàn bộ 20 phút được tính thêm một lần nữa</td></tr>
+<tr><td>U · bị từ chối</td><td style="text-align:left">Số khách lần đầu không lên được vì xe đầy</td><td>5</td><td style="text-align:left">Một người bị từ chối tốn bằng 5 passenger-minute chờ</td></tr>
+<tr><td>E · bỏ cuộc</td><td style="text-align:left">Số khách bỏ cuộc sau khi chờ quá lâu</td><td>60</td><td style="text-align:left">Một người bỏ cuộc tốn bằng 60 passenger-minute chờ</td></tr>
+<tr><td>M · đổi nhiệm vụ</td><td style="text-align:left">Số lần đổi nhiệm vụ xe được chấp nhận</td><td>2</td><td style="text-align:left">Đổi nhiệm vụ tốn ít, nhưng tốn thời gian deadhead</td></tr>
+<tr><td>N<sub>H</sub> · khách tồn</td><td style="text-align:left">Khách còn chờ hoặc còn trên xe khi hết ca</td><td>60</td><td style="text-align:left">Chỉ cộng một lần ở bước cuối, không cộng mỗi bước</td></tr>
+</tbody></table></div>
+<div class="formula">\[ \min_{\mu}\; \mathbb{E}_{\mu}\left[\; \sum_{k=0}^{K-1} c_k \;+\; 60\,N_H \right], \qquad u_k = \mu(\mathcal{I}_k) \in \mathcal{U}(s_k) \]</div>
+<p class="eq-note"><b>Đọc là:</b> tìm quy tắc <i>μ</i> sao cho kỳ vọng của tổng chi phí cả ca là nhỏ nhất, trong đó <i>μ</i> chỉ được dùng thông tin có đến thời điểm <i>t<sub>k</sub></i>. Kỳ vọng lấy trên mọi nguồn ngẫu nhiên: khách đến, giao thông và ngày mô phỏng.</p>
+
+<h3 style="margin-top:34px">Nhóm C · Học như thế nào</h3>
+<div class="formula">\[ r_k = -\,\frac{c_k + \mathbf{1}[k = K-1]\cdot 60\,N_H}{N_{\mathrm{ref}}}, \qquad N_{\mathrm{ref}} = 3000 \]</div>
+<p class="eq-note"><b>Đọc là:</b> reward chỉ là chi phí đổi dấu và chia cho 3.000. Số hạng thứ hai chỉ xuất hiện ở bước cuối, nên phạt khách tồn không bị cộng lặp 120 lần.</p>
+<div class="formula">\[ J(\theta) = \mathbb{E}_{\pi_\theta}\left[\sum_{k=0}^{K-1} \gamma^k r_k\right] \;\;\xrightarrow{\;\gamma = 1\;}\;\; J(\theta) = -\frac{1}{3000}\,\mathbb{E}\left[\sum_{k=0}^{K-1} c_k + 60\,N_H\right] \]</div>
+<p class="eq-note"><b>Đọc là:</b> với discount bằng 1, tối đa hoá reward tương đương tối thiểu hoá chi phí của bài toán. Hằng số 3.000 không đổi thứ tự tốt xấu, chỉ giữ giá trị reward ở thang thuận lợi cho việc học.</p>
+<div class="formula">\[ e_k = r_k + \gamma (1-d_k) V_\varphi(o_{k+1}) - V_\varphi(o_k) \]</div>
+<div class="formula">\[ \hat A_k = e_k + \gamma \lambda_{\mathrm{GAE}} (1-d_k) \hat A_{k+1}, \qquad \hat G_k = \hat A_k + V_\varphi(o_k) \]</div>
+<p class="eq-note"><b>Đọc là:</b> <i>e<sub>k</sub></i> là phần reward thực tế vượt quá mức critic dự đoán. GAE cộng dồn các sai số đó ngược từ cuối ca về đầu, với λ bằng 0,95 quyết định mức tin vào dự đoán xa. Advantage dương nghĩa là kết quả tốt hơn kỳ vọng, và đó là tín hiệu để tăng xác suất của action vừa chọn.</p>
+<div class="formula">\[ \rho_k(\theta) = \frac{\pi_\theta(a_k \mid o_k, m_k)}{\pi_{\theta_{\mathrm{old}}}(a_k \mid o_k, m_k)} \]</div>
+<div class="formula">\[ L^{\mathrm{clip}}(\theta) = \mathbb{E}_k\Big[\min\big(\rho_k \hat A_k,\; \operatorname{clip}(\rho_k,\, 1-\epsilon,\, 1+\epsilon)\, \hat A_k\big)\Big] \]</div>
+<p class="eq-note"><b>Đọc là:</b> <i>ρ</i> so sánh xác suất policy mới gán cho action đó với policy cũ. PPO chỉ cho phép tỉ lệ này lệch trong khoảng cộng trừ 0,2; vượt ra ngoài thì phần cải thiện bị cắt và không còn tạo động lực cập nhật. Nhờ vậy một rollout không bị dùng để thay đổi policy quá mạnh.</p>
+<div class="formula">\[ L(\theta, \varphi) = -L^{\mathrm{clip}} + c_V\,\mathbb{E}_k\big[(V_\varphi(o_k) - \hat G_k)^2\big] - c_{\mathrm{ent}}\,\mathbb{E}_k\big[\mathcal{H}\big(\pi_\theta(\cdot \mid o_k, m_k)\big)\big] \]</div>
+<p class="eq-note"><b>Đọc là:</b> ba số hạng, ba việc. Số hạng đầu cải thiện actor, số hạng thứ hai dạy critic khớp return với hệ số 0,5, số hạng thứ ba giữ entropy với hệ số 0,01 để policy không thu hẹp lựa chọn quá sớm. Dấu trừ ở hai số hạng đầu là vì thư viện tối thiểu hoá loss trong khi ta muốn tối đa hoá chúng.</p>
+<div class="formula">\[ \pi_\theta(a \mid o, m) = \frac{m(a)\,\exp\big(z_\theta(o,a)\big)}{\sum_{a'} m(a')\,\exp\big(z_\theta(o,a')\big)} \]</div>
+<p class="eq-note"><b>Đọc là:</b> nếu mask bằng 0 thì tử số bằng 0 nên xác suất bằng 0, và mẫu số chỉ cộng trên các slot hợp lệ. Đây là công thức biến mask thành một phần của phân phối chứ không phải bước lọc bên ngoài.</p>
+<div class="formula">\[ a^{*}_k = \operatorname*{arg\,max}_{a:\, m_k(a)=1}\; \pi_{\theta^{*}}(a \mid o_k, m_k) \]</div>
+<p class="eq-note"><b>Đọc là:</b> lúc đánh giá, chọn slot hợp lệ có xác suất cao nhất. Không có phần tử ngẫu nhiên nào, nên cùng một ngày mô phỏng luôn cho cùng một chuỗi quyết định.</p>
+<div class="note"><b>Muốn tra ký hiệu:</b> ý nghĩa của từng ký hiệu nằm ở mục <a href="#bien">4 · Các biến</a>, gồm cả giá trị setup của từng biến. Mục này chỉ giải thích công thức, không lặp lại bảng ký hiệu.</div>
+</section>
+
+<section id="tham-chieu">
+<span class="tag">Tham chiếu nhanh</span>
+<h2>Các con số của bài toán</h2>
+<div class="grid two">
+<div class="card"><h3>Mạng lưới và đội xe</h3><div class="table-wrap"><table><tbody>
+<tr><td>Số tuyến</td><td>3, hai hướng</td></tr>
+<tr><td>Trạm mỗi tuyến</td><td>6</td></tr>
+<tr><td>Tổng số xe</td><td>12 · 9 chạy đều, 3 dự phòng</td></tr>
+<tr><td>Sức chứa · thoải mái</td><td>40 · 30 khách</td></tr>
+<tr><td>Hành trình short-turn</td><td>s0 tới s3 rồi quay lại theo đúng thứ tự</td></tr>
+</tbody></table></div></div>
+<div class="card"><h3>Thời gian và vận hành</h3><div class="table-wrap"><table><tbody>
+<tr><td>Tick · khoảng điều khiển</td><td>30 giây · 120 giây</td></tr>
+<tr><td>Ca vận hành</td><td>240 phút · 120 quyết định</td></tr>
+<tr><td>Ngừng sinh khách</td><td>phút 180</td></tr>
+<tr><td>Headway cho phép</td><td>6 · 10 · 15 phút</td></tr>
+<tr><td>Cooldown xe · headway</td><td>20 phút · 10 phút</td></tr>
+<tr><td>Bỏ cuộc · chờ quá lâu</td><td>45 phút · 15 phút</td></tr>
+</tbody></table></div></div>
+</div>
+<div class="card" style="margin-top:18px"><h3>Nhu cầu và giao thông</h3><div class="table-wrap"><table><thead><tr><th>Đại lượng</th><th style="text-align:left">Giá trị</th></tr></thead><tbody>
+<tr><td>Demand cơ sở mỗi tuyến</td><td style="text-align:left">180 · 160 · 140 khách mỗi giờ, cả hai hướng</td></tr>
+<tr><td>Cao điểm</td><td style="text-align:left">Hệ số 1,5 đến 3,0 · đỉnh quanh phút 45 đến 135</td></tr>
+<tr><td>Traffic multiplier</td><td style="text-align:left">Lognormal theo bucket 300 giây, chặn trong 0,7 đến 2,5</td></tr>
+<tr><td>Đích đến của khách</td><td style="text-align:left">Giảm theo khoảng cách trạm, chuẩn hoá trên các đích hợp lệ</td></tr>
+</tbody></table></div></div>
+<details><summary>Controller thấy gì trong observation?</summary><ul><li>Queue count và tuổi chờ theo tuyến, hướng, trạm, đích; số khách đã chờ lâu.</li><li>Lịch sử arrivals trong 5 khoảng điều khiển gần nhất.</li><li>Với mỗi xe: phase, tuyến, hướng, pattern, vị trí, tải và timer.</li><li>Với mỗi tuyến: headway mục tiêu, khoảng cách xuất bến thực tế, số xe committed, incoming, short, và cooldown.</li><li>Thời gian hiện tại, thời gian còn lại của ca, và action mask.</li></ul><p><b>Không</b> thấy: đích đến chi tiết của khách đang chờ, seed scenario, nhu cầu và giao thông tương lai.</p></details>
+</section>
+
+<section id="pham-vi">
+<span class="tag">Phạm vi</span>
+<h2>Bài toán này là gì — và không phải là gì</h2>
+<div class="grid two"><div class="card"><h3 style="color:var(--teal)">Là</h3><ul><li>Bài toán điều khiển vận hành trên mạng tuyến đã cho: phân bổ xe, headway, quay đầu sớm.</li><li>Nghiên cứu trên dữ liệu nhu cầu tổng hợp, có kiểm soát, chạy trên CPU.</li><li>So sánh có đối chứng với các bộ điều phối theo quy tắc trên cùng ngày mô phỏng.</li></ul></div><div class="card"><h3 style="color:var(--warn)">Không phải</h3><ul><li>Công cụ thiết kế tuyến mới hay quy hoạch mạng lưới.</li><li>Kết quả triển khai trên hệ thống buýt thành phố thật.</li><li>Bài toán tối ưu chi phí tài chính, hay tối ưu đồng thời mọi chỉ số dịch vụ.</li></ul></div></div>
+<p class="small" style="margin-top:15px">Giả định: nhu cầu và giao thông tổng hợp; mạng 3 tuyến cố định; cảm biến hàng chờ và tải xe chính xác; không có chuyển tuyến của hành khách, tắc nghẽn nội sinh, xếp ca tài xế hay hỏng xe.</p>
+<p class="verdict"><b>Câu chốt khi thuyết trình:</b> “Với 12 xe trên 3 tuyến cố định và nhu cầu biến động không biết trước, bài toán là tìm quy tắc chọn một trong sáu loại quyết định vận hành mỗi 2 phút, sao cho chi phí tổng hợp của cả ca — chờ đợi, quá đông, khách bỏ cuộc, vận hành và khách tồn cuối ca — là nhỏ nhất.”</p>
+</section>
+
+<section id="nguon">
+<span class="tag">Kiểm chứng &amp; truy vết</span>
+<h2>Nội dung trang này lấy từ đâu?</h2>
+<div class="table-wrap"><table><thead><tr><th>Tài liệu</th><th style="text-align:left">Nội dung</th></tr></thead><tbody>
+<tr><td><a href="../docs/problem_solution_brief.md">docs/problem_solution_brief.md</a></td><td style="text-align:left">Bản giải thích bài toán và lời giải trong khoảng một trang</td></tr>
+<tr><td><a href="../docs/problem_solution.md">docs/problem_solution.md</a></td><td style="text-align:left">Bản đầy đủ: toàn bộ biến, state, action, objective và cấu hình</td></tr>
+<tr><td><a href="../docs/spec/spec_v1.0.md">docs/spec/spec_v1.0.md</a></td><td style="text-align:left">Đặc tả: timing, dispatcher, action table, cost, scenario, acceptance</td></tr>
+<tr><td><a href="README.md">reports/README.md</a></td><td style="text-align:left">Kết quả cuối, cấu hình nghiên cứu và những gì đã bị loại</td></tr>
+<tr><td><a href="final_results.html">reports/final_results.html</a></td><td style="text-align:left">Bản tóm tắt kết quả thực nghiệm bằng tiếng Việt</td></tr>
+</tbody></table></div>
+<div class="note" id="cdn-note" hidden><b>Không tải được thư viện hiển thị.</b> Trang đang hiển thị mã nguồn của sơ đồ và công thức thay vì hình vẽ. Cần Internet cho lần tải đầu, sau đó trình duyệt thường dùng lại bản đã cache.</div>
+<p class="small" style="margin-top:17px">Sơ đồ vẽ bằng Mermaid, nạp từ CDN jsdelivr và khoá ở một phiên bản cụ thể. Mã nguồn của từng sơ đồ nằm ngay trong file này, sửa trực tiếp phần <code>&lt;pre class="mermaid"&gt;</code> là đổi được hình.</p>
+</section>
+
+</main>
+<footer>BUS-RL · Bản giải thích bài toán bằng tiếng Việt · Mở trực tiếp <code>reports/problem.html</code>. Bản đầy đủ về ký hiệu và công thức: <code>docs/problem_solution.md</code>.</footer>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script>
+(function(){
+  var note=document.getElementById('cdn-note');
+  if(!window.mermaid || !window.renderMathInElement){ if(note){note.hidden=false;} }
+  if(window.renderMathInElement){
+    window.renderMathInElement(document.body, {
+      delimiters:[{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false}],
+      throwOnError:false
+    });
+  }
+  if(!window.mermaid){ return; }
+  window.mermaid.initialize({
+    startOnLoad:true,
+    theme:'base',
+    themeVariables:{
+      fontFamily:'system-ui,-apple-system,"Segoe UI",sans-serif',
+      fontSize:'15px',
+      primaryColor:'#eaf0ff', primaryTextColor:'#16263e', primaryBorderColor:'#255bd7',
+      secondaryColor:'#edf8f4', secondaryTextColor:'#16263e', secondaryBorderColor:'#087e70',
+      tertiaryColor:'#ffffff', tertiaryTextColor:'#16263e', tertiaryBorderColor:'#dce4ee',
+      lineColor:'#52637a',
+      noteBkgColor:'#fff3df', noteTextColor:'#70450f', noteBorderColor:'#c58027',
+      actorBkg:'#eaf0ff', actorBorder:'#255bd7', actorTextColor:'#16263e',
+      signalColor:'#52637a', signalTextColor:'#16263e',
+      labelBoxBkgColor:'#eef2f7', labelBoxBorderColor:'#dce4ee', labelTextColor:'#16263e',
+      loopTextColor:'#52637a'
+    },
+    flowchart:{curve:'basis',useMaxWidth:true,htmlLabels:true},
+    sequence:{useMaxWidth:true,mirrorActors:false},
+    state:{useMaxWidth:true}
+  });
+})();
+</script>
+</body>
+</html>
