@@ -417,6 +417,8 @@ button:active { transform: scale(.98); }
           <button data-speed="15" aria-pressed="false">15×</button>
           <button data-speed="40" aria-pressed="true">40×</button>
           <button data-speed="120" aria-pressed="false">120×</button>
+          <!-- 120 two-minute decisions in ~15 s: 240 min × 60 / 15 s = 960× (API latency adds to each tick) -->
+          <button data-speed="960" aria-pressed="false" title="Xong một ca 240 phút trong khoảng 15 giây">15 giây</button>
         </div>
       </div>
     </section>
