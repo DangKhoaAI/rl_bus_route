@@ -45,6 +45,7 @@ class Simulation:
     observation: dict
     finished: bool = False
     finish_reason: str | None = None
+    closed: bool = False
     last_costs: StepCosts = field(default_factory=StepCosts)
     # Endpoints are sync `def`s on FastAPI's threadpool; the native env is not thread-safe.
     lock: threading.Lock = field(default_factory=threading.Lock)
@@ -169,6 +170,7 @@ class SimulationService:
     def get(self, simulation_id: str) -> SimulationSnapshot:
         simulation = self._simulations[simulation_id]
         with simulation.lock:
+            self._ensure_open(simulation)
             return self._snapshot(simulation)
 
     def step(self, simulation_id: str, decisions: int) -> StepResponse:
@@ -181,6 +183,7 @@ class SimulationService:
             raise ValueError(f"decisions must be <= {self._max_decisions_per_call}")
         simulation = self._simulations[simulation_id]
         with simulation.lock:
+            self._ensure_open(simulation)
             if simulation.finished:
                 raise RuntimeError("simulation already finished")
             started = perf_counter()
@@ -224,7 +227,7 @@ class SimulationService:
     def delete(self, simulation_id: str) -> None:
         with self._simulations_lock:
             simulation = self._simulations.pop(simulation_id)
-        simulation.env.close()
+        self._close(simulation)
         logger.info("simulation %s deleted", simulation_id)
 
     def close(self) -> None:
@@ -232,6 +235,19 @@ class SimulationService:
             simulations = list(self._simulations.values())
             self._simulations.clear()
         for simulation in simulations:
+            self._close(simulation)
+
+    @staticmethod
+    def _ensure_open(simulation: Simulation) -> None:
+        """A request that waited on the lock of a deleted session gets KeyError."""
+        if simulation.closed:
+            raise KeyError(simulation.simulation_id)
+
+    @staticmethod
+    def _close(simulation: Simulation) -> None:
+        # Waits out an in-flight step: closing the native env under it is unsafe.
+        with simulation.lock:
+            simulation.closed = True
             simulation.env.close()
 
     def _advance(self, simulation: Simulation, decisions: int) -> list[Decision]:
