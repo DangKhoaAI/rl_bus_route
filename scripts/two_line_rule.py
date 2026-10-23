@@ -45,7 +45,7 @@ class TwoLineRule:
 
 
 def main() -> None:
-    import bus_rl.evaluation.runner as runner
+    from bus_rl.evaluation import runner
 
     runner.make_controller = lambda method, model=None, seed=0: TwoLineRule()
     run = load_run_config(ROOT / "configs/eval.toml")
