@@ -135,15 +135,29 @@ def root() -> RedirectResponse:
     return RedirectResponse("/intro/")
 
 
+class RevalidatedStaticFiles(StaticFiles):
+    """Static files that browsers must revalidate, so a rebuilt image shows at once.
+
+    Without a Cache-Control header browsers cache the pages heuristically, and the
+    dashboard iframe inside `/intro/` keeps an old copy even after a hard reload.
+    The ETag keeps each revalidation a cheap 304.
+    """
+
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 # The pages ship separately under `web/`; serve them same-origin when present so the
 # dashboard calls the API without CORS.
 intro_directory = Path(app_config.server.static_dir).parent / "intro"
 if intro_directory.is_dir():
-    app.mount("/intro", StaticFiles(directory=intro_directory, html=True), name="intro")
+    app.mount("/intro", RevalidatedStaticFiles(directory=intro_directory, html=True), name="intro")
 if Path(app_config.server.static_dir).is_dir():
     app.mount(
         "/visualize",
-        StaticFiles(directory=app_config.server.static_dir, html=True),
+        RevalidatedStaticFiles(directory=app_config.server.static_dir, html=True),
         name="visualize",
     )
 
