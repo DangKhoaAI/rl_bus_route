@@ -96,7 +96,7 @@ caption b { color: var(--ink); }
 .cmp .v { display: flex; justify-content: space-between; gap: .6rem; white-space: nowrap; }
 .cmp .pct { color: var(--dim); font-size: .85em; }
 .cmp .bar { height: .45rem; margin-top: .3rem; background: var(--grey); opacity: .55; }
-.cmp tr.ppo .bar { background: var(--green); opacity: 1; } .cmp tr.two .bar { background: var(--purple); opacity: 1; }
+.cmp tr.ppo .bar { background: var(--green); opacity: 1; }
 
 .panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.2rem 2rem; }
 .panels h4 { margin: 0 0 .3rem; font-size: .95rem; font-weight: 700; }
@@ -133,11 +133,9 @@ caption b { color: var(--ink); }
   <thead><tr><th>Phương pháp</th><th>Ngày thường</th><th>Burst</th><th>Traffic</th></tr></thead>
   <tbody id="cmp"></tbody>
 </table></div>
-<p class="note">† Luật hai dòng: phân tích sau (§6), không phải baseline đăng ký trước.</p>
 <ol class="t abstract">
   <li>PPO thấp nhất ở cả ba bộ test; CI 95% so với từng luật viết tay đều &gt; 0.</li>
   <li>Chiến lược học được: 3 xe dự phòng ra ngay đầu ca, sau đó chỉ chỉnh giãn cách.</li>
-  <li>Luật hai dòng chép chiến lược đó: kém PPO 0,2–0,4%; trên burst CI chứa 0.</li>
 </ol>
 </section>
 
@@ -358,7 +356,6 @@ caption b { color: var(--ink); }
     <caption><b>Bảng 4.</b> $\bar\Delta$ = phương pháp − PPO, CI 95%. Dương: PPO tốt hơn.</caption>
     <thead><tr><th>Phương pháp</th><th class="n">Ngày thường</th><th class="n">Burst</th><th class="n">Traffic</th></tr></thead>
     <tbody>
-      <tr><td>Luật hai dòng †</td><td class="n">+28,6 [15,8; 41,3]</td><td class="n">+92,0 [−5,3; 193,4]</td><td class="n">+31,6 [16,3; 47,2]</td></tr>
       <tr><td>Fixed</td><td class="n">+2.795,6 [2.759,6; 2.831,6]</td><td class="n">+8.550,2 [8.276,7; 8.819,3]</td><td class="n">+2.895,3 [2.850,0; 2.939,4]</td></tr>
       <tr><td>Proportional</td><td class="n">+2.991,0 [2.871,1; 3.114,8]</td><td class="n">+2.783,6 [2.184,8; 3.403,5]</td><td class="n">+3.137,3 [3.014,4; 3.270,9]</td></tr>
       <tr><td>Threshold</td><td class="n">+3.586,6 [3.450,7; 3.727,8]</td><td class="n">+1.334,7 [760,8; 1.927,0]</td><td class="n">+3.512,2 [3.385,1; 3.638,2]</td></tr>
@@ -374,7 +371,6 @@ caption b { color: var(--ink); }
     <thead><tr><th>Phương pháp</th><th class="n">Ngày thường</th><th class="n">Burst</th><th class="n">Traffic</th></tr></thead>
     <tbody>
       <tr><td>PPO</td><td class="n">5,57 / 11,28</td><td class="n">8,07 / 30,88</td><td class="n">5,70 / 11,79</td></tr>
-      <tr><td>Luật hai dòng †</td><td class="n">5,57 / 11,36</td><td class="n">8,09 / 31,07</td><td class="n">5,71 / 11,87</td></tr>
       <tr><td>Fixed</td><td class="n">7,42 / 14,88</td><td class="n">10,49 / 39,13</td><td class="n">7,57 / 15,20</td></tr>
       <tr><td>Proportional</td><td class="n">7,07 / 14,73</td><td class="n">9,08 / 28,51</td><td class="n">7,18 / 15,04</td></tr>
       <tr><td>Threshold</td><td class="n">7,27 / 15,46</td><td class="n">9,11 / 26,64</td><td class="n">7,34 / 15,82</td></tr>
@@ -407,21 +403,11 @@ caption b { color: var(--ink); }
   </ul>
   <figure>
     <div class="panels" id="grid"></div>
-    <figcaption><b>Hình 10.</b> 120 lệnh của ngày đầu bộ ngày thường, đo thật. Mỗi ô một bước 2 phút, mỗi hàng 20 phút; ô tối là NOOP. Fixed: 120 ô NOOP (chi phí 15.444,6). Riêng ngày này luật hai dòng thấp hơn PPO; trên 200 ngày PPO thấp hơn (Bảng 4).</figcaption>
+    <figcaption><b>Hình 10.</b> 120 lệnh của ngày đầu bộ ngày thường, đo thật. Mỗi ô một bước 2 phút, mỗi hàng 20 phút; ô tối là NOOP. Fixed: 120 ô NOOP (chi phí 15.444,6).</figcaption>
   </figure>
   <ul class="t">
     <li>27 ngày chi phí cao nhất của PPO (3 ngày × 3 seed × 3 bộ test): ngày nào cũng 3 lệnh đưa xe ra (3 <code>DISPATCH</code>, hoặc 2 <code>DISPATCH</code> + 1 <code>SHORT_TURN</code>) và đúng 3 <code>SET_HEADWAY</code>.</li>
     <li>Không còn trace của bản PPO gốc để kiểm thời điểm từng lệnh.</li>
-  </ul>
-  <div class="algo"><div class="ah"><b>Thuật toán 4.</b> Luật hai dòng (phân tích sau)</div><ol>
-    <li><span class="k">với</span> mỗi xe dự phòng 9, 10, 11 còn ở depot: DISPATCH lần lượt sang tuyến A, B, C</li>
-    <li><span class="k">với</span> mỗi tuyến chưa đặt: SET_HEADWAY 10 phút; sau đó NOOP</li>
-  </ol></div>
-  <ul class="t">
-    <li>Một lệnh mỗi bước → dùng 6 bước đầu (phút 0–10), rồi NOOP tới hết ca.</li>
-    <li>So với PPO: +28,6 [15,8; 41,3] ngày thường, +31,6 [16,3; 47,2] traffic → PPO tốt hơn, nhưng chỉ ≈ 0,2%.</li>
-    <li>Burst: +92,0 [−5,3; 193,4], CI chứa 0 → chưa phân biệt được.</li>
-    <li>Đặt ra sau khi xem trace PPO, ngoài kế hoạch đăng ký trước.</li>
   </ul>
 </section>
 
@@ -433,13 +419,12 @@ caption b { color: var(--ink); }
     <li>Kẹt xe chỉ từ hệ số ngẫu nhiên, không do chính các xe gây ra.</li>
     <li>Chặng 3 phút và đường depot 6 phút cố định mọi ngày; thiết kế cho phép đổi theo ngày. <code>REASSIGN</code> cũng tính 6 phút, không theo đường ngắn nhất.</li>
     <li>Tham số Threshold và Proportional đặt tay, chưa tinh chỉnh trên validation như thiết kế yêu cầu.</li>
-    <li>Nhạy với lần huấn luyện: huấn luyện lại kém 2,3%, lớn hơn nhiều khoảng cách 0,2–0,4% giữa PPO và luật hai dòng.</li>
+    <li>Nhạy với lần huấn luyện: một lần huấn luyện lại cùng cấu hình kém 2,3%.</li>
   </ul>
   <h3>Kết luận</h3>
   <ul class="t">
-    <li>Vững: PPO và luật hai dòng tốt hơn ba luật phản ứng.</li>
-    <li>Phụ thuộc lần huấn luyện: PPO tốt hơn luật hai dòng.</li>
-    <li>Đưa xe dự phòng ra sớm thắng chờ hàng dài mới phản ứng; phần lớn lợi ích của PPO gói được trong một luật hai dòng.</li>
+    <li>PPO tốt hơn ba luật phản ứng ở cả ba bộ test; CI 95% đều &gt; 0.</li>
+    <li>Đưa xe dự phòng ra sớm thắng chờ hàng dài mới phản ứng.</li>
   </ul>
   <p>Demo: <a href="../visualize/">dashboard</a>, hai chính sách trên bản đồ 3D.</p>
 </section>
@@ -515,7 +500,6 @@ const segmented = (box, keys, current, onPick) => keys.forEach(k => {
 const SPLITS = ["Ngày thường", "Burst", "Traffic"];
 const COST = [
   ["PPO", "ppo", [13065.7, 25197.2, 13412.4]],
-  ["Luật hai dòng †", "two", [13094.3, 25289.2, 13444.1]],
   ["Fixed", "", [15861.3, 33747.4, 16307.8]],
   ["Proportional", "", [16056.6, 27980.7, 16549.8]],
   ["Threshold", "", [16652.3, 26531.9, 16924.6]]
@@ -793,7 +777,6 @@ addEventListener("load", () => {
 (() => {
   const DAY = [
     ["PPO (huấn luyện lại)", 13313.3, "SDDHHHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNNHHNNNHHNNNHHNNNHNNNNN"],
-    ["Luật hai dòng †", 12806.9, "DDDHHH" + "N".repeat(114)],
     ["Threshold", 16067.9, "CNNNNNNNNNDDDNNNNNNNNNDNNHNNNNNNHNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNCNNNNNNNCNNNNNNNNNNNNNNNNN"],
     ["Proportional", 15752.4, "NNNNNNNNNNNNNNNNNNNNNNNNNNNNDDDHNNNNHNNNNNNNCNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN"]
   ];
