@@ -236,8 +236,8 @@ button:active { transform: scale(.98); }
 .tabs button:hover { color: var(--ink); }
 .tab-clock { margin-left: auto; align-self: center; font: 600 .875rem var(--font-mono); color: var(--ink); font-variant-numeric: tabular-nums; }
 .tabs button[aria-selected="true"] { background: var(--panel-2); color: var(--ink); }
-.tabs .tab-grow { padding: .375rem; display: inline-flex; }
-.tabs .tab-grow[aria-pressed="true"] { background: var(--panel-2); color: var(--ink); }
+.tabs .tab-grow { align-self: center; height: 1.5rem; margin-left: .5rem; padding: 0 .5rem; border: 1px solid var(--line); border-radius: .375rem; font-size: .75rem; font-weight: 600; line-height: 1; }
+.tabs .tab-grow[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--panel); }
 /* A tall list takes the whole right column, so the detail panel above it steps aside. */
 @media (min-width: 901px) { .lists.wide { width: min(48rem, calc(100% - var(--gutter-l) - var(--config-w) - var(--gutter-r) - var(--panel-gap) * 2)); } }
 /* Minimized panels fold to their header; the KPI row keeps only total cost. */
@@ -261,6 +261,25 @@ button:active { transform: scale(.98); }
 .tabpanel::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: .1875rem; }
 .lists .row:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; background: var(--panel-2); }
 .qbar { width: 2.875rem; flex: none; }
+/* One tint per decision kind, so a scan down the log separates fleet moves from headway changes. */
+.lists .row[class*="log-"] { border-left: 3px solid var(--tint); background: color-mix(in srgb, var(--tint) 12%, var(--panel)); }
+.log-dispatch { --tint: #3fa75a; }
+.log-recall { --tint: #8a8f98; }
+.log-reassign { --tint: #8a5cd6; }
+.log-short_turn { --tint: #e08a2c; }
+.log-set_headway { --tint: #4a8fd8; }
+.log-burst { --tint: #d64545; }
+.log-end { --tint: #555b66; }
+.log-why { margin-top: .375rem; font-size: .75rem; line-height: 1.35; color: var(--muted); white-space: normal; }
+.why-state { display: flex; flex-wrap: wrap; gap: .25rem .75rem; }
+.why-route { display: inline-flex; align-items: center; gap: .3rem; }
+.why-route b { color: #fff; font: 600 .68rem/1 var(--font-mono); padding: .15rem .3rem; border-radius: .25rem; }
+.why-pick { list-style: none; margin: .375rem 0 0; padding: 0; display: grid; gap: .2rem; }
+.why-pick li { display: grid; grid-template-columns: 3rem 2.4rem 1fr; align-items: center; gap: .375rem; color: var(--ink); }
+.why-pick li:first-child { font-weight: 600; }
+.why-pick b { font: 600 .72rem var(--font-mono); text-align: right; }
+.why-p { height: .3rem; border-radius: .2rem; background: var(--line); overflow: hidden; }
+.why-p i { display: block; height: 100%; background: var(--ink); }
 .log-code { font-family: var(--font-mono); font-size: .8rem; font-weight: 600; }
 .log-time { font-size: .8rem; min-width: 4.25rem; flex: none; font-family: var(--font-mono); align-self: flex-start; line-height: 1.4; white-space: nowrap; }
 
@@ -433,9 +452,7 @@ button:active { transform: scale(.98); }
         <button role="tab" id="tab-buses" aria-selected="true" data-tab="buses">Xe</button>
         <button role="tab" id="tab-log" aria-selected="false" data-tab="log">Quyết định</button>
         <span class="tab-clock" id="log-clock" aria-label="Giờ mô phỏng">--:--:--</span>
-        <button class="tab-grow" id="lists-grow" aria-pressed="false" aria-label="Mở rộng khung danh sách" title="Mở rộng / thu hẹp">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 7-5 5 5 5M15 7l5 5-5 5"/></svg>
-        </button>
+        <button class="tab-grow" id="lists-grow" aria-pressed="false" title="Mở rộng / thu hẹp khung danh sách">Rộng</button>
       </div>
       <div class="tabpanel" id="tabpanel" role="tabpanel"></div>
     </section>
@@ -650,7 +667,7 @@ function buildFleet(size) {
 }
 
 function resetSim() {
-  Object.assign(SIM, { t: null, noop: 0, lastK: null, kIndex: 0, total: 0, abandonedTotal: 0, history: [], log: [] });
+  Object.assign(SIM, { t: null, lastK: null, kIndex: 0, total: 0, abandonedTotal: 0, history: [], log: [] });
   ROUTES.forEach((r) => { r.headway = null; r.liveWaiting = null; });
   hasData = false;
   BUSES.forEach((b) => {
@@ -680,8 +697,8 @@ function committed(ri) { return BUSES.filter((b) => b.route === ri && !(b.mode =
 const routeQueue = (r) => r.liveWaiting ?? 0;
 const totalWaiting = () => ROUTES.reduce((n, r) => n + routeQueue(r), 0);
 
-function logDecision(code, text, kind, t = SIM.t) {
-  SIM.log.push({ t, code, text, kind });
+function logDecision(code, text, kind, t = SIM.t, why = null) {
+  SIM.log.push({ t, code, text, kind, why });
   if (SIM.log.length > 200) SIM.log.shift();
 }
 
@@ -966,12 +983,12 @@ ALL_STOPS.forEach((s) => {
   s.el = el; s.lblPos = new THREE.Vector3(s.center.x, 4.4, s.center.z);
 });
 $('#map-key').innerHTML = '<h3>Điểm dừng</h3>'
-  + '<span class="sym dp">D</span><span>Bến trung tâm · xe dự phòng</span>'
-  + '<span class="sym end">33</span><span>Trạm đầu cuối · số tuyến</span>'
+  + '<span class="sym dp">D</span><span>Bến trung tâm - xe dự phòng</span>'
+  + '<span class="sym end">33</span><span>Trạm đầu cuối - số tuyến</span>'
   + '<span class="sym mid"></span><span>Trạm dọc tuyến</span>'
-  + '<span class="sym bus">50</span><span>Xe buýt · số tuyến đang chạy</span>'
+  + '<span class="sym bus">50</span><span>Xe buýt - số tuyến đang chạy; thanh dưới là độ đầy (khách trên xe / sức chứa)</span>'
   + '<h3>Tuyến</h3>'
-  + ROUTES.map((r) => `<span class="sw" style="background:var(${r.color})"></span><span>${r.code} · ${esc(r.name)}</span>`).join('');
+  + ROUTES.map((r) => `<span class="sw" style="background:var(${r.color})"></span><span>${r.code} - ${esc(r.name)}</span>`).join('');
 const depotLbl = document.createElement('button');
 depotLbl.className = 'lbl lbl-depot';
 depotLbl.innerHTML = `<i>D</i><span><b>Bến trung tâm</b><small id="depot-lbl-sub"></small></span>`;
@@ -1112,7 +1129,7 @@ function sideNet() {
     <div class="sec-title">Tuyến<small>headway mục tiêu</small></div>
     <div class="rows">${ROUTES.map((r) => {
       const q = routeQueue(r);
-      return `<button class="row" data-key="route-${r.i}" data-sel="route:${r.i}"><span class="chip" style="background:var(${r.color})">${r.code}</span><span class="grow"><span class="name">${esc(r.name)}</span><span class="sub">${committed(r.i)} xe · ${q} khách chờ</span></span>${headwayChips(r)}</button>`;
+      return `<button class="row" data-key="route-${r.i}" data-sel="route:${r.i}"><span class="chip" style="background:var(${r.color})">${r.code}</span><span class="grow"><span class="name">${esc(r.name)}</span><span class="sub">${committed(r.i)} xe - ${q} khách chờ</span></span>${headwayChips(r)}</button>`;
     }).join('')}</div>
     <div class="sec-title">Thành phần cost c<sub>k</sub><small>${PHYS.controlS / 60} phút gần nhất</small></div>
     ${costRow}
@@ -1120,7 +1137,7 @@ function sideNet() {
 }
 function stopRow(s) {
   const r = ROUTES[s.r];
-  return `<button class="row" data-key="stop-${s.r}-${s.k}" data-sel="stop:${s.r}:${s.k}"><span class="dot" style="background:var(${r.color})"></span><span class="grow"><span class="name">${esc(s.name)}</span><span class="sub">${r.code} · trạm ${s.k + 1}</span></span></button>`;
+  return `<button class="row" data-key="stop-${s.r}-${s.k}" data-sel="stop:${s.r}:${s.k}"><span class="dot" style="background:var(${r.color})"></span><span class="grow"><span class="name">${esc(s.name)}</span><span class="sub">${r.code} - trạm ${s.k + 1}</span></span></button>`;
 }
 function busRow(b) {
   const [lab, cls] = statusOf(b);
@@ -1132,7 +1149,7 @@ function busRow(b) {
 function sideStop(s) {
   const r = ROUTES[s.r];
   return `
-    <div class="side-head"><span class="ic">${ICON.stop}</span><div><div class="eyebrow">Trạm ${s.k + 1} · tuyến ${r.code}</div><h2>${esc(s.name)}</h2></div><button class="x" data-sel="net" aria-label="Đóng">${ICON.x}</button></div>
+    <div class="side-head"><span class="ic">${ICON.stop}</span><div><div class="eyebrow">Trạm ${s.k + 1} - tuyến ${r.code}</div><h2>${esc(s.name)}</h2></div><button class="x" data-sel="net" aria-label="Đóng">${ICON.x}</button></div>
     <div class="statusrow"><span>${esc(r.name)}</span></div>
     <div class="tiles"><div class="tile"><small>Khách chờ cả tuyến ${r.code}</small><b class="num">${routeQueue(r)}</b></div><div class="tile"><small>Xe trên tuyến</small><b class="num">${committed(r.i)}</b></div></div>
 `;
@@ -1145,7 +1162,7 @@ function sideBus(b) {
   const next = r && b.mode !== 'dead' ? nextStopOf(b) : null;
   const dest = r && b.mode !== 'dead' ? (busDir(b) > 0 ? r.stops[r.stops.length - 1] : r.stops[0]) : null;
   return `
-    <div class="side-head"><span class="ic">${ICON.bus}</span><div><div class="eyebrow">${r ? `${r.code} · ${esc(r.name)}` : 'Xe dự phòng'}</div><h2>${b.id}</h2></div><button class="x" data-sel="net" aria-label="Đóng">${ICON.x}</button></div>
+    <div class="side-head"><span class="ic">${ICON.bus}</span><div><div class="eyebrow">${r ? `${r.code} - ${esc(r.name)}` : 'Xe dự phòng'}</div><h2>${b.id}</h2></div><button class="x" data-sel="net" aria-label="Đóng">${ICON.x}</button></div>
     <div class="statusrow"><span class="pill ${cls}">${lab}</span>${dest ? `<span>Đến ${esc(dest.name)}</span>` : ''}</div>
     <div class="tiles">
       <div class="tile"><small>Tải</small><b class="num">${load}<em> / ${PHYS.capacity}</em></b><div class="bar ${lvl(load / PHYS.capacity)}"><i style="width:${pct(load, PHYS.capacity)}"></i></div></div>
@@ -1161,7 +1178,7 @@ function sideDepot() {
   const res = BUSES.filter((b) => b.mode === 'reserve');
   const moving = BUSES.filter((b) => b.mode === 'dead');
   return `
-    <div class="side-head"><span class="ic">${ICON.depot}</span><div><div class="eyebrow">Depot · dự phòng</div><h2>Bãi đỗ Bến xe buýt ĐHQG</h2></div><button class="x" data-sel="net" aria-label="Đóng">${ICON.x}</button></div>
+    <div class="side-head"><span class="ic">${ICON.depot}</span><div><div class="eyebrow">Depot - dự phòng</div><h2>Bãi đỗ Bến xe buýt ĐHQG</h2></div><button class="x" data-sel="net" aria-label="Đóng">${ICON.x}</button></div>
     <div class="tiles">
       <div class="tile"><small>Xe ở bãi</small><b class="num">${res.length}<em> / ${BAYS.length} bãi</em></b><div class="bar"><i style="width:${pct(res.length, BAYS.length)}"></i></div></div>
       <div class="tile"><small>Đang chạy rỗng</small><b class="num">${moving.length}</b></div>
@@ -1174,7 +1191,7 @@ function sideRoute(r) {
   const buses = BUSES.filter((b) => b.route === r.i);
   return `
     <div class="side-head"><span class="ic" style="background:var(${r.color});color:#fff">${ICON.net}</span><div><div class="eyebrow">Tuyến ${r.code}</div><h2>${esc(r.name)}</h2></div><button class="x" data-sel="net" aria-label="Đóng">${ICON.x}</button></div>
-    <div class="statusrow"><span>Headway</span>${headwayChips(r)}<span>· ${committed(r.i)} xe</span></div>
+    <div class="statusrow"><span>Headway</span>${headwayChips(r)}<span>- ${committed(r.i)} xe</span></div>
     <div class="rows">${r.stops.map(stopRow).join('')}</div>
     <div class="sec-title">Xe trên tuyến</div>
     <div class="rows">${buses.map(busRow).join('')}</div>`;
@@ -1257,17 +1274,21 @@ function renderSide() {
 }
 
 let tab = 'buses';
+// The log follows new decisions while the reader sits at its bottom. Only the reader's own
+// scrolling changes this: a reflow from widening or restoring the panel must not stop it.
+let logFollow = true;
+$('#tabpanel').addEventListener('scroll', (e) => {
+  const panel = e.currentTarget;
+  if (tab === 'log') logFollow = panel.scrollHeight - panel.scrollTop - panel.clientHeight < 24;
+});
 function renderList() {
   if (!hasData) { patch($('#tabpanel'), '<span class="muted">Chưa có dữ liệu từ station API.</span>'); return; }
   let html;
   if (tab === 'buses') html = BUSES.map(busRow).join('');
-  else html = SIM.log.length ? SIM.log.map((l, i) => `<div class="row" style="cursor:default"><span class="muted num log-time">${stamp(l.t)}</span><span class="grow"><span class="log-code">${esc(l.code)}</span><span class="sub" style="white-space:normal">${esc(l.text)}</span></span></div>`).join('') + `<div class="row muted" style="cursor:default;font-size:11px">${SIM.noop} khoảng gần đây chọn NOOP</div>` : `<span class="muted">Chưa có quyết định nào ngoài NOOP.</span>`;
+  else html = SIM.log.length ? SIM.log.map((l, i) => `<div class="row log-${l.code.split('(')[0].toLowerCase()}" style="cursor:default"><span class="muted num log-time">${stamp(l.t)}</span><span class="grow"><span class="log-code">${esc(l.code)}</span><span class="sub" style="white-space:normal">${esc(l.text)}</span>${l.why ? `<div class="log-why">${l.why}</div>` : ''}</span></div>`).join('') : `<span class="muted">Chưa có quyết định nào ngoài NOOP.</span>`;
   const panel = $('#tabpanel');
-  // Follow new decisions only while the reader is already at the bottom, so scrolling
-  // back through older entries is not yanked away on the next tick.
-  const follow = panel.scrollHeight - panel.scrollTop - panel.clientHeight < 24;
   patch(panel, html);
-  if (tab === 'log' && follow) panel.scrollTop = panel.scrollHeight;
+  if (tab === 'log' && logFollow) panel.scrollTop = panel.scrollHeight;
 }
 
 function renderKPIs() {
@@ -1311,6 +1332,7 @@ function renderPanels(force) {
     b.el.style.background = routeColor(b.route);
     b.sign.textContent = b.route === null ? 'DP' : ROUTES[b.route].code;
     b.fill.style.width = pct(b.pax.length, PHYS.capacity);
+    b.el.title = `${b.id}: ${b.pax.length}/${PHYS.capacity} khách trên xe`;
     b.el.classList.toggle('sel', selection.kind === 'bus' && selection.ref === b);
     const m = b.route === null ? MAT.reserve : MAT['r' + (b.route + 1)];
     b.stripe.material = m; b.roof.material = m;
@@ -1327,9 +1349,11 @@ document.addEventListener('click', (e) => {
   else if (kind === 'stop') select({ kind, ref: ROUTES[+a].stops[+b] }, true);
   else if (kind === 'bus') select({ kind, ref: BUSES[+a] }, true);
 });
-document.querySelectorAll('.tabs button').forEach((btn) => btn.addEventListener('click', () => {
+// Only the role=tab buttons switch tabs; the widen and minimize buttons share the bar.
+document.querySelectorAll('.tabs [role="tab"]').forEach((btn) => btn.addEventListener('click', () => {
   tab = btn.dataset.tab;
-  document.querySelectorAll('.tabs button').forEach((x) => x.setAttribute('aria-selected', String(x === btn)));
+  document.querySelectorAll('.tabs [role="tab"]').forEach((x) => x.setAttribute('aria-selected', String(x === btn)));
+  logFollow = true;
   $('#tabpanel').scrollTop = tab === 'log' ? Number.MAX_SAFE_INTEGER : 0;
   renderList();
 }));
@@ -1381,8 +1405,8 @@ setSpeed(speed);
 // search
 const q = $('#q'), results = $('#results');
 const INDEX = [
-  ...ROUTES.map((r) => ({ label: `${r.code} · ${r.name}`, sub: 'Tuyến', sel: `route:${r.i}` })),
-  ...ALL_STOPS.map((s) => ({ label: s.name, sub: `Trạm · ${ROUTES[s.r].code}`, sel: `stop:${s.r}:${s.k}` })),
+  ...ROUTES.map((r) => ({ label: `${r.code} - ${r.name}`, sub: 'Tuyến', sel: `route:${r.i}` })),
+  ...ALL_STOPS.map((s) => ({ label: s.name, sub: `Trạm - ${ROUTES[s.r].code}`, sel: `stop:${s.r}:${s.k}` })),
   ...BUSES.map((b) => ({ label: b.id, sub: 'Xe buýt', sel: `bus:${b.i}` })),
 ];
 const MARKS = new RegExp('[' + String.fromCharCode(0x300) + '-' + String.fromCharCode(0x36f) + ']', 'g');
@@ -1573,6 +1597,7 @@ const setListsWide = (on) => {
   $('#lists').classList.toggle('wide', on);
   $('#lists-grow').setAttribute('aria-pressed', on);
   storeJSON('station-lists-wide', on);
+  if (tab === 'log' && logFollow) $('#tabpanel').scrollTop = $('#tabpanel').scrollHeight;
 };
 $('#lists-grow').addEventListener('click', () => setListsWide(!$('#lists').classList.contains('wide')));
 setListsWide(storedJSON('station-lists-wide', false));
@@ -1669,9 +1694,9 @@ function applySnapshot(snap, decisions) {
     if (SIM.history.length > 200) SIM.history.shift();
   }
   decisions.forEach((d) => {
-    if (d.kind === 'NOOP') { SIM.noop++; return; }
+    if (d.kind === 'NOOP') return;
     const [code, text, kind] = describeAction(d);
-    logDecision(code, text, kind, d.time_s);
+    logDecision(code, text, kind, d.time_s, explain(d.context));
   });
   if (snap.burst) noteBurst(snap.burst);
   $('#note').hidden = true;
@@ -1781,6 +1806,20 @@ function animateLive(now) {
 }
 
 // A decision names its kind and arguments (`Decision` in station/schema.py).
+// The state a command was decided from, plus a learned policy's leading alternatives,
+// so the log shows why each command was taken. Rule controllers send no alternatives.
+function explain(context) {
+  if (!context) return null;
+  const routes = context.routes.map((r) => `<span class="why-route"><b style="background:${routeColor(r.route_id)}">${ROUTES[r.route_id]?.code ?? r.route_id}</b>${r.waiting} chờ, ${r.buses} xe, ${r.headway_s / 60} phút/chuyến</span>`);
+  const state = `<div class="why-state">${routes.join('')}<span class="why-route">Bãi còn ${context.reserve} xe</span></div>`;
+  const choices = context.top_choices.map((c) => {
+    const p = Math.round(c.probability * 100);
+    const text = c.kind === 'NOOP' ? 'Không làm gì' : describeAction(c)[1];
+    return `<li><span class="why-p"><i style="width:${p}%"></i></span><b>${p}%</b>${esc(text)}</li>`;
+  });
+  return state + (choices.length ? `<ol class="why-pick">${choices.join('')}</ol>` : '');
+}
+
 function describeAction(d) {
   const bus = (n) => (BUSES[n] ? BUSES[n].id : `#${n}`);
   const route = (n) => `tuyến ${ROUTES[n] ? ROUTES[n].code : n}`;
