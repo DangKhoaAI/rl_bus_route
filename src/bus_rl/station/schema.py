@@ -157,6 +157,35 @@ class SimulationSnapshot(BaseModel):
     interval_cost: CostBreakdown
 
 
+class RouteContext(BaseModel):
+    """One route as the controller saw it just before deciding."""
+
+    route_id: int
+    waiting: int
+    buses: int
+    headway_s: int
+
+
+class ActionChoice(BaseModel):
+    action_index: int
+    kind: str
+    bus_id: int | None
+    route_id: int | None
+    headway_s: int | None
+    probability: float
+
+
+class DecisionContext(BaseModel):
+    """What a decision was made from, so a viewer can see why it was taken."""
+
+    routes: list[RouteContext]
+    reserve: int
+    legal_actions: int
+    # A learned policy's most likely legal actions, highest first; empty for rule
+    # controllers, whose reason is their rule.
+    top_choices: list[ActionChoice]
+
+
 class Decision(BaseModel):
     time_s: int
     action_index: int
@@ -168,6 +197,8 @@ class Decision(BaseModel):
     # Cost of the control interval this decision opened, so a caller that advances
     # several intervals can still total the episode.
     cost: float
+    # Null for NOOP: only commands are explained, and NOOP is most of the day.
+    context: DecisionContext | None = None
 
 
 class StepResponse(BaseModel):

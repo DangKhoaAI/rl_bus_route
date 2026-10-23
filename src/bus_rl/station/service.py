@@ -13,10 +13,13 @@ from bus_rl.execution.environments.factory import make_env_for_run
 from bus_rl.execution.scenarios.generation import SPLIT_VARIANTS
 from bus_rl.station import departures, fleet, passengers
 from bus_rl.station.schema import (
+    ActionChoice,
     Bus,
     CostBreakdown,
     Decision,
+    DecisionContext,
     DepartureClock,
+    RouteContext,
     RouteLayout,
     RouteState,
     ScenarioSplit,
@@ -275,7 +278,11 @@ class SimulationService:
         records: list[Decision] = []
         for _ in range(decisions):
             time_s = int(env.kernel.current_time_s)
-            action = simulation.controller.act(simulation.observation, env.action_masks())
+            mask = env.action_masks()
+            action = simulation.controller.act(simulation.observation, mask)
+            context = None
+            if ACTION_TABLE[action].kind != "NOOP":
+                context = self._context(simulation, mask)
             simulation.observation, _, terminated, truncated, info = env.step(action)
             costs = info["costs"]
             records.append(
@@ -287,6 +294,7 @@ class SimulationService:
                     route_id=ACTION_TABLE[action].route_id,
                     headway_s=ACTION_TABLE[action].headway_s,
                     cost=interval_cost(costs, self._run.reward),
+                    context=context,
                 )
             )
             if terminated or truncated:
@@ -297,6 +305,42 @@ class SimulationService:
                 break
         simulation.last_costs = costs
         return records
+
+    def _context(self, simulation: Simulation, mask) -> DecisionContext:
+        """The state a command was decided from; call before the env steps."""
+        snapshot = self._snapshot(simulation)
+        top_choices = []
+        probabilities = getattr(simulation.controller, "action_probabilities", None)
+        if probabilities is not None:
+            p = probabilities(simulation.observation, mask)
+            for index in p.argsort()[::-1][:3]:
+                if p[index] <= 0:
+                    break
+                action = ACTION_TABLE[int(index)]
+                top_choices.append(
+                    ActionChoice(
+                        action_index=int(index),
+                        kind=action.kind,
+                        bus_id=action.bus_id,
+                        route_id=action.route_id,
+                        headway_s=action.headway_s,
+                        probability=round(float(p[index]), 4),
+                    )
+                )
+        return DecisionContext(
+            routes=[
+                RouteContext(
+                    route_id=route.route_id,
+                    waiting=route.waiting,
+                    buses=len(route.buses),
+                    headway_s=route.headway_s,
+                )
+                for route in snapshot.routes
+            ],
+            reserve=len(snapshot.reserve_queue),
+            legal_actions=int(sum(mask)),
+            top_choices=top_choices,
+        )
 
     def _snapshot(self, simulation: Simulation) -> SimulationSnapshot:
         """Serve the kernel's full state snapshot; it is the one source for every field."""

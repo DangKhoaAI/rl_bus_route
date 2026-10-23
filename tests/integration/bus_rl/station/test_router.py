@@ -194,3 +194,42 @@ def test_idle_session_is_evicted_when_the_limit_is_reached(client, monkeypatch):
     finally:
         for response in fresh:
             client.delete(f"/simulations/{response.json()['simulation_id']}")
+
+
+def _commands(client, controller):
+    created = client.post("/simulations", json={"controller": controller}).json()
+    simulation_id = created["simulation_id"]
+    try:
+        step = client.post(f"/simulations/{simulation_id}/steps", json={"decisions": 200})
+        return step.json()["decisions"]
+    finally:
+        client.delete(f"/simulations/{simulation_id}")
+
+
+def test_commands_carry_the_state_they_were_decided_from(client):
+    decisions = _commands(client, "threshold")
+    commands = [d for d in decisions if d["kind"] != "NOOP"]
+    assert commands
+    assert all(d["context"] is None for d in decisions if d["kind"] == "NOOP")
+    for command in commands:
+        context = command["context"]
+        assert [route["route_id"] for route in context["routes"]] == [0, 1, 2]
+        # Recalls can park more than the three planned reserves.
+        assert 0 <= context["reserve"] <= 12
+        assert context["legal_actions"] >= 1
+        # A rule controller has no probabilities; its reason is the rule itself.
+        assert context["top_choices"] == []
+
+
+def test_ppo_commands_list_the_policy_top_choices(client):
+    if "ppo" not in client.get("/station").json()["controllers"]:
+        pytest.skip("no PPO checkpoint configured")
+    commands = [d for d in _commands(client, "ppo") if d["kind"] != "NOOP"]
+    assert commands
+    for command in commands:
+        choices = command["context"]["top_choices"]
+        probabilities = [choice["probability"] for choice in choices]
+        # Deterministic predict takes the most likely legal action.
+        assert choices[0]["action_index"] == command["action_index"]
+        assert probabilities == sorted(probabilities, reverse=True)
+        assert 0 < sum(probabilities) <= 1.0001
