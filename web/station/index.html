@@ -351,6 +351,12 @@ button:active { transform: scale(.98); }
 @media (max-width: 480px) {
   .depot b, .brand { font-size: 15px; }
 }
+/* Fleet-move toasts: top-centre, click-through so they never block the map. */
+.toasts { position: fixed; top: 128px; left: 50%; transform: translateX(-50%); z-index: 50; display: grid; gap: 6px; justify-items: center; pointer-events: none; }
+/* Grows with the viewport so a 27" monitor or a wall TV still reads it from across the room. */
+.toast { background: var(--ink); color: #fff; font-size: clamp(14px, .4rem + .7vw, 30px); padding: .6em 1.1em; border-radius: 999px; box-shadow: var(--shadow-hover); animation: toast 3s var(--ease) forwards; white-space: nowrap; }
+.toast b { font-family: var(--font-mono); font-weight: 600; margin-right: .6em; }
+@keyframes toast { 0% { opacity: 0; transform: translateY(-6px); } 8%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
   .live i, .side.enter > *, .side.enter .bar i, .side.enter .stack > * { animation: none; }
   *, *::before, *::after { transition: none !important; }
@@ -415,6 +421,7 @@ button:active { transform: scale(.98); }
       </div>
     </div>
     <div class="legend-note" id="note">Đang kết nối station API…</div>
+    <div class="toasts" id="toasts" aria-live="polite"></div>
     <div class="card map-key" id="map-key" aria-label="Chú giải bản đồ"></div>
     <div class="runs-view" id="runs-view" hidden>
     <section class="card runs" id="runs" aria-label="Kết quả hết ca">
@@ -1692,6 +1699,7 @@ function applySnapshot(snap, decisions) {
     if (d.kind === 'NOOP') return;
     const [code, text, kind] = describeAction(d);
     logDecision(code, text, kind, d.time_s, explain(d.context));
+    if (d.kind !== 'SET_HEADWAY') showToast(d.kind, text);
   });
   if (snap.burst) noteBurst(snap.burst);
   $('#note').hidden = true;
@@ -1825,6 +1833,16 @@ function describeAction(d) {
   if (d.kind === 'RECALL') return [`RECALL(${d.bus_id})`, `Gọi ${bus(d.bus_id)} về bãi`, 'mute'];
   const text = { DISPATCH: `Đưa ${bus(d.bus_id)} từ bãi vào ${route(d.route_id)}`, REASSIGN: `Chuyển ${bus(d.bus_id)} sang ${route(d.route_id)}`, SHORT_TURN: `${bus(d.bus_id)} quay đầu sớm trên ${route(d.route_id)}` }[d.kind];
   return [`${d.kind}(${d.bus_id},${d.route_id})`, text, 'info'];
+}
+
+// Bus moves (depot in/out, route swaps, short turns) are rare and easy to miss in the log,
+// so each one also flashes for 3 s above the map.
+function showToast(code, text) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = `<b>${esc(code)}</b>${esc(text)}`;
+  $('#toasts').append(el);
+  setTimeout(() => el.remove(), 3000);
 }
 
 // A burst day's surge is announced once when it starts and once when it ends, so the
