@@ -1439,6 +1439,14 @@ document.addEventListener('keydown', (e) => {
   if (e.key === '/' && document.activeElement !== q) { e.preventDefault(); q.focus(); }
 });
 document.addEventListener('pointerdown', (e) => { if (!e.target.closest('.search')) results.hidden = true; });
+// Inside the intro's frame, going back to the article only hides this page, so the
+// simulation keeps running and is still there on return.
+if (window.parent !== window) {
+  $('.pages a[href="../intro/"]').addEventListener('click', (e) => {
+    e.preventDefault();
+    window.parent.postMessage('intro', location.origin);
+  });
+}
 
 /* ---------- live data from the station API ---------- */
 // The page drives one API simulation: GET /station, POST /simulations, then one

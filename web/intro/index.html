@@ -40,6 +40,8 @@ code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .82em;
 #pages a { padding: .2rem .9rem; border-radius: 999px; color: var(--dim); text-decoration: none; white-space: nowrap; }
 #pages a:hover { color: var(--ink); }
 #pages a[aria-current] { background: var(--ink); color: var(--bg); }
+#dash { position: fixed; z-index: 10; inset: 0; width: 100%; height: 100%; border: 0; background: var(--bg); }
+html.dash { overflow: hidden; }
 @media (max-width: 760px) { #pages { left: 1rem; transform: none; font-size: .75rem; } #theme { font-size: .75rem; } }
 #theme:focus-visible, input:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
 
@@ -124,7 +126,8 @@ caption b { color: var(--ink); }
 </head>
 <body>
 <div id="bar"></div>
-<nav id="pages" aria-label="Trang"><a href="./" aria-current="page">Bài viết</a><a href="../visualize/">Dashboard</a></nav>
+<nav id="pages" aria-label="Trang"><a href="./" aria-current="page">Bài viết</a><a href="#dashboard">Dashboard</a></nav>
+<iframe id="dash" title="Dashboard" hidden></iframe>
 <button id="theme" type="button" aria-label="Đổi giao diện sáng tối">Giao diện sáng</button>
 
 <nav id="toc" aria-label="Các phần"></nav>
@@ -861,6 +864,26 @@ function linkRefs() {
   const links = secs.map(sec => { const a = document.createElement("a"); a.href = "#" + sec.id; a.innerHTML = `${sec.dataset.num || "·"}<span>${sec.dataset.t}</span>`; nav.appendChild(a); return a; });
   const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) links.forEach((l, i) => l.classList.toggle("on", secs[i] === e.target)); }), { rootMargin: "-20% 0px -65% 0px" });
   secs.forEach(sec => io.observe(sec));
+})();
+
+/* The dashboard opens over the article in a frame that stays loaded, so switching
+   back and forth keeps both the reading position and the running simulation. */
+(() => {
+  const frame = $("#dash");
+  const show = () => {
+    const on = location.hash === "#dashboard";
+    if (on && !frame.src) frame.src = "../visualize/";
+    frame.hidden = !on;
+    document.documentElement.classList.toggle("dash", on);
+  };
+  addEventListener("hashchange", show);
+  // The dashboard's "Bài viết" pill asks for the article back instead of reloading it.
+  addEventListener("message", e => {
+    if (e.origin !== location.origin || e.data !== "intro") return;
+    history.pushState(null, "", location.pathname);
+    show();
+  });
+  show();
 })();
 </script>
 </body>
