@@ -66,6 +66,7 @@ async def lifespan(app: FastAPI):
         controllers=controllers,
         max_sessions=settings.max_sessions,
         max_decisions_per_call=settings.max_decisions_per_call,
+        session_idle_s=settings.session_idle_s,
         forecaster=forecaster,
     )
     logger.info(

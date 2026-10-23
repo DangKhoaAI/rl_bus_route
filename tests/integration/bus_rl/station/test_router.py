@@ -177,3 +177,20 @@ def test_health_and_dashboard_are_served(client):
     assert client.get("/health").json() == {"status": "ok"}
     if (ROOT / "web/station/index.html").exists():
         assert client.get("/").status_code == 200
+
+
+def test_idle_session_is_evicted_when_the_limit_is_reached(client, monkeypatch):
+    from time import monotonic
+
+    import bus_rl.station.service as service_module
+
+    idle = client.post("/simulations", json={}).json()["simulation_id"]
+    # Jump an hour ahead: every session already open is now idle past the timeout.
+    monkeypatch.setattr(service_module, "monotonic", lambda: monotonic() + 3600)
+    fresh = [client.post("/simulations", json={}) for _ in range(2)]
+    try:
+        assert [response.status_code for response in fresh] == [201, 201]
+        assert client.get(f"/simulations/{idle}").status_code == 404
+    finally:
+        for response in fresh:
+            client.delete(f"/simulations/{response.json()['simulation_id']}")

@@ -30,6 +30,9 @@ class SimulationSettings(BaseModel):
     splits: list[str] = Field(default_factory=lambda: ["validation"], min_length=1)
     max_sessions: int = Field(8, ge=1)
     max_decisions_per_call: int = Field(120, ge=1)
+    # Once `max_sessions` is reached, a session idle this long (no step or read) is
+    # freed for the new one.
+    session_idle_s: float = Field(600, gt=0)
 
 
 class AppConfig(BaseSettings):

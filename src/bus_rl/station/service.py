@@ -6,7 +6,7 @@ import logging
 import threading
 import uuid
 from dataclasses import dataclass, field
-from time import perf_counter
+from time import monotonic, perf_counter
 
 from bus_rl.config import RunConfig
 from bus_rl.execution.environments.factory import make_env_for_run
@@ -46,6 +46,7 @@ class Simulation:
     finished: bool = False
     finish_reason: str | None = None
     closed: bool = False
+    last_used_s: float = field(default_factory=monotonic)
     last_costs: StepCosts = field(default_factory=StepCosts)
     # Endpoints are sync `def`s on FastAPI's threadpool; the native env is not thread-safe.
     lock: threading.Lock = field(default_factory=threading.Lock)
@@ -59,6 +60,7 @@ class SimulationService:
         controllers: dict[str, object],
         max_sessions: int,
         max_decisions_per_call: int,
+        session_idle_s: float,
         forecaster: object | None = None,
     ) -> None:
         self._run = run
@@ -66,6 +68,7 @@ class SimulationService:
         self._controllers = controllers
         self._max_sessions = max_sessions
         self._max_decisions_per_call = max_decisions_per_call
+        self._session_idle_s = session_idle_s
         self._forecaster = forecaster
         self._simulations: dict[str, Simulation] = {}
         self._simulations_lock = threading.Lock()
@@ -144,6 +147,8 @@ class SimulationService:
         scenario = self._scenarios[split][scenario_index]
         with self._simulations_lock:
             if len(self._simulations) >= self._max_sessions:
+                self._evict_idle()
+            if len(self._simulations) >= self._max_sessions:
                 raise RuntimeError(f"session limit {self._max_sessions} reached")
             env = make_env_for_run([scenario], self._run, forecaster=self._forecaster)
             observation, _ = env.reset(seed=0, options={"scenario_index": 0})
@@ -170,7 +175,7 @@ class SimulationService:
     def get(self, simulation_id: str) -> SimulationSnapshot:
         simulation = self._simulations[simulation_id]
         with simulation.lock:
-            self._ensure_open(simulation)
+            self._touch(simulation)
             return self._snapshot(simulation)
 
     def step(self, simulation_id: str, decisions: int) -> StepResponse:
@@ -183,7 +188,7 @@ class SimulationService:
             raise ValueError(f"decisions must be <= {self._max_decisions_per_call}")
         simulation = self._simulations[simulation_id]
         with simulation.lock:
-            self._ensure_open(simulation)
+            self._touch(simulation)
             if simulation.finished:
                 raise RuntimeError("simulation already finished")
             started = perf_counter()
@@ -238,10 +243,11 @@ class SimulationService:
             self._close(simulation)
 
     @staticmethod
-    def _ensure_open(simulation: Simulation) -> None:
-        """A request that waited on the lock of a deleted session gets KeyError."""
+    def _touch(simulation: Simulation) -> None:
+        """Mark a session in use; a request that waited on the lock of a deleted one gets KeyError."""
         if simulation.closed:
             raise KeyError(simulation.simulation_id)
+        simulation.last_used_s = monotonic()
 
     @staticmethod
     def _close(simulation: Simulation) -> None:
@@ -249,6 +255,19 @@ class SimulationService:
         with simulation.lock:
             simulation.closed = True
             simulation.env.close()
+
+    def _evict_idle(self) -> None:
+        """Free sessions nobody stepped or read for `session_idle_s`; caller holds `_simulations_lock`.
+
+        A dashboard tab that crashed or lost its network never sends DELETE, so without
+        this its session would hold one of the `max_sessions` slots until restart.
+        """
+        cutoff = monotonic() - self._session_idle_s
+        for simulation_id, simulation in list(self._simulations.items()):
+            if simulation.last_used_s < cutoff:
+                del self._simulations[simulation_id]
+                self._close(simulation)
+                logger.info("simulation %s evicted after idling", simulation_id)
 
     def _advance(self, simulation: Simulation, decisions: int) -> list[Decision]:
         env = simulation.env
