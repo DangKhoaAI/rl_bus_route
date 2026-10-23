@@ -1,0 +1,10 @@
+Hạng mục,Thiết lập chung
+Mạng và đội xe,"3 tuyến hai chiều, 6 điểm dừng/tuyến; 12 xe, sức chứa 40 khách/xe"
+Thời gian mô phỏng,240 phút/ngày; nhận khách trong 180 phút đầu; tick 30 giây; quyết định mỗi 120 giây
+Dữ liệu,"500 ngày train, 100 ngày validation, 200 ngày cho mỗi điều kiện test"
+Ngân sách và seed,"245,760 transitions/seed; seeds 11, 22, 33"
+PPO,learning rate 0.0003; gamma 1.0; GAE lambda 0.95; clip 0.2
+Rollout và tối ưu,4 envs x 256 bước; batch 256; 4 epochs; entropy 0.01
+Runtime,"Rust, CPU; 2 Torch threads; đánh giá theo batch 16"
+Điều khiển,"Giữ nguyên action masking, REASSIGN và SHORT_TURN; forecast và reward shaping tắt"
+Chọn checkpoint,"Cost validation thấp nhất sau khi train; hòa thì chọn sớm nhất; đánh giá mỗi 12,288 transitions. Step 0 chỉ làm mốc tham chiếu."

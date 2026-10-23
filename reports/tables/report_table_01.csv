@@ -1,0 +1,8 @@
+Hạng mục,Thông tin chính
+Bài toán,"Điều khiển đội xe buýt bằng MaskablePPO, so với các luật điều khiển"
+Mô phỏng,"3 tuyến, 6 điểm dừng/tuyến; 12 xe; 240 phút/ngày"
+Controllers,"RL-MLP10, RL-GRU10, RL-Belief20-fade, RULE-Fixed, RULE-Proportional, RULE-Threshold"
+Dữ liệu,"500 ngày train, 100 ngày validation; 200 ngày/điều kiện test"
+Huấn luyện,"245,760 transitions/seed; seeds 11, 22, 33"
+Điều kiện test,Nhu cầu bình thường; Nhu cầu tăng đột biến; Gián đoạn giao thông
+Đánh giá,"Cost thấp hơn là tốt hơn; kèm thời gian chờ, tỷ lệ hoàn thành và bỏ cuộc. Chọn checkpoint theo cost validation thấp nhất."

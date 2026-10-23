@@ -1,0 +1,7 @@
+Thuật toán,Mode,Bước,Request sai,Request NOOP,Thực thi NOOP
+REINFORCE,apply,120,0,46,46
+REINFORCE,free,120,120,0,120
+A2C,apply,120,0,46,46
+A2C,free,120,119,0,119
+PPO,apply,120,0,91,91
+PPO,free,120,118,0,118

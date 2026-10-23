@@ -1,0 +1,7 @@
+Điều kiện,Đối chứng,PPO giảm cost,CI 95% paired theo ngày
+Nhu cầu bình thường,REINFORCE,+5.03%,[+4.80; +5.25]
+Nhu cầu tăng đột biến,REINFORCE,+4.34%,[+3.37; +5.26]
+Gián đoạn giao thông,REINFORCE,+5.40%,[+5.15; +5.65]
+Nhu cầu bình thường,A2C,+6.92%,[+6.64; +7.19]
+Nhu cầu tăng đột biến,A2C,+4.81%,[+3.83; +5.80]
+Gián đoạn giao thông,A2C,+7.21%,[+6.93; +7.52]

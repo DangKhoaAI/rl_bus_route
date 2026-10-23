@@ -1,0 +1,4 @@
+Thuật toán,Giảm cost apply so với free,CI 95% paired theo ngày
+REINFORCE,+12.55%,[+12.29; +12.80]
+A2C,+9.12%,[+8.84; +9.40]
+PPO,+12.24%,[+12.04; +12.44]

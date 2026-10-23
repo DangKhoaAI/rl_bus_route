@@ -1,0 +1,11 @@
+Thiết lập,Giá trị
+Dữ liệu,"500 ngày train, 100 validation, 200 ngày cho mỗi split test; cùng tapes"
+Số lần train,3 thuật toán × 2 mask mode × 3 seeds (11/22/33) = 18
+Ngân sách,"245.760 transitions/seed, 2.048 episode; CPU, 4 env, Torch 2 threads"
+Setup kế thừa,GRU10; gamma 1; lr 3e-4; rollout yêu cầu 256; batch 256; PPO 4 epoch; cùng reward và guards
+REINFORCE,"Return Monte Carlo, không baseline/critic; thu 240 bước/env để đủ 2 episode; một cập nhật toàn rollout"
+A2C,"GAE 0,95, Adam; một cập nhật toàn rollout 256 bước/env"
+PPO,"PPO-Clip 0,2; GAE 0,95; 4 epoch, 16 optimizer steps/rollout"
+Validation,Mốc yêu cầu 12.288 transitions; đo sau update ở rollout boundary đầu tiên đạt mốc; đo cả trọng số sau update cuối
+Mask-free,"Policy chọn trong 221 action; request sai thực thi NOOP, vẫn chạy 2 phút, nhận cost thực; không penalty bổ sung"
+Execution chung,Cả apply/free dùng cùng noop adapter; native kernel giữ guard strict

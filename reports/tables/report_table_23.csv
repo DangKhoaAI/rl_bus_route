@@ -1,0 +1,4 @@
+Cấu hình,Encoder / cửa sổ,Điểm khác biệt
+RL-MLP10,MLP / 10 phút,Mạng feed-forward
+RL-GRU10,GRU / 10 phút,Mã hóa cửa sổ quan sát bằng GRU
+RL-Belief20-fade,Belief / 20 phút,Đặc trưng rate Gamma-Poisson; prior shape/rate = 0.1/0.1; decay = 0.8

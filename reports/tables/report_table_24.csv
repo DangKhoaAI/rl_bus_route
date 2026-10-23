@@ -1,0 +1,4 @@
+Split,Điều kiện
+test_id,"Nhu cầu và giao thông theo cấu hình nền của bộ mô phỏng, với các seed kịch bản riêng cho test."
+test_ood_burst,"Tại một điểm dừng ngẫu nhiên, thêm 8-20 hành khách mỗi tick trong 5-10 phút; thời điểm bắt đầu nằm trong phút 30-150. Tick mô phỏng là 30 giây."
+test_ood_traffic,"Thời gian di chuyển trên hành lang của một tuyến ngẫu nhiên tăng 1,5-2,0 lần trong 30 phút."

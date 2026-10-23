@@ -1,0 +1,19 @@
+Điều kiện,Thuật toán / mode,Tuyến chờ lâu nhất (phút),Bỏ cuộc,Chưa hoàn tất,Thực thi NOOP
+Nhu cầu bình thường,REINFORCE / apply,6.7,0.00%,0.00%,37.75%
+Nhu cầu bình thường,REINFORCE / free,7.6,0.00%,0.00%,100.00%
+Nhu cầu bình thường,A2C / apply,6.9,0.00%,0.00%,48.00%
+Nhu cầu bình thường,A2C / free,7.5,0.00%,0.00%,98.89%
+Nhu cầu bình thường,PPO / apply,5.9,0.00%,0.00%,71.16%
+Nhu cầu bình thường,PPO / free,7.4,0.00%,0.00%,97.38%
+Nhu cầu tăng đột biến,REINFORCE / apply,12.1,2.00%,0.00%,37.75%
+Nhu cầu tăng đột biến,REINFORCE / free,14.9,4.62%,0.01%,99.98%
+Nhu cầu tăng đột biến,A2C / apply,12.2,1.96%,0.00%,48.39%
+Nhu cầu tăng đột biến,A2C / free,14.4,4.27%,0.00%,98.89%
+Nhu cầu tăng đột biến,PPO / apply,11.7,1.77%,0.00%,71.52%
+Nhu cầu tăng đột biến,PPO / free,13.4,3.26%,0.01%,97.32%
+Gián đoạn giao thông,REINFORCE / apply,6.9,0.00%,0.00%,37.74%
+Gián đoạn giao thông,REINFORCE / free,7.9,0.00%,0.00%,100.00%
+Gián đoạn giao thông,A2C / apply,7.2,0.00%,0.00%,48.07%
+Gián đoạn giao thông,A2C / free,7.8,0.00%,0.01%,98.89%
+Gián đoạn giao thông,PPO / apply,6.2,0.00%,0.00%,71.34%
+Gián đoạn giao thông,PPO / free,7.6,0.00%,0.04%,97.35%

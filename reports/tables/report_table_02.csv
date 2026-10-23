@@ -1,0 +1,4 @@
+Điều kiện,RL-MasablePPO,RULE-Fixed,RULE-Proportional,RULE-Threshold
+Nhu cầu bình thường,"13,065.7","15,861.3","16,056.6","16,652.3"
+Nhu cầu tăng đột biến,"25,178.5","33,747.4","27,980.7","26,531.9"
+Gián đoạn giao thông,"13,412.4","16,307.8","16,549.8","16,924.6"
