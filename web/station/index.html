@@ -115,6 +115,13 @@ button:active { transform: scale(.98); }
 .config select:hover { border-color: var(--line-strong); }
 .config select:disabled { color: var(--muted); cursor: progress; }
 .config .playback { justify-content: space-between; flex-wrap: wrap; height: auto; gap: .125rem; margin-top: .25rem; }
+.runs { border-top: 1px solid var(--line); padding-top: .5rem; font-size: .75rem; }
+.runs-head { display: flex; justify-content: space-between; align-items: center; color: var(--muted); margin-bottom: .25rem; }
+.runs-head button { border: 0; background: none; color: var(--muted); font: inherit; cursor: pointer; text-decoration: underline; }
+.runs table { width: 100%; border-collapse: collapse; }
+.runs td { padding: .1875rem 0; border-top: 1px solid var(--line); }
+.runs td.num { text-align: right; }
+.runs tr.best td { font-weight: 700; }
 
 /* Stage */
 .stage { position: relative; flex: 1; min-height: 0; }
@@ -332,6 +339,10 @@ button:active { transform: scale(.98); }
           <button data-speed="40" aria-pressed="true">40×</button>
           <button data-speed="120" aria-pressed="false">120×</button>
         </div>
+      </div>
+      <div class="runs" id="runs" hidden>
+        <div class="runs-head"><span>Kết quả hết ca (cost, thấp nhất in đậm)</span><button id="runs-clear">Xoá</button></div>
+        <table><tbody id="runs-body"></tbody></table>
       </div>
     </section>
 
@@ -1362,6 +1373,37 @@ function fillDays() {
   $('#pick-day').innerHTML = Array.from({ length: count }, (_, i) => `<option value="${i}">${i + 1} / ${count}</option>`).join('');
 }
 
+/* ---------- finished-day log ---------- */
+// Each finished day is kept per viewer, so controllers can be compared on the same day
+// after the next pick restarts the simulation.
+const RUNS_KEY = 'station-runs';
+let RUNS = [];
+try { RUNS = JSON.parse(localStorage.getItem(RUNS_KEY)) ?? []; } catch { RUNS = []; }
+
+function recordRun(live, total) {
+  RUNS = RUNS.filter((r) => !(r.split === live.split && r.day === live.day && r.controller === live.controller));
+  RUNS.push({ split: live.split, splitLabel: live.splitLabel, day: live.day, controller: live.controller, cost: total });
+  try { localStorage.setItem(RUNS_KEY, JSON.stringify(RUNS)); } catch { /* the log still shows for this visit */ }
+  renderRuns();
+}
+
+function renderRuns() {
+  $('#runs').hidden = RUNS.length === 0;
+  const sameDay = (a, b) => a.split === b.split && a.day === b.day;
+  const rows = [...RUNS].sort((a, b) => a.split.localeCompare(b.split) || a.day - b.day || a.cost - b.cost);
+  $('#runs-body').innerHTML = rows.map((r, i) => {
+    const best = i === 0 || !sameDay(r, rows[i - 1]);
+    return `<tr class="${best ? 'best' : ''}"><td>${esc(r.splitLabel)} · ngày ${r.day + 1}</td><td>${esc(r.controller)}</td><td class="num">${Math.round(r.cost).toLocaleString('vi-VN')}</td></tr>`;
+  }).join('');
+}
+
+$('#runs-clear').addEventListener('click', () => {
+  RUNS = [];
+  try { localStorage.removeItem(RUNS_KEY); } catch { /* nothing stored */ }
+  renderRuns();
+});
+renderRuns();
+
 const setPickersDisabled = (disabled) => PICKERS.forEach((sel) => { $(sel).disabled = disabled; });
 
 // Every pick starts a fresh API simulation; the previous one is deleted so it
@@ -1375,7 +1417,10 @@ async function startSimulation() {
   try {
     const snap = await api('POST', '/simulations', body);
     resetSim();
-    LIVE = { id: snap.simulation_id, controller: snap.controller, finished: false, steps: 0 };
+    LIVE = {
+      id: snap.simulation_id, controller: snap.controller, finished: false, steps: 0,
+      split: snap.split, splitLabel: $('#pick-split').selectedOptions[0].textContent, day: snap.scenario_index,
+    };
     setSpeed(speed);
     applySnapshot(snap, []);
     const live = LIVE;
@@ -1455,6 +1500,7 @@ function applySnapshot(snap, decisions) {
   if (snap.finished) {
     LIVE.finished = true;
     logDecision('END', `Kết thúc ca lúc ${clock(SIM.t)}: tổng cost ${Math.round(SIM.total).toLocaleString('vi-VN')}`, 'mute');
+    recordRun(LIVE, SIM.total);
     $('#live').classList.add('paused');
     api('DELETE', `/simulations/${LIVE.id}`).catch((err) => console.warn('Could not delete the finished simulation:', err.message));
   }
