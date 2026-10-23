@@ -304,6 +304,11 @@ button:active { transform: scale(.98); }
 .lbl-stop.end { opacity: 1; z-index: 1; font-size: .8125rem; gap: .375rem; border-radius: .375rem; padding: .1875rem .5rem .1875rem .1875rem; border: 2px solid var(--rc); }
 .lbl-stop.end i { width: auto; min-width: 1.75rem; height: 1.375rem; padding: 0 .3125rem; border-radius: .25rem; font: 700 .75rem var(--font-mono); }
 .lbl-stop.end .nm { display: inline; }
+/* Waiting-passenger count beside each stop; amber once anyone has waited past tau_excess. */
+.lbl-stop .q { font: 700 .75rem var(--font-mono); color: #fff; background: var(--ink); border-radius: 999px; min-width: 1.25rem; padding: .0625rem .375rem; text-align: center; }
+.lbl-stop .q::before { content: '👤'; font-size: .625rem; margin-right: .1875rem; filter: grayscale(1) brightness(3); }
+.lbl-stop .q:empty { display: none; }
+.lbl-stop .q.warn { background: var(--warn); }
 .lbl-depot { pointer-events: auto; cursor: pointer; z-index: 2; display: flex; align-items: center; gap: .5rem; padding: .3125rem .75rem .3125rem .3125rem; border: 0; border-radius: .5rem; background: var(--ink); color: #fff; box-shadow: var(--shadow-hover); text-align: left; line-height: 1.2; }
 .lbl-depot i { width: 1.75rem; height: 1.75rem; border-radius: .375rem; display: grid; place-items: center; background: var(--s-curb); color: var(--ink); font: 700 .875rem var(--font-mono); font-style: normal; }
 .lbl-depot b { display: block; font-size: .875rem; }
@@ -323,6 +328,10 @@ button:active { transform: scale(.98); }
 .lbl-bus u { display: block; width: 1.125rem; height: .25rem; border-radius: .125rem; background: rgba(255, 255, 255, .35); overflow: hidden; text-decoration: none; }
 .lbl-bus u b { display: block; height: 100%; background: #fff; transition: width .3s var(--ease); }
 .lbl-bus.sel { outline: 2px solid var(--fg); }
+/* A reserve bus the controller sent out from the depot keeps the depot's "D" badge while on a route. */
+.lbl-bus i { display: none; font-style: normal; font-weight: 700; color: var(--ink); background: var(--s-curb); border-radius: .1875rem; padding: 0 .25rem; }
+.lbl-bus.from-depot i { display: block; }
+.lbl-bus.from-depot { outline: 2px solid var(--s-curb); }
 
 .legend-note { position: absolute; left: calc(var(--gutter-l) + var(--config-w) + var(--panel-gap)); top: 8rem; font: 500 .8rem var(--font-mono); color: var(--muted); z-index: 2; background: color-mix(in srgb, var(--panel) 80%, transparent); border: 1px solid var(--line); padding: .25rem .5rem; border-radius: .375rem; }
 
@@ -681,9 +690,10 @@ function buildFleet(size) {
 function resetSim() {
   Object.assign(SIM, { t: null, lastK: null, kIndex: 0, total: 0, abandonedTotal: 0, history: [], log: [] });
   ROUTES.forEach((r) => { r.headway = null; r.liveWaiting = null; });
+  ALL_STOPS.forEach((s) => { s.queue = null; });
   hasData = false;
   BUSES.forEach((b) => {
-    Object.assign(b, { route: null, s: 0, ev: 0, mode: null, until: 0, pax: [], bay: b.i % BAYS.length, dead: null, deadS: 0, deadTo: null, recall: false, cooldown: 0, ready: false });
+    Object.assign(b, { route: null, s: 0, ev: 0, mode: null, until: 0, pax: [], bay: b.i % BAYS.length, dead: null, deadS: 0, deadTo: null, recall: false, cooldown: 0, ready: false, fromDepot: false });
     b.mesh.visible = false;
     b.el.style.visibility = 'hidden';
   });
@@ -705,7 +715,6 @@ function startDeadhead(b, to, ri) {
 }
 
 function committed(ri) { return BUSES.filter((b) => b.route === ri && !(b.mode === 'dead' && b.deadTo === 'bay')).length; }
-// The API reports waiting passengers per route only; there is no per-stop queue.
 const routeQueue = (r) => r.liveWaiting ?? 0;
 const totalWaiting = () => ROUTES.reduce((n, r) => n + routeQueue(r), 0);
 
@@ -988,17 +997,19 @@ ALL_STOPS.forEach((s) => {
   const end = s.k === 0 || s.k === ROUTES[s.r].stops.length - 1;
   el.className = 'lbl lbl-stop' + (end ? ' end' : '');
   el.style.setProperty('--rc', `var(${ROUTES[s.r].color})`);
-  el.innerHTML = `<i>${end ? ROUTES[s.r].code : ''}</i><span class="nm">${esc(s.name)}</span>`;
+  el.innerHTML = `<i>${end ? ROUTES[s.r].code : ''}</i><span class="nm">${esc(s.name)}</span><b class="q"></b>`;
   el.setAttribute('aria-label', `${end ? 'Trạm đầu cuối' : 'Trạm'} ${s.name}, tuyến ${ROUTES[s.r].code}`);
   el.addEventListener('click', () => select({ kind: 'stop', ref: s }, true));
   labelsEl.appendChild(el);
-  s.el = el; s.lblPos = new THREE.Vector3(s.center.x, 4.4, s.center.z);
+  s.el = el; s.qEl = el.querySelector('.q'); s.lblPos = new THREE.Vector3(s.center.x, 4.4, s.center.z);
 });
 $('#map-key').innerHTML = '<h3>Điểm dừng</h3>'
   + '<span class="sym dp">D</span><span>Bến trung tâm - xe dự phòng</span>'
   + '<span class="sym end">33</span><span>Trạm đầu cuối - số tuyến</span>'
   + '<span class="sym mid"></span><span>Trạm dọc tuyến</span>'
   + '<span class="sym bus">50</span><span>Xe buýt - số tuyến đang chạy; thanh dưới là độ đầy (khách trên xe / sức chứa)</span>'
+  + '<span class="sym dp">D</span><span>Viền vàng + D: xe được điều từ depot</span>'
+  + '<span class="sym bus">4</span><span>Số khách chờ tại trạm</span>'
   + '<h3>Tuyến</h3>'
   + ROUTES.map((r) => `<span class="sw" style="background:var(${r.color})"></span><span>${r.code} - ${esc(r.name)}</span>`).join('');
 const depotLbl = document.createElement('button');
@@ -1011,7 +1022,7 @@ const depotLblPos = new THREE.Vector3(-30, 7, 42);
 function makeBusLabel(b) {
   const el = document.createElement('div');
   el.className = 'lbl lbl-bus';
-  el.innerHTML = '<span></span><u><b></b></u>';
+  el.innerHTML = '<i title="Xe điều từ depot">D</i><span></span><u><b></b></u>';
   el.style.visibility = 'hidden';
   labelsEl.appendChild(el);
   b.el = el; b.sign = el.querySelector('span'); b.fill = el.querySelector('b');
@@ -1163,6 +1174,7 @@ function sideStop(s) {
   return `
     <div class="side-head"><span class="ic">${ICON.stop}</span><div><div class="eyebrow">Trạm ${s.k + 1} - tuyến ${r.code}</div><h2>${esc(s.name)}</h2></div><button class="x" data-sel="net" aria-label="Đóng">${ICON.x}</button></div>
     <div class="statusrow"><span>${esc(r.name)}</span></div>
+    <div class="tiles"><div class="tile"><small>Khách chờ tại trạm</small><b class="num">${s.queue ? s.queue.waiting : '–'}</b></div><div class="tile"><small>Chờ lâu nhất</small><b class="num">${s.queue ? Math.round(s.queue.maxWait / 60) : '–'}<em> phút</em></b></div></div>
     <div class="tiles"><div class="tile"><small>Khách chờ cả tuyến ${r.code}</small><b class="num">${routeQueue(r)}</b></div><div class="tile"><small>Xe trên tuyến</small><b class="num">${committed(r.i)}</b></div></div>
 `;
 }
@@ -1335,6 +1347,8 @@ function renderPanels(force) {
   renderKPIs(); renderSide(); renderList();
   ALL_STOPS.forEach((s) => {
     s.el.classList.toggle('sel', selection.kind === 'stop' && selection.ref === s);
+    s.qEl.textContent = s.queue && s.queue.waiting ? s.queue.waiting : '';
+    s.qEl.classList.toggle('warn', Boolean(s.queue && s.queue.excessive));
   });
   BUSES.forEach((b) => {
     if (!b.ready) return;
@@ -1343,6 +1357,7 @@ function renderPanels(force) {
     b.fill.style.width = pct(b.pax.length, PHYS.capacity);
     b.el.title = `${b.id}: ${b.pax.length}/${PHYS.capacity} khách trên xe`;
     b.el.classList.toggle('sel', selection.kind === 'bus' && selection.ref === b);
+    b.el.classList.toggle('from-depot', Boolean(b.fromDepot));
     const m = b.route === null ? MAT.reserve : MAT['r' + (b.route + 1)];
     b.stripe.material = m; b.roof.material = m;
   });
@@ -1698,13 +1713,25 @@ function applySnapshot(snap, decisions) {
   hasData = true;
   liveError = null;
   needsRender = true;
+  const inDepot = new Set(BUSES.filter((b) => b.ready && b.route === null));
   snap.routes.forEach((rs) => {
     const r = ROUTES[rs.route_id];
     r.headway = rs.headway_s;
     r.liveWaiting = rs.waiting;
     rs.buses.forEach((bus) => placeLiveBus(BUSES[bus.bus_id], bus, rs.route_id, 0));
   });
+  // The API keeps one queue per direction; a stop shows both added together.
+  ALL_STOPS.forEach((s) => { s.queue = { waiting: 0, excessive: 0, maxWait: 0 }; });
+  snap.stop_queues.forEach((q) => {
+    const s = ROUTES[q.route_id].stops[q.stop_index].queue;
+    s.waiting += q.waiting; s.excessive += q.excessive; s.maxWait = Math.max(s.maxWait, q.max_wait_s);
+  });
   snap.reserve_queue.forEach((bus, j) => placeLiveBus(BUSES[bus.bus_id], bus, null, j));
+  // DISPATCH (or a SHORT_TURN on a reserve) moves a depot bus onto a route; RECALL clears the mark.
+  BUSES.forEach((b) => {
+    if (b.route === null) b.fromDepot = false;
+    else if (inDepot.has(b)) b.fromDepot = true;
+  });
   if (decisions.length) {
     const c = snap.interval_cost;
     // Weights mirror RewardConfig defaults so the cost bar matches the local view; `total` is the API's own.
