@@ -10,10 +10,6 @@
 # repo's `core-11` release (checkpoints stay out of git):
 #
 #   docker build --target ppo -t bus-rl-station:ppo .
-#
-# Builders that cannot pick a target (Render) set STATION_TARGET=ppo instead.
-
-ARG STATION_TARGET=station
 
 FROM rust:1.97.1-slim-bookworm AS native
 # PyO3 reads the interpreter config at build time; bookworm's python3 is 3.11 (abi3-py311).
@@ -87,4 +83,4 @@ USER station
 ENV SIMULATION__CHECKPOINT_PATH=runs/core-11/best.zip
 
 # Last stage is the default target: a plain build stays baseline-only.
-FROM ${STATION_TARGET}
+FROM station

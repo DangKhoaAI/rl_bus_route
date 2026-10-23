@@ -18,6 +18,3 @@ crates/**/target/
 
 # Manim explainer video sources and renders; kept local only.
 bus-rl-explainer/
-
-# Vercel build output (vercel.json).
-public/
