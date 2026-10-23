@@ -98,6 +98,10 @@ button:active { transform: scale(.98); }
 .link { height: 2.25rem; border: 0; background: transparent; color: var(--muted); font-weight: 500; padding: 0 .75rem; border-radius: .5rem; cursor: pointer; font-size: .875rem; white-space: nowrap; }
 .link:hover { color: var(--ink); background: var(--panel-2); }
 .link[aria-pressed="true"] { color: var(--ink); background: var(--panel-2); }
+.pages { display: flex; padding: 3px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; }
+.pages a { height: 1.75rem; display: flex; align-items: center; padding: 0 .8rem; border-radius: 999px; color: var(--muted); font-size: .8125rem; font-weight: 500; text-decoration: none; white-space: nowrap; }
+.pages a:hover { color: var(--ink); }
+.pages a[aria-current] { background: var(--panel); color: var(--ink); box-shadow: var(--shadow); }
 .playback { display: inline-flex; align-items: center; height: 2.25rem; padding: .125rem; border: 1px solid var(--line); border-radius: .5rem; background: var(--panel); }
 .live { display: inline-flex; align-items: center; gap: .5rem; height: 1.875rem; padding: 0 .625rem; border-radius: .375rem; background: var(--ok-soft); color: var(--ok); font: 600 .8rem var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .live i { width: .4375rem; height: .4375rem; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 0 currentColor; animation: pulse 1.8s infinite; }
@@ -371,6 +375,7 @@ button:active { transform: scale(.98); }
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
     </button>
     <div class="brand">Làng Đại học 3D</div>
+    <nav class="pages" aria-label="Trang"><a href="../intro/">Bài viết</a><a href="./" aria-current="page">Dashboard</a></nav>
     <div class="search">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       <input id="q" type="search" autocomplete="off" placeholder="Tìm trạm, xe buýt, tuyến, trường…" aria-label="Tìm trạm, xe buýt, tuyến hoặc trường">

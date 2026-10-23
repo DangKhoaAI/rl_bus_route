@@ -36,6 +36,11 @@ code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .82em;
 #bar { position: fixed; z-index: 6; left: 0; top: 0; height: 2px; width: 100%; background: var(--blue); transform-origin: 0 50%; transform: scaleX(0); }
 #theme { position: fixed; z-index: 6; right: 1rem; top: .8rem; font: inherit; font-size: .9rem; color: var(--dim); background: var(--bg); border: 1px solid var(--rule); padding: .25rem .7rem; cursor: pointer; border-radius: 2px; }
 #theme:hover { color: var(--ink); border-color: var(--dim); }
+#pages { position: fixed; z-index: 6; left: 50%; top: .8rem; transform: translateX(-50%); display: flex; padding: 3px; font-size: .9rem; background: var(--bg); border: 1px solid var(--rule); border-radius: 999px; }
+#pages a { padding: .2rem .9rem; border-radius: 999px; color: var(--dim); text-decoration: none; white-space: nowrap; }
+#pages a:hover { color: var(--ink); }
+#pages a[aria-current] { background: var(--ink); color: var(--bg); }
+@media (max-width: 760px) { #pages { left: 1rem; transform: none; font-size: .75rem; } #theme { font-size: .75rem; } }
 #theme:focus-visible, input:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
 
 article { padding: 0 max(1rem, 4vw); }
@@ -119,6 +124,7 @@ caption b { color: var(--ink); }
 </head>
 <body>
 <div id="bar"></div>
+<nav id="pages" aria-label="Trang"><a href="./" aria-current="page">Bài viết</a><a href="../visualize/">Dashboard</a></nav>
 <button id="theme" type="button" aria-label="Đổi giao diện sáng tối">Giao diện sáng</button>
 
 <nav id="toc" aria-label="Các phần"></nav>
@@ -425,7 +431,6 @@ caption b { color: var(--ink); }
     <li>PPO tốt hơn ba luật phản ứng ở cả ba bộ test; CI 95% đều &gt; 0.</li>
     <li>Đưa xe dự phòng ra sớm thắng chờ hàng dài mới phản ứng.</li>
   </ul>
-  <p>Demo: <a href="../visualize/">dashboard</a>, hai chính sách trên bản đồ 3D.</p>
 </section>
 
 <section id="notation" data-num="A" data-t="Ký hiệu">
