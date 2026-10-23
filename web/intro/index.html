@@ -6,7 +6,6 @@
 <meta name="color-scheme" content="dark light">
 <title>Điều phối đội xe buýt bằng học tăng cường</title>
 <meta name="description" content="Báo cáo kỹ thuật: điều phối 12 xe buýt trên 3 tuyến bằng MaskablePPO, so với ba luật viết tay.">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/katex.min.css">
 <style>
 @font-face { font-family: "Latin Modern"; src: url("fonts/lmroman10-regular.otf") format("opentype"); font-weight: 400; font-style: normal; font-display: swap; }
 @font-face { font-family: "Latin Modern"; src: url("fonts/lmroman10-italic.otf") format("opentype"); font-weight: 400; font-style: italic; font-display: swap; }
@@ -54,6 +53,7 @@ section > * { width: 100%; }
 h2 { font-size: clamp(2rem, 4.2vw, 3.1rem); font-weight: 400; line-height: 1.12; margin: 0 0 .6rem; max-width: 22ch; }
 h2 .num { color: var(--dim); margin-right: .45em; font-feature-settings: "tnum"; }
 h3 { font-size: 1.1rem; font-weight: 700; margin: 2rem 0 .1rem; }
+h4 { font-size: 1rem; font-weight: 700; margin: 1.4rem 0 .1rem; }
 p { margin: 1.1rem 0 0; max-width: 100%; line-height: 1.7; }
 ul.t, ol.t { margin: .9rem 0 0; padding-left: 1.6rem; max-width: 100%; } ul.t li, ol.t li { margin: .5rem 0; line-height: 1.6; padding-left: .2rem; }
 ol.t > li::marker { color: var(--blue); font-weight: 700; }
@@ -84,8 +84,6 @@ input[type=range] { accent-color: var(--blue); width: min(16rem, 100%); }
 button.t { font: inherit; font-size: .9rem; color: var(--ink); background: none; border: 1px solid var(--rule); padding: .25rem .8rem; cursor: pointer; border-radius: 2px; }
 button.t:hover, button.t[aria-pressed=true] { border-color: var(--blue); color: var(--blue); }
 
-.eq { overflow-x: auto; overflow-y: hidden; margin: .6rem 0 0; padding: .2rem 0; width: min(54rem, 100vw - max(2rem, 8vw)); margin-left: calc((100% - min(54rem, 100vw - max(2rem, 8vw))) / 2); }
-.eq .katex-display { margin: .3rem 0; }
 table { border-collapse: collapse; width: 100%; margin-top: .6rem; font-size: .93rem; font-feature-settings: "tnum"; }
 th, td { padding: .3rem .6rem; text-align: left; vertical-align: top; }
 thead th { border-top: 1.5px solid var(--ink); border-bottom: 1px solid var(--ink); font-weight: 700; }
@@ -136,7 +134,7 @@ caption b { color: var(--ink); }
 <header class="title">
   <h1>Điều phối đội xe buýt bằng học tăng cường</h1>
 </header>
-<p class="abstract">12 xe, 3 tuyến, một lệnh mỗi 2 phút. MaskablePPO so với ba luật viết tay, trên 200 ngày chưa thấy của mỗi bộ test.</p>
+<p class="abstract">12 xe, 3 tuyến, một lệnh mỗi 2 phút. MaskablePPO so với ba luật viết tay.</p>
 <p class="note">Chi phí trung bình mỗi ngày, thấp hơn là tốt hơn. % = chi phí / PPO − 1. Thanh ngang so trong cùng một cột.</p>
 <div class="tw hero"><table class="cmp">
   <thead><tr><th>Phương pháp</th><th>Ngày thường</th><th>Burst</th><th>Traffic</th></tr></thead>
@@ -144,7 +142,7 @@ caption b { color: var(--ink); }
 </table></div>
 <ol class="t abstract">
   <li>PPO thấp nhất ở cả ba bộ test; CI 95% so với từng luật viết tay đều &gt; 0.</li>
-  <li>Chiến lược học được: 3 xe dự phòng ra ngay đầu ca, sau đó chỉ chỉnh giãn cách.</li>
+  <li>Chiến lược học được: 3 xe dự phòng ra ngay đầu ca, sau đó chủ yếu chỉnh giãn cách.</li>
 </ol>
 </section>
 
@@ -152,12 +150,12 @@ caption b { color: var(--ink); }
   <h2><span class="num">1</span>Giới thiệu</h2>
   <ul class="t">
     <li>Đội xe cố định: câu hỏi là đặt xe <b>ở đâu, lúc nào</b>, không phải thêm bao nhiêu xe.</li>
-    <li>Cùng 12 xe: P95 thời gian chờ ≈ 11 phút với PPO, ≈ 15 phút với các luật viết tay (Bảng 5).</li>
+    <li>Ngày thường, cùng 12 xe: P95 thời gian chờ ≈ 11 phút với PPO, ≈ 15 phút với các luật viết tay. Riêng ngày burst, P95 của PPO cao hơn Threshold và Proportional (Bảng 5).</li>
     <li>Xe từ depot mất 6 phút không tải + ≈ 3 phút mỗi chặng → luật chờ thấy hàng dài mới gửi xe thì luôn trễ.</li>
   </ul>
   <figure>
     <div class="scroll"><svg id="net" viewBox="0 0 900 430" role="img" aria-label="Sơ đồ mạng: depot với 3 xe dự phòng, ba tuyến vòng mỗi tuyến 6 trạm mỗi chiều, 3 xe mỗi tuyến, một hàng khách chờ"></svg></div>
-    <figcaption><b>Hình 1.</b> Sơ đồ, không phải bản đồ. Xe chạy đi về giữa s0 và s5, quay đầu ở hai đầu: làn trên chiều đi, làn dưới chiều về. Đầu ca: 3 xe mỗi tuyến, 3 xe dự phòng ở depot.</figcaption>
+    <figcaption><b>Hình 1.</b> Sơ đồ, không phải bản đồ. Xe chạy đi về giữa s0 và s5, quay đầu ở hai đầu: làn trên chiều đi, làn dưới chiều về. Vị trí xe chỉ để minh họa; đầu ca thực tế mỗi tuyến có 2 xe ở s0, 1 xe ở s5, 3 xe dự phòng ở depot.</figcaption>
   </figure>
   <h3>Đóng góp</h3>
   <ol class="t">
@@ -165,10 +163,11 @@ caption b { color: var(--ink); }
     <li>So PPO với ba luật viết tay bằng kiểm định ghép cặp theo ngày.</li>
     <li>Đọc lại chiến lược PPO học được.</li>
   </ol>
-  <h3>Hai nền tảng</h3>
+  <h3>Cách hoạt động</h3>
   <ul class="t">
-    <li><b>POMDP</b> [1]: người điều phối chỉ thấy quan sát <i>o<sub>k</sub></i>, không thấy trạng thái thật <i>s<sub>k</sub></i>. Mục tiêu: chính sách có tổng chi phí kỳ vọng nhỏ nhất [2].</li>
-    <li><b>MaskablePPO</b> [3, 5]: policy gradient cập nhật từng bước ngắn nhờ clip; mặt nạ loại lệnh vi phạm ràng buộc trước khi chọn.</li>
+    <li>Người điều phối chỉ thấy những gì đã xảy ra (hàng chờ, xe ở đâu), không thấy khách sắp đến [1].</li>
+    <li>Mỗi 2 phút ra một lệnh; mặt nạ loại sẵn lệnh vi phạm ràng buộc. Mục tiêu: tổng chi phí cả ca nhỏ nhất [2].</li>
+    <li>PPO [3, 5] học cách chọn lệnh từ hàng nghìn ca mô phỏng; ba luật viết tay làm mốc so sánh.</li>
   </ul>
   <figure>
     <svg id="loop" viewBox="0 0 900 290" role="img" aria-label="Vòng lặp tác tử và môi trường trong một POMDP có mặt nạ"></svg>
@@ -179,25 +178,34 @@ caption b { color: var(--ink); }
 
 <section id="s2" data-num="2" data-t="Bài toán">
   <h2><span class="num">2</span>Bài toán</h2>
-  <h3>Mạng và nhu cầu</h3>
+  <p>Một ca làm việc 240 phút. Cứ 2 phút người điều phối ra một lệnh, tổng cộng 120 lệnh. Bài toán gồm năm thành phần: mạng lưới, xe, khách, lệnh và chi phí.</p>
+  <h3>Mạng lưới</h3>
   <ul class="t">
-    <li>3 tuyến hai chiều × 6 trạm, 1 depot. <i>F</i> = 12 xe, 40 chỗ: 9 chạy tuyến + 3 dự phòng.</li>
-    <li>Ca 240 phút = 120 bước × 2 phút. Sau phút 180 không có khách mới.</li>
-    <li>Khách đến Poisson; lượng khách cơ bản $b=(180,160,140)$ khách/giờ; một tuyến có thêm một đỉnh:</li>
+    <li>3 tuyến A, B, C, mỗi tuyến 6 trạm s0–s5. Xe chạy đi về giữa s0 và s5, quay đầu ở hai đầu tuyến (Hình 1).</li>
+    <li>Mỗi chặng giữa hai trạm ≈ 3 phút. Depot là bãi đỗ chung, nối với hai đầu mỗi tuyến bằng đường 6 phút.</li>
   </ul>
-  <div class="eq">$$\begin{gathered}\lambda_r(t)=b_r\Bigl[1+(m-1)\,e^{-(t-\mu)^2/2\sigma^2}\Bigr]\mathbf 1[t<180]\quad\text{(tuyến có đỉnh)}\\ m\in[1.5,3],\quad \mu\in[45,135],\quad \sigma\in[15,30]\end{gathered}\tag{1}$$</div>
+  <h3>Xe buýt</h3>
   <ul class="t">
-    <li><i>m</i>, <i>μ</i>, <i>σ</i> rút lại mỗi ngày.</li>
-    <li>Điểm đến: xuôi chiều, xác suất ∝ $e^{-|j-i|/2}$.</li>
-    <li>Kẹt xe nền: hệ số log-normal (trung bình 1, $\sigma=0.15$, cắt $[0.7; 2.5]$), rút lại mỗi 5 phút.</li>
+    <li>12 xe, mỗi xe 40 chỗ; trên 30 khách là chật. Đầu ca: 3 xe mỗi tuyến, 3 xe dự phòng nằm ở depot.</li>
+    <li>Một xe trên tuyến lặp vòng: chờ ở trạm đầu → xuất bến → dừng 30 giây ở mỗi trạm để đón, trả khách → tới trạm cuối nghỉ 2 phút → quay đầu.</li>
+    <li>Xe không tự xuất bến tùy ý: bộ lập lịch cho xe đi khi đã đủ giãn cách (headway) so với chuyến trước, mặc định 15 phút.</li>
+    <li>Xe ra vào depot hay đổi tuyến thì chạy không tải: tốn thời gian và chi phí nhưng không chở khách.</li>
+  </ul>
+  <h3>Hành khách</h3>
+  <ul class="t">
+    <li>Khách đến trạm ngẫu nhiên (Poisson); lượng khách cơ bản 180, 160, 140 khách/giờ cho tuyến A, B, C. Sau phút 180 không có khách mới; 60 phút cuối để chở nốt.</li>
+    <li>Mỗi ngày một tuyến có thêm một đỉnh cao điểm: gấp 1,5–3 lần, rơi vào phút 45–135, rộng 15–30 phút.</li>
+    <li>Khách lên chuyến đầu tiên còn chỗ và xuống ở một trạm phía trước; trạm càng xa càng ít người xuống.</li>
+    <li>Xe đầy thì khách ở lại chờ chuyến sau. Chờ quá 45 phút thì khách bỏ về.</li>
+    <li>Kẹt xe nền: thời gian mỗi chặng nhân một hệ số ngẫu nhiên quanh 1 (trong 0,7–2,5), đổi mỗi 5 phút.</li>
   </ul>
   <figure>
     <svg id="demand" viewBox="0 0 900 250" role="img" aria-label="Cường độ đến theo thời gian với một đỉnh"></svg>
-    <div class="ctl"><label for="peak">Vị trí đỉnh μ</label><input id="peak" type="range" min="45" max="135" value="90"><span id="peakv" class="b">μ = 90</span></div>
-    <figcaption><b>Hình 3.</b> Minh họa (1) với <i>m</i> = 2, <i>σ</i> = 20, lượng khách cơ bản 180 khách/giờ.</figcaption>
+    <div class="ctl"><label for="peak">Vị trí đỉnh</label><input id="peak" type="range" min="45" max="135" value="90"><span id="peakv" class="b">phút 90</span></div>
+    <figcaption><b>Hình 3.</b> Minh họa: đỉnh gấp 2 lần, rộng 20 phút, lượng khách cơ bản 180 khách/giờ.</figcaption>
   </figure>
   <div class="tw"><table>
-    <caption><b>Bảng 1.</b> Dữ liệu: 500 ngày huấn luyện, 100 ngày validation, ba bộ test × 200 ngày.</caption>
+    <caption><b>Bảng 1.</b> Mỗi ngày là một kịch bản khách và kẹt xe khác nhau: 500 ngày để học, 100 ngày để chọn mô hình, ba bộ test × 200 ngày.</caption>
     <thead><tr><th>Bộ test</th><th>Khác ngày thường ở đâu</th></tr></thead>
     <tbody>
       <tr><td>Ngày thường</td><td>Cùng phân phối với huấn luyện.</td></tr>
@@ -206,59 +214,83 @@ caption b { color: var(--ink); }
     </tbody>
   </table></div>
 
-  <h3>Không gian action</h3>
+  <h3>Lệnh điều phối</h3>
+  <p>Người điều phối không lái xe; mỗi lệnh chỉ đổi kế hoạch của một xe hoặc một tuyến. Lệnh nào cũng mất thời gian mới thấy tác dụng.</p>
   <div class="tw"><table>
     <caption><b>Bảng 2.</b> Sáu loại lệnh, 221 ô. Bảng tính cho 16 xe × 4 tuyến; ô của xe 12–15 và tuyến thứ tư luôn bị mask.</caption>
     <thead><tr><th>Lệnh</th><th class="n">Số ô</th><th>Tác dụng</th></tr></thead>
     <tbody>
-      <tr><td><code>NOOP</code></td><td class="n">1</td><td>Giữ nguyên.</td></tr>
+      <tr><td><code>NOOP</code></td><td class="n">1</td><td>Giữ nguyên kế hoạch; bộ lập lịch vẫn cho xe xuất bến.</td></tr>
       <tr><td><code>DISPATCH</code></td><td class="n">64</td><td>Xe depot ra tuyến; 6 phút không tải tới trạm đầu.</td></tr>
-      <tr><td><code>REASSIGN</code></td><td class="n">64</td><td>Chuyển xe rỗng sang tuyến khác.</td></tr>
+      <tr><td><code>REASSIGN</code></td><td class="n">64</td><td>Chuyển xe rỗng đang chờ ở đầu tuyến sang tuyến khác.</td></tr>
       <tr><td><code>SHORT_TURN</code></td><td class="n">64</td><td>Chạy đoạn s0–s3 rồi quay đầu; áp lên xe depot thì cũng đưa xe ra.</td></tr>
-      <tr><td><code>RECALL</code></td><td class="n">16</td><td>Về depot.</td></tr>
+      <tr><td><code>RECALL</code></td><td class="n">16</td><td>Đưa xe rỗng đang chờ ở đầu tuyến về depot.</td></tr>
       <tr><td><code>SET_HEADWAY</code></td><td class="n">12</td><td>Giãn cách xuất bến của tuyến: 6, 10 hoặc 15 phút.</td></tr>
     </tbody>
   </table></div>
   <ul class="t">
-    <li>Ràng buộc: ≥ 2 xe mỗi tuyến · cooldown 20 phút mỗi xe · giãn cách đổi lại sau ≥ 10 phút · xe đang chở khách không chuyển được.</li>
-    <li>Ô vi phạm bị mask; lệnh vào ô bị mask bị môi trường từ chối bằng lỗi.</li>
+    <li>Ràng buộc: xe đang chở khách không chuyển được · mỗi tuyến luôn còn ≥ 2 xe · <code>REASSIGN</code>, <code>RECALL</code> cần thêm một xe rỗng khác của tuyến chờ cùng chỗ · một xe nhận lệnh xong phải chờ 20 phút mới nhận lệnh khác · giãn cách của tuyến đổi lại sau ≥ 10 phút.</li>
+  </ul>
+  <h4>Mặt nạ (mask) là gì</h4>
+  <ul class="t">
+    <li>Mọi lệnh có thể ra được xếp thành 221 ô cố định: mỗi ô là một cặp (lệnh, xe, tuyến) như "DISPATCH xe 9 sang tuyến A". Bảng tính sẵn cho tối đa 16 xe, 4 tuyến, nên ô của xe 12–15 và tuyến thứ tư luôn tắt.</li>
+    <li>Trước mỗi lệnh, môi trường bật ô nào làm được ngay lúc đó, tắt ô vi phạm ràng buộc ở trên. Đó là mặt nạ.</li>
+    <li>Người điều phối chỉ chọn trong ô bật. PPO gán xác suất 0 cho ô tắt nên không bao giờ chọn trúng (Hình 7); chọn ô tắt thì môi trường báo lỗi, không tự đổi thành NOOP.</li>
+    <li>NOOP luôn bật, nên lúc nào cũng có ít nhất một lệnh hợp lệ.</li>
+  </ul>
+  <p>Đọc Hình 4 ở hai thời điểm đo thật:</p>
+  <ul class="t">
+    <li><b>Phút 0</b>, 49 ô bật: 9 <code>DISPATCH</code> (3 xe dự phòng 9, 10, 11 × 3 tuyến); <code>REASSIGN</code>, <code>SHORT_TURN</code>, <code>RECALL</code> chỉ cho các xe rỗng đang chờ ở đầu tuyến; <code>SET_HEADWAY</code> chỉ còn 6 và 10 phút vì 15 phút là giãn cách đang dùng.</li>
+    <li><b>Phút 60</b>, 5 ô bật: NOOP và 4 ô <code>SET_HEADWAY</code> của tuyến B, C. Xe dự phòng đã ra hết, xe trên tuyến đang chở khách hoặc tuyến không dư xe, nên mọi lệnh theo xe đều tắt; tuyến A vừa đổi giãn cách nên phải chờ đủ 10 phút.</li>
   </ul>
   <figure>
     <div class="ctl" role="group" aria-label="Chọn thời điểm" id="maskt" style="margin:0 0 .4rem"></div>
     <div class="scroll"><svg id="mask" viewBox="0 0 900 300" role="img" aria-label="221 ô action xếp theo loại lệnh, xe và tuyến; ô sáng là hợp lệ"></svg></div>
-    <figcaption><b>Hình 4.</b> Mặt nạ đo thật, ngày đầu của bộ ngày thường, bản huấn luyện lại cùng cấu hình. Cột = xe 0–15, hàng = tuyến A, B, C, thứ tư. Ô tô màu hợp lệ, ô viền bị mask. Phút 0: xe 9, 10, 11 còn ở depot → 9 ô <code>DISPATCH</code>. Phút 60: chỉ còn NOOP và 4 ô <code>SET_HEADWAY</code>; mọi lệnh theo xe đều bị mask.</figcaption>
+    <figcaption><b>Hình 4.</b> Mặt nạ đo thật, ngày đầu của bộ ngày thường, bản huấn luyện lại cùng cấu hình. Cột = xe 0–15, hàng = tuyến A, B, C, thứ tư; khối <code>SET_HEADWAY</code>: hàng = tuyến, cột = 6/10/15 phút. Ô tô màu là ô bật, ô chỉ có viền là ô tắt.</figcaption>
   </figure>
+  <h3>Người điều phối thấy gì</h3>
+  <ul class="t">
+    <li>Thấy: số khách chờ và đã chờ bao lâu ở từng trạm, xe nào ở đâu và chở bao nhiêu, giãn cách hiện tại, thời gian còn lại của ca.</li>
+    <li>Không thấy: khách đang chờ muốn xuống trạm nào, sắp có bao nhiêu khách đến. Vì vậy phải đoán từ những gì vừa xảy ra [1].</li>
+  </ul>
+  <p class="note">PPO nhận thêm số khách đến của 5 khoảng gần nhất để đoán xu hướng; mạng không có bộ nhớ.</p>
   <div class="algo"><div class="ah"><b>Thuật toán 1.</b> Một bước điều phối (mỗi 2 phút)</div><ol>
     <li><span class="k">quan sát</span> o ← observe(state)  <span class="c">// chỉ dữ liệu đã xảy ra</span></li>
     <li>m ← valid_mask(state)  <span class="c">// 221 ô, 0 nếu vi phạm ràng buộc</span></li>
     <li>a ← controller(o, m)  <span class="c">// PPO hoặc luật viết tay</span></li>
     <li><span class="k">nếu</span> m[a] = 0 <span class="k">thì</span> báo lỗi  <span class="c">// PPO không chọn được: xác suất 0</span></li>
     <li>mô phỏng 2 phút với lệnh a</li>
-    <li>c ← W + 0.25V + 0.5O + … + 2M  <span class="c">// (2)</span></li>
+    <li>c ← tổng có trọng số của các biến  <span class="c">// Bảng 3</span></li>
     <li><span class="k">trả về</span> r = −c / 3000</li>
   </ol></div>
 
-  <h3>Chi phí và reward</h3>
-  <div class="eq">$$c = W + 0.25\,V + 0.5\,O + 0.5\,C + 0.5\,C_D + X + 5\,U + 60\,E + 2\,M,\qquad c_{\text{cuối}} \mathrel{+}= 60\,N_H\tag{2}$$</div>
+  <h3>Chi phí: thế nào là điều phối tốt</h3>
   <ul class="t">
-    <li><i>W</i>: passenger-minute chờ = diện tích dưới đường hàng chờ (Hình 5). 10 khách × 5 phút = 50.</li>
-    <li>Một khách bỏ về (<i>E</i>) = 60 phút chờ. Ký hiệu đầy đủ: Phụ lục A.</li>
+    <li>Mỗi bước 2 phút, các biến dưới đây nhân trọng số rồi cộng lại thành chi phí <i>c</i>; reward = −<i>c</i> / 3000.</li>
+    <li>Chi phí cân hai phía: khách chờ, chật, bỏ về (phía khách) và xe chạy, chạy không tải, đổi lệnh (phía nhà xe). Một khách bỏ về nặng bằng 60 phút chờ.</li>
   </ul>
-  <div class="eq">$$r_k=-\frac{c_k}{3000},\qquad \gamma=1\tag{3}$$</div>
-  <p class="note"><i>γ</i> = 1 nên max tổng reward ⇔ min tổng chi phí.</p>
+  <div class="tw"><table>
+    <caption><b>Bảng 3.</b> Các biến của chi phí.</caption>
+    <thead><tr><th>Biến</th><th>Ý nghĩa</th><th>Đơn vị</th><th class="n">Trọng số</th></tr></thead>
+    <tbody>
+      <tr><td><i>W</i></td><td>Thời gian chờ của hàng chờ (Hình 5): 10 khách × 5 phút = 50</td><td>passenger-minute</td><td class="n">1</td></tr>
+      <tr><td><i>V</i></td><td>Thời gian khách ngồi trên xe</td><td>passenger-minute</td><td class="n">0,25</td></tr>
+      <tr><td><i>O</i></td><td>Tải vượt mức thoải mái (30 khách)</td><td>passenger-minute</td><td class="n">0,5</td></tr>
+      <tr><td><i>C</i></td><td>Thời gian xe hoạt động ngoài depot</td><td>bus-minute</td><td class="n">0,5</td></tr>
+      <tr><td><i>C<sub>D</sub></i></td><td>Thời gian xe chạy không tải</td><td>bus-minute</td><td class="n">0,5</td></tr>
+      <tr><td><i>X</i></td><td>Chờ của khách đã chờ ≥ 15 phút</td><td>passenger-minute</td><td class="n">1</td></tr>
+      <tr><td><i>U</i></td><td>Khách bị từ chối lần đầu vì xe đầy</td><td>khách</td><td class="n">5</td></tr>
+      <tr><td><i>E</i></td><td>Khách bỏ về (chờ quá 45 phút)</td><td>khách</td><td class="n">60</td></tr>
+      <tr><td><i>M</i></td><td>Số lần đổi nhiệm vụ của xe</td><td>lần</td><td class="n">2</td></tr>
+      <tr><td><i>N<sub>H</sub></i></td><td>Khách còn chờ hoặc còn trên xe khi hết ca, tính một lần</td><td>khách</td><td class="n">60</td></tr>
+    </tbody>
+  </table></div>
   <figure>
     <svg id="area" viewBox="0 0 900 230" role="img" aria-label="Hàng chờ theo thời gian, hai kịch bản"></svg>
     <div class="ctl"><button class="t" id="reactive" aria-pressed="true">Phản ứng sau cao điểm</button><button class="t" id="proactive" aria-pressed="false">Đi trước cao điểm</button></div>
     <figcaption><b>Hình 5.</b> Minh họa: diện tích tô vàng là <i>W</i>. Chỉ so hình dạng, không có số.</figcaption>
   </figure>
 
-  <h3>Quan sát một phần</h3>
-  <ul class="t">
-    <li>Thấy: hàng chờ, tuổi chờ, trạng thái xe, giãn cách, giờ còn lại.</li>
-    <li>Không thấy: điểm đến của khách đang chờ, nhu cầu tương lai → POMDP [1].</li>
-  </ul>
-  <div class="eq">$$\pi^\star=\arg\max_\pi\ \mathbb E_\pi\Bigl[\sum_{k=0}^{K-1}\gamma^k r_k\Bigr]=\arg\min_\pi\ \mathbb E_\pi\Bigl[\tfrac{1}{3000}\sum_{k=0}^{K-1}c_k\Bigr],\quad a_k\sim\pi(\cdot\mid o_k)\tag{4}$$</div>
-  <p class="note">Xấp xỉ: đưa lịch sử khách đến 5 khoảng gần nhất vào <i>o<sub>k</sub></i>, dùng MLP không nhớ thay cho mạng hồi quy. Không giả định <i>o<sub>k</sub></i> là Markov.</p>
 </section>
 
 <section id="s3" data-num="3" data-t="Phương pháp">
@@ -266,11 +298,11 @@ caption b { color: var(--ink); }
   <h3>Ba luật viết tay</h3>
   <ul class="t">
     <li><b>Fixed</b>: luôn NOOP; 3 xe dự phòng nằm depot cả ca.</li>
-    <li><b>Threshold</b>: chọn tuyến khẩn nhất theo (5), phản ứng theo hàng chờ <i>Q</i> của tuyến đó (Thuật toán 2).</li>
+    <li><b>Threshold</b>: chọn tuyến khẩn nhất, phản ứng theo hàng chờ <i>Q</i> của tuyến đó (Thuật toán 2).</li>
     <li><b>Proportional</b>: sàn 2 xe/tuyến; ngân sách 9 xe, thành 12 khi tổng hàng chờ ≥ 120; phần trên sàn chia theo lượng khách đến 5 khoảng gần nhất (làm tròn phần dư lớn nhất). Thiếu → <code>DISPATCH</code> rồi <code>REASSIGN</code>; thừa → <code>RECALL</code>. Giãn cách ≈ 38 phút / số xe.</li>
   </ul>
   <div class="algo"><div class="ah"><b>Thuật toán 2.</b> Luật Threshold</div><ol>
-    <li>r* ← <span class="k">argmax</span><sub>r</sub> u<sub>r</sub>;  Q ← hàng chờ của r*  <span class="c">// (5)</span></li>
+    <li>r* ← <span class="k">argmax</span><sub>r</sub> u<sub>r</sub>;  Q ← hàng chờ của r*  <span class="c">// u: độ khẩn, xem dưới</span></li>
     <li><span class="k">nếu</span> Q ≥ 40 <span class="k">thì</span></li>
     <li class="i1"><span class="k">nếu</span> ≥ 70% khách chờ đi trong s0–s3: SHORT_TURN một xe depot  <span class="c">// tỷ lệ ước lượng từ phân phối điểm đến</span></li>
     <li class="i1">DISPATCH xe depot; hết xe depot → REASSIGN từ tuyến ít khẩn nhất</li>
@@ -279,8 +311,7 @@ caption b { color: var(--ink); }
     <li><span class="k">nếu</span> lệnh đó bị mask và Q &lt; 5: RECALL một xe</li>
     <li><span class="k">còn lại</span> NOOP</li>
   </ol></div>
-  <div class="eq">$$u_r=\frac{Q_r}{40\,n_r}+\frac{w_r^{\max}}{15}+\frac{g_r^{\max}}{20}\tag{5}$$</div>
-  <p class="note"><i>n<sub>r</sub></i>: số xe chạy trọn tuyến (≥ 1); <i>w<sup>max</sup></i>: chờ lâu nhất; <i>g<sup>max</sup></i>: thời gian từ lần xuất bến trọn tuyến gần nhất, lấy max của hai bến đầu (phút).</p>
+  <p class="note">Độ khẩn của tuyến = hàng chờ trên mỗi xe chạy trọn tuyến (chia 40) + thời gian chờ lâu nhất (chia 15 phút) + thời gian từ chuyến xuất bến trọn tuyến gần nhất (chia 20 phút).</p>
 
   <h3>PPO có mask</h3>
   <p>Quan sát <i>o<sub>k</sub></i>: 1.383 chiều, chuẩn hóa về cỡ 1.</p>
@@ -292,77 +323,38 @@ caption b { color: var(--ink); }
   </ul>
   <figure>
     <video id="blocks" class="auto" src="media/policy_blocks.mp4" poster="media/policy_blocks.jpg" muted playsinline preload="metadata" aria-label="Sơ đồ khối của mạng chính sách: cột quan sát 1383 chiều, trunk 256 và 128, đầu actor ra 221 logit qua mặt nạ và softmax, đầu critic ra một giá trị"></video>
-    <figcaption><b>Hình 6.</b> Mạng chính sách, 448.862 tham số. Trunk chung 1383 → 256 → 128 (ReLU); mỗi đầu 128 → 128 (Tanh); actor → 221 logit, critic → <i>V</i>. Chiều cao khối theo log số chiều. Khối đỏ: áp mặt nạ (6).</figcaption>
+    <figcaption><b>Hình 6.</b> Mạng chính sách, 448.862 tham số. Trunk chung 1383 → 256 → 128 (ReLU); mỗi đầu 128 → 128 (Tanh); actor → 221 logit, critic → <i>V</i>. Chiều cao khối theo log số chiều. Khối đỏ: áp mặt nạ.</figcaption>
   </figure>
-  <div class="eq">$$\pi_\theta(a\mid o)=\frac{m_a\,e^{z_a}}{\sum_{a'}m_{a'}\,e^{z_{a'}}},\qquad m_a\in\{0,1\},\ \textstyle\sum_a m_a\ge 1\tag{6}$$</div>
-  <p class="note">Ô bị mask: logit −∞ → xác suất đúng 0, không nhận gradient [5].</p>
+  <p class="note">Mặt nạ đặt xác suất của lệnh không hợp lệ về đúng 0, phần còn lại chuẩn hóa lại [5].</p>
   <figure>
     <svg id="mdemo" viewBox="0 0 900 270" role="img" aria-label="Xác suất của sáu loại lệnh trước và sau mặt nạ"></svg>
     <div class="ctl" id="mbtns" role="group" aria-label="Chọn loại lệnh bị mask"></div>
-    <figcaption><b>Hình 7.</b> Minh họa, logit cố định. Bấm để mask một loại lệnh; phần còn lại chuẩn hóa lại theo (6).</figcaption>
-  </figure>
-  <div class="eq">$$L^{\text{CLIP}}(\theta)=\mathbb E_k\!\Bigl[\min\bigl(\rho_k A_k,\ \operatorname{clip}(\rho_k,1-\varepsilon,1+\varepsilon)\,A_k\bigr)\Bigr],\quad \rho_k=\frac{\pi_\theta(a_k\mid o_k)}{\pi_{\theta_{\text{old}}}(a_k\mid o_k)},\quad \varepsilon=0.2\tag{7}$$</div>
-  <p class="note"><i>A<sub>k</sub></i>: kết quả thực tế − giá trị critic dự đoán, ước lượng bằng GAE [4]. Clip giữ <i>ρ</i> trong [0,8; 1,2] → mỗi lần cập nhật chỉ đi một đoạn ngắn [3].</p>
-  <figure>
-    <svg id="clip" viewBox="0 0 900 290" role="img" aria-label="Hàm mục tiêu PPO theo tỷ lệ xác suất"></svg>
-    <div class="ctl"><label for="adv">Advantage A</label><input id="adv" type="range" min="-1" max="1" step="0.05" value="1"><span id="advv" class="g">A = +1,0</span></div>
-    <figcaption><b>Hình 8.</b> Nét đứt: $\rho A$. Liền xanh lá: phần dùng trong (7). Vùng xanh dương: $[1-\varepsilon,1+\varepsilon]$.</figcaption>
+    <figcaption><b>Hình 7.</b> Minh họa, logit cố định. Bấm để mask một loại lệnh; phần còn lại chuẩn hóa lại. NOOP luôn hợp lệ nên không mask được.</figcaption>
   </figure>
   <div class="algo"><div class="ah"><b>Thuật toán 3.</b> Huấn luyện MaskablePPO [6]</div><ol>
     <li><span class="k">lặp</span> đến 245.760 quyết định:</li>
     <li class="i1"><span class="k">rollout</span> 4 môi trường × 256 bước, lưu (o, m, a, log π, r, V)</li>
     <li class="i1">a lấy mẫu từ π<sub>θ</sub>(·|o) đã áp mặt nạ m</li>
-    <li class="i1">GAE: δ<sub>k</sub> = r<sub>k</sub> + γV<sub>k+1</sub> − V<sub>k</sub>, A<sub>k</sub> = Σ (γλ)<sup>j</sup> δ<sub>k+j</sub></li>
+    <li class="i1">A ← mỗi lệnh tốt hơn hay kém hơn critic dự đoán bao nhiêu (GAE [4])</li>
     <li class="i1"><span class="k">lặp 4 epoch</span>, batch 256:</li>
     <li class="i2">ρ ← π<sub>θ</sub>(a|o, m) / π<sub>cũ</sub>(a|o, m)</li>
-    <li class="i2">L ← −min(ρA, clip(ρ, 0.8, 1.2)A) + 0.5·(V − R)² − 0.01·H(π)</li>
+    <li class="i2">tăng xác suất lệnh có A &gt; 0, giảm lệnh có A &lt; 0, nhưng ρ chỉ được đi trong [0,8; 1,2]  <span class="c">// clip [3]</span></li>
     <li class="i2">θ ← Adam, lr 3·10<sup>−4</sup>, cắt chuẩn gradient 0,5</li>
     <li class="i1">mỗi 12.288 quyết định: chạy 100 ngày validation, giữ checkpoint tốt nhất</li>
   </ol></div>
-  <div class="tw"><table>
-    <caption><b>Bảng 3.</b> Siêu tham số.</caption>
-    <thead><tr><th>Tham số</th><th class="n">Giá trị</th><th>Tham số</th><th class="n">Giá trị</th></tr></thead>
-    <tbody>
-      <tr><td>Learning rate</td><td class="n">3·10<sup>−4</sup></td><td>Hệ số entropy</td><td class="n">0,01</td></tr>
-      <tr><td>Môi trường song song</td><td class="n">4</td><td>Hệ số value</td><td class="n">0,5</td></tr>
-      <tr><td><code>n_steps</code> mỗi môi trường</td><td class="n">256</td><td>GAE <i>λ</i></td><td class="n">0,95</td></tr>
-      <tr><td>Batch</td><td class="n">256</td><td>Clip <i>ε</i></td><td class="n">0,2</td></tr>
-      <tr><td>Epoch mỗi lần cập nhật</td><td class="n">4</td><td>Chuẩn gradient tối đa</td><td class="n">0,5</td></tr>
-      <tr><td>Quyết định huấn luyện</td><td class="n">245.760</td><td>Chu kỳ đánh giá</td><td class="n">12.288</td></tr>
-    </tbody>
-  </table></div>
 </section>
 
-<section id="s4" data-num="4" data-t="Thực nghiệm">
-  <h2><span class="num">4</span>Thực nghiệm</h2>
+<section id="s4" data-num="4" data-t="Kết quả">
+  <h2><span class="num">4</span>Kết quả</h2>
   <ul class="t">
-    <li>3 seed × 245.760 quyết định (≈ 2.048 ca mỗi seed).</li>
-    <li>Checkpoint tốt nhất trên validation: 13.114,0 · 13.199,1 · 13.213,5.</li>
-    <li>Điểm cuối cao hơn (13.347,9–13.507,8): đường dao động → phải chọn checkpoint theo validation.</li>
-  </ul>
-  <figure>
-    <svg id="vcurve" viewBox="0 0 900 270" role="img" aria-label="Chi phí validation theo số quyết định huấn luyện, ba seed"></svg>
-    <div class="ctl" id="vleg" role="group" aria-label="Bật tắt seed"></div>
-    <figcaption><b>Hình 9.</b> Chi phí validation của PPO, ba seed. Nét đứt: Fixed (16.016,9) và Threshold (16.641,4) trên cùng tập.</figcaption>
-  </figure>
-  <h3>So sánh ghép cặp</h3>
-  <div class="eq">$$\Delta_d = c_d^{\text{base}} - c_d^{\text{PPO}},\qquad \bar\Delta=\tfrac{1}{200}\textstyle\sum_d \Delta_d\tag{8}$$</div>
-  <ul class="t">
-    <li>Mọi phương pháp chạy trên cùng 200 ngày → so theo từng ngày.</li>
-    <li>CI 95%: bootstrap ghép cặp [7], 2.000 lần rút lại (seed 6001), phân vị 2,5% và 97,5%.</li>
-    <li>Chi phí PPO = trung bình 3 seed trên từng ngày. Chi phí báo cáo là chi phí thô, chưa chia 3000.</li>
-  </ul>
-</section>
-
-<section id="s5" data-num="5" data-t="Kết quả">
-  <h2><span class="num">5</span>Kết quả</h2>
-  <ul class="t">
+    <li>Mọi phương pháp chạy trên cùng 200 ngày của mỗi bộ test; so chênh lệch chi phí theo từng ngày, CI 95% bằng bootstrap [7].</li>
+    <li>PPO là trung bình 3 lần huấn luyện (3 seed), mỗi lần giữ checkpoint tốt nhất trên 100 ngày validation.</li>
     <li>Mọi CI của ba luật viết tay nằm xa 0 (Bảng 4).</li>
     <li>Ngày thường và traffic: Threshold, Proportional còn tệ hơn Fixed.</li>
     <li>Burst: luật viết tay chỉ thắng Fixed ở đây; Threshold gần PPO nhất (+1.334,7).</li>
   </ul>
   <div class="tw"><table>
-    <caption><b>Bảng 4.</b> $\bar\Delta$ = phương pháp − PPO, CI 95%. Dương: PPO tốt hơn.</caption>
+    <caption><b>Bảng 4.</b> Chênh lệch trung bình phương pháp − PPO, CI 95%. Dương: PPO tốt hơn.</caption>
     <thead><tr><th>Phương pháp</th><th class="n">Ngày thường</th><th class="n">Burst</th><th class="n">Traffic</th></tr></thead>
     <tbody>
       <tr><td>Fixed</td><td class="n">+2.795,6 [2.759,6; 2.831,6]</td><td class="n">+8.550,2 [8.276,7; 8.819,3]</td><td class="n">+2.895,3 [2.850,0; 2.939,4]</td></tr>
@@ -384,46 +376,32 @@ caption b { color: var(--ink); }
       <tr><td>Threshold</td><td class="n">7,27 / 15,46</td><td class="n">9,11 / 26,64</td><td class="n">7,34 / 15,82</td></tr>
     </tbody>
   </table></div>
-  <h3>Ablation</h3>
-  <ul class="t">
-    <li>Bỏ <code>REASSIGN</code>, bỏ <code>SHORT_TURN</code>, hay tắt trọng số công bằng đều làm chi phí tăng.</li>
-    <li>Ngày thường, traffic: mọi CI &gt; 0. Burst: CI của <code>fairness</code> = 0 chứa 0.</li>
-  </ul>
-  <div class="tw"><table>
-    <caption><b>Bảng 6.</b> Ablation: hiệu so với PPO đầy đủ, CI 95%, phần trăm.</caption>
-    <thead><tr><th>Biến thể</th><th class="n">Ngày thường</th><th class="n">Burst</th><th class="n">Traffic</th></tr></thead>
-    <tbody>
-      <tr><td>bỏ <code>REASSIGN</code></td><td class="n">+60,8 [42,6; 78,3] · 0,5%</td><td class="n">+231,2 [18,2; 442,5] · 0,9%</td><td class="n">+44,2 [26,0; 63,1] · 0,3%</td></tr>
-      <tr><td>bỏ <code>SHORT_TURN</code></td><td class="n">+215,0 [197,7; 231,2] · 1,6%</td><td class="n">+194,7 [14,5; 385,7] · 0,8%</td><td class="n">+202,9 [185,8; 220,7] · 1,5%</td></tr>
-      <tr><td><code>fairness</code> = 0</td><td class="n">+277,5 [250,1; 305,4] · 2,1%</td><td class="n">+235,6 [−111,1; 607,0] · 0,9%</td><td class="n">+252,6 [222,6; 283,2] · 1,9%</td></tr>
-    </tbody>
-  </table></div>
 </section>
 
-<section id="s6" data-num="6" data-t="Hành vi">
-  <h2><span class="num">6</span>PPO học được gì</h2>
+<section id="s5" data-num="5" data-t="Hành vi">
+  <h2><span class="num">5</span>PPO học được gì</h2>
   <p class="note">Phân tích sau. Trace dưới đây lấy từ một lần huấn luyện lại cùng cấu hình, kém bản PPO trong Bảng 4 ≈ 2,3%.</p>
   <ul class="t">
     <li>PPO: cả 3 xe dự phòng ra trong 3 bước đầu (<code>SHORT_TURN</code> phút 0, <code>DISPATCH</code> phút 2 và 4). Sau đó chỉ còn 46 <code>SET_HEADWAY</code> và 71 NOOP.</li>
     <li>Giãn cách không hội tụ: tuyến A 6 ↔ 10 phút, tuyến C 10 ↔ 15 phút, chu kỳ ≈ 20 phút; đổi lại ngay khi hết cooldown 10 phút.</li>
     <li>Threshold: thu một xe về ở phút 0 (hàng chờ còn nhỏ), đưa xe ra từ phút 20.</li>
-    <li>Proportional: chờ tới phút 56, khi tổng hàng chờ chạm 120.</li>
+    <li>Proportional: tới phút 56–60 mới đưa cả 3 xe dự phòng vào tuyến C, khi khách dồn về tuyến này (52 khách chờ); tổng hàng chờ cao nhất 97, chưa chạm ngưỡng 120 nên ngân sách vẫn 9 xe. Phút 88 thu một xe về.</li>
   </ul>
   <figure>
     <div class="panels" id="grid"></div>
-    <figcaption><b>Hình 10.</b> 120 lệnh của ngày đầu bộ ngày thường, đo thật. Mỗi ô một bước 2 phút, mỗi hàng 20 phút; ô tối là NOOP. Fixed: 120 ô NOOP (chi phí 15.444,6).</figcaption>
+    <figcaption><b>Hình 8.</b> 120 lệnh của ngày đầu bộ ngày thường, đo thật. Mỗi ô một bước 2 phút, mỗi hàng 20 phút; ô tối là NOOP. Fixed: 120 ô NOOP (chi phí 15.444,6).</figcaption>
   </figure>
   <ul class="t">
-    <li>27 ngày chi phí cao nhất của PPO (3 ngày × 3 seed × 3 bộ test): ngày nào cũng 3 lệnh đưa xe ra (3 <code>DISPATCH</code>, hoặc 2 <code>DISPATCH</code> + 1 <code>SHORT_TURN</code>) và đúng 3 <code>SET_HEADWAY</code>.</li>
+    <li>27 ngày chi phí cao nhất của PPO (3 ngày × 3 seed × 3 bộ test): chia đều ba kiểu, mỗi kiểu 9 ngày: 3 <code>DISPATCH</code>; 2 <code>DISPATCH</code> + 1 <code>SHORT_TURN</code>; 2 <code>DISPATCH</code> + 1 <code>SHORT_TURN</code> + 1 <code>REASSIGN</code>. Ngày nào cũng đúng 3 <code>SET_HEADWAY</code>, còn lại NOOP.</li>
     <li>Không còn trace của bản PPO gốc để kiểm thời điểm từng lệnh.</li>
   </ul>
 </section>
 
-<section id="s7" data-num="7" data-t="Kết luận">
-  <h2><span class="num">7</span>Hạn chế và kết luận</h2>
+<section id="s6" data-num="6" data-t="Kết luận">
+  <h2><span class="num">6</span>Hạn chế và kết luận</h2>
   <h3>Hạn chế</h3>
   <ul class="t">
-    <li>Mô phỏng: cầu tổng hợp, mạng 3 tuyến cố định, cảm biến hoàn hảo, không có chuyển tuyến.</li>
+    <li>Mô phỏng: cầu tổng hợp, mạng 3 tuyến cố định, cảm biến hoàn hảo, khách không đổi tuyến.</li>
     <li>Kẹt xe chỉ từ hệ số ngẫu nhiên, không do chính các xe gây ra.</li>
     <li>Chặng 3 phút và đường depot 6 phút cố định mọi ngày; thiết kế cho phép đổi theo ngày. <code>REASSIGN</code> cũng tính 6 phút, không theo đường ngắn nhất.</li>
     <li>Tham số Threshold và Proportional đặt tay, chưa tinh chỉnh trên validation như thiết kế yêu cầu.</li>
@@ -434,36 +412,6 @@ caption b { color: var(--ink); }
     <li>PPO tốt hơn ba luật phản ứng ở cả ba bộ test; CI 95% đều &gt; 0.</li>
     <li>Đưa xe dự phòng ra sớm thắng chờ hàng dài mới phản ứng.</li>
   </ul>
-</section>
-
-<section id="notation" data-num="A" data-t="Ký hiệu">
-  <h2><span class="num">A</span>Ký hiệu</h2>
-  <div class="tw"><table>
-    <thead><tr><th>Ký hiệu</th><th>Ý nghĩa</th><th>Giá trị / đơn vị</th></tr></thead>
-    <tbody>
-      <tr><td>$F$</td><td>Số xe của đội</td><td>12 (9 chạy tuyến, 3 dự phòng)</td></tr>
-      <tr><td>$t$</td><td>Thời gian trong ca</td><td>phút, 0 đến 240; bước 2</td></tr>
-      <tr><td>$\lambda_r(t)$</td><td>Cường độ khách đến tuyến $r$</td><td>khách/giờ, công thức (1)</td></tr>
-      <tr><td>$b_r$</td><td>Lượng khách cơ bản của tuyến $r$</td><td>180, 160, 140 khách/giờ</td></tr>
-      <tr><td>$Q_r$</td><td>Khách đang chờ ở tuyến $r$</td><td>khách</td></tr>
-      <tr><td>$n_r$</td><td>Số xe chạy trọn tuyến $r$</td><td>xe; mỗi tuyến ≥ 2 xe</td></tr>
-      <tr><td>$m,\mu,\sigma$</td><td>Hệ số, tâm, độ rộng của đỉnh cầu</td><td>$[1.5,3]$; $[45,135]$ phút; $[15,30]$ phút</td></tr>
-      <tr><td>$W$</td><td>Thời gian chờ của hàng chờ</td><td>passenger-minute, hệ số 1</td></tr>
-      <tr><td>$V$</td><td>Thời gian khách trên xe</td><td>passenger-minute, hệ số 0,25</td></tr>
-      <tr><td>$O$</td><td>Tải vượt mức thoải mái (30 khách)</td><td>passenger-minute, hệ số 0,5</td></tr>
-      <tr><td>$C$</td><td>Thời gian xe hoạt động</td><td>bus-minute, hệ số 0,5</td></tr>
-      <tr><td>$C_D$</td><td>Thời gian xe chạy không tải</td><td>bus-minute, hệ số 0,5</td></tr>
-      <tr><td>$X$</td><td>Chờ của khách đã chờ ≥ 15 phút</td><td>passenger-minute, hệ số 1</td></tr>
-      <tr><td>$U$</td><td>Khách bị từ chối lần đầu (xe đầy)</td><td>khách, hệ số 5</td></tr>
-      <tr><td>$E$</td><td>Khách bỏ về (chờ quá 45 phút)</td><td>khách, hệ số 60</td></tr>
-      <tr><td>$M$</td><td>Số lần đổi nhiệm vụ của xe</td><td>lần, hệ số 2</td></tr>
-      <tr><td>$N_H$</td><td>Khách còn chờ hoặc còn trên xe khi hết ca</td><td>khách, hệ số 60, tính một lần</td></tr>
-      <tr><td>$c$, $r$</td><td>Chi phí, reward</td><td>$r=-c/3000$</td></tr>
-      <tr><td>$\gamma$</td><td>Hệ số chiết khấu</td><td>1</td></tr>
-      <tr><td>$\rho_k$, $A_k$</td><td>Tỷ lệ xác suất, advantage</td><td>clip trong $[1-\varepsilon,1+\varepsilon]$</td></tr>
-      <tr><td>$\varepsilon$</td><td>Biên clip PPO</td><td>0,2</td></tr>
-    </tbody>
-  </table></div>
 </section>
 
 <section id="refs" data-t="Tài liệu tham khảo">
@@ -480,8 +428,6 @@ caption b { color: var(--ink); }
 </section>
 </article>
 
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/katex.min.js"></script>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/contrib/auto-render.min.js"></script>
 <script>
 const $ = (s, r = document) => r.querySelector(s);
 const NS = "http://www.w3.org/2000/svg";
@@ -530,11 +476,7 @@ addEventListener("scroll", () => {
   requestAnimationFrame(() => { const h = document.documentElement; bar.style.transform = `scaleX(${h.scrollTop / (h.scrollHeight - h.clientHeight || 1)})`; tick = false; });
 }, { passive: true });
 
-/* math */
-addEventListener("load", () => {
-  if (window.renderMathInElement) renderMathInElement(document.body, { delimiters: [{ left: "$$", right: "$$", display: true }, { left: "$", right: "$", display: false }], throwOnError: false });
-  linkRefs();
-});
+addEventListener("load", linkRefs);
 
 /* videos play only while visible */
 (() => {
@@ -588,7 +530,7 @@ addEventListener("load", () => {
   // a queue at route A, outbound stop s3
   const qx = stopX(3), qy = 95 - HALF;
   for (let i = 0; i < 12; i++) el("circle", { cx: qx - 25 + (i % 6) * 10, cy: qy - 14 - Math.floor(i / 6) * 10, r: 4, fill: C.yellow }, svg);
-  text(qx, qy - 40, "hàng chờ Q = 12 khách", { anchor: "middle", size: 14, fill: C.yellow });
+  text(qx, qy - 40, "ví dụ: 12 khách đang chờ ở s3", { anchor: "middle", size: 14, fill: C.yellow });
   // one leg and one bus annotated
   const lx = (stopX(4) + stopX(5)) / 2;
   el("path", { d: `M${stopX(4)} 190 v-6 H${stopX(5)} v6`, fill: "none", stroke: C.dim }, svg);
@@ -635,14 +577,14 @@ addEventListener("load", () => {
   const X = t => L + (W - L - 10) * t / 240, Y = v => B - v * 0.45;
   axis(svg, L, B, W - 10, B); axis(svg, L, 20, L, B);
   [0, 60, 120, 180, 240].forEach(t => note(svg, X(t), B + 22, t, "middle"));
-  note(svg, W - 10, B + 42, "t (phút)", "end"); note(svg, L + 8, 28, "λ (khách/giờ), tuyến A với m = 2, σ = 20");
+  note(svg, W - 10, B + 42, "t (phút)", "end"); note(svg, L + 8, 28, "khách/giờ, tuyến A");
   const fill = el("path", { fill: C.yellow, "fill-opacity": .18 }, svg);
   const line = el("path", { fill: "none", stroke: C.yellow, "stroke-width": 3 }, svg);
   el("line", { x1: X(180), x2: X(180), y1: 20, y2: B, stroke: C.red, "stroke-dasharray": "4 5" }, svg);
   note(svg, X(180) + 6, 32, "t = 180: hết khách mới");
   const slider = $("#peak"), out = $("#peakv");
   const render = () => {
-    const p = +slider.value; out.textContent = "μ = " + p;
+    const p = +slider.value; out.textContent = "phút " + p;
     let d = ""; for (let t = 0; t <= 240; t += 2) d += (t ? "L" : "M") + X(t) + " " + Y(lam(t, p)) + " ";
     line.setAttribute("d", d); fill.setAttribute("d", d + `L${X(240)} ${B} L${X(0)} ${B}Z`);
   };
@@ -707,7 +649,8 @@ addEventListener("load", () => {
   const svg = $("#mdemo"), acts = [["NOOP", 0.4], ["DISPATCH", 2.0], ["SET_HEADWAY", 1.5], ["REASSIGN", 1.1], ["RECALL", -0.5], ["SHORT_TURN", 1.7]];
   const masked = new Set(), L = 180, R = 800, rowH = 40;
   const btns = $("#mbtns");
-  acts.forEach(([n], i) => { const b = document.createElement("button"); b.className = "t"; b.textContent = n; b.setAttribute("aria-pressed", "false"); b.onclick = () => { masked.has(i) ? masked.delete(i) : masked.add(i); b.setAttribute("aria-pressed", masked.has(i)); draw(); }; btns.appendChild(b); });
+  // NOOP is never masked in the environment, so at least one action always stays legal.
+  acts.forEach(([n], i) => { if (!i) return; const b = document.createElement("button"); b.className = "t"; b.textContent = n; b.setAttribute("aria-pressed", "false"); b.onclick = () => { masked.has(i) ? masked.delete(i) : masked.add(i); b.setAttribute("aria-pressed", masked.has(i)); draw(); }; btns.appendChild(b); });
   const draw = () => {
     svg.replaceChildren();
     const e = acts.map(([, z]) => Math.exp(z)), full = e.reduce((a, b) => a + b), live = e.reduce((a, v, i) => a + (masked.has(i) ? 0 : v), 0) || 1;
@@ -724,63 +667,7 @@ addEventListener("load", () => {
   draw();
 })();
 
-/* Fig 8 */
-(() => {
-  const svg = $("#clip"), eps = .2, L = 60, R = 880, T = 20, B = 255;
-  const X = r => L + (R - L) * (r - 0.4) / 1.2, Y = v => (T + B) / 2 - v * 110;
-  const slider = $("#adv"), out = $("#advv");
-  const band = el("rect", { y: T, height: B - T, fill: C.blue, "fill-opacity": .12 }, svg);
-  const zero = el("line", { x1: L, x2: R, stroke: C.rule }, svg);
-  const full = el("path", { fill: "none", stroke: C.grey, "stroke-width": 2, "stroke-dasharray": "6 5" }, svg);
-  const used = el("path", { fill: "none", stroke: C.green, "stroke-width": 4 }, svg);
-  [.5, .8, 1, 1.2, 1.5].forEach(r => note(svg, X(r), B + 22, String(r).replace(".", ","), "middle"));
-  note(svg, R, B + 42, "ρ = π_mới / π_cũ", "end");
-  const render = () => {
-    const A = +slider.value; out.textContent = "A = " + (A >= 0 ? "+" : "−") + Math.abs(A).toFixed(1).replace(".", ",");
-    out.style.color = A >= 0 ? C.green : C.red;
-    zero.setAttribute("y1", Y(0)); zero.setAttribute("y2", Y(0));
-    band.setAttribute("x", X(1 - eps)); band.setAttribute("width", X(1 + eps) - X(1 - eps));
-    let d1 = "", d2 = "";
-    for (let i = 0; i <= 120; i++) {
-      const r = .4 + 1.2 * i / 120, cl = Math.min(Math.max(r, 1 - eps), 1 + eps);
-      d1 += (i ? "L" : "M") + X(r) + " " + Y(r * A) + " "; d2 += (i ? "L" : "M") + X(r) + " " + Y(Math.min(r * A, cl * A)) + " ";
-    }
-    full.setAttribute("d", d1); used.setAttribute("d", d2);
-  };
-  slider.addEventListener("input", render); render();
-})();
-
-/* Fig 9: validation curves */
-(() => {
-  const svg = $("#vcurve"), L = 60, R = 880, T = 15, B = 225;
-  const seeds = {
-    "seed 11": [17551.53,15646.93,14494.52,13976.79,16820.10,14440.58,14484.77,14484.69,13726.51,13727.73,13788.44,14086.44,13199.13,14036.17,14424.24,13199.13,13282.01,13363.21,13340.88,13464.35],
-    "seed 22": [16971.68,14247.51,14052.60,14341.72,14977.97,13590.04,13823.42,13113.97,13357.37,13999.24,13247.92,13319.31,13604.09,13610.73,13610.73,13249.03,13252.81,13335.33,13465.08,13507.83],
-    "seed 33": [14433.43,15266.32,14204.08,14317.89,13751.16,14117.76,13593.69,13779.67,17383.13,17066.34,14524.77,15241.76,16951.71,16636.64,16515.84,16393.18,16348.24,14039.35,13213.46,13347.95]
-  };
-  const col = [C.green, C.blue, C.purple];
-  const X = k => L + (R - L) * (k - 1) / 19, Y = v => B - (v - 13000) / (17600 - 13000) * (B - T);
-  axis(svg, L, B, R, B); axis(svg, L, T, L, B);
-  [13000, 14000, 15000, 16000, 17000].forEach(v => { note(svg, L - 8, Y(v) + 5, v.toLocaleString("vi-VN"), "end"); el("line", { x1: L, x2: R, y1: Y(v), y2: Y(v), stroke: C.rule, "stroke-opacity": .5 }, svg); });
-  [0, 5, 10, 15, 20].forEach(k => { const kk = Math.max(k, 1); note(svg, X(kk), B + 22, k === 0 ? "12.288" : (k * 12288).toLocaleString("vi-VN"), "middle"); });
-  note(svg, R, B + 44, "số quyết định huấn luyện", "end");
-  [["Fixed", 16016.87], ["Threshold", 16641.44]].forEach(([n, v]) => {
-    el("line", { x1: L, x2: R, y1: Y(v), y2: Y(v), stroke: C.grey, "stroke-dasharray": "6 5" }, svg);
-    note(svg, R, Y(v) - 6, n, "end");
-  });
-  Object.entries(seeds).forEach(([n, ys], i) => {
-    const g = el("g", {}, svg);
-    el("path", { d: ys.map((v, k) => (k ? "L" : "M") + X(k + 1) + " " + Y(v)).join(" "), fill: "none", stroke: col[i], "stroke-width": 2.5 }, g);
-    const best = ys.indexOf(Math.min(...ys));
-    el("circle", { cx: X(best + 1), cy: Y(ys[best]), r: 5, fill: col[i] }, g);
-    const sw = document.createElement("button"); sw.className = "t"; sw.setAttribute("aria-pressed", "true");
-    sw.innerHTML = `<span style="color:${["var(--green)","var(--blue)","var(--purple)"][i]}">&#9644;</span> ${n}`;
-    sw.onclick = () => { const on = sw.getAttribute("aria-pressed") !== "true"; sw.setAttribute("aria-pressed", on); g.style.opacity = on ? 1 : .08; };
-    $("#vleg").appendChild(sw);
-  });
-})();
-
-/* Fig 10: every decision of one day (test_id, first day), one letter per 2-minute step; letters as in ACT. */
+/* Fig 8: every decision of one day (test_id, first day), one letter per 2-minute step; letters as in ACT. */
 (() => {
   const DAY = [
     ["PPO (huấn luyện lại)", 13313.3, "SDDHHHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNNHHNNNHHNNNHHNNNHNNNNN"],
@@ -813,10 +700,8 @@ addEventListener("load", () => {
     loop: [[C.blue, "line", "dữ liệu tác tử nhận"], [C.purple, "dash", "phần bị che"], [C.yellow, "line", "bước đang xem"]],
     mask: acts.slice(0, 5),
     mdemo: [[C.grey, "bar", "xác suất trước mask"], [C.green, "bar", "sau mask"], [C.red, "dash", "bị mask"]],
-    demand: [[C.yellow, "line", "λ_r(t), cường độ khách đến"], [C.red, "dash", "t = 180, hết khách mới"]],
-    area: [[C.yellow, "line", "hàng chờ Q(t)"], [C.yellow, "box", "diện tích = W (passenger-phút chờ)"]],
-    clip: [[C.grey, "dash", "ρ·A, chưa clip"], [C.green, "line", "min(ρA, clip(ρ)A), phần được dùng"], [C.blue, "box", "vùng [1−ε, 1+ε]"]],
-    vcurve: [[C.grey, "dash", "Fixed, Threshold (validation)"], [C.ink, "dot", "checkpoint được chọn"]],
+    demand: [[C.yellow, "line", "cường độ khách đến"], [C.red, "dash", "t = 180, hết khách mới"]],
+    area: [[C.yellow, "line", "số khách đang chờ"], [C.yellow, "box", "diện tích = W (passenger-phút chờ)"]],
     grid: acts
   };
   for (const [id, items] of Object.entries(legends)) {
