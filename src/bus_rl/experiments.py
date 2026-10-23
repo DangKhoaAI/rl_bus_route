@@ -152,8 +152,11 @@ def run_experiment(
             if resume and (destination / "metadata.json").exists():
                 meta = json.loads((destination / "metadata.json").read_text())
                 expected = asdict(replace(run.algorithm, seed=seed))
-                if meta["algorithm"] != expected or meta.get("best_checkpoint_sha256") != file_hash(
-                    destination / "best.zip"
+                if (
+                    meta["algorithm"] != expected
+                    or meta.get("action_execution_hash") != run.action_execution_hash
+                    or meta.get("trainer_version") != 1
+                    or meta.get("best_checkpoint_sha256") != file_hash(destination / "best.zip")
                 ):
                     raise ValueError(f"inconsistent completed training: {destination}")
                 continue
@@ -234,7 +237,14 @@ def run_experiment(
             report_data = read_report_data(report / "report.html")
         else:
             print(f"[experiment] report {name}", flush=True)
-            report_data = generate_report([*evaluations, *baseline_paths], report)
+            from bus_rl.learning.training.algorithms import learned_method
+
+            run = runs[name]
+            report_data = generate_report(
+                [*evaluations, *baseline_paths],
+                report,
+                rl_method=learned_method(run.algorithm.name, run.algorithm.mask_mode),
+            )
         for table, rows in [("summary", all_summary), ("comparisons", all_comparisons)]:
             frame = pd.DataFrame(report_data["tables"][table])
             frame.insert(0, "policy", name)

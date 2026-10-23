@@ -1,0 +1,11 @@
+{
+  "algorithm": "a2c",
+  "checkpoint_sha256": "884820a996bca7257b5ab8e40e78f78b7ec59778f9c6083075fef6398563821b",
+  "decisions_sha256": "23ab1a09ecadf7e29716892e476aac67097600032163b87e1f11d56fb982f20a",
+  "mask_mode": "apply",
+  "repeated_200_day_evaluation_matches": true,
+  "scenario_hash": "f4e25517e5992fea6eaa1deb262321d9f6310bc703d3a3001954c7c46c71a78f",
+  "scenario_seed": 5874776132901884234,
+  "selection": "seed 11, test_id, manifest scenario index 0; fixed for all six arms",
+  "steps": 120
+}

@@ -1,0 +1,22 @@
+schema_version = 1
+name = "standard-v1-masking"
+jobs = 3
+seeds = [11, 22, 33]
+splits = ["test_id", "test_ood_burst", "test_ood_traffic"]
+baselines = ["fixed", "proportional", "threshold"]
+baseline_config = "configs/studies/baselines.toml"
+
+[counts]
+train = 500
+validation = 100
+test_id = 200
+test_ood_burst = 200
+test_ood_traffic = 200
+
+[policies]
+reinforce_apply = "configs/studies/masking/reinforce-apply.toml"
+reinforce_free = "configs/studies/masking/reinforce-free.toml"
+a2c_apply = "configs/studies/masking/a2c-apply.toml"
+a2c_free = "configs/studies/masking/a2c-free.toml"
+ppo_apply = "configs/studies/masking/ppo-apply.toml"
+ppo_free = "configs/studies/masking/ppo-free.toml"

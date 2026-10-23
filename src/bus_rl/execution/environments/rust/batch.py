@@ -20,6 +20,7 @@ import numpy as np
 from gymnasium.utils import seeding
 from stable_baselines3.common.vec_env import VecEnv
 
+from bus_rl.execution.environments.action_execution import execute_requests
 from bus_rl.execution.environments.arrival_memory import ArrivalMemory
 from bus_rl.execution.environments.rust.bridge import shared_store
 from bus_sim.oracle.domain import initial_state
@@ -205,14 +206,23 @@ class NativeBatchVecEnv(VecEnv):
         return {key: value.copy() for key, value in self._obs.items()}
 
     def step_async(self, actions: np.ndarray) -> None:
-        actions = np.asarray(actions).reshape(-1)
+        actions = np.asarray(actions)
+        if actions.ndim != 1 or actions.dtype.kind not in "iu":
+            raise ValueError("actions must be a one-dimensional integer array")
         if actions.shape[0] != self.num_envs:
             raise ValueError(f"expected {self.num_envs} actions, got {actions.shape[0]}")
         self._actions = actions.astype(np.int64, copy=True)
 
     def step_wait(self):
         slots = list(range(self.num_envs))
-        result = self.kernel.step(slots, self._actions.tolist())
+        feasibility_masks = self.kernel.masks(slots)
+        executed, action_infos = execute_requests(
+            self._actions,
+            feasibility_masks,
+            invalid_action=self.run.action_execution.invalid_action,
+            mask_mode=self.run.algorithm.mask_mode,
+        )
+        result = self.kernel.step(slots, executed.tolist())
         obs_raw = {key: np.asarray(value) for key, value in result["obs"].items()}
         obs_raw = self.arrival_memory.apply(obs_raw, slots)
         # `DummyVecEnv.buf_rews` is float32; match it for bit-identical parity.
@@ -223,7 +233,11 @@ class NativeBatchVecEnv(VecEnv):
 
         infos: list[dict] = []
         for slot in range(self.num_envs):
-            info: dict = {"TimeLimit.truncated": bool(truncated[slot] and not terminated[slot])}
+            info: dict = {
+                "TimeLimit.truncated": bool(truncated[slot] and not terminated[slot]),
+                "action_execution": action_infos[slot],
+                "feasibility_mask": feasibility_masks[slot].copy(),
+            }
             if dones[slot]:
                 info["terminal_observation"] = {
                     key: value[slot].copy() for key, value in obs_raw.items()
@@ -339,7 +353,14 @@ class NativeBatchEvalPool:
         return obs, mask
 
     def step(self, slots, actions) -> dict:
-        result = self.kernel.step(slots, actions)
+        executed, action_infos = execute_requests(
+            actions,
+            self.kernel.masks(slots),
+            invalid_action=self.run.action_execution.invalid_action,
+            mask_mode=self.run.algorithm.mask_mode,
+        )
+        result = self.kernel.step(slots, executed.tolist())
+        result["action_execution"] = action_infos
         result["obs"] = self.arrival_memory.apply(result["obs"], slots)
         return result
 

@@ -10,10 +10,10 @@ from pathlib import Path
 from types import ModuleType
 
 import torch
-from sb3_contrib import MaskablePPO
 
 from bus_rl.config import RunConfig
 from bus_rl.execution.environments.rust.bridge import native_build_info
+from bus_rl.learning.training.algorithms import TRAINERS
 from bus_rl.provenance import (
     action_schema_hash,
     assert_physical_compatible,
@@ -31,6 +31,15 @@ def run_metadata(run: RunConfig, extra: dict | None = None) -> dict:
     sha, dirty = git_status()
     payload = {
         "obs_version": 2,
+        "learning_schema_version": 2,
+        "mask_mode": run.algorithm.mask_mode,
+        "action_execution": {
+            **asdict(run.action_execution),
+            "invalid_penalty": 0,
+            "advance_interval": True,
+            "version": 1,
+        },
+        "action_execution_hash": run.action_execution_hash,
         "action_schema_hash": action_schema_hash(),
         "obs_schema_hash": observation_schema_hash(run.physical, run.arrival_memory_bins),
         "arrival_memory_bins": run.arrival_memory_bins,
@@ -113,7 +122,17 @@ def load_model(checkpoint: Path, env, config: SimConfig, backend: str | None = N
     if backend is not None:
         assert_backend_compatible(metadata, backend)
     with _legacy_model_imports():
-        model = MaskablePPO.load(str(checkpoint), env=env, device="cpu")
+        name = metadata.get("algorithm", {}).get("name", "ppo")
+        if name not in TRAINERS:
+            raise ValueError(f"unknown checkpoint algorithm: {name}")
+        model = TRAINERS[name].load(str(checkpoint), env=env, device="cpu")
+        if model.mask_mode != metadata.get("mask_mode", "apply"):
+            raise ValueError("checkpoint mask mode differs from metadata")
+        if metadata.get("trainer_class") not in (None, type(model).__name__):
+            raise ValueError("checkpoint trainer class differs from metadata")
+        execution = metadata.get("action_execution", {})
+        if execution.get("invalid_penalty", 0) != 0 or not execution.get("advance_interval", True):
+            raise ValueError("unsupported checkpoint action execution contract")
     return model, metadata
 
 

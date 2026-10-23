@@ -1,6 +1,6 @@
 # standard-v1
 
-Một báo cáo tổng hợp cho RL-MLP10, RL-GRU10 và RL-Belief20-fade.
+Study gốc MLP10/GRU10/Belief20-fade, bổ sung REINFORCE/A2C/PPO với A/B masking.
 
 - [Báo cáo Markdown](report.md): đọc ngay trong editor.
 - [Báo cáo HTML](report.html): bảng và biểu đồ, tự chứa hình ảnh.
@@ -30,3 +30,5 @@ Chương trình kiểm tra dữ liệu, dựng đủ các định dạng ở th�
 bundle hiện tại; bản trước đó được giữ trong `/tmp/bus-study-previous-*/`.
 Dữ liệu này là snapshot tái lập trên bộ test tham chiếu đã dùng trước đây;
 không tự thay thế kết luận lịch sử ở `reports/`.
+
+Phần mở rộng: `evidence/<algorithm>/<apply|free>/<seed>/{train,eval}`. Protocol/config/screening được giữ tại `evidence/extensions/masking/`. Evidence gốc giữ nguyên; các file report gồm cả kết quả mới.

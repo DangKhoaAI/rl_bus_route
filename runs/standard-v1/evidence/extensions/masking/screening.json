@@ -1,0 +1,44 @@
+[
+  {
+    "algorithm": "reinforce",
+    "mask_mode": "apply",
+    "actual_steps": 61440,
+    "val_cost": 14231.88375,
+    "wall_s": 25.18840840802295
+  },
+  {
+    "algorithm": "reinforce",
+    "mask_mode": "free",
+    "actual_steps": 61440,
+    "val_cost": 16016.87375,
+    "wall_s": 23.483189343998674
+  },
+  {
+    "algorithm": "a2c",
+    "mask_mode": "apply",
+    "actual_steps": 61440,
+    "val_cost": 13611.015,
+    "wall_s": 25.16740795801161
+  },
+  {
+    "algorithm": "a2c",
+    "mask_mode": "free",
+    "actual_steps": 61440,
+    "val_cost": 16016.87375,
+    "wall_s": 24.454819762031548
+  },
+  {
+    "algorithm": "ppo",
+    "mask_mode": "apply",
+    "actual_steps": 61440,
+    "val_cost": 13399.3025,
+    "wall_s": 32.26112836401444
+  },
+  {
+    "algorithm": "ppo",
+    "mask_mode": "free",
+    "actual_steps": 61440,
+    "val_cost": 15819.2975,
+    "wall_s": 30.866626394039486
+  }
+]

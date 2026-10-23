@@ -18,7 +18,7 @@ from bus_rl.evaluation.runner import mean_cost
 from bus_rl.execution.runtime import apply_runtime_settings
 from bus_rl.execution.timing import TIMERS
 from bus_rl.learning.training.checkpoint import run_metadata, write_metadata
-from bus_rl.learning.training.train import make_env, make_model
+from bus_rl.learning.training.train import make_env, make_model, validate_training_setup
 
 
 class DiagnoseCallback(BaseCallback):
@@ -42,7 +42,7 @@ class DiagnoseCallback(BaseCallback):
     def _on_rollout_start(self) -> None:
         now = perf_counter()
         if self._after_rollout is not None:
-            self._log("ppo_update", now - self._after_rollout)
+            self._log("policy_update", now - self._after_rollout)
         self._last_env_snapshot = TIMERS.snapshot()
         self._rollout_started = now
 
@@ -60,7 +60,7 @@ class DiagnoseCallback(BaseCallback):
     def _on_training_end(self) -> None:
         now = perf_counter()
         if self._after_rollout is not None:
-            self._log("ppo_update", now - self._after_rollout)
+            self._log("policy_update", now - self._after_rollout)
         self._log("learn_total", now - (self._learn_started or now))
         (self.output / "train_events.jsonl").write_text(
             "\n".join(json.dumps(event) for event in self.events) + "\n"
@@ -137,6 +137,7 @@ def diagnose_train(
     *,
     eval_limit: int = 10,
 ) -> dict:
+    validate_training_setup(run)
     output = Path(output)
     output.mkdir(parents=True, exist_ok=False)
     apply_runtime_settings(run)
@@ -191,7 +192,7 @@ def diagnose_train(
         "n_epochs": run.algorithm.n_epochs,
         "decisions_per_s": model.num_timesteps / learn_s if learn_s else 0.0,
         "events": diagnose.events,
-        "learn_functions": _sum_event(diagnose.events, "rollout_collect", "ppo_update"),
+        "learn_functions": _sum_event(diagnose.events, "rollout_collect", "policy_update"),
         "eval_functions": eval_timers,
         "cprofile_top": profile_rows[:20],
         "projected": _project(learn_s, eval_s, model.num_timesteps, eval_limit),

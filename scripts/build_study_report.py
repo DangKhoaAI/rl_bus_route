@@ -649,6 +649,496 @@ def document(evidence):
             ("APPENDIX C. Nguồn", training_blocks[source_index + 1 :]),
         ]
     )
+    additions = algorithm_pages(evidence)
+    if additions:
+        position = next(i for i, (title, _) in enumerate(pages) if title.startswith("APPENDIX"))
+        pages[position:position] = additions
+    return pages
+
+
+def validate_decision_example(base, results, metadata):
+    path = base / "eval/test_id/decisions.csv"
+    info = json.loads(path.with_suffix(".json").read_text())
+    decisions = pd.read_csv(path)
+    example = results[results.scenario_seed == str(info["scenario_seed"])].iloc[0]
+    if (
+        info["decisions_sha256"] != file_hash(path)
+        or info["checkpoint_sha256"] != metadata["best_checkpoint_sha256"]
+        or info["scenario_hash"] != example.scenario_hash
+        or not info["repeated_200_day_evaluation_matches"]
+        or decisions.step.tolist() != list(range(1, 121))
+        or not decisions.requested_action_index.between(0, 220).all()
+        or not decisions.executed_action_index.between(0, 220).all()
+    ):
+        raise ValueError("invalid predetermined decision example")
+    valid = decisions.requested_action_valid
+    if (
+        (~valid).sum() != example.invalid_request_count
+        or decisions.requested_action_index.eq(0).sum() != example.requested_noop_count
+        or decisions.executed_action_index.eq(0).sum() != example.executed_noop_count
+        or not decisions.loc[~valid, "executed_action_index"].eq(0).all()
+        or not decisions.loc[~valid, "invalid_action_fallback"].eq("noop").all()
+        or not decisions.loc[valid, "requested_action_index"].equals(
+            decisions.loc[valid, "executed_action_index"]
+        )
+    ):
+        raise ValueError("decision example disagrees with episode counters or NOOP contract")
+    return decisions
+
+
+def load_algorithm_extension(evidence):
+    """Verify the full matrix from per-day results, rather than trusting summary cells."""
+    extension = evidence / "extensions/masking"
+    protocol_path = extension / "protocol.json"
+    if not protocol_path.exists():
+        return None
+    protocol = json.loads(protocol_path.read_text())
+    spec = protocol["plan"]["spec"]
+    expected_arms = {
+        f"{algo}_{mode}" for algo in ("reinforce", "a2c", "ppo") for mode in ("apply", "free")
+    }
+    if set(spec["policies"]) != expected_arms or spec["seeds"] != [11, 22, 33]:
+        raise ValueError("incomplete algorithm/masking matrix")
+    if spec["counts"] != {"train": 500, "validation": 100, **{s: 200 for s in SPLITS}}:
+        raise ValueError("algorithm extension must use the standard-v1 dataset counts")
+    reference = json.loads((evidence / "protocol.json").read_text())["resolved_configs"]["gru10"]
+    raw, metadata = {}, {}
+    common_algorithm = (
+        "encoder",
+        "history_minutes",
+        "gamma",
+        "learning_rate",
+        "n_steps",
+        "n_envs",
+        "batch_size",
+        "n_epochs",
+        "ent_coef",
+        "vf_coef",
+        "max_grad_norm",
+        "gae_lambda",
+        "clip_range",
+        "total_timesteps",
+        "eval_freq",
+        "device",
+        "torch_threads",
+    )
+    for algo in ("reinforce", "a2c", "ppo"):
+        for mode in ("apply", "free"):
+            arm = f"{algo}_{mode}"
+            config = protocol["resolved_configs"][arm]
+            for field in common_algorithm:
+                if config["algorithm"][field] != reference["algorithm"][field]:
+                    raise ValueError(f"standard setup mismatch: {arm}/{field}")
+            for field in ("physical", "control", "reward", "runtime", "forecast", "shaping"):
+                if config[field] != reference[field]:
+                    raise ValueError(f"standard setup mismatch: {arm}/{field}")
+            for seed in spec["seeds"]:
+                base = evidence / algo / mode / str(seed)
+                meta = json.loads((base / "train/metadata.json").read_text())
+                history = pd.read_csv(base / "train/evaluations.csv")
+                if (
+                    meta["algorithm"]["name"] != algo
+                    or meta["mask_mode"] != mode
+                    or meta["total_timesteps_actual"] != 245760
+                    or meta["episodes_completed"] != 2048
+                    or meta["action_execution"]["invalid_action"] != "noop"
+                    or meta["action_execution"]["invalid_penalty"] != 0
+                    or meta["evaluations_sha256"] != file_hash(base / "train/evaluations.csv")
+                ):
+                    raise ValueError(f"invalid training evidence: {arm}/{seed}")
+                eligible = history[history.checkpoint_eligible]
+                if not math.isclose(float(eligible.val_cost.min()), meta["best_val_cost"]):
+                    raise ValueError("best checkpoint does not match eligible validation history")
+                if history.iloc[-1].optimizer_steps != meta["optimizer_steps"]:
+                    raise ValueError("final post-update validation is missing")
+                metadata[algo, mode, seed] = meta
+                for split in SPLITS:
+                    path = base / "eval" / split / "results.csv"
+                    sidecar = json.loads(path.with_name("evaluation.json").read_text())
+                    frame = pd.read_csv(
+                        path,
+                        dtype={
+                            "scenario_seed": "string",
+                            "model_seed": "string",
+                            "scenario_hash": "string",
+                        },
+                    )
+                    method = algo if mode == "apply" else f"{algo}_free"
+                    if (
+                        sidecar["results_sha256"] != file_hash(path)
+                        or len(frame) != 200
+                        or set(frame.method) != {method}
+                        or set(frame.model_seed) != {str(seed)}
+                    ):
+                        raise ValueError(f"invalid evaluation evidence: {path}")
+                    if frame.decision_steps.ne(120).any():
+                        raise ValueError("mask mode changed episode duration")
+                    if mode == "apply" and frame.invalid_request_count.ne(0).any():
+                        raise ValueError("apply selected invalid actions")
+                    if seed == 11 and split == "test_id":
+                        validate_decision_example(base, frame, meta)
+                    raw.setdefault((algo, mode), []).append(frame)
+    raw = {
+        key: validate_results(pd.concat(frames, ignore_index=True)) for key, frames in raw.items()
+    }
+    # Force exact day pairing with the existing shared baseline tapes, for every seed.
+    baselines = pd.concat(
+        [
+            pd.read_csv(
+                evidence / "baselines/shared/eval" / split / "results.csv",
+                dtype={
+                    "scenario_seed": "string",
+                    "model_seed": "string",
+                    "scenario_hash": "string",
+                },
+            )
+            for split in SPLITS
+        ],
+        ignore_index=True,
+    )
+    for (algo, mode), frame in raw.items():
+        compare_baselines(
+            validate_results(pd.concat([frame, baselines], ignore_index=True)),
+            algo if mode == "apply" else f"{algo}_free",
+        )
+    for algo in ("reinforce", "a2c", "ppo"):
+        for seed in spec["seeds"]:
+            if (
+                metadata[algo, "apply", seed]["action_execution_hash"]
+                != metadata[algo, "free", seed]["action_execution_hash"]
+            ):
+                raise ValueError("mask A/B execution contracts differ")
+    return raw, metadata, protocol
+
+
+def algorithm_pages(evidence):
+    loaded = load_algorithm_extension(evidence)
+    if loaded is None:
+        return []
+    raw, metadata, _protocol = loaded
+    pages = [
+        (
+            "III. ALGORITHM COMPARISON & MASK A/B",
+            [
+                (
+                    "p",
+                    (
+                        "Bổ sung REINFORCE, A2C và PPO với cùng encoder GRU10, trên đúng dữ liệu và "
+                        "ngân sách của standard-v1. Mỗi thuật toán có hai nhánh được train riêng: apply và free."
+                    ),
+                ),
+                table(
+                    ["Thiết lập", "Giá trị"],
+                    [
+                        [
+                            "Dữ liệu",
+                            "500 ngày train, 100 validation, 200 ngày cho mỗi split test; cùng tapes",
+                        ],
+                        ["Số lần train", "3 thuật toán × 2 mask mode × 3 seeds (11/22/33) = 18"],
+                        [
+                            "Ngân sách",
+                            "245.760 transitions/seed, 2.048 episode; CPU, 4 env, Torch 2 threads",
+                        ],
+                        [
+                            "Setup kế thừa",
+                            (
+                                "GRU10; gamma 1; lr 3e-4; rollout yêu cầu 256; batch 256; "
+                                "PPO 4 epoch; cùng reward và guards"
+                            ),
+                        ],
+                        [
+                            "REINFORCE",
+                            (
+                                "Return Monte Carlo, không baseline/critic; thu 240 bước/env để đủ "
+                                "2 episode; một cập nhật toàn rollout"
+                            ),
+                        ],
+                        ["A2C", "GAE 0,95, Adam; một cập nhật toàn rollout 256 bước/env"],
+                        ["PPO", "PPO-Clip 0,2; GAE 0,95; 4 epoch, 16 optimizer steps/rollout"],
+                        [
+                            "Validation",
+                            (
+                                "Mốc yêu cầu 12.288 transitions; đo sau update ở rollout boundary "
+                                "đầu tiên đạt mốc; đo cả trọng số sau update cuối"
+                            ),
+                        ],
+                        [
+                            "Mask-free",
+                            (
+                                "Policy chọn trong 221 action; request sai thực thi NOOP, vẫn chạy "
+                                "2 phút, nhận cost thực; không penalty bổ sung"
+                            ),
+                        ],
+                        [
+                            "Execution chung",
+                            "Cả apply/free dùng cùng noop adapter; native kernel giữ guard strict",
+                        ],
+                    ],
+                    [0.24, 0.76],
+                ),
+                (
+                    "p",
+                    (
+                        "Ba policy MLP10/GRU10/Belief20-fade trong các phần trước là snapshot gốc. "
+                        "Phần bổ sung train lại PPO control và dùng validation sau update; so thuật toán "
+                        "và hiệu quả masking bằng chính các control mới trong phần này."
+                    ),
+                ),
+            ],
+        )
+    ]
+    mask_contrasts = {}
+    for algo in ("reinforce", "a2c", "ppo"):
+        mask_contrasts[algo] = compare_baselines(
+            pd.concat([raw[algo, "apply"], raw[algo, "free"]], ignore_index=True), algo
+        )
+    for split, (label, _) in SPLITS.items():
+        rows, numeric, plotting = [], [], []
+        for algo in ("reinforce", "a2c", "ppo"):
+            for mode in ("apply", "free"):
+                frame = raw[algo, mode]
+                group = frame[frame.split == split]
+                stats = summarize_results(group).iloc[0]
+                rows.append(
+                    [
+                        algo.upper(),
+                        mode,
+                        f"{fmt(stats.total_cost_core)} +/- {fmt(stats.seed_std_cost)}",
+                        fmt(stats.mean_wait),
+                        fmt(stats.p95_wait),
+                        f"{100 * stats.completed_share:.2f}%",
+                        f"{100 * group.invalid_request_rate.mean():.2f}%",
+                    ]
+                )
+                numeric.append(
+                    [
+                        None,
+                        None,
+                        stats.total_cost_core,
+                        stats.mean_wait,
+                        stats.p95_wait,
+                        stats.completed_share,
+                        None,
+                    ]
+                )
+                plotting.append(
+                    {
+                        "label": f"{algo.upper()} / {mode}",
+                        "total_cost_core": stats.total_cost_core,
+                        "p95_wait": stats.p95_wait,
+                    }
+                )
+        contrasts = []
+        for algo in ("reinforce", "a2c", "ppo"):
+            contrast = mask_contrasts[algo]
+            row = contrast[contrast.split == split].iloc[0]
+            contrasts.append(
+                [
+                    algo.upper(),
+                    f"{row.cost_saved_pct:+.2f}%",
+                    f"[{row.cost_saved_pct_ci95_low:+.2f}; {row.cost_saved_pct_ci95_high:+.2f}]",
+                ]
+            )
+        pages.append(
+            (
+                f"MASK A/B - {label}",
+                [
+                    table(
+                        [
+                            "Thuật toán",
+                            "Mode",
+                            "Cost +/- seed std",
+                            "Mean wait",
+                            "P95 wait",
+                            "Hoàn thành",
+                            "Request sai",
+                        ],
+                        rows,
+                        [0.15, 0.08, 0.24, 0.12, 0.12, 0.15, 0.14],
+                        best=best_cells(numeric, {2: "min", 3: "min", 4: "min", 5: "max"}),
+                    ),
+                    (
+                        "p",
+                        (
+                            "Wait tính bằng phút. Request sai là tỷ lệ quyết định được chuyển thành NOOP. "
+                            "Mean cost lấy trung bình model seeds trong từng ngày rồi trung bình các ngày."
+                        ),
+                    ),
+                    condition_plot(plotting),
+                    ("h3", "Lợi ích của mask trong từng thuật toán"),
+                    table(
+                        ["Thuật toán", "Giảm cost apply so với free", "CI 95% paired theo ngày"],
+                        contrasts,
+                        [0.22, 0.38, 0.40],
+                    ),
+                    (
+                        "p",
+                        (
+                            "Giá trị dương nghĩa là apply giảm cost so với free. CI dùng 2.000 bootstrap "
+                            "ghép cặp theo ngày, seed 6001; không bao gồm bất định giữa các seed train."
+                        ),
+                    ),
+                ],
+            )
+        )
+    service_rows = []
+    for split, (label, _) in SPLITS.items():
+        for algo in ("reinforce", "a2c", "ppo"):
+            for mode in ("apply", "free"):
+                group = raw[algo, mode]
+                group = group[group.split == split]
+                stats = summarize_results(group).iloc[0]
+                service_rows.append(
+                    [
+                        label,
+                        f"{algo.upper()} / {mode}",
+                        fmt(stats.worst_route_mean_wait),
+                        f"{100 * stats.abandoned_share:.2f}%",
+                        f"{100 * stats.unfinished_share:.2f}%",
+                        f"{100 * group.executed_noop_rate.mean():.2f}%",
+                    ]
+                )
+    pages.append(
+        (
+            "SERVICE & EXECUTION - chất lượng phục vụ",
+            [
+                table(
+                    [
+                        "Điều kiện",
+                        "Thuật toán / mode",
+                        "Tuyến chờ lâu nhất (phút)",
+                        "Bỏ cuộc",
+                        "Chưa hoàn tất",
+                        "Thực thi NOOP",
+                    ],
+                    service_rows,
+                    [0.23, 0.25, 0.16, 0.12, 0.12, 0.12],
+                    separators=[6, 12],
+                ),
+                (
+                    "p",
+                    (
+                        "Tỷ lệ thực thi NOOP gồm cả request NOOP hợp lệ và request sai bị chuyển thành NOOP. "
+                        "Tuyến chờ lâu nhất là trung bình, qua các ngày/seed, của mean wait lớn nhất giữa các tuyến trong mỗi ca."
+                    ),
+                ),
+            ],
+        )
+    )
+    example_rows = []
+    for algo in ("reinforce", "a2c", "ppo"):
+        for mode in ("apply", "free"):
+            decisions = pd.read_csv(evidence / algo / mode / "11/eval/test_id/decisions.csv")
+            example_rows.append(
+                [
+                    algo.upper(),
+                    mode,
+                    "120",
+                    str((~decisions.requested_action_valid).sum()),
+                    str(decisions.requested_action_index.eq(0).sum()),
+                    str(decisions.executed_action_index.eq(0).sum()),
+                ]
+            )
+    pages.append(
+        (
+            "DECISION TRACE - cùng một ca test",
+            [
+                (
+                    "p",
+                    (
+                        "Ví dụ được chọn cố định: model seed 11, ca index 0 của test_id, cho cả sáu nhánh. "
+                        "Mỗi trace có đủ 120 bước; đã chạy lại toàn bộ 200 ngày test_id và đối chiếu chính xác cost, "
+                        "mean/P95 wait và invalid rate với evaluation đã đăng ký."
+                    ),
+                ),
+                table(
+                    ["Thuật toán", "Mode", "Bước", "Request sai", "Request NOOP", "Thực thi NOOP"],
+                    example_rows,
+                    [0.22, 0.12, 0.12, 0.18, 0.18, 0.18],
+                ),
+                (
+                    "p",
+                    (
+                        "Các request sai không làm dừng ca hay giảm số transitions. Policy vẫn học trên action "
+                        "đã yêu cầu; simulator thực thi NOOP và tính cost vận hành bình thường. "
+                        "Trace từng bước và hash checkpoint/scenario nằm tại "
+                        "evidence/<algorithm>/<mode>/11/eval/test_id/decisions.{csv,json}."
+                    ),
+                ),
+                (
+                    "p",
+                    (
+                        "Weights/logs nằm ở experiments/standard-v1-masking. Evidence tại "
+                        "evidence/<algorithm>/<mode>/<seed>/{train,eval}. Protocol và config của phần "
+                        "bổ sung nằm ở evidence/extensions/masking. Các số được tính lại từ results.csv "
+                        "từng ngày và đối chiếu checksum trước khi dựng report."
+                    ),
+                ),
+            ],
+        )
+    )
+    algorithm_rows = []
+    for algo in ("reinforce", "a2c"):
+        paired = compare_baselines(
+            pd.concat([raw[algo, "apply"], raw["ppo", "apply"]], ignore_index=True), "ppo"
+        )
+        for split, (label, _) in SPLITS.items():
+            row = paired[paired.split == split].iloc[0]
+            algorithm_rows.append(
+                [
+                    label,
+                    algo.upper(),
+                    f"{row.cost_saved_pct:+.2f}%",
+                    f"[{row.cost_saved_pct_ci95_low:+.2f}; {row.cost_saved_pct_ci95_high:+.2f}]",
+                ]
+            )
+    training = []
+    for (algo, mode, seed), meta in metadata.items():
+        training.append(
+            [
+                algo.upper(),
+                mode,
+                str(seed),
+                fmt(meta["best_val_cost"]),
+                str(meta["effective_n_steps"]),
+                f"{meta['optimizer_steps']:,}",
+                fmt(meta["wall_time_s"]),
+            ]
+        )
+    pages.append(
+        (
+            "ALGORITHM COMPARISON - cùng mask apply",
+            [
+                table(
+                    ["Điều kiện", "Đối chứng", "PPO giảm cost", "CI 95% paired theo ngày"],
+                    algorithm_rows,
+                    [0.29, 0.18, 0.21, 0.32],
+                ),
+                (
+                    "p",
+                    (
+                        "PPO được so trực tiếp với REINFORCE/A2C có mask trên cùng ngày test. "
+                        "Dấu dương có lợi cho PPO; mọi arm nhận cùng số transitions, nhưng số lượt cập "
+                        "nhật và độ dài rollout thực tế khác theo định nghĩa thuật toán."
+                    ),
+                ),
+                ("h3", "Huấn luyện từng arm và seed"),
+                table(
+                    [
+                        "Thuật toán",
+                        "Mode",
+                        "Seed",
+                        "Best val cost",
+                        "Steps/env",
+                        "Optimizer steps",
+                        "Train + val (s)",
+                    ],
+                    training,
+                    [0.16, 0.08, 0.07, 0.20, 0.13, 0.18, 0.18],
+                ),
+            ],
+        )
+    )
     return pages
 
 
@@ -680,8 +1170,13 @@ def write_markdown(pages, path):
 def write_html(pages, path):
     parts = [
         '<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Báo cáo standard-v1</title>',
-        '<style>body{margin:0;background:#f2f5f7;color:#20303c;font:16px/1.6 system-ui,sans-serif}main{max-width:1120px;margin:auto;padding:32px 24px}header{margin-bottom:28px}h1{font-size:36px;line-height:1.2}h2{font-size:26px;color:#087f8c}h3{font-size:19px}h3.numbered{font-size:24px;color:#087f8c}h4{font-size:19px}section{background:white;border:1px solid #dce4e8;padding:28px;margin:24px 0}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;vertical-align:top;padding:9px;border-bottom:1px solid #dde5e9}th{background:#edf4f5}tr.condition-start td{border-top:3px solid #748895}td.best{background:#e8f5e9;color:#166534;font-weight:700}.legend{font-size:13px;color:#42594c}.table{overflow-x:auto}img{width:100%;height:auto}nav a{margin-right:16px}footer{font-size:13px;color:#53636d}@media print{.pagebreak{break-before:page}body{background:white}main{padding:0}section{border:0;break-before:page}nav{display:none}}</style><main><header><p>BUS FLEET CONTROL / STANDARD-V1</p><h1>Báo cáo thực nghiệm</h1><p>RL-MLP10, RL-GRU10 và RL-Belief20-fade - cấu hình, điều kiện test và kết quả cuối.</p><nav><a href="report.md">Markdown</a><a href="report.pdf">PDF</a><a href="README.md">Hướng dẫn</a></nav></header>',
+        '<style>body{margin:0;background:#f2f5f7;color:#20303c;font:16px/1.6 system-ui,sans-serif}main{max-width:1120px;margin:auto;padding:32px 24px}header{margin-bottom:28px}h1{font-size:36px;line-height:1.2}h2{font-size:26px;color:#087f8c}h3{font-size:19px}h3.numbered{font-size:24px;color:#087f8c}h4{font-size:19px}section{background:white;border:1px solid #dce4e8;padding:28px;margin:24px 0}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;vertical-align:top;padding:9px;border-bottom:1px solid #dde5e9}th{background:#edf4f5}tr.condition-start td{border-top:3px solid #748895}td.best{background:#e8f5e9;color:#166534;font-weight:700}.legend{font-size:13px;color:#42594c}.table{overflow-x:auto}p,footer{overflow-wrap:anywhere}@media(max-width:600px){main{padding:16px}section{padding:16px}h1{font-size:30px}table{min-width:640px}}img{width:100%;height:auto}nav a{margin-right:16px}footer{font-size:13px;color:#53636d}@media print{.pagebreak{break-before:page}body{background:white}main{padding:0}section{border:0;break-before:page}nav{display:none}}</style><main><header><p>BUS FLEET CONTROL / STANDARD-V1</p><h1>Báo cáo thực nghiệm</h1><p>RL-MLP10, RL-GRU10 và RL-Belief20-fade - cấu hình, điều kiện test và kết quả cuối.</p><nav><a href="report.md">Markdown</a><a href="report.pdf">PDF</a><a href="README.md">Hướng dẫn</a></nav></header>',
     ]
+    if any(title.startswith("III. ALGORITHM") for title, _ in pages):
+        parts[1] = parts[1].replace(
+            "RL-MLP10, RL-GRU10 và RL-Belief20-fade - cấu hình, điều kiện test và kết quả cuối.",
+            "Study gốc MLP10/GRU10/Belief20-fade và mở rộng REINFORCE/A2C/PPO với A/B masking.",
+        )
     for index, (title, blocks) in enumerate(pages):
         is_result = 1 <= index <= len(SPLITS) + 1
         parts.append("<section>")
@@ -939,6 +1434,16 @@ bundle hiện tại; bản trước đó được giữ trong `/tmp/bus-study-pr
 Dữ liệu này là snapshot tái lập trên bộ test tham chiếu đã dùng trước đây;
 không tự thay thế kết luận lịch sử ở `reports/`.
 """)
+        if (evidence / "extensions/masking/protocol.json").exists():
+            readme = stage / "README.md"
+            text = readme.read_text().replace(
+                "Một báo cáo tổng hợp cho RL-MLP10, RL-GRU10 và RL-Belief20-fade.",
+                "Study gốc MLP10/GRU10/Belief20-fade, bổ sung REINFORCE/A2C/PPO với A/B masking.",
+            )
+            text += "\nPhần mở rộng: `evidence/<algorithm>/<apply|free>/<seed>/{train,eval}`. "
+            text += "Protocol/config/screening được giữ tại `evidence/extensions/masking/`. "
+            text += "Evidence gốc giữ nguyên; các file report gồm cả kết quả mới.\n"
+            readme.write_text(text)
         manifest.update(
             {
                 "layout": "study-report-v1",

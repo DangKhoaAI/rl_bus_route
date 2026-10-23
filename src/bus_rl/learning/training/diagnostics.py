@@ -55,7 +55,7 @@ def _as_one_dimensional_mask(mask) -> np.ndarray:
     return array
 
 
-def mask_metrics(mask, action: int | None = None) -> dict:
+def mask_metrics(mask, action: int | None = None, mask_mode="apply") -> dict:
     """Summarize one valid-action mask and an optional selected action.
 
     A family with no valid slot gets a null conditional selection rate.  This
@@ -68,22 +68,21 @@ def mask_metrics(mask, action: int | None = None) -> dict:
         raise ValueError("action mask has K=0 valid actions")
     if action is not None:
         action = int(action)
-        if action < 0 or action >= len(ACTION_TABLE) or not valid[action]:
+        if action < 0 or action >= len(ACTION_TABLE):
+            raise ValueError(f"selected action {action} is outside the action space")
+        if mask_mode == "apply" and not valid[action]:
             raise ValueError(f"selected action {action} is not valid under the supplied mask")
     row = {
         "valid_action_count": k,
         "k_one": k == 1,
         "selected_action": action,
+        "selected_action_valid": None if action is None else bool(valid[action]),
         "families": {},
     }
     for family, family_mask in _FAMILY_INDEX.items():
         valid_slots = int(np.count_nonzero(valid & family_mask))
         opportunity = valid_slots > 0
-        selected = int(
-            action is not None
-            and action < len(ACTION_TABLE)
-            and ACTION_TABLE[action].kind == family
-        )
+        selected = int(action is not None and valid[action] and ACTION_TABLE[action].kind == family)
         row["families"][family] = {
             "valid_slots": valid_slots,
             "opportunity": opportunity,
@@ -93,8 +92,8 @@ def mask_metrics(mask, action: int | None = None) -> dict:
     return row
 
 
-def probability_metrics(probabilities, mask, action: int | None = None) -> dict:
-    """Compute entropy and family probability mass on the valid support only."""
+def probability_metrics(probabilities, mask, action: int | None = None, mask_mode="apply") -> dict:
+    """Compute entropy on the actual policy support and feasibility telemetry."""
     valid = _as_one_dimensional_mask(mask)
     probs = np.asarray(probabilities, dtype=np.float64)
     if probs.shape != valid.shape:
@@ -102,9 +101,9 @@ def probability_metrics(probabilities, mask, action: int | None = None) -> dict:
     require_finite("masked probabilities", probs)
     if np.any(probs < -1e-7):
         raise ValueError("masked probabilities contain a negative value")
-    if np.any(np.abs(probs[~valid]) > 1e-6):
+    if mask_mode == "apply" and np.any(np.abs(probs[~valid]) > 1e-6):
         raise ValueError("masked probabilities assign mass to an invalid action")
-    support = np.where(valid, probs, 0.0)
+    support = np.where(valid, probs, 0.0) if mask_mode == "apply" else probs
     total = float(support.sum())
     if not np.isfinite(total) or not np.isclose(total, 1.0, atol=1e-5):
         raise ValueError(f"valid probability mass must sum to one, got {total}")
@@ -113,8 +112,12 @@ def probability_metrics(probabilities, mask, action: int | None = None) -> dict:
     entropy = float(-np.sum(positive * np.log(positive))) if positive.size else 0.0
     row = {
         "valid_action_count": k,
-        "entropy": 0.0 if k == 1 else entropy,
-        "normalized_entropy": None if k == 1 else entropy / np.log(k),
+        "entropy": 0.0 if k == 1 and mask_mode == "apply" else entropy,
+        "invalid_probability_mass": float(probs[~valid].sum()),
+        "normalized_entropy_full_support": entropy / np.log(len(probs)),
+        "normalized_entropy": (None if k == 1 else entropy / np.log(k))
+        if mask_mode == "apply"
+        else entropy / np.log(len(probs)),
         "families": {},
     }
     for family, family_mask in _FAMILY_INDEX.items():
@@ -123,6 +126,7 @@ def probability_metrics(probabilities, mask, action: int | None = None) -> dict:
         selected = int(
             action is not None
             and 0 <= int(action) < len(ACTION_TABLE)
+            and valid[int(action)]
             and ACTION_TABLE[int(action)].kind == family
         )
         row["families"][family] = {
@@ -201,6 +205,10 @@ class TrainingDiagnosticsCallback(BaseCallback):
         masks = self.locals.get("action_masks")
         actions = self.locals.get("actions")
         if masks is None:
+            infos = self.locals.get("infos", [])
+            if infos and all("feasibility_mask" in info for info in infos):
+                masks = np.stack([info["feasibility_mask"] for info in infos])
+        if masks is None:
             self._write(
                 {
                     "kind": "availability",
@@ -217,7 +225,7 @@ class TrainingDiagnosticsCallback(BaseCallback):
         actions_array = None if actions is None else np.asarray(actions).reshape(-1)
         for index, mask in enumerate(masks):
             selected = None if actions_array is None else int(actions_array[index])
-            metrics = mask_metrics(mask, selected)
+            metrics = mask_metrics(mask, selected, getattr(self.model, "mask_mode", "apply"))
             for family, family_row in metrics["families"].items():
                 self._mask_totals[family]["valid_slots"] += family_row["valid_slots"]
                 self._mask_totals[family]["opportunities"] += int(family_row["opportunity"])
@@ -266,7 +274,12 @@ class TrainingDiagnosticsCallback(BaseCallback):
                     tensor_obs = observation
                 else:
                     tensor_obs = obs_as_tensor(observation, self.model.device)
-                distribution = self.model.policy.get_distribution(tensor_obs, action_masks=masks)
+                distribution = self.model.policy.get_distribution(
+                    tensor_obs,
+                    action_masks=masks
+                    if getattr(self.model, "mask_mode", "apply") == "apply"
+                    else None,
+                )
                 categorical = distribution.distribution
                 probabilities = categorical.probs.detach().cpu().numpy()
                 logits = categorical.logits.detach().cpu().numpy()
@@ -275,12 +288,16 @@ class TrainingDiagnosticsCallback(BaseCallback):
                     probabilities[index],
                     masks[index],
                     None if actions is None else int(actions[index]),
+                    mask_mode=getattr(self.model, "mask_mode", "apply"),
                 )
                 for index in range(len(masks))
             ]
+            row["invalid_probability_mass_mean"] = float(
+                np.mean([item["invalid_probability_mass"] for item in probability_rows])
+            )
             row["available"] = True
             row["entropy_mean"] = float(np.mean([item["entropy"] for item in probability_rows]))
-            normalized = [item["normalized_entropy"] for item in probability_rows]
+            normalized = [item["normalized_entropy_full_support"] for item in probability_rows]
             normalized = [value for value in normalized if value is not None]
             row["normalized_entropy_mean"] = float(np.mean(normalized)) if normalized else None
             row["probability_family_mass"] = {
@@ -292,7 +309,10 @@ class TrainingDiagnosticsCallback(BaseCallback):
                 for family in ACTION_FAMILIES
             }
             row["logits_finite"] = finite_check("logits", logits)
-            require_finite("valid logits", logits[masks])
+            if getattr(self.model, "mask_mode", "apply") == "apply":
+                require_finite("valid logits", logits[masks])
+            else:
+                require_finite("full-support logits", logits)
             row["observation_distributions"] = {
                 key: distribution_summary(
                     f"observation.{key}",
@@ -312,12 +332,13 @@ class TrainingDiagnosticsCallback(BaseCallback):
         finite_checks = {}
         for name in ("rewards", "values", "log_probs", "advantages", "returns"):
             value = getattr(buffer, name, None)
-            if value is not None:
+            if value is not None and (name != "values" or getattr(self.model, "critic_used", True)):
                 finite_checks[name] = require_finite(f"rollout {name}", value)
         distributions = {
             name: distribution_summary(f"rollout {name}", value)
             for name in ("rewards", "values", "advantages", "returns")
             if (value := getattr(buffer, name, None)) is not None
+            and (name != "values" or getattr(self.model, "critic_used", True))
         }
         self._write(
             {

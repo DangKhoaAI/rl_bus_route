@@ -22,6 +22,9 @@ class ControlConfig:
 @dataclass(frozen=True)
 class AlgorithmConfig:
     # Small observation-encoder ablation; PPO/masking and the env contract stay unchanged.
+    name: str = "ppo"
+    mask_mode: str = "apply"
+    validation_timing: str = "legacy_step"
     encoder: str = "gru"
     history_minutes: int = 10
     belief_prior_shape: float = 1.0
@@ -52,6 +55,12 @@ class AlgorithmConfig:
     diagnostics_interval: int = 256
 
     def __post_init__(self) -> None:
+        if self.name not in {"ppo", "a2c", "reinforce"}:
+            raise ValueError(f"unknown algorithm.name: {self.name!r}")
+        if self.mask_mode not in {"apply", "free"}:
+            raise ValueError(f"unknown algorithm.mask_mode: {self.mask_mode!r}")
+        if self.validation_timing not in {"legacy_step", "post_update"}:
+            raise ValueError("unknown validation_timing")
         if self.encoder not in {"mlp", "belief", "gru", "belief_gru"}:
             raise ValueError(f"unknown algorithm.encoder: {self.encoder!r}")
         if not isinstance(self.history_minutes, int) or self.history_minutes < 10:
@@ -62,6 +71,15 @@ class AlgorithmConfig:
                 raise ValueError(f"algorithm.{name} must be finite and positive")
         if self.belief_decay > 1:
             raise ValueError("algorithm.belief_decay must be <= 1")
+
+
+@dataclass(frozen=True)
+class ActionExecutionConfig:
+    invalid_action: str = "error"
+
+    def __post_init__(self):
+        if self.invalid_action not in {"error", "noop"}:
+            raise ValueError("action_execution.invalid_action must be error or noop")
 
 
 @dataclass(frozen=True)
@@ -162,6 +180,25 @@ class RunConfig:
     runtime: RuntimeConfig = field(default_factory=RuntimeConfig)
     shaping: ShapingConfig = field(default_factory=ShapingConfig)
 
+    action_execution: ActionExecutionConfig = field(default_factory=ActionExecutionConfig)
+
+    def __post_init__(self):
+        if self.algorithm.mask_mode == "free" and self.action_execution.invalid_action != "noop":
+            raise ValueError("mask-free requires action_execution.invalid_action=noop")
+        if self.algorithm.mask_mode == "free" and self.runtime.backend != "rust":
+            raise ValueError("mask-free requires the maintained Rust backend")
+
+    @property
+    def action_execution_hash(self):
+        return canonical_hash(
+            {
+                **asdict(self.action_execution),
+                "version": 1,
+                "invalid_penalty": 0,
+                "advance_interval": True,
+            }
+        )
+
     @property
     def arrival_memory_bins(self) -> int:
         # Keep the native five-bin contract unless extended memory is requested.
@@ -202,6 +239,8 @@ def _deep_merge(base: dict, override: dict) -> dict:
 
 def _from_section(cls, payload: dict):
     allowed = {item.name for item in fields(cls)}
+    if cls is AlgorithmConfig and (unknown := set(payload) - allowed):
+        raise ValueError(f"unknown algorithm configuration fields: {sorted(unknown)}")
     return cls(**{key: value for key, value in payload.items() if key in allowed})
 
 
@@ -216,6 +255,7 @@ def load_run_config(path: Path, project_root: Path | None = None) -> RunConfig:
     physical_payload = merged.get("physical", {})
     return RunConfig(
         physical=_from_section(SimConfig, physical_payload),
+        action_execution=_from_section(ActionExecutionConfig, merged.get("action_execution", {})),
         control=_from_section(ControlConfig, merged.get("control", {})),
         reward=_from_section(RewardConfig, merged.get("reward", {})),
         algorithm=_from_section(AlgorithmConfig, merged.get("algorithm", {})),

@@ -42,6 +42,23 @@ def test_invalid_masks_and_nonfinite_probabilities_fail_explicitly():
         probability_metrics(bad, mask)
 
 
+def test_free_diagnostics_allow_invalid_requests_without_counting_valid_selection():
+    mask = np.zeros(221, dtype=bool)
+    mask[[0, 1]] = True
+    with pytest.raises(ValueError, match="not valid"):
+        mask_metrics(mask, action=2)
+    row = mask_metrics(mask, action=2, mask_mode="free")
+    assert row["selected_action_valid"] is False
+    assert row["families"]["DISPATCH"]["conditional_selection_rate"] == 0
+    probabilities = np.full(221, 1 / 221)
+    distribution = probability_metrics(probabilities, mask, action=2, mask_mode="free")
+    assert distribution["invalid_probability_mass"] == pytest.approx(219 / 221)
+    assert distribution["normalized_entropy"] == pytest.approx(1)
+    assert distribution["families"]["DISPATCH"]["selected"] == 0
+    with pytest.raises(ValueError, match="outside"):
+        mask_metrics(mask, action=221, mask_mode="free")
+
+
 def test_finite_and_distribution_summaries_are_serializable():
     finite = finite_check("x", np.array([1.0, 2.0]))
     summary = distribution_summary("x", np.array([1.0, 2.0, 3.0]))
