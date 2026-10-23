@@ -4,8 +4,12 @@
 #   docker build -t bus-rl-station .
 #   docker run --rm -p 8000:8000 bus-rl-station      # open http://localhost:8000/intro/ and /visualize/
 #
-# The runtime stage carries only what the station server imports (numpy, gymnasium,
+# The default image carries only what the station server imports (numpy, gymnasium,
 # the FastAPI stack and the native kernel); torch and the training stack stay out.
+# `--target ppo` adds them plus the local checkpoint in runs/core-11 (untracked, so
+# that target builds only where the checkpoint exists):
+#
+#   docker build --target ppo -t bus-rl-station:ppo .
 
 FROM rust:1.97.1-slim-bookworm AS native
 # PyO3 reads the interpreter config at build time; bookworm's python3 is 3.11 (abi3-py311).
@@ -22,7 +26,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     cargo build --release --locked -p bus-sim-python \
     && cp target/release/libbus_sim_native.so /build/bus_sim_native.so
 
-FROM python:3.11-slim-bookworm
+FROM python:3.11-slim-bookworm AS station
 COPY --from=ghcr.io/astral-sh/uv:0.9.26 /uv /usr/local/bin/uv
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -61,3 +65,19 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"
 CMD ["uvicorn", "bus_rl.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+FROM station AS ppo
+USER root
+# Versions match uv.lock; torch comes from the CPU-only index like the project's own.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install --index-url https://download.pytorch.org/whl/cpu torch==2.14.0+cpu \
+    && uv pip install \
+    stable-baselines3==2.9.0 \
+    sb3-contrib==2.9.0 \
+    pandas==3.0.5
+COPY runs/core-11/best.zip runs/core-11/metadata.json ./runs/core-11/
+USER station
+ENV SIMULATION__CHECKPOINT_PATH=runs/core-11/best.zip
+
+# Last stage is the default target: a plain build stays baseline-only.
+FROM station

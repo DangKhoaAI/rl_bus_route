@@ -9,5 +9,7 @@
 !src/bus_sim
 !web/station
 !web/intro
+!runs/core-11/best.zip
+!runs/core-11/metadata.json
 crates/**/target
 **/__pycache__
