@@ -155,6 +155,19 @@ class SimulationSnapshot(BaseModel):
     reserve_queue: list[Bus]
     # Cost of the most recent control interval, the unit the spec defines in §6.3.
     interval_cost: CostBreakdown
+    # Burst split only, and null until the surge starts: the viewer is never told ahead of time.
+    burst: Burst | None = None
+
+
+class Burst(BaseModel):
+    """The burst split's extra arrivals at one stop; `added` counts only those already released."""
+
+    route_id: int
+    direction: int
+    stop_index: int
+    start_s: int
+    end_s: int
+    added: int
 
 
 class RouteContext(BaseModel):

@@ -158,6 +158,26 @@ def test_simulation_replays_the_requested_split_and_controller(client):
             client.delete(f"/simulations/{snapshot['simulation_id']}")
 
 
+def test_burst_surfaces_only_once_it_has_started(client):
+    created = client.post("/simulations", json={"split": "test_ood_burst"}).json()
+    simulation_id = created["simulation_id"]
+    try:
+        assert created["burst"] is None
+        snapshot = client.post(
+            f"/simulations/{simulation_id}/steps", json={"decisions": 200}
+        ).json()["snapshot"]
+        burst = snapshot["burst"]
+        assert burst["start_s"] < burst["end_s"] <= snapshot["time_s"]
+        # 5–10 minutes of 8–20 extra passengers per tick.
+        assert 8 * 5 <= burst["added"]
+        assert burst["direction"] in (1, -1)
+    finally:
+        client.delete(f"/simulations/{simulation_id}")
+    base = client.post("/simulations", json={"split": "validation"}).json()
+    client.delete(f"/simulations/{base['simulation_id']}")
+    assert base["burst"] is None
+
+
 def test_errors_map_to_http_status(client):
     assert client.post("/simulations", json={"controller": "nope"}).status_code == 404
     assert client.post("/simulations", json={"scenario_index": 5}).status_code == 422

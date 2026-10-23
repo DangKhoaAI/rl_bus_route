@@ -8,12 +8,15 @@ import uuid
 from dataclasses import dataclass, field
 from time import monotonic, perf_counter
 
+import numpy as np
+
 from bus_rl.config import RunConfig
 from bus_rl.execution.environments.factory import make_env_for_run
-from bus_rl.execution.scenarios.generation import SPLIT_VARIANTS
+from bus_rl.execution.scenarios.generation import SPLIT_VARIANTS, generate_scenario
 from bus_rl.station import departures, fleet, passengers
 from bus_rl.station.schema import (
     ActionChoice,
+    Burst,
     Bus,
     CostBreakdown,
     Decision,
@@ -36,6 +39,16 @@ from bus_sim.oracle.domain import Scenario, StepCosts
 logger = logging.getLogger(__name__)
 
 
+@dataclass(frozen=True)
+class Surge:
+    """Where a burst day adds passengers, and how many at each tick it touches."""
+
+    route_id: int
+    direction: int
+    stop_index: int
+    extras: list[tuple[int, int]]  # (tick, extra passengers), in tick order
+
+
 @dataclass
 class Simulation:
     simulation_id: str
@@ -51,6 +64,7 @@ class Simulation:
     closed: bool = False
     last_used_s: float = field(default_factory=monotonic)
     last_costs: StepCosts = field(default_factory=StepCosts)
+    surge: Surge | None = None
     # Endpoints are sync `def`s on FastAPI's threadpool; the native env is not thread-safe.
     lock: threading.Lock = field(default_factory=threading.Lock)
 
@@ -164,6 +178,7 @@ class SimulationService:
                 env=env,
                 controller=controller,
                 observation=observation,
+                surge=self._surge(scenario) if SPLIT_VARIANTS[split] == "burst" else None,
             )
             self._simulations[simulation.simulation_id] = simulation
         logger.info(
@@ -174,6 +189,25 @@ class SimulationService:
             scenario_index,
         )
         return self._snapshot(simulation)
+
+    @staticmethod
+    def _surge(scenario: Scenario) -> Surge:
+        """Recover the burst by diffing the tape against the same seed's base day.
+
+        The generator draws the burst after everything else, so the base day is the
+        burst day minus exactly the extra arrivals.
+        """
+        base = generate_scenario(scenario.seed, scenario.config, "base").arrival_tape
+        extra = scenario.arrival_tape.astype(np.int32) - base.astype(np.int32)
+        cells = np.argwhere(extra > 0)
+        _, route_id, direction_index, stop_index, _ = (int(v) for v in cells[0])
+        per_tick = extra.sum(axis=(1, 2, 3, 4))
+        return Surge(
+            route_id=route_id,
+            direction=1 if direction_index == 0 else -1,
+            stop_index=stop_index,
+            extras=[(int(tick), int(per_tick[tick])) for tick in np.flatnonzero(per_tick)],
+        )
 
     def get(self, simulation_id: str) -> SimulationSnapshot:
         simulation = self._simulations[simulation_id]
@@ -402,6 +436,21 @@ class SimulationService:
             interval_cost=CostBreakdown(
                 **vars(costs), total=interval_cost(costs, self._run.reward)
             ),
+            burst=self._burst(simulation.surge, time_s, physical.tick_s),
+        )
+
+    @staticmethod
+    def _burst(surge: Surge | None, time_s: int, tick_s: int) -> Burst | None:
+        """The surge as released by `time_s`; null before its first tick has been simulated."""
+        if surge is None or surge.extras[0][0] * tick_s >= time_s:
+            return None
+        return Burst(
+            route_id=surge.route_id,
+            direction=surge.direction,
+            stop_index=surge.stop_index,
+            start_s=surge.extras[0][0] * tick_s,
+            end_s=(surge.extras[-1][0] + 1) * tick_s,
+            added=sum(extra for tick, extra in surge.extras if tick * tick_s < time_s),
         )
 
     @staticmethod

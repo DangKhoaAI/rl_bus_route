@@ -1553,6 +1553,7 @@ function applySnapshot(snap, decisions) {
     const [code, text, kind] = describeAction(d);
     logDecision(code, text, kind, d.time_s);
   });
+  if (snap.burst) noteBurst(snap.burst);
   $('#note').hidden = true;
   if (snap.finished) {
     LIVE.finished = true;
@@ -1670,6 +1671,27 @@ function describeAction(d) {
   if (d.kind === 'RECALL') return [`RECALL(${d.bus_id})`, `Gọi ${bus(d.bus_id)} về bãi`, 'mute'];
   const text = { DISPATCH: `Đưa ${bus(d.bus_id)} từ bãi vào ${route(d.route_id)}`, REASSIGN: `Chuyển ${bus(d.bus_id)} sang ${route(d.route_id)}`, SHORT_TURN: `${bus(d.bus_id)} quay đầu sớm trên ${route(d.route_id)}` }[d.kind];
   return [`${d.kind}(${d.bus_id},${d.route_id})`, text, 'info'];
+}
+
+// A burst day's surge is announced once when it starts and once when it ends, so the
+// viewer can follow how the controller answers it on that route.
+function noteBurst(burst) {
+  const r = ROUTES[burst.route_id];
+  const stop = r.stops[burst.stop_index].name;
+  const toward = (burst.direction > 0 ? r.stops[r.stops.length - 1] : r.stops[0]).name;
+  if (!LIVE.burstStarted) {
+    LIVE.burstStarted = true;
+    const text = `Khách tăng đột biến tại ${stop} (tuyến ${r.code}, hướng ${toward}) từ ${clock(burst.start_s)}`;
+    logDecision('BURST', text, 'warn');
+    showToast('BURST', text);
+  }
+  if (!LIVE.burstEnded && SIM.t >= burst.end_s) {
+    LIVE.burstEnded = true;
+    const minutes = Math.round((burst.end_s - burst.start_s) / 60);
+    const text = `Hết đột biến tại ${stop}: thêm ${burst.added} khách trong ${minutes} phút`;
+    logDecision('BURST', text, 'warn');
+    showToast('BURST', text);
+  }
 }
 
 addEventListener('pagehide', () => {
