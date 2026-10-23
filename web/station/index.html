@@ -239,18 +239,13 @@ button:active { transform: scale(.98); }
 .tabs .tab-grow { padding: .375rem; display: inline-flex; }
 .tabs .tab-grow[aria-pressed="true"] { background: var(--panel-2); color: var(--ink); }
 /* A tall list takes the whole right column, so the detail panel above it steps aside. */
-.stage.lists-tall { --lists-h: calc(100% - var(--edge) * 2); }
-.stage.lists-tall .side { display: none; }
+@media (min-width: 901px) { .lists.wide { width: min(48rem, calc(100% - var(--gutter-l) - var(--config-w) - var(--gutter-r) - var(--panel-gap) * 2)); } }
 /* Minimized panels fold to their header; the KPI row keeps only total cost. */
 .min-btn { position: absolute; top: .375rem; right: .375rem; z-index: 1; width: 1.5rem; height: 1.5rem; border: 0; border-radius: .375rem; background: transparent; color: var(--muted); font: 700 1rem/1 var(--font-ui); cursor: pointer; }
 .min-btn:hover { background: var(--panel-2); color: var(--ink); }
-.tabs .min-btn { position: static; align-self: center; }
-/* A minimized panel slides out past the edge it sits on; a tab left at that screen edge brings it back. */
-.slide { transition: transform .28s var(--ease), opacity .28s var(--ease); }
-.slide.min { opacity: 0; pointer-events: none; }
-.slide.min[data-edge="left"] { transform: translateX(calc(-100% - var(--gutter-l) - 1rem)); }
-.slide.min[data-edge="right"] { transform: translateX(calc(100% + var(--gutter-r) + 1rem)); }
-.slide.min[data-edge="top"] { transform: translateY(calc(-100% - var(--edge) - 1rem)); }
+.tabs .min-btn { position: static; align-self: center; margin-left: .375rem; }
+/* A minimized panel is hidden; a tab left at the screen edge it sat against brings it back. */
+.slide.min { display: none; }
 .peek { position: absolute; z-index: 4; display: flex; align-items: center; gap: .25rem; border: 1px solid var(--line); background: var(--panel); color: var(--ink); box-shadow: var(--shadow); font-size: .75rem; font-weight: 600; padding: .375rem .5rem; cursor: pointer; }
 .peek[hidden] { display: none; }
 .peek:hover { background: var(--panel-2); }
@@ -258,7 +253,6 @@ button:active { transform: scale(.98); }
 .peek[data-edge="right"] { right: 0; border-right: 0; border-radius: .5rem 0 0 .5rem; }
 .peek[data-edge="top"] { top: 0; border-top: 0; border-radius: 0 0 .5rem .5rem; }
 @media (max-width: 900px) {
-  .slide.min { display: none; }
   .peek { position: static; align-self: flex-start; margin-left: var(--gutter-l); border: 1px solid var(--line); border-radius: .5rem; order: -2; }
 }
 @media (max-width: 900px) { .config, .map-key, .kpis, .side, .lists { position: relative; } }
@@ -439,8 +433,8 @@ button:active { transform: scale(.98); }
         <button role="tab" id="tab-buses" aria-selected="true" data-tab="buses">Xe</button>
         <button role="tab" id="tab-log" aria-selected="false" data-tab="log">Quyết định</button>
         <span class="tab-clock" id="log-clock" aria-label="Giờ mô phỏng">--:--:--</span>
-        <button class="tab-grow" id="lists-grow" aria-pressed="false" aria-label="Kéo dài khung danh sách" title="Kéo dài / thu gọn">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 9 5-5 5 5M7 15l5 5 5-5"/></svg>
+        <button class="tab-grow" id="lists-grow" aria-pressed="false" aria-label="Mở rộng khung danh sách" title="Mở rộng / thu hẹp">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 7-5 5 5 5M15 7l5 5-5 5"/></svg>
         </button>
       </div>
       <div class="tabpanel" id="tabpanel" role="tabpanel"></div>
@@ -1220,14 +1214,14 @@ function addMinButton(el, edge, label, host = el) {
     peek.setAttribute('aria-label', `Mở lại ${label}`);
   }
   el.classList.add('slide');
-  el.dataset.edge = edge;
   const show = (on) => {
+    // Place the tab beside where the panel is, read before hiding it zeroes offsetTop/offsetLeft.
+    if (on && !el.classList.contains('min')) {
+      if (edge === 'top') peek.style.left = `${el.offsetLeft}px`;
+      else peek.style.top = `${el.offsetTop + 8}px`;
+    }
     el.classList.toggle('min', on);
-    el.inert = on;
     peek.hidden = !on;
-    // The tab sits beside where the panel was; transforms do not move offsetTop/offsetLeft.
-    if (edge === 'top') peek.style.left = `${el.offsetLeft}px`;
-    else peek.style.top = `${el.offsetTop + 8}px`;
   };
   const toggle = (on) => {
     show(on);
@@ -1574,13 +1568,14 @@ function storeJSON(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* applies for this visit */ }
 }
 
-const setListsTall = (on) => {
-  $('.stage').classList.toggle('lists-tall', on);
+// Widening grows the list leftward over the map at a fixed width, so long log lines fit on one row.
+const setListsWide = (on) => {
+  $('#lists').classList.toggle('wide', on);
   $('#lists-grow').setAttribute('aria-pressed', on);
-  storeJSON('station-lists-tall', on);
+  storeJSON('station-lists-wide', on);
 };
-$('#lists-grow').addEventListener('click', () => setListsTall(!$('.stage').classList.contains('lists-tall')));
-setListsTall(storedJSON('station-lists-tall', false));
+$('#lists-grow').addEventListener('click', () => setListsWide(!$('#lists').classList.contains('wide')));
+setListsWide(storedJSON('station-lists-wide', false));
 addMinButton($('#config'), 'left', 'Thiết lập');
 addMinButton($('#kpis'), 'top', 'Chỉ số');
 addMinButton($('#map-key'), 'left', 'Chú giải');
