@@ -1535,7 +1535,7 @@ let dayCounts = {};
 function fillPickers(layout) {
   const controllers = layout.controllers;
   $('#pick-controller').innerHTML = controllers.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
-  $('#pick-controller').value = controllers.includes('ppo') ? 'ppo' : controllers.includes('threshold') ? 'threshold' : controllers[0];
+  $('#pick-controller').value = controllers.includes('fixed') ? 'fixed' : controllers[0];
   // The API lists the default split first, so the select opens on it.
   $('#pick-split').innerHTML = layout.splits.map((sp) => `<option value="${esc(sp.name)}">${esc(VARIANT_LABEL[sp.variant] ?? sp.variant)}</option>`).join('');
   dayCounts = Object.fromEntries(layout.splits.map((sp) => [sp.name, sp.scenario_count]));

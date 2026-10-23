@@ -335,7 +335,7 @@ docker run --rm -p 8000:8000 bus-rl-station
 ### Serve a trained policy
 
 Point the station at a checkpoint (`metadata.json` must sit beside it); the
-dashboard selects `ppo` by default. This needs torch, so the default Docker
+dashboard opens on `fixed` and lists `ppo` beside the baselines. This needs torch, so the default Docker
 image runs the baselines only.
 
 ```bash
