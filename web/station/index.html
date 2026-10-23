@@ -1259,7 +1259,8 @@ function addMinButton(el, edge, label, host = el) {
   el.classList.add('slide');
   const show = (on) => {
     // Place the tab beside where the panel is, read before hiding it zeroes offsetTop.
-    if (on && !el.classList.contains('min')) peek.style.top = `${el.offsetTop + 8}px`;
+    // The offset can come from the stacked narrow layout, so clamp it to stay on screen after a resize.
+    if (on && !el.classList.contains('min')) peek.style.top = `min(${el.offsetTop + 8}px, calc(100% - 2.5rem))`;
     el.classList.toggle('min', on);
     peek.hidden = !on;
   };
