@@ -333,13 +333,25 @@ docker run --rm -p 8000:8000 bus-rl-station
 ### Serve a trained policy
 
 Point the station at a checkpoint (`metadata.json` must sit beside it); the
-dashboard selects `ppo` by default. This needs torch, so the slim Docker
+dashboard selects `ppo` by default. This needs torch, so the default Docker
 image runs the baselines only.
 
 ```bash
 SIMULATION__CHECKPOINT_PATH=runs/core-11/best.zip \
 SIMULATION__MANIFEST_PATH=data/generated/base/manifest.json \
   uv run uvicorn bus_rl.main:app --host 127.0.0.1 --port 8000
+```
+
+Without Docker, download the checkpoint first:
+`gh release download core-11 --repo DangKhoaAI/rl_bus_route --dir runs/core-11`.
+The `ppo` image target adds torch and downloads that checkpoint itself:
+
+```bash
+docker build --target ppo -t bus-rl-station:ppo .
+```
+
+```bash
+docker run --rm -p 8000:8000 bus-rl-station:ppo
 ```
 
 The page loads three.js from a CDN, so the demo machine needs internet access.
