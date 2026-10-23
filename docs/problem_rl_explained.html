@@ -26,9 +26,10 @@
     .table-wrap{overflow-x:auto;margin:20px 0;border:1px solid var(--line);border-radius:7px}table{border-collapse:collapse;width:100%;font-size:14px;line-height:1.65;background:var(--surface)}th,td{text-align:left;vertical-align:top;padding:12px 15px;border-bottom:1px solid var(--line)}th{font-weight:700;background:var(--table-head)}tr:last-child td{border-bottom:0}td:first-child{font-weight:600}caption{text-align:left;padding:12px 15px;font-size:12px;color:var(--muted);background:var(--surface)}td code{font-size:12px}
     .equation{background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:18px 22px;margin:20px 0}.eq-label{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:9px}.math{font-family:"Cambria Math","STIX Two Math","DejaVu Serif",serif;font-size:19px;line-height:1.8;overflow-x:auto;padding:3px 0}.math .row{display:block}.math sub,.math sup{font-size:.72em}.equation p{font-size:14px;color:var(--muted);margin:10px 0 0}.fraction{display:inline-flex;flex-direction:column;text-align:center;vertical-align:middle;line-height:1.4;margin:0 5px}.fraction>span:first-child{border-bottom:1px solid currentColor;padding:0 4px 3px}.fraction>span:last-child{padding-top:3px}.nowrap{white-space:nowrap}
     .flow{display:flex;gap:10px;align-items:stretch;margin:24px 0;flex-wrap:wrap}.flow .node{flex:1;min-width:128px;padding:16px;background:var(--surface);border:1px solid var(--line);border-radius:6px;font-size:13px}.flow .node strong{display:block;color:var(--accent);font-size:14px}.flow .arrow{align-self:center;color:var(--muted)}.ladder{list-style:none;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:25px 0}.ladder li{margin:0;padding:16px 18px;border:1px solid var(--line);border-radius:7px;background:var(--surface)}.ladder a{font-weight:750;text-decoration:none}.ladder small{display:block;color:var(--muted);font-size:12px;margin-top:7px}.progress{position:fixed;top:0;left:0;height:3px;background:var(--accent);width:0;z-index:5}
+    .training-map{margin:24px 0;text-align:center;break-inside:avoid}.training-map .shared,.training-map .worker{padding:15px;background:var(--surface);border:1px solid var(--line);border-radius:6px}.training-map strong{display:block;color:var(--accent)}.training-map .workers{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.training-map .worker{font-size:14px}.training-map .connector{margin:12px 0;color:var(--muted);font-size:14px}
     .demo{border:1px solid var(--demo-border);border-radius:8px;background:var(--surface);padding:24px;margin:25px 0}.demo h3{margin:0 0 9px}.demo label{display:block;font-size:14px;margin:15px 0 6px}.demo input[type=range]{width:100%;accent-color:var(--accent)}.demo select{font:inherit;background:var(--surface);color:var(--ink);padding:5px 10px;border:1px solid var(--line);border-radius:5px;max-width:100%}.demo svg{display:block;width:100%;height:auto;margin:16px 0}.readout{padding:12px 15px;background:var(--soft);font-size:14px;min-height:76px}.mask-name{font-family:var(--mono);font-size:12px}.bar-track{width:100%;min-width:75px;height:9px;background:var(--bar-track);border-radius:5px;margin-top:4px}.bar-fill{height:9px;background:var(--accent);border-radius:5px}.bar-fill.old{background:var(--chart-muted)}.invalid{color:var(--red)}.small{font-size:13px;color:var(--muted)}.demo input[type=checkbox]{accent-color:var(--accent);width:18px;height:18px}.demo .check-label{display:flex;align-items:center;gap:8px;margin:0}.demo .table-wrap{margin-bottom:14px}footer{border-top:1px solid var(--line);margin-top:55px;padding-top:20px;font-size:12px;color:var(--muted)}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
     @media(max-width:1080px){.layout{grid-template-columns:204px minmax(0,1fr);gap:30px;padding:30px 24px}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.ladder{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    @media(max-width:760px){.layout{display:block;padding:24px 18px 60px}.sidebar{position:static;max-height:none;border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:30px}.sidebar nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 8px}.sidebar nav h2{grid-column:1/-1;margin-top:14px}.sidebar p{display:none}.sidebar a{font-size:12px}.grid{grid-template-columns:1fr}.lead{font-size:17px}h2{font-size:25px}.math{font-size:17px}.equation{padding:14px}section{margin-top:44px}.flow .arrow{display:none}.demo{padding:16px}th,td{padding:10px}.stats{gap:8px}.ladder li{padding:12px}}
+    @media(max-width:760px){.layout{display:block;padding:24px 18px 60px}.sidebar{position:static;max-height:none;border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:30px}.sidebar nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 8px}.sidebar nav h2{grid-column:1/-1;margin-top:14px}.sidebar p{display:none}.sidebar a{font-size:12px}.grid{grid-template-columns:1fr}.lead{font-size:17px}h2{font-size:25px}.math{font-size:17px}.equation{padding:14px}section{margin-top:44px}.flow .arrow{display:none}.training-map .workers{grid-template-columns:repeat(2,minmax(0,1fr))}.demo{padding:16px}th,td{padding:10px}.stats{gap:8px}.ladder li{padding:12px}}
     @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
     @media print{:root,:root[data-theme="dark"]{color-scheme:light;--paper:#f7f8fa;--surface:#fff;--ink:#182b3a;--muted:#526576;--line:#d8e0e7;--accent:#09695f;--soft:#eaf5f1;--blue:#235e96;--red:#a13a36;--inset:#edf1f5;--table-head:#edf2f5;--demo-border:#b9d6cc;--bar-track:#e9eef2;--chart-muted:#98a9b7;--chart-axis:#8799a6;--chart-guide:#b5cfc5;--pre-bg:#132c3b;--pre-ink:#e8f2f5;}html{scroll-behavior:auto}body{font-size:10pt;background:#fff;color:#111;line-height:1.6}.layout{display:block;padding:0;max-width:none}.sidebar,.progress,.tools,.demo .controls{display:none}section{margin-top:28px}h1{font-size:30pt}h2{font-size:20pt;break-after:avoid}h3{font-size:13pt;break-after:avoid}.lead{font-size:12pt}.hero{padding-bottom:16px}.card,.equation,.stats,.flow,.demo{break-inside:avoid}.table-wrap{overflow:visible}table{font-size:9pt}thead{display:table-header-group}tr{break-inside:avoid}.math{font-size:12pt;overflow:visible}a{color:inherit}pre{white-space:pre-wrap;background:#f2f2f2;color:#111;font-size:8pt}.ladder{grid-template-columns:repeat(3,minmax(0,1fr))}.demo svg{max-height:200px}.badge{font-size:8pt}}
   </style>
@@ -55,6 +56,7 @@
       <a href="#maskppo">10 · MaskablePPO</a>
       <h2>Gắn với repository</h2>
       <a href="#implementation">11 · Một vòng huấn luyện</a>
+      <a class="sub" href="#training-counts">500 kịch bản và 245.760 bước</a>
       <a href="#comparison">12 · So sánh &amp; đánh giá</a>
       <a href="#sources">13 · Bản đồ nguồn</a>
     </nav>
@@ -324,7 +326,45 @@
 
     <section id="implementation">
       <h2>11. Huấn luyện trong repository</h2>
-      <p>Source khởi tạo <code>sb3_contrib.MaskablePPO</code> với <code>MultiInputPolicy</code>. Môi trường mô phỏng dùng Rust; Python cung cấp cấu hình, đầu vào cho mạng, vòng huấn luyện và đánh giá. Kết quả học được lưu thành một bản trọng số gọi là <strong>checkpoint</strong>. Ta có thể lần theo một chu kỳ từ thông tin của simulator đến bản lưu này.</p>
+      <p>Để theo dõi các con số bằng một ví dụ nhất quán, phần này xét <strong>một lần train PPO có mask, seed 11, trong study standard-v1</strong>. Trainer kế thừa <code>sb3_contrib.MaskablePPO</code> và dùng <code>MultiInputPolicy</code>. Môi trường mô phỏng dùng Rust; Python tổ chức việc thu kinh nghiệm, cập nhật mạng và đánh giá. Kết quả học được lưu thành một bản trọng số gọi là <strong>checkpoint</strong>.</p>
+      <h3 id="training-counts">Kho 500 kịch bản là dữ liệu để môi trường chạy</h3>
+      <p>Trước khi train, hệ thống đã sinh <strong>500 kịch bản train khác nhau</strong>. Mỗi kịch bản chứa dữ liệu khách đến trạm và giao thông cho một ca vận hành 240 phút. Trong các bảng thực nghiệm, một kịch bản như vậy được gọi là một <strong>ngày mô phỏng</strong>.</p>
+      <p>Khi bắt đầu ca, môi trường lấy ngẫu nhiên một kịch bản trong kho rồi mô phỏng đội xe dưới các quyết định của policy. Chạy hết ca, môi trường trở về trạng thái đầu ca và lấy kịch bản cho lượt tiếp theo. Một kịch bản có thể được lấy nhiều lần; mỗi lần chạy là một cơ hội để policy thử cách điều phối và học từ kết quả. Vì vậy, <strong>500 là số kịch bản trong kho</strong>, còn số lượt chạy trên kho này do ngân sách huấn luyện quyết định.</p>
+      <h3>Mỗi episode tạo ra 120 transitions</h3>
+      <p>Một lượt chạy từ đầu đến hết ca được gọi là <strong>episode</strong>. Trong episode, cứ 2 phút mô phỏng, agent nhận observation, chọn action rồi nhận reward và observation tiếp theo. Một lần tương tác như vậy là <strong>một step RL</strong>; mẫu kinh nghiệm nó tạo ra được gọi là <strong>transition</strong>.</p>
+      <pre><code>Một transition:
+(observation đầu bước, action, reward, observation tiếp theo, đã hết ca chưa)
+
+Một episode:
+240 phút / 2 phút mỗi step = 120 steps = 120 transitions</code></pre>
+      <p>Trong mỗi step RL, simulator chạy bốn tick 30 giây để cập nhật xe và hành khách. Bộ đếm ngân sách train tăng theo các step RL: mỗi quyết định và phản hồi sau 2 phút tạo thêm một transition.</p>
+      <h3>Bốn env cùng thu kinh nghiệm cho một model</h3>
+      <p>Study dùng <strong>4 env chạy song song</strong>. Mỗi env là một bản mô phỏng có trạng thái xe, hành khách và thời gian riêng, đồng thời lấy kịch bản từ cùng kho train. Cả bốn dùng chung policy đang được huấn luyện; kinh nghiệm của chúng được gom về để cập nhật cùng một model.</p>
+      <div class="training-map" role="img" aria-label="Kho 500 kịch bản cung cấp dữ liệu cho bốn env độc lập. Cả bốn dùng chung một policy và tạo tổng cộng bốn transitions mỗi lượt bước.">
+        <div class="shared"><strong>Kho 500 kịch bản train</strong>Khách đến và giao thông của từng ca</div>
+        <p class="connector">↓ Mỗi env lấy mẫu một kịch bản khi bắt đầu ca ↓</p>
+        <div class="workers">
+          <div class="worker"><strong>Env 1</strong>Chạy ca riêng<br>1 transition/step</div>
+          <div class="worker"><strong>Env 2</strong>Chạy ca riêng<br>1 transition/step</div>
+          <div class="worker"><strong>Env 3</strong>Chạy ca riêng<br>1 transition/step</div>
+          <div class="worker"><strong>Env 4</strong>Chạy ca riêng<br>1 transition/step</div>
+        </div>
+        <p class="connector">↓ Gom kinh nghiệm của cả bốn env ↓</p>
+        <div class="shared"><strong>Một policy dùng chung</strong>Mỗi lượt cả bốn env tiến một bước tạo 4 transitions</div>
+      </div>
+      <h3>245.760 là tổng số transitions dùng để train</h3>
+      <p><code>total_timesteps = 245760</code> đặt ngân sách cho <strong>toàn bộ một lần train</strong>, cộng kinh nghiệm từ cả bốn env. Khi mỗi env đã tiến một bước, bộ đếm tổng tăng thêm 4. Đến cuối lần chạy này, mỗi env đã hoàn thành 512 episodes:</p>
+      <pre><code>4 env × 512 episodes/env × 120 transitions/episode
+= 245.760 transitions train
+= 2.048 episodes, cộng trên cả bốn env</code></pre>
+      <p>Như vậy, agent đã chạy <strong>2.048 lượt episode trên kho 500 kịch bản</strong>. Con số 500 mô tả độ đa dạng kịch bản sẵn có; con số 245.760 mô tả lượng tương tác đã thu để học.</p>
+      <div class="table-wrap"><table><thead><tr><th>Con số trong ví dụ</th><th>Đại lượng được đếm</th></tr></thead><tbody>
+        <tr><td>500 kịch bản</td><td>Các ngày mô phỏng khác nhau trong kho train, được lấy mẫu lại qua các episode.</td></tr>
+        <tr><td>4 env</td><td>Bốn bản mô phỏng cùng thu kinh nghiệm cho một policy.</td></tr>
+        <tr><td>120 steps/episode</td><td>Số quyết định trong một ca 240 phút của một env.</td></tr>
+        <tr><td>2.048 episodes</td><td>Tổng lượt chạy hết ca, cộng trên bốn env.</td></tr>
+        <tr><td>245.760 transitions</td><td>Tổng mẫu tương tác thu trong một lần train, ứng với một thuật toán, một mask mode và một seed.</td></tr>
+      </tbody></table></div>
       <h3>Chuẩn bị đầu vào cho actor và critic</h3>
       <p>Observation được chia thành các tensor, tức các mảng số nhiều chiều: hàng chờ tại trạm, thông tin xe, thông tin tuyến, arrivals gần đây và thời gian còn lại. Các đại lượng được đưa về thang số phù hợp, chẳng hạn số khách chia cho sức chứa 40. Những slot không có xe hoặc trạm được đánh dấu bằng các trường xác định phần dữ liệu có thật.</p>
       <p>Mặc định hiện tại, encoder sử dụng <strong>GRU</strong> để đọc cửa sổ arrivals 10 phút. GRU là một mạng xử lý chuỗi: đọc bin cũ nhất trước, cập nhật một vector tóm tắt, rồi đọc bin tiếp theo cho đến bin mới nhất. Vector cuối cùng có 32 giá trị học được, dùng để biểu diễn mẫu biến động của arrivals trong cửa sổ.</p>
@@ -332,8 +372,11 @@
       <div class="flow" aria-label="Luồng dữ liệu qua mạng"><div class="node"><strong>Observation</strong>Hàng chờ, xe, tuyến, thời gian</div><span class="arrow">→</span><div class="node"><strong>Encoder</strong>Thêm GRU arrivals → 128 đặc trưng</div><span class="arrow">→</span><div class="node"><strong>Actor / critic</strong>221 logits / một value</div><span class="arrow">→</span><div class="node"><strong>Mask + chọn</strong>Một action hợp lệ</div></div>
       <p>Sau phần đặc trưng chung, actor và critic có nhánh riêng, mỗi nhánh có lớp ẩn 128 đơn vị. Actor trả 221 logits để tạo phân phối đã mask. Critic trả một số dự đoán tổng reward còn lại. Đây là cách một đầu vào phục vụ cả quyết định lẫn việc đánh giá tình huống.</p>
       <h3>Thu đủ dữ liệu cho một rollout</h3>
-      <p>Cấu hình chạy 4 môi trường, mỗi môi trường thu 256 bước điều phối trước vòng cập nhật. Tổng lô là 4 × 256 = <strong>1.024 transitions</strong>. Một transition là một lần chọn action và nhận phản hồi sau 2 phút mô phỏng.</p>
-      <p>Một ca có 120 bước, nên một môi trường có thể kết thúc ca và bắt đầu ca khác trong lúc thu 256 bước. Dữ liệu ghi lại các ranh giới này để tính return riêng cho từng ca. Kết thúc ca thật thì value tương lai bằng 0; nếu chỉ hết phần dữ liệu của rollout nhưng ca còn tiếp tục, critic dự đoán phần còn lại.</p>
+      <p>Model học theo từng lô kinh nghiệm. PPO giữ nguyên trọng số trong lúc thu <strong>256 steps từ mỗi env</strong>, gom dữ liệu của bốn env rồi bắt đầu cập nhật mạng. Lô dữ liệu thu giữa hai đợt cập nhật như vậy được gọi là <strong>rollout</strong>.</p>
+      <pre><code>1 rollout PPO = 4 env × 256 steps/env = 1.024 transitions
+Toàn bộ lần train = 245.760 / 1.024 = 240 rollouts</code></pre>
+      <p><strong>Episode đánh dấu kết thúc ca; rollout đánh dấu đã thu đủ một lô để học.</strong> Một ca dài 120 bước, trong khi mỗi env thu 256 bước cho một rollout, nên nó có thể kết thúc ca và bắt đầu ca khác trong lúc thu lô. Khi hết rollout mà ca còn dở, env tiếp tục ca đó ở rollout sau.</p>
+      <p>Dữ liệu ghi lại ranh giới episode để tính return riêng cho từng ca. Kết thúc ca thật thì value tương lai bằng 0; nếu chỉ hết phần dữ liệu của rollout nhưng ca còn tiếp tục, critic dự đoán phần còn lại. Nhờ vậy, việc chia lô học vẫn giữ được ý nghĩa của phần reward còn lại trong ca.</p>
       <h3>Cập nhật trọng số từ rollout</h3>
       <p>Từ lô dữ liệu, thuật toán tính GAE và return target. Khi dùng advantage cho actor, implementation trừ trung bình rồi chia độ lệch chuẩn của advantage trong minibatch. Phép chuẩn hóa này đưa tín hiệu về thang ổn định hơn giữa các lô; critic tiếp tục học từ return target đã tính ban đầu.</p>
       <p>Mỗi epoch chia 1.024 mẫu thành 4 minibatch, mỗi minibatch 256 mẫu. Cấu hình dùng 4 epoch, nên một rollout tạo 16 lần cập nhật optimizer. Learning rate là 3 × 10<sup>−4</sup>. Sau khi tính gradient của loss, code đo độ lớn vector gradient bằng căn bậc hai của tổng bình phương các thành phần. Nếu độ lớn này vượt 0,5, toàn bộ vector được thu nhỏ cùng tỷ lệ để về 0,5. Giới hạn này giữ hướng gradient nhưng giảm cỡ bước thay đổi khi gradient quá lớn.</p>
@@ -366,8 +409,19 @@ Lặp cho đến hết ngân sách tương tác:
 
     Đến lịch đánh giá thì chạy trên các ngày validation
     Lưu checkpoint nếu validation cost tốt hơn trước</code></pre>
+      <h3>Validation chọn checkpoint; test đo kết quả cuối</h3>
+      <p>Ngoài kho train, study giữ riêng <strong>100 kịch bản validation</strong>. Trong ví dụ PPO đang xét, cứ thu thêm 12.288 transitions, model sau cập nhật được chạy trên các kịch bản này với trọng số giữ nguyên để đo cost. Những lượt validation chỉ chấm chất lượng model và không cộng vào ngân sách 245.760 transitions train.</p>
+      <p>Step zero đo policy chưa học làm mốc tham chiếu. Trong các checkpoint sau cập nhật, bản có mean validation cost thấp nhất được chọn làm <code>best.zip</code>; bằng nhau giữ bản sớm hơn. Trọng số sau lần cập nhật cuối cũng được đánh giá trước khi kết thúc train.</p>
+      <p>Sau khi đã chọn checkpoint, hệ thống dùng <strong>600 kịch bản test riêng</strong> để đo chất lượng: 200 ngày bình thường, 200 ngày nhu cầu tăng đột biến và 200 ngày gián đoạn giao thông. Mỗi kịch bản được chạy hết một episode, nên một checkpoint tạo 600 × 120 = <strong>72.000 transitions test</strong>. Model giữ nguyên trọng số trong toàn bộ phép đo này.</p>
+      <div class="table-wrap"><table><thead><tr><th>Tập dữ liệu</th><th>Số kịch bản riêng biệt</th><th>Cách dùng trong một lần chạy</th></tr></thead><tbody>
+        <tr><td>Train</td><td>500</td><td>Lấy mẫu lại để thu 2.048 episodes, tổng 245.760 transitions dùng cập nhật mạng.</td></tr>
+        <tr><td>Validation</td><td>100</td><td>Chạy lặp tại các mốc đánh giá để chọn checkpoint; giữ nguyên trọng số khi chấm.</td></tr>
+        <tr><td>Test bình thường</td><td>200</td><td>Chạy checkpoint đã chọn để đo chất lượng trong điều kiện nền.</td></tr>
+        <tr><td>Test tăng nhu cầu</td><td>200</td><td>Chạy cùng checkpoint trong điều kiện khách tăng đột biến.</td></tr>
+        <tr><td>Test gián đoạn giao thông</td><td>200</td><td>Chạy cùng checkpoint trong điều kiện thời gian di chuyển tăng.</td></tr>
+      </tbody></table></div>
+      <p>Toàn bộ cách đếm trên áp dụng cho <strong>một lần train và checkpoint của lần đó</strong>. Study lặp lại việc train với seeds 11, 22 và 33, rồi đánh giá ba checkpoint trên cùng các ngày test. Vì thế, 200 ngày của một điều kiện tạo 600 lượt episode đánh giá qua ba seed, trong khi vẫn là cùng 200 kịch bản để đối chiếu kết quả.</p>
       <h3>Từ checkpoint đến một quyết định vận hành</h3>
-      <p>Một tập ngày mô phỏng riêng được giữ lại để lựa chọn checkpoint, gọi là <strong>validation</strong>. Cứ 12.288 transitions, controller được chạy trên các ngày này. Checkpoint có mean cost thấp nhất sau khi train được giữ làm bản tốt nhất; bằng nhau thì giữ bản sớm hơn. Nhờ đó, đầu ra của huấn luyện là một bộ trọng số đã qua tiêu chí lựa chọn cụ thể.</p>
       <p>Khi đánh giá hoặc điều khiển bằng checkpoint, vòng xử lý ngắn hơn: nhận observation và mask, chạy mạng, chọn action hợp lệ có xác suất lớn nhất rồi thực thi. Trọng số giữ nguyên trong giai đoạn này. Cả quá trình học dài trước đó được sử dụng dưới dạng một phép dự đoán tại mỗi quyết định.</p>
     </section>
 
@@ -395,6 +449,7 @@ Lặp cho đến hết ngân sách tương tác:
       <div class="table-wrap"><table><thead><tr><th>Nội dung</th><th>Tài liệu và code</th></tr></thead><tbody>
         <tr><td>Bài toán và objective</td><td><a href="problem_solution.md">docs/problem_solution.md</a>; <a href="spec/spec_v1.0.md">spec/spec_v1.0.md</a>.</td></tr>
         <tr><td>Thông số môi trường và huấn luyện</td><td><a href="../configs/base.toml">configs/base.toml</a>; <a href="../configs/train.toml">configs/train.toml</a>; <a href="../src/bus_rl/config.py">AlgorithmConfig</a>.</td></tr>
+        <tr><td>500 kịch bản, ngân sách train và các tập test</td><td><a href="../runs/standard-v1/evidence/extensions/masking/protocol.json">Protocol của study bổ sung standard-v1</a>; <a href="../runs/standard-v1/evidence/ppo/apply/11/train/metadata.json">Metadata PPO có mask, seed 11</a>; <a href="../runs/standard-v1/report.html">Báo cáo thực nghiệm</a>.</td></tr>
         <tr><td>State, dynamics và cost</td><td><a href="../crates/bus-sim-core/src/domain.rs">domain.rs</a>; <a href="../crates/bus-sim-core/src/engine.rs">engine.rs</a>; <a href="../crates/bus-sim-core/src/costs.rs">costs.rs</a>.</td></tr>
         <tr><td>Observation và lịch sử arrivals</td><td><a href="../crates/bus-sim-core/src/observation.rs">observation.rs</a>; <a href="../src/bus_rl/execution/environments/arrival_memory.py">arrival_memory.py</a>.</td></tr>
         <tr><td>Action table và mask</td><td><a href="../crates/bus-sim-core/src/actions.rs">actions.rs</a>; <a href="../crates/bus-sim-core/src/guards.rs">guards.rs</a>; <a href="../src/bus_rl/execution/environments/rust/environment.py">NativeBusDispatchEnv</a>.</td></tr>
