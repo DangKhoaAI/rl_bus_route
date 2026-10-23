@@ -6,10 +6,14 @@
 #
 # The default image carries only what the station server imports (numpy, gymnasium,
 # the FastAPI stack and the native kernel); torch and the training stack stay out.
-# `--target ppo` adds them plus the local checkpoint in runs/core-11 (untracked, so
-# that target builds only where the checkpoint exists):
+# `--target ppo` adds them plus the runs/core-11 checkpoint, downloaded from the
+# repo's `core-11` release (checkpoints stay out of git):
 #
 #   docker build --target ppo -t bus-rl-station:ppo .
+#
+# Builders that cannot pick a target (Render) set STATION_TARGET=ppo instead.
+
+ARG STATION_TARGET=station
 
 FROM rust:1.97.1-slim-bookworm AS native
 # PyO3 reads the interpreter config at build time; bookworm's python3 is 3.11 (abi3-py311).
@@ -75,9 +79,12 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     stable-baselines3==2.9.0 \
     sb3-contrib==2.9.0 \
     pandas==3.0.5
-COPY runs/core-11/best.zip runs/core-11/metadata.json ./runs/core-11/
+ADD --chown=station:station --checksum=sha256:6ffe783a4bab3dd225ec0e3bc3ed188e909edd014cb30fede27c0b5d63ee26e7 \
+    https://github.com/DangKhoaAI/rl_bus_route/releases/download/core-11/best.zip ./runs/core-11/
+ADD --chown=station:station --checksum=sha256:7f20d78fa5b164d15d9a78efe1b2508690813dfa5da5ef664f02bb2bf182eada \
+    https://github.com/DangKhoaAI/rl_bus_route/releases/download/core-11/metadata.json ./runs/core-11/
 USER station
 ENV SIMULATION__CHECKPOINT_PATH=runs/core-11/best.zip
 
 # Last stage is the default target: a plain build stays baseline-only.
-FROM station
+FROM ${STATION_TARGET}

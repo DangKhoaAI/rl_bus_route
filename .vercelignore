@@ -1,0 +1,4 @@
+# Allowlist: the static build needs only the two pages.
+/*
+!/web
+!/vercel.json
