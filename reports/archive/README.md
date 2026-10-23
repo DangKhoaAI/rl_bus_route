@@ -1,20 +1,17 @@
-# Archive
+# Archive — retained evidence
 
-Everything that is **not part of the final claim**, kept for provenance. Each
-folder says what was run; open a file only if you need that history.
+Chỉ giữ kết luận, bảng tổng hợp và protocol có giá trị đối chiếu.
 
-| Path | What it is | Status |
-|---|---|---|
-| [`pilot-12k-pipeline-gate/`](pilot-12k-pipeline-gate/) | 12,288-transition pilot: checks the pipeline, not policy quality | `HISTORICAL` |
-| [`rejected-changes/`](rejected-changes/) | L1 GAE, L2 causal forecast, L2 reward shaping: cards + tables | `REJECTED` |
-| [`python-training-speed-before-after/`](python-training-speed-before-after/) | Python training-speed measurements before/after hot-path work | `HISTORICAL` |
-| [`infrastructure/`](infrastructure/) | Rust migration, runtime batching, memory notes | `ACCEPTED` (infra) |
+| Thư mục | Lý do giữ |
+|---|---|
+| [historical-core](historical-core/README.md) | Benchmark và ablation core cũ, protocol, kiểm chứng và ledger |
+| [belief-gru-ablation](belief-gru-ablation/README.md) | Thử nghiệm encoder: kết luận, summary, contrasts và protocol |
+| [memory-belief-ablation](memory-belief-ablation/README.md) | Thử nghiệm cửa sổ nhớ/belief: kết luận, summary, contrasts và protocol |
+| [rejected-changes](rejected-changes/README.md) | Bằng chứng các thay đổi đã thử và không được chọn |
+| [infrastructure](infrastructure/README.md) | Kiểm chứng Rust và tối ưu runtime đã chấp nhận |
 
-## Reading guide
+Pilot 12k chỉ kiểm tra pipeline (PPO validation cost 18,207 so với fixed 16,017); không phải bằng chứng chất lượng policy. Các bản đo tốc độ Python cũ, pilot, hình trùng, telemetry và dữ liệu từng ngày đã được bỏ khỏi archive.
+Có thể xem lại toàn bộ bản trước khi dọn tại commit `782f3e4` trong Git.
+Dữ liệu từng ngày của study hiện tại vẫn giữ ở `runs/standard-v1/evidence/`.
 
-- Final result: [`../README.md`](../README.md).
-- Rejected changes: [`rejected-changes/README.md`](rejected-changes/README.md).
-- Rust/runtime: [`infrastructure/README.md`](infrastructure/README.md).
-
-Raw artifacts for the historical runs live in the git-ignored `runs/diagnose/`,
-`runs/diagnose-after/`, `runs/rust-migration/` and `runs/rl-improvement/` trees.
+[Báo cáo cuối hiện tại](../README.md).

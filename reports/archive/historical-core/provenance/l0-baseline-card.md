@@ -2,7 +2,7 @@
 
 **Status:** `ACCEPTED` — this is the control for every later change.
 **Full narrative:** [`../README.md`](../README.md)
-**Diagnosis:** [`l0-diagnosis.md`](l0-diagnosis.md)
+**Diagnosis:** `l0-diagnosis.md` (historical artifact: Git `782f3e4`)
 **Protocol:** [`protocol.json`](protocol.json)
 
 ## Question
@@ -16,9 +16,9 @@ is tested?
 - Rust backend, 245,760 transitions per seed, seeds 11/22/33.
 - 100 validation days for checkpoint selection; held-out splits not read.
 - `total_cost_core` is the selection metric; tie → earliest checkpoint.
-- Evidence: [`l0-verification.json`](l0-verification.json),
-  [`core-learning-curves.csv`](core-learning-curves.csv),
-  [`core_learning_curves.png`](core_learning_curves.png).
+- Evidence: `l0-verification.json` (historical artifact: Git `782f3e4`),
+  `core-learning-curves.csv` (historical artifact: Git `782f3e4`),
+  `core_learning_curves.png` (historical artifact: Git `782f3e4`).
 
 ## Result
 

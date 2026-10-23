@@ -2,7 +2,7 @@
 
 **Status:** `REJECTED` after three-seed confirmation. Control retained.
 **Final report:** [`../../README.md`](../../README.md)
-**Ledger row:** `L2-PBRS` in [`../../provenance/experiments.csv`](../../provenance/experiments.csv)
+**Ledger row:** `L2-PBRS` in `../../provenance/experiments.csv` (historical artifact: Git `782f3e4`)
 
 ## Question
 

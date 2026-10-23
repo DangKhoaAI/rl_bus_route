@@ -19,11 +19,11 @@ programmed baselines, and what does each component contribute?
 - Baselines: `fixed`, `threshold`, `proportional` on the same days.
 - Evidence: [`held_out_per_seed.csv`](held_out_per_seed.csv),
   [`ablation_contrasts.csv`](ablation_contrasts.csv),
-  [`paired_days.csv`](paired_days.csv),
+  `paired_days.csv` (historical artifact: Git `782f3e4`),
   [`baselines_summary.csv`](baselines_summary.csv),
   [`baseline_contrasts.csv`](baseline_contrasts.csv),
   [`../provenance/l3-verification.json`](../provenance/l3-verification.json),
-  [`../figures/`](../figures/), [`../provenance/l3-failure-traces.json`](../provenance/l3-failure-traces.json).
+  `../figures/` (historical artifact: Git `782f3e4`), `../provenance/l3-failure-traces.json` (historical artifact: Git `782f3e4`).
 
 ## Result — ablations vs core
 

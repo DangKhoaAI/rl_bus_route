@@ -110,7 +110,7 @@ Tổng thời gian được ghi trong 12 run: **412,01 giây**, chưa gồm tạ
 
 **Kết luận thăm dò:** GRU cửa sổ là hướng có tín hiệu tốt nhất để thử tiếp. Belief Gamma–Poisson đơn giản này chưa hữu ích trong contrast đang xét; không thêm độ phức tạp chỉ để giữ nó. MLP có seed spread lớn ở ngân sách ngắn, đặc biệt burst, và GRU chỉ thắng 2/3 seed: không suy ra lợi thế chắc chắn ở full budget. Giữ `algorithm.encoder="mlp"` mặc định; không thay incumbent, không tự tăng ngân sách hay tuning sau probe.
 
-Dữ liệu: [summary.csv](summary.csv), [contrasts.csv](contrasts.csv), [runs.csv](runs.csv), [probe_days.csv](probe_days.csv), [protocol.json](protocol.json). `probe_days.csv` chứa đủ per-day metrics để tính lại các contrast và bootstrap CI.
+Dữ liệu: [summary.csv](summary.csv), [contrasts.csv](contrasts.csv), runs.csv (historical artifact: Git `782f3e4`), probe_days.csv (historical artifact: Git `782f3e4`), [protocol.json](protocol.json). `probe_days.csv` chứa đủ per-day metrics để tính lại các contrast và bootstrap CI.
 
 Audit: đủ 12 run, 96 rollout và 96 PPO update/run, tổng 1.179.648 mask decisions; **16.128 finite checks** trong diagnostics đều qua. Metadata config/encoder/budget, checkpoint hashes, frozen source hashes và CI tính lại đều khớp. Probe có đủ 36 nhóm encoder×seed×split, mỗi nhóm 50 ngày, không trùng khóa.
 

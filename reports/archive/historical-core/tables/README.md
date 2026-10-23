@@ -19,7 +19,6 @@ curated tables in this directory; no hand-editing.
 | [`baseline_contrasts.csv`](baseline_contrasts.csv) | Paired baseline − core deltas and 95% CIs |
 | [`held_out_per_seed.csv`](held_out_per_seed.csv) | Per-seed held-out metrics for all four arms |
 | [`ablation_contrasts.csv`](ablation_contrasts.csv) | Paired ablation − core deltas, CIs and service deltas |
-| [`paired_days.csv`](paired_days.csv) | Raw per-day paired rows (analysis input, 2,000 rows) |
 
 ## Column guide
 

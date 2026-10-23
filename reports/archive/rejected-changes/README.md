@@ -29,6 +29,6 @@ and why it was not adopted. None of these changed the final controller.
 failed”. The cards include the registered threshold and the failed rule.
 
 The full change ledger is
-[`../../provenance/experiments-ledger.md`](../../provenance/experiments-ledger.md).
+[`../historical-core/provenance/experiments-ledger.md`](../historical-core/provenance/experiments-ledger.md).
 The final controller is described in
 [`../../README.md`](../../README.md).

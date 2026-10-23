@@ -2,7 +2,7 @@
 
 **Status:** `REJECTED` at screening. Control retained.
 **Final report:** [`../../README.md`](../../README.md)
-**Ledger rows:** `L1-GAE-098`, `L1-GAE-100` in [`../../provenance/experiments.csv`](../../provenance/experiments.csv)
+**Ledger rows:** `L1-GAE-098`, `L1-GAE-100` in `../../provenance/experiments.csv` (historical artifact: Git `782f3e4`)
 
 ## Question
 
@@ -17,7 +17,7 @@ delayed?
 - Budget: 245,760 transitions; seed 11 screening; confirmation on seeds 22/33
   only if a candidate reached the pre-registered 2% reduction.
 - Evidence: [`l1-screening.csv`](l1-screening.csv),
-  [`../../provenance/core-learning-curves.csv`](../../provenance/core-learning-curves.csv).
+  `../../provenance/core-learning-curves.csv` (historical artifact: Git `782f3e4`).
 
 ## Result (seed 11, 100 validation days)
 

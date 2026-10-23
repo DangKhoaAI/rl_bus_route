@@ -122,7 +122,7 @@ GRU20/30 tốn thêm khoảng **13.1% / 24.9%** thời gian train + validation s
 
 Audit đã xác nhận đủ **21 run, 2.064.384 transitions, 3.150 episode probe**, 96 rollout và 96 đợt PPO update/run; **28.224 finite checks** đều qua. Metadata/config/budget/checkpoint hashes và frozen source hashes khớp; bootstrap CI tính lại khớp CSV. Cả 3 đường validation GRU10 (8 mốc/seed) tái lập chính xác vòng trước.
 
-Dữ liệu: [summary.csv](summary.csv), [contrasts.csv](contrasts.csv), [runs.csv](runs.csv), [probe_days.csv](probe_days.csv), [protocol.json](protocol.json). Cột `encoder` trong CSV là tên arm; `policy_encoder` trong `runs.csv` là loại encoder thực sự. `probe_days.csv` có đủ dữ liệu để tính lại các contrast.
+Dữ liệu: [summary.csv](summary.csv), [contrasts.csv](contrasts.csv), runs.csv (historical artifact: Git `782f3e4`), probe_days.csv (historical artifact: Git `782f3e4`), [protocol.json](protocol.json). Cột `encoder` trong CSV là tên arm; `policy_encoder` trong `runs.csv` là loại encoder thực sự. `probe_days.csv` có đủ dữ liệu để tính lại các contrast.
 
 ## Tái lập và kiểm tra
 

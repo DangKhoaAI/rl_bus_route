@@ -9,7 +9,6 @@ study.
 | Rust kernel R0–R4 | [`rust-migration/README.md`](rust-migration/README.md) | [`rust-migration/artifacts/`](rust-migration/artifacts/) | accepted |
 | Runtime batching/caching O0–O2 | [`runtime-optimization/README.md`](runtime-optimization/README.md) | [`runtime-optimization/artifacts/`](runtime-optimization/artifacts/) | accepted, opt-in |
 | Memory M1/M3 | [`../../../docs/spec/memory_optimize.md`](../../../docs/spec/memory_optimize.md) | measurements embedded in `rust-migration/artifacts/` | accepted |
-| Training-time diagnosis (legacy) | [`../python-training-speed-before-after/`](../python-training-speed-before-after/) | git-ignored `runs/diagnose*` | historical |
 
 ## Frozen manifest path
 
