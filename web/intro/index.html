@@ -174,7 +174,7 @@ caption b { color: var(--ink); }
   <ul class="t">
     <li>3 tuyến hai chiều × 6 trạm, 1 depot. <i>F</i> = 12 xe, 40 chỗ: 9 chạy tuyến + 3 dự phòng.</li>
     <li>Ca 240 phút = 120 bước × 2 phút. Sau phút 180 không có khách mới.</li>
-    <li>Khách đến Poisson; cầu nền $b=(180,160,140)$ khách/giờ; một tuyến có thêm một đỉnh:</li>
+    <li>Khách đến Poisson; lượng khách cơ bản $b=(180,160,140)$ khách/giờ; một tuyến có thêm một đỉnh:</li>
   </ul>
   <div class="eq">$$\begin{gathered}\lambda_r(t)=b_r\Bigl[1+(m-1)\,e^{-(t-\mu)^2/2\sigma^2}\Bigr]\mathbf 1[t<180]\quad\text{(tuyến có đỉnh)}\\ m\in[1.5,3],\quad \mu\in[45,135],\quad \sigma\in[15,30]\end{gathered}\tag{1}$$</div>
   <ul class="t">
@@ -185,7 +185,7 @@ caption b { color: var(--ink); }
   <figure>
     <svg id="demand" viewBox="0 0 900 250" role="img" aria-label="Cường độ đến theo thời gian với một đỉnh"></svg>
     <div class="ctl"><label for="peak">Vị trí đỉnh μ</label><input id="peak" type="range" min="45" max="135" value="90"><span id="peakv" class="b">μ = 90</span></div>
-    <figcaption><b>Hình 3.</b> Minh họa (1) với <i>m</i> = 2, <i>σ</i> = 20, cầu nền 180 khách/giờ.</figcaption>
+    <figcaption><b>Hình 3.</b> Minh họa (1) với <i>m</i> = 2, <i>σ</i> = 20, lượng khách cơ bản 180 khách/giờ.</figcaption>
   </figure>
   <div class="tw"><table>
     <caption><b>Bảng 1.</b> Dữ liệu: 500 ngày huấn luyện, 100 ngày validation, ba bộ test × 200 ngày.</caption>
@@ -437,7 +437,7 @@ caption b { color: var(--ink); }
       <tr><td>$F$</td><td>Số xe của đội</td><td>12 (9 chạy tuyến, 3 dự phòng)</td></tr>
       <tr><td>$t$</td><td>Thời gian trong ca</td><td>phút, 0 đến 240; bước 2</td></tr>
       <tr><td>$\lambda_r(t)$</td><td>Cường độ khách đến tuyến $r$</td><td>khách/giờ, công thức (1)</td></tr>
-      <tr><td>$b_r$</td><td>Cầu nền của tuyến $r$</td><td>180, 160, 140 khách/giờ</td></tr>
+      <tr><td>$b_r$</td><td>Lượng khách cơ bản của tuyến $r$</td><td>180, 160, 140 khách/giờ</td></tr>
       <tr><td>$Q_r$</td><td>Khách đang chờ ở tuyến $r$</td><td>khách</td></tr>
       <tr><td>$n_r$</td><td>Số xe chạy trọn tuyến $r$</td><td>xe; mỗi tuyến ≥ 2 xe</td></tr>
       <tr><td>$m,\mu,\sigma$</td><td>Hệ số, tâm, độ rộng của đỉnh cầu</td><td>$[1.5,3]$; $[45,135]$ phút; $[15,30]$ phút</td></tr>
@@ -568,7 +568,7 @@ addEventListener("load", () => {
   text(100, 326, "ra tuyến: ≈ 6 phút", { anchor: "middle", size: 15, dim: true });
   routes.forEach(([name, y, base]) => {
     el("path", { d: `M${X0} ${y - HALF} H${X1} A${HALF} ${HALF} 0 0 1 ${X1} ${y + HALF} H${X0} A${HALF} ${HALF} 0 0 1 ${X0} ${y - HALF} Z`, fill: "none", stroke: C.grey, "stroke-width": 3 }, svg);
-    text(X0, y - HALF - 14, `Tuyến ${name} · cầu nền ${base} khách/giờ`, { size: 15 });
+    text(X0, y - HALF - 14, `Tuyến ${name} · lượng khách cơ bản ${base} khách/giờ`, { size: 15 });
     for (let i = 0; i < 6; i++) [y - HALF, y + HALF].forEach(yy => el("circle", { cx: stopX(i), cy: yy, r: 6, fill: C.bg, stroke: C.ink, "stroke-width": 1.5 }, svg));
     // direction chevrons sit between stops: outbound on the upper lane, inbound on the lower
     el("path", { d: `M${stopX(4.5) - 5} ${y - HALF - 6} l10 6 l-10 6`, fill: "none", stroke: C.dim, "stroke-width": 1.5 }, svg);
