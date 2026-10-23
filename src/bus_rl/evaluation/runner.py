@@ -58,6 +58,16 @@ class PPOController:
         action, _ = self.model.predict(observation, action_masks=mask, deterministic=True)
         return int(np.asarray(action).reshape(-1)[0])
 
+    def action_probabilities(self, observation, mask) -> np.ndarray:
+        """The policy's probability for every action after masking; illegal ones are 0."""
+        import torch
+
+        policy = self.model.policy
+        obs_tensor, _ = policy.obs_to_tensor(observation)
+        with torch.no_grad():
+            distribution = policy.get_distribution(obs_tensor, action_masks=np.asarray(mask))
+        return distribution.distribution.probs.cpu().numpy().reshape(-1)
+
     def act_batch(self, observations: list, masks: list) -> list[int]:
         """One deterministic predict over a batch of observations/masks."""
         if not observations:

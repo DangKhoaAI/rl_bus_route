@@ -1,0 +1,775 @@
+<!doctype html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>Điều phối đội xe buýt bằng học tăng cường</title>
+<meta name="description" content="Báo cáo kỹ thuật: điều phối 12 xe buýt trên 3 tuyến bằng MaskablePPO, so với ba luật viết tay.">
+<style>
+@font-face { font-family: "Latin Modern"; src: url("fonts/lmroman10-regular.otf") format("opentype"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Latin Modern"; src: url("fonts/lmroman10-italic.otf") format("opentype"); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: "Latin Modern"; src: url("fonts/lmroman10-bold.otf") format("opentype"); font-weight: 700; font-style: normal; font-display: swap; }
+
+:root, :root[data-theme="dark"] {
+  --bg: #000; --ink: #fff; --dim: #a6a6a6; --rule: #333; --wash: #0d0d0d;
+  --blue: #58c4dd; --yellow: #ffff00; --red: #fc6255; --green: #83c167; --grey: #8c8c8c; --purple: #b08ac4;
+}
+:root[data-theme="light"] {
+  --bg: #fffefb; --ink: #111; --dim: #555; --rule: #d6d3cc; --wash: #f4f2ec;
+  --blue: #1c758a; --yellow: #8a6d00; --red: #c4382c; --green: #2f7d32; --grey: #666; --purple: #7a4d96;
+}
+html { font-size: clamp(20px, .5vw + 17px, 24px); background: var(--bg); scroll-behavior: smooth; }
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: "Latin Modern", "CMU Serif", "Computer Modern", "Times New Roman", serif;
+  line-height: 1.6; -webkit-font-smoothing: antialiased; -webkit-text-stroke: .3px currentColor;
+}
+::selection { background: color-mix(in srgb, var(--blue) 35%, transparent); }
+a { color: var(--blue); text-underline-offset: 3px; }
+code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .82em; overflow-wrap: anywhere; }
+.b { color: var(--blue); } .y { color: var(--yellow); } .r { color: var(--red); }
+.g { color: var(--green); } .gr { color: var(--grey); } .p { color: var(--purple); }
+
+#bar { position: fixed; z-index: 6; left: 0; top: 0; height: 2px; width: 100%; background: var(--blue); transform-origin: 0 50%; transform: scaleX(0); }
+#theme { position: fixed; z-index: 6; right: 1rem; top: .8rem; font: inherit; font-size: .9rem; color: var(--dim); background: var(--bg); border: 1px solid var(--rule); padding: .25rem .7rem; cursor: pointer; border-radius: 2px; }
+#theme:hover { color: var(--ink); border-color: var(--dim); }
+#pages { position: fixed; z-index: 6; left: 50%; top: .8rem; transform: translateX(-50%); display: flex; padding: 3px; font-size: .9rem; background: var(--bg); border: 1px solid var(--rule); border-radius: 999px; }
+#pages a { padding: .2rem .9rem; border-radius: 999px; color: var(--dim); text-decoration: none; white-space: nowrap; }
+#pages a:hover { color: var(--ink); }
+#pages a[aria-current] { background: var(--ink); color: var(--bg); }
+#dash { position: fixed; z-index: 10; inset: 0; width: 100%; height: 100%; border: 0; background: var(--bg); }
+html.dash { overflow: hidden; }
+@media (max-width: 760px) { #pages { left: 1rem; transform: none; font-size: .75rem; } #theme { font-size: .75rem; } }
+#theme:focus-visible, input:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+
+article { padding: 0 max(1rem, 4vw); }
+section { min-height: 100dvh; display: flex; flex-direction: column; justify-content: center; max-width: 80ch; margin-inline: auto; padding: 6rem 0 4rem; }
+section > * { width: 100%; }
+.title { margin-bottom: 1.4rem; }
+.title h1 { font-weight: 400; font-size: clamp(2.2rem, 4.6vw, 3.8rem); line-height: 1.1; margin: 0 0 1rem; max-width: 22ch; letter-spacing: -.005em; }
+.abstract { max-width: 100%; font-size: 1.1rem; }
+h2 { font-size: clamp(2rem, 4.2vw, 3.1rem); font-weight: 400; line-height: 1.12; margin: 0 0 .6rem; max-width: 22ch; }
+h2 .num { color: var(--dim); margin-right: .45em; font-feature-settings: "tnum"; }
+h3 { font-size: 1.1rem; font-weight: 700; margin: 2rem 0 .1rem; }
+h4 { font-size: 1rem; font-weight: 700; margin: 1.4rem 0 .1rem; }
+p { margin: 1.1rem 0 0; max-width: 100%; line-height: 1.7; }
+ul.t, ol.t { margin: .9rem 0 0; padding-left: 1.6rem; max-width: 100%; } ul.t li, ol.t li { margin: .5rem 0; line-height: 1.6; padding-left: .2rem; }
+ol.t > li::marker { color: var(--blue); font-weight: 700; }
+.algo { margin-top: 1.4rem; border: 1px solid var(--rule); background: var(--wash); max-width: 100%; }
+.algo .ah { padding: .5rem 1rem; border-bottom: 1px solid var(--rule); font-size: .95rem; }
+.algo ol { margin: 0; padding: .6rem 1rem .8rem 3.2rem; list-style: decimal; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .8rem; line-height: 1.75; -webkit-text-stroke: 0; }
+.algo li::marker { color: var(--dim); }
+.algo li.i1 { margin-left: 1.6rem; } .algo li.i2 { margin-left: 3.2rem; }
+.algo .k { color: var(--blue); font-weight: 700; } .algo .c { color: var(--dim); }
+@media (min-width: 1900px) { html { font-size: 26px; } }
+@media (min-width: 2500px) { html { font-size: 32px; } }
+.leg { display: flex; flex-wrap: wrap; gap: .4rem 1.4rem; margin-top: .7rem; padding: .5rem .9rem; border: 1px solid var(--rule); background: var(--wash); font-size: .88rem; color: var(--dim); max-width: max-content; }
+.leg i { display: inline-block; vertical-align: middle; margin-right: .45rem; }
+.leg i.line { width: 1.6rem; height: 0; border-top: 3px solid; } .leg i.dash { width: 1.6rem; height: 0; border-top: 2px dashed; }
+.leg i.dot { width: .7rem; height: .7rem; border-radius: 50%; } .leg i.box { width: 1.2rem; height: .8rem; opacity: .5; } .leg i.bar { width: 1.2rem; height: .8rem; }
+.note { font-size: .85rem; color: var(--dim); }
+
+figure { margin: 1.8rem 0 0; }
+figcaption { font-size: .9rem; color: var(--dim); margin-top: .6rem; }
+figcaption b { color: var(--ink); }
+video { display: block; width: 100%; height: auto; background: #000; border: 1px solid var(--rule); }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { font-family: inherit; fill: var(--ink); }
+svg .d { fill: var(--dim); }
+.scroll { overflow-x: auto; } .scroll svg { min-width: 640px; }
+.ctl { display: flex; align-items: center; gap: .8rem; flex-wrap: wrap; margin-top: .6rem; color: var(--dim); font-size: .9rem; }
+input[type=range] { accent-color: var(--blue); width: min(16rem, 100%); }
+button.t { font: inherit; font-size: .9rem; color: var(--ink); background: none; border: 1px solid var(--rule); padding: .25rem .8rem; cursor: pointer; border-radius: 2px; }
+button.t:hover, button.t[aria-pressed=true] { border-color: var(--blue); color: var(--blue); }
+
+table { border-collapse: collapse; width: 100%; margin-top: .6rem; font-size: .93rem; font-feature-settings: "tnum"; }
+th, td { padding: .3rem .6rem; text-align: left; vertical-align: top; }
+thead th { border-top: 1.5px solid var(--ink); border-bottom: 1px solid var(--ink); font-weight: 700; }
+tbody tr:last-child td { border-bottom: 1.5px solid var(--ink); }
+td.n, th.n { text-align: right; white-space: nowrap; }
+.tw { overflow-x: auto; width: min(54rem, 100vw - max(2rem, 8vw)); margin-left: calc((100% - min(54rem, 100vw - max(2rem, 8vw))) / 2); }
+.tw.hero { width: auto; margin-left: 0; }
+.tw code { overflow-wrap: normal; }
+caption { caption-side: top; text-align: left; font-size: .9rem; color: var(--dim); padding-bottom: .3rem; }
+caption b { color: var(--ink); }
+
+/* hero comparison: one row per method, one bar per split */
+.cmp { max-width: 100%; }
+.cmp td { min-width: 7rem; }
+.cmp .v { display: flex; justify-content: space-between; gap: .6rem; white-space: nowrap; }
+.cmp .pct { color: var(--dim); font-size: .85em; }
+.cmp .bar { height: .45rem; margin-top: .3rem; background: var(--grey); opacity: .55; }
+.cmp tr.ppo .bar { background: var(--green); opacity: 1; }
+
+.panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.2rem 2rem; }
+.panels h4 { margin: 0 0 .3rem; font-size: .95rem; font-weight: 700; }
+.panels h4 small { font-weight: 400; color: var(--dim); }
+
+#toc { position: fixed; z-index: 5; left: 0; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: .1rem; font-size: .85rem; padding: 1.2rem 3rem 1.2rem 1rem; opacity: .4; transition: opacity .2s; }
+#toc:hover, #toc:focus-within { opacity: 1; }
+#toc a { color: var(--dim); text-decoration: none; font-feature-settings: "tnum"; padding: .3rem .4rem; white-space: nowrap; display: flex; gap: .7rem; border-radius: 2px; }
+#toc a:hover, #toc a.on { color: var(--ink); }
+#toc a:hover { background: var(--wash); }
+#toc a span { display: none; }
+#toc:hover a span, #toc:focus-within a span { display: inline; }
+#toc:hover { background: var(--bg); border-right: 1px solid var(--rule); }
+@media (max-width: 900px) { #toc { display: none; } }
+.refs { font-size: .9rem; max-width: 60rem; } .refs li { margin: .4rem 0; }
+
+@media (max-width: 760px) { section { min-height: auto; padding-left: 0; padding-block: 4.5rem 2.5rem; } .panels { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+<div id="bar"></div>
+<nav id="pages" aria-label="Trang"><a href="./" aria-current="page">Bài viết</a><a href="#dashboard">Dashboard</a></nav>
+<iframe id="dash" title="Dashboard" hidden></iframe>
+<button id="theme" type="button" aria-label="Đổi giao diện sáng tối">Giao diện sáng</button>
+
+<nav id="toc" aria-label="Các phần"></nav>
+<article>
+<section id="s0" data-t="Tóm tắt">
+<header class="title">
+  <h1>Điều phối đội xe buýt bằng học tăng cường</h1>
+</header>
+<p class="abstract">12 xe, 3 tuyến, một lệnh mỗi 2 phút. MaskablePPO so với ba luật viết tay.</p>
+<p class="note">Chi phí trung bình mỗi ngày, thấp hơn là tốt hơn. % = chi phí / PPO − 1. Thanh ngang so trong cùng một cột.</p>
+<div class="tw hero"><table class="cmp">
+  <thead><tr><th>Phương pháp</th><th>Ngày thường</th><th>Burst</th><th>Traffic</th></tr></thead>
+  <tbody id="cmp"></tbody>
+</table></div>
+<ol class="t abstract">
+  <li>PPO thấp nhất ở cả ba bộ test; CI 95% so với từng luật viết tay đều &gt; 0.</li>
+  <li>Chiến lược học được: 3 xe dự phòng ra ngay đầu ca, sau đó chủ yếu chỉnh giãn cách.</li>
+</ol>
+</section>
+
+<section id="s1" data-num="1" data-t="Giới thiệu">
+  <h2><span class="num">1</span>Giới thiệu</h2>
+  <ul class="t">
+    <li>Đội xe cố định: câu hỏi là đặt xe <b>ở đâu, lúc nào</b>, không phải thêm bao nhiêu xe.</li>
+    <li>Ngày thường, cùng 12 xe: P95 thời gian chờ ≈ 11 phút với PPO, ≈ 15 phút với các luật viết tay. Riêng ngày burst, P95 của PPO cao hơn Threshold và Proportional (Bảng 5).</li>
+    <li>Xe từ depot mất 6 phút không tải + ≈ 3 phút mỗi chặng → luật chờ thấy hàng dài mới gửi xe thì luôn trễ.</li>
+  </ul>
+  <figure>
+    <div class="scroll"><svg id="net" viewBox="0 0 900 430" role="img" aria-label="Sơ đồ mạng: depot với 3 xe dự phòng, ba tuyến vòng mỗi tuyến 6 trạm mỗi chiều, 3 xe mỗi tuyến, một hàng khách chờ"></svg></div>
+    <figcaption><b>Hình 1.</b> Sơ đồ, không phải bản đồ. Xe chạy đi về giữa s0 và s5, quay đầu ở hai đầu: làn trên chiều đi, làn dưới chiều về. Vị trí xe chỉ để minh họa; đầu ca thực tế mỗi tuyến có 2 xe ở s0, 1 xe ở s5, 3 xe dự phòng ở depot.</figcaption>
+  </figure>
+  <h3>Đóng góp</h3>
+  <ol class="t">
+    <li>Mô hình hóa: 6 loại lệnh, hàm chi phí tường minh.</li>
+    <li>So PPO với ba luật viết tay bằng kiểm định ghép cặp theo ngày.</li>
+    <li>Đọc lại chiến lược PPO học được.</li>
+  </ol>
+  <h3>Cách hoạt động</h3>
+  <ul class="t">
+    <li>Người điều phối chỉ thấy những gì đã xảy ra (hàng chờ, xe ở đâu), không thấy khách sắp đến [1].</li>
+    <li>Mỗi 2 phút ra một lệnh; mặt nạ loại sẵn lệnh vi phạm ràng buộc. Mục tiêu: tổng chi phí cả ca nhỏ nhất [2].</li>
+    <li>PPO [3, 5] học cách chọn lệnh từ hàng nghìn ca mô phỏng; ba luật viết tay làm mốc so sánh.</li>
+  </ul>
+  <figure>
+    <svg id="loop" viewBox="0 0 900 290" role="img" aria-label="Vòng lặp tác tử và môi trường trong một POMDP có mặt nạ"></svg>
+    <div class="ctl"><button class="t" id="loopnext">Bước tiếp theo</button><button class="t" id="loophid" aria-pressed="false">Hiện phần bị che</button><span id="loopmsg" class="b"></span></div>
+    <figcaption><b>Hình 2.</b> Một bước điều phối: nhận <i>o<sub>k</sub></i> và mặt nạ <i>m<sub>k</sub></i>, chọn <i>a<sub>k</sub></i>, nhận reward <i>r<sub>k</sub></i>.</figcaption>
+  </figure>
+</section>
+
+<section id="s2" data-num="2" data-t="Bài toán">
+  <h2><span class="num">2</span>Bài toán</h2>
+  <p>Một ca làm việc 240 phút. Cứ 2 phút người điều phối ra một lệnh, tổng cộng 120 lệnh. Bài toán gồm năm thành phần: mạng lưới, xe, khách, lệnh và chi phí.</p>
+  <h3>Mạng lưới</h3>
+  <ul class="t">
+    <li>3 tuyến A, B, C, mỗi tuyến 6 trạm s0–s5. Xe chạy đi về giữa s0 và s5, quay đầu ở hai đầu tuyến (Hình 1).</li>
+    <li>Mỗi chặng giữa hai trạm ≈ 3 phút. Depot là bãi đỗ chung, nối với hai đầu mỗi tuyến bằng đường 6 phút.</li>
+  </ul>
+  <h3>Xe buýt</h3>
+  <ul class="t">
+    <li>12 xe, mỗi xe 40 chỗ; trên 30 khách là chật. Đầu ca: 3 xe mỗi tuyến, 3 xe dự phòng nằm ở depot.</li>
+    <li>Một xe trên tuyến lặp vòng: chờ ở trạm đầu → xuất bến → dừng 30 giây ở mỗi trạm để đón, trả khách → tới trạm cuối nghỉ 2 phút → quay đầu.</li>
+    <li>Xe không tự xuất bến tùy ý: bộ lập lịch cho xe đi khi đã đủ giãn cách (headway) so với chuyến trước, mặc định 15 phút.</li>
+    <li>Xe ra vào depot hay đổi tuyến thì chạy không tải: tốn thời gian và chi phí nhưng không chở khách.</li>
+  </ul>
+  <h3>Hành khách</h3>
+  <ul class="t">
+    <li>Khách đến trạm ngẫu nhiên (Poisson); lượng khách cơ bản 180, 160, 140 khách/giờ cho tuyến A, B, C. Sau phút 180 không có khách mới; 60 phút cuối để chở nốt.</li>
+    <li>Mỗi ngày một tuyến có thêm một đỉnh cao điểm: gấp 1,5–3 lần, rơi vào phút 45–135, rộng 15–30 phút.</li>
+    <li>Khách lên chuyến đầu tiên còn chỗ và xuống ở một trạm phía trước; trạm càng xa càng ít người xuống.</li>
+    <li>Xe đầy thì khách ở lại chờ chuyến sau. Chờ quá 45 phút thì khách bỏ về.</li>
+    <li>Kẹt xe nền: thời gian mỗi chặng nhân một hệ số ngẫu nhiên quanh 1 (trong 0,7–2,5), đổi mỗi 5 phút.</li>
+  </ul>
+  <figure>
+    <svg id="demand" viewBox="0 0 900 250" role="img" aria-label="Cường độ đến theo thời gian với một đỉnh"></svg>
+    <div class="ctl"><label for="peak">Vị trí đỉnh</label><input id="peak" type="range" min="45" max="135" value="90"><span id="peakv" class="b">phút 90</span></div>
+    <figcaption><b>Hình 3.</b> Minh họa: đỉnh gấp 2 lần, rộng 20 phút, lượng khách cơ bản 180 khách/giờ.</figcaption>
+  </figure>
+  <div class="tw"><table>
+    <caption><b>Bảng 1.</b> Mỗi ngày là một kịch bản khách và kẹt xe khác nhau: 500 ngày để học, 100 ngày để chọn mô hình, ba bộ test × 200 ngày.</caption>
+    <thead><tr><th>Bộ test</th><th>Khác ngày thường ở đâu</th></tr></thead>
+    <tbody>
+      <tr><td>Ngày thường</td><td>Cùng phân phối với huấn luyện.</td></tr>
+      <tr><td>Burst</td><td>Một trạm ngẫu nhiên, bắt đầu phút 30–150, kéo dài 5–10 phút, +8–20 khách mỗi 30 giây.</td></tr>
+      <tr><td>Traffic</td><td>Một tuyến chạy chậm ×1,5–2 trong 30 phút.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Lệnh điều phối</h3>
+  <p>Người điều phối không lái xe; mỗi lệnh chỉ đổi kế hoạch của một xe hoặc một tuyến. Lệnh nào cũng mất thời gian mới thấy tác dụng.</p>
+  <div class="tw"><table>
+    <caption><b>Bảng 2.</b> Sáu loại lệnh, 221 ô. Bảng tính cho 16 xe × 4 tuyến; ô của xe 12–15 và tuyến thứ tư luôn bị mask.</caption>
+    <thead><tr><th>Lệnh</th><th class="n">Số ô</th><th>Tác dụng</th></tr></thead>
+    <tbody>
+      <tr><td><code>NOOP</code></td><td class="n">1</td><td>Giữ nguyên kế hoạch; bộ lập lịch vẫn cho xe xuất bến.</td></tr>
+      <tr><td><code>DISPATCH</code></td><td class="n">64</td><td>Xe depot ra tuyến; 6 phút không tải tới trạm đầu.</td></tr>
+      <tr><td><code>REASSIGN</code></td><td class="n">64</td><td>Chuyển xe rỗng đang chờ ở đầu tuyến sang tuyến khác.</td></tr>
+      <tr><td><code>SHORT_TURN</code></td><td class="n">64</td><td>Chạy đoạn s0–s3 rồi quay đầu; áp lên xe depot thì cũng đưa xe ra.</td></tr>
+      <tr><td><code>RECALL</code></td><td class="n">16</td><td>Đưa xe rỗng đang chờ ở đầu tuyến về depot.</td></tr>
+      <tr><td><code>SET_HEADWAY</code></td><td class="n">12</td><td>Giãn cách xuất bến của tuyến: 6, 10 hoặc 15 phút.</td></tr>
+    </tbody>
+  </table></div>
+  <ul class="t">
+    <li>Ràng buộc: xe đang chở khách không chuyển được · mỗi tuyến luôn còn ≥ 2 xe · <code>REASSIGN</code>, <code>RECALL</code> cần thêm một xe rỗng khác của tuyến chờ cùng chỗ · một xe nhận lệnh xong phải chờ 20 phút mới nhận lệnh khác · giãn cách của tuyến đổi lại sau ≥ 10 phút.</li>
+  </ul>
+  <h4>Mặt nạ (mask) là gì</h4>
+  <ul class="t">
+    <li>Mọi lệnh có thể ra được xếp thành 221 ô cố định: mỗi ô là một cặp (lệnh, xe, tuyến) như "DISPATCH xe 9 sang tuyến A". Bảng tính sẵn cho tối đa 16 xe, 4 tuyến, nên ô của xe 12–15 và tuyến thứ tư luôn tắt.</li>
+    <li>Trước mỗi lệnh, môi trường bật ô nào làm được ngay lúc đó, tắt ô vi phạm ràng buộc ở trên. Đó là mặt nạ.</li>
+    <li>Người điều phối chỉ chọn trong ô bật. PPO gán xác suất 0 cho ô tắt nên không bao giờ chọn trúng (Hình 7); chọn ô tắt thì môi trường báo lỗi, không tự đổi thành NOOP.</li>
+    <li>NOOP luôn bật, nên lúc nào cũng có ít nhất một lệnh hợp lệ.</li>
+  </ul>
+  <p>Đọc Hình 4 ở hai thời điểm đo thật:</p>
+  <ul class="t">
+    <li><b>Phút 0</b>, 49 ô bật: 9 <code>DISPATCH</code> (3 xe dự phòng 9, 10, 11 × 3 tuyến); <code>REASSIGN</code>, <code>SHORT_TURN</code>, <code>RECALL</code> chỉ cho các xe rỗng đang chờ ở đầu tuyến; <code>SET_HEADWAY</code> chỉ còn 6 và 10 phút vì 15 phút là giãn cách đang dùng.</li>
+    <li><b>Phút 60</b>, 5 ô bật: NOOP và 4 ô <code>SET_HEADWAY</code> của tuyến B, C. Xe dự phòng đã ra hết, xe trên tuyến đang chở khách hoặc tuyến không dư xe, nên mọi lệnh theo xe đều tắt; tuyến A vừa đổi giãn cách nên phải chờ đủ 10 phút.</li>
+  </ul>
+  <figure>
+    <div class="ctl" role="group" aria-label="Chọn thời điểm" id="maskt" style="margin:0 0 .4rem"></div>
+    <div class="scroll"><svg id="mask" viewBox="0 0 900 300" role="img" aria-label="221 ô action xếp theo loại lệnh, xe và tuyến; ô sáng là hợp lệ"></svg></div>
+    <figcaption><b>Hình 4.</b> Mặt nạ đo thật, ngày đầu của bộ ngày thường, bản huấn luyện lại cùng cấu hình. Cột = xe 0–15, hàng = tuyến A, B, C, thứ tư; khối <code>SET_HEADWAY</code>: hàng = tuyến, cột = 6/10/15 phút. Ô tô màu là ô bật, ô chỉ có viền là ô tắt.</figcaption>
+  </figure>
+  <h3>Người điều phối thấy gì</h3>
+  <ul class="t">
+    <li>Thấy: số khách chờ và đã chờ bao lâu ở từng trạm, xe nào ở đâu và chở bao nhiêu, giãn cách hiện tại, thời gian còn lại của ca.</li>
+    <li>Không thấy: khách đang chờ muốn xuống trạm nào, sắp có bao nhiêu khách đến. Vì vậy phải đoán từ những gì vừa xảy ra [1].</li>
+  </ul>
+  <p class="note">PPO nhận thêm số khách đến của 5 khoảng gần nhất để đoán xu hướng; mạng không có bộ nhớ.</p>
+  <div class="algo"><div class="ah"><b>Thuật toán 1.</b> Một bước điều phối (mỗi 2 phút)</div><ol>
+    <li><span class="k">quan sát</span> o ← observe(state)  <span class="c">// chỉ dữ liệu đã xảy ra</span></li>
+    <li>m ← valid_mask(state)  <span class="c">// 221 ô, 0 nếu vi phạm ràng buộc</span></li>
+    <li>a ← controller(o, m)  <span class="c">// PPO hoặc luật viết tay</span></li>
+    <li><span class="k">nếu</span> m[a] = 0 <span class="k">thì</span> báo lỗi  <span class="c">// PPO không chọn được: xác suất 0</span></li>
+    <li>mô phỏng 2 phút với lệnh a</li>
+    <li>c ← tổng có trọng số của các biến  <span class="c">// Bảng 3</span></li>
+    <li><span class="k">trả về</span> r = −c / 3000</li>
+  </ol></div>
+
+  <h3>Chi phí: thế nào là điều phối tốt</h3>
+  <ul class="t">
+    <li>Mỗi bước 2 phút, các biến dưới đây nhân trọng số rồi cộng lại thành chi phí <i>c</i>; reward = −<i>c</i> / 3000.</li>
+    <li>Chi phí cân hai phía: khách chờ, chật, bỏ về (phía khách) và xe chạy, chạy không tải, đổi lệnh (phía nhà xe). Một khách bỏ về nặng bằng 60 phút chờ.</li>
+  </ul>
+  <div class="tw"><table>
+    <caption><b>Bảng 3.</b> Các biến của chi phí.</caption>
+    <thead><tr><th>Biến</th><th>Ý nghĩa</th><th>Đơn vị</th><th class="n">Trọng số</th></tr></thead>
+    <tbody>
+      <tr><td><i>W</i></td><td>Thời gian chờ của hàng chờ (Hình 5): 10 khách × 5 phút = 50</td><td>passenger-minute</td><td class="n">1</td></tr>
+      <tr><td><i>V</i></td><td>Thời gian khách ngồi trên xe</td><td>passenger-minute</td><td class="n">0,25</td></tr>
+      <tr><td><i>O</i></td><td>Tải vượt mức thoải mái (30 khách)</td><td>passenger-minute</td><td class="n">0,5</td></tr>
+      <tr><td><i>C</i></td><td>Thời gian xe hoạt động ngoài depot</td><td>bus-minute</td><td class="n">0,5</td></tr>
+      <tr><td><i>C<sub>D</sub></i></td><td>Thời gian xe chạy không tải</td><td>bus-minute</td><td class="n">0,5</td></tr>
+      <tr><td><i>X</i></td><td>Chờ của khách đã chờ ≥ 15 phút</td><td>passenger-minute</td><td class="n">1</td></tr>
+      <tr><td><i>U</i></td><td>Khách bị từ chối lần đầu vì xe đầy</td><td>khách</td><td class="n">5</td></tr>
+      <tr><td><i>E</i></td><td>Khách bỏ về (chờ quá 45 phút)</td><td>khách</td><td class="n">60</td></tr>
+      <tr><td><i>M</i></td><td>Số lần đổi nhiệm vụ của xe</td><td>lần</td><td class="n">2</td></tr>
+      <tr><td><i>N<sub>H</sub></i></td><td>Khách còn chờ hoặc còn trên xe khi hết ca, tính một lần</td><td>khách</td><td class="n">60</td></tr>
+    </tbody>
+  </table></div>
+  <figure>
+    <svg id="area" viewBox="0 0 900 230" role="img" aria-label="Hàng chờ theo thời gian, hai kịch bản"></svg>
+    <div class="ctl"><button class="t" id="reactive" aria-pressed="true">Phản ứng sau cao điểm</button><button class="t" id="proactive" aria-pressed="false">Đi trước cao điểm</button></div>
+    <figcaption><b>Hình 5.</b> Minh họa: diện tích tô vàng là <i>W</i>. Chỉ so hình dạng, không có số.</figcaption>
+  </figure>
+
+</section>
+
+<section id="s3" data-num="3" data-t="Phương pháp">
+  <h2><span class="num">3</span>Phương pháp</h2>
+  <h3>Ba luật viết tay</h3>
+  <ul class="t">
+    <li><b>Fixed</b>: luôn NOOP; 3 xe dự phòng nằm depot cả ca.</li>
+    <li><b>Threshold</b>: chọn tuyến khẩn nhất, phản ứng theo hàng chờ <i>Q</i> của tuyến đó (Thuật toán 2).</li>
+    <li><b>Proportional</b>: sàn 2 xe/tuyến; ngân sách 9 xe, thành 12 khi tổng hàng chờ ≥ 120; phần trên sàn chia theo lượng khách đến 5 khoảng gần nhất (làm tròn phần dư lớn nhất). Thiếu → <code>DISPATCH</code> rồi <code>REASSIGN</code>; thừa → <code>RECALL</code>. Giãn cách ≈ 38 phút / số xe.</li>
+  </ul>
+  <div class="algo"><div class="ah"><b>Thuật toán 2.</b> Luật Threshold</div><ol>
+    <li>r* ← <span class="k">argmax</span><sub>r</sub> u<sub>r</sub>;  Q ← hàng chờ của r*  <span class="c">// u: độ khẩn, xem dưới</span></li>
+    <li><span class="k">nếu</span> Q ≥ 40 <span class="k">thì</span></li>
+    <li class="i1"><span class="k">nếu</span> ≥ 70% khách chờ đi trong s0–s3: SHORT_TURN một xe depot  <span class="c">// tỷ lệ ước lượng từ phân phối điểm đến</span></li>
+    <li class="i1">DISPATCH xe depot; hết xe depot → REASSIGN từ tuyến ít khẩn nhất</li>
+    <li class="i1"><span class="k">nếu</span> vẫn chưa ra lệnh và ≥ 70%: SHORT_TURN bất kỳ xe nào hợp lệ</li>
+    <li><span class="k">nếu</span> chưa ra lệnh: SET_HEADWAY(r*, 6 phút nếu Q ≥ 80; 10 nếu Q ≥ 40; còn lại 15)</li>
+    <li><span class="k">nếu</span> lệnh đó bị mask và Q &lt; 5: RECALL một xe</li>
+    <li><span class="k">còn lại</span> NOOP</li>
+  </ol></div>
+  <p class="note">Độ khẩn của tuyến = hàng chờ trên mỗi xe chạy trọn tuyến (chia 40) + thời gian chờ lâu nhất (chia 15 phút) + thời gian từ chuyến xuất bến trọn tuyến gần nhất (chia 20 phút).</p>
+
+  <h3>PPO có mask</h3>
+  <p>Quan sát <i>o<sub>k</sub></i>: 1.383 chiều, chuẩn hóa về cỡ 1.</p>
+  <ul class="t">
+    <li><b>Trạm, 448</b>: hàng chờ, tuổi chờ TB và max, số khách chờ ≥ 15 phút, lên/xuống, khách đến trong khoảng gần nhất.</li>
+    <li><b>Lịch sử đến, 320</b>: khách đến trong 5 khoảng gần nhất.</li>
+    <li><b>Xe, 432</b>: 16 ô xe × pha, tuyến, hướng, tải, thời gian còn lại của chặng, cooldown.</li>
+    <li><b>Còn lại, 183</b>: trạng thái tuyến, khối dự báo 64 chiều (luôn 0, không bật), cờ hợp lệ, giờ còn lại.</li>
+  </ul>
+  <figure>
+    <video id="blocks" class="auto" src="media/policy_blocks.mp4" poster="media/policy_blocks.jpg" muted playsinline preload="metadata" aria-label="Sơ đồ khối của mạng chính sách: cột quan sát 1383 chiều, trunk 256 và 128, đầu actor ra 221 logit qua mặt nạ và softmax, đầu critic ra một giá trị"></video>
+    <figcaption><b>Hình 6.</b> Mạng chính sách, 448.862 tham số. Trunk chung 1383 → 256 → 128 (ReLU); mỗi đầu 128 → 128 (Tanh); actor → 221 logit, critic → <i>V</i>. Chiều cao khối theo log số chiều. Khối đỏ: áp mặt nạ.</figcaption>
+  </figure>
+  <p class="note">Mặt nạ đặt xác suất của lệnh không hợp lệ về đúng 0, phần còn lại chuẩn hóa lại [5].</p>
+  <figure>
+    <svg id="mdemo" viewBox="0 0 900 270" role="img" aria-label="Xác suất của sáu loại lệnh trước và sau mặt nạ"></svg>
+    <div class="ctl" id="mbtns" role="group" aria-label="Chọn loại lệnh bị mask"></div>
+    <figcaption><b>Hình 7.</b> Minh họa, logit cố định. Bấm để mask một loại lệnh; phần còn lại chuẩn hóa lại. NOOP luôn hợp lệ nên không mask được.</figcaption>
+  </figure>
+  <div class="algo"><div class="ah"><b>Thuật toán 3.</b> Huấn luyện MaskablePPO [6]</div><ol>
+    <li><span class="k">lặp</span> đến 245.760 quyết định:</li>
+    <li class="i1"><span class="k">rollout</span> 4 môi trường × 256 bước, lưu (o, m, a, log π, r, V)</li>
+    <li class="i1">a lấy mẫu từ π<sub>θ</sub>(·|o) đã áp mặt nạ m</li>
+    <li class="i1">A ← mỗi lệnh tốt hơn hay kém hơn critic dự đoán bao nhiêu (GAE [4])</li>
+    <li class="i1"><span class="k">lặp 4 epoch</span>, batch 256:</li>
+    <li class="i2">ρ ← π<sub>θ</sub>(a|o, m) / π<sub>cũ</sub>(a|o, m)</li>
+    <li class="i2">tăng xác suất lệnh có A &gt; 0, giảm lệnh có A &lt; 0, nhưng ρ chỉ được đi trong [0,8; 1,2]  <span class="c">// clip [3]</span></li>
+    <li class="i2">θ ← Adam, lr 3·10<sup>−4</sup>, cắt chuẩn gradient 0,5</li>
+    <li class="i1">mỗi 12.288 quyết định: chạy 100 ngày validation, giữ checkpoint tốt nhất</li>
+  </ol></div>
+</section>
+
+<section id="s4" data-num="4" data-t="Kết quả">
+  <h2><span class="num">4</span>Kết quả</h2>
+  <ul class="t">
+    <li>Mọi phương pháp chạy trên cùng 200 ngày của mỗi bộ test; so chênh lệch chi phí theo từng ngày, CI 95% bằng bootstrap [7].</li>
+    <li>PPO là trung bình 3 lần huấn luyện (3 seed), mỗi lần giữ checkpoint tốt nhất trên 100 ngày validation.</li>
+    <li>Mọi CI của ba luật viết tay nằm xa 0 (Bảng 4).</li>
+    <li>Ngày thường và traffic: Threshold, Proportional còn tệ hơn Fixed.</li>
+    <li>Burst: luật viết tay chỉ thắng Fixed ở đây; Threshold gần PPO nhất (+1.334,7).</li>
+  </ul>
+  <div class="tw"><table>
+    <caption><b>Bảng 4.</b> Chênh lệch trung bình phương pháp − PPO, CI 95%. Dương: PPO tốt hơn.</caption>
+    <thead><tr><th>Phương pháp</th><th class="n">Ngày thường</th><th class="n">Burst</th><th class="n">Traffic</th></tr></thead>
+    <tbody>
+      <tr><td>Fixed</td><td class="n">+2.795,6 [2.759,6; 2.831,6]</td><td class="n">+8.550,2 [8.276,7; 8.819,3]</td><td class="n">+2.895,3 [2.850,0; 2.939,4]</td></tr>
+      <tr><td>Proportional</td><td class="n">+2.991,0 [2.871,1; 3.114,8]</td><td class="n">+2.783,6 [2.184,8; 3.403,5]</td><td class="n">+3.137,3 [3.014,4; 3.270,9]</td></tr>
+      <tr><td>Threshold</td><td class="n">+3.586,6 [3.450,7; 3.727,8]</td><td class="n">+1.334,7 [760,8; 1.927,0]</td><td class="n">+3.512,2 [3.385,1; 3.638,2]</td></tr>
+    </tbody>
+  </table></div>
+  <ul class="t">
+    <li>Ngày thường: chờ TB 5,6 phút (luật viết tay 7,1–7,4); P95 11,3 phút (14,7–15,5).</li>
+    <li>Burst: P95 của PPO (30,9) cao hơn Threshold (26,6) và Proportional (28,5) dù tổng chi phí thấp nhất; ≈ 1,8% khách bỏ về.</li>
+  </ul>
+  <div class="tw"><table>
+    <caption><b>Bảng 5.</b> Thời gian chờ TB / P95 (phút).</caption>
+    <thead><tr><th>Phương pháp</th><th class="n">Ngày thường</th><th class="n">Burst</th><th class="n">Traffic</th></tr></thead>
+    <tbody>
+      <tr><td>PPO</td><td class="n">5,57 / 11,28</td><td class="n">8,07 / 30,88</td><td class="n">5,70 / 11,79</td></tr>
+      <tr><td>Fixed</td><td class="n">7,42 / 14,88</td><td class="n">10,49 / 39,13</td><td class="n">7,57 / 15,20</td></tr>
+      <tr><td>Proportional</td><td class="n">7,07 / 14,73</td><td class="n">9,08 / 28,51</td><td class="n">7,18 / 15,04</td></tr>
+      <tr><td>Threshold</td><td class="n">7,27 / 15,46</td><td class="n">9,11 / 26,64</td><td class="n">7,34 / 15,82</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="s5" data-num="5" data-t="Hành vi">
+  <h2><span class="num">5</span>PPO học được gì</h2>
+  <p class="note">Phân tích sau. Trace dưới đây lấy từ một lần huấn luyện lại cùng cấu hình, kém bản PPO trong Bảng 4 ≈ 2,3%.</p>
+  <ul class="t">
+    <li>PPO: cả 3 xe dự phòng ra trong 3 bước đầu (<code>SHORT_TURN</code> phút 0, <code>DISPATCH</code> phút 2 và 4). Sau đó chỉ còn 46 <code>SET_HEADWAY</code> và 71 NOOP.</li>
+    <li>Giãn cách không hội tụ: tuyến A 6 ↔ 10 phút, tuyến C 10 ↔ 15 phút, chu kỳ ≈ 20 phút; đổi lại ngay khi hết cooldown 10 phút.</li>
+    <li>Threshold: thu một xe về ở phút 0 (hàng chờ còn nhỏ), đưa xe ra từ phút 20.</li>
+    <li>Proportional: tới phút 56–60 mới đưa cả 3 xe dự phòng vào tuyến C, khi khách dồn về tuyến này (52 khách chờ); tổng hàng chờ cao nhất 97, chưa chạm ngưỡng 120 nên ngân sách vẫn 9 xe. Phút 88 thu một xe về.</li>
+  </ul>
+  <figure>
+    <div class="panels" id="grid"></div>
+    <figcaption><b>Hình 8.</b> 120 lệnh của ngày đầu bộ ngày thường, đo thật. Mỗi ô một bước 2 phút, mỗi hàng 20 phút; ô tối là NOOP. Fixed: 120 ô NOOP (chi phí 15.444,6).</figcaption>
+  </figure>
+  <ul class="t">
+    <li>27 ngày chi phí cao nhất của PPO (3 ngày × 3 seed × 3 bộ test): chia đều ba kiểu, mỗi kiểu 9 ngày: 3 <code>DISPATCH</code>; 2 <code>DISPATCH</code> + 1 <code>SHORT_TURN</code>; 2 <code>DISPATCH</code> + 1 <code>SHORT_TURN</code> + 1 <code>REASSIGN</code>. Ngày nào cũng đúng 3 <code>SET_HEADWAY</code>, còn lại NOOP.</li>
+    <li>Không còn trace của bản PPO gốc để kiểm thời điểm từng lệnh.</li>
+  </ul>
+</section>
+
+<section id="s6" data-num="6" data-t="Kết luận">
+  <h2><span class="num">6</span>Hạn chế và kết luận</h2>
+  <h3>Hạn chế</h3>
+  <ul class="t">
+    <li>Mô phỏng: cầu tổng hợp, mạng 3 tuyến cố định, cảm biến hoàn hảo, khách không đổi tuyến.</li>
+    <li>Kẹt xe chỉ từ hệ số ngẫu nhiên, không do chính các xe gây ra.</li>
+    <li>Chặng 3 phút và đường depot 6 phút cố định mọi ngày; thiết kế cho phép đổi theo ngày. <code>REASSIGN</code> cũng tính 6 phút, không theo đường ngắn nhất.</li>
+    <li>Tham số Threshold và Proportional đặt tay, chưa tinh chỉnh trên validation như thiết kế yêu cầu.</li>
+    <li>Nhạy với lần huấn luyện: một lần huấn luyện lại cùng cấu hình kém 2,3%.</li>
+  </ul>
+  <h3>Kết luận</h3>
+  <ul class="t">
+    <li>PPO tốt hơn ba luật phản ứng ở cả ba bộ test; CI 95% đều &gt; 0.</li>
+    <li>Đưa xe dự phòng ra sớm thắng chờ hàng dài mới phản ứng.</li>
+  </ul>
+</section>
+
+<section id="refs" data-t="Tài liệu tham khảo">
+  <h2>Tài liệu tham khảo</h2>
+  <ol class="refs">
+    <li id="ref-1">L. P. Kaelbling, M. L. Littman, A. R. Cassandra. <em>Planning and acting in partially observable stochastic domains</em>. Artificial Intelligence 101(1–2): 99–134, 1998.</li>
+    <li id="ref-2">R. S. Sutton, A. G. Barto. <em>Reinforcement Learning: An Introduction</em>, 2nd ed. MIT Press, 2018.</li>
+    <li id="ref-3">J. Schulman, F. Wolski, P. Dhariwal, A. Radford, O. Klimov. <em>Proximal Policy Optimization Algorithms</em>. arXiv:1707.06347, 2017.</li>
+    <li id="ref-4">J. Schulman, P. Moritz, S. Levine, M. Jordan, P. Abbeel. <em>High-Dimensional Continuous Control Using Generalized Advantage Estimation</em>. ICLR 2016, arXiv:1506.02438.</li>
+    <li id="ref-5">S. Huang, S. Ontañón. <em>A Closer Look at Invalid Action Masking in Policy Gradient Algorithms</em>. FLAIRS-35, 2022, arXiv:2006.14171.</li>
+    <li id="ref-6">A. Raffin, A. Hill, A. Gleave, A. Kanervisto, M. Ernestus, N. Dormann. <em>Stable-Baselines3: Reliable Reinforcement Learning Implementations</em>. JMLR 22(268): 1–8, 2021.</li>
+    <li id="ref-7">B. Efron, R. J. Tibshirani. <em>An Introduction to the Bootstrap</em>. Chapman &amp; Hall, 1993.</li>
+  </ol>
+</section>
+</article>
+
+<script>
+const $ = (s, r = document) => r.querySelector(s);
+const NS = "http://www.w3.org/2000/svg";
+const PAINT = new Set(["fill", "stroke"]);
+const el = (tag, attrs = {}, parent) => {
+  const n = document.createElementNS(NS, tag);
+  for (const k in attrs) PAINT.has(k) ? (n.style[k] = attrs[k]) : n.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(n);
+  return n;
+};
+const C = { blue: "var(--blue)", yellow: "var(--yellow)", red: "var(--red)", green: "var(--green)", grey: "var(--grey)", purple: "var(--purple)", dim: "var(--dim)", rule: "var(--rule)", ink: "var(--ink)", bg: "var(--bg)" };
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const axis = (svg, x0, y0, x1, y1) => el("line", { x1: x0, y1: y0, x2: x1, y2: y1, stroke: C.dim }, svg);
+const note = (svg, x, y, s, anchor = "start", size = 17) => { const t = el("text", { x, y, "text-anchor": anchor, "font-size": size, class: "d" }, svg); t.textContent = s; return t; };
+const fmt = (v, d = 1) => v.toLocaleString("vi-VN", { minimumFractionDigits: d, maximumFractionDigits: d });
+const segmented = (box, keys, current, onPick) => keys.forEach(k => {
+  const b = document.createElement("button"); b.className = "t"; b.textContent = k; b.setAttribute("aria-pressed", k === current);
+  b.onclick = () => { [...box.children].forEach(c => c.setAttribute("aria-pressed", c === b)); onPick(k); };
+  box.appendChild(b);
+});
+
+/* Mean cost per day on the three test splits (200 days each); PPO is L3, the mean of three seeds. */
+const SPLITS = ["Ngày thường", "Burst", "Traffic"];
+const COST = [
+  ["PPO", "ppo", [13065.7, 25197.2, 13412.4]],
+  ["Fixed", "", [15861.3, 33747.4, 16307.8]],
+  ["Proportional", "", [16056.6, 27980.7, 16549.8]],
+  ["Threshold", "", [16652.3, 26531.9, 16924.6]]
+];
+/* Action colours shared by the mask figure and the per-day action grid. */
+const ACT = { N: ["NOOP", C.rule], D: ["DISPATCH", C.purple], S: ["SHORT_TURN", C.yellow], H: ["SET_HEADWAY", C.blue], R: ["REASSIGN", C.green], C: ["RECALL", C.red] };
+
+/* theme toggle, persisted per viewer */
+(() => {
+  const root = document.documentElement, btn = $("#theme");
+  let saved = null; try { saved = localStorage.getItem("theme"); } catch (e) {}
+  const set = t => { root.dataset.theme = t; btn.textContent = t === "dark" ? "Giao diện sáng" : "Giao diện tối"; try { localStorage.setItem("theme", t); } catch (e) {} };
+  set(saved || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"));
+  btn.addEventListener("click", () => set(root.dataset.theme === "dark" ? "light" : "dark"));
+})();
+
+/* reading progress */
+const bar = $("#bar"); let tick = false;
+addEventListener("scroll", () => {
+  if (tick) return; tick = true;
+  requestAnimationFrame(() => { const h = document.documentElement; bar.style.transform = `scaleX(${h.scrollTop / (h.scrollHeight - h.clientHeight || 1)})`; tick = false; });
+}, { passive: true });
+
+addEventListener("load", linkRefs);
+
+/* videos play only while visible */
+(() => {
+  if (reduce) return;
+  document.querySelectorAll("video.auto").forEach(v => new IntersectionObserver(([e]) => { e.isIntersecting ? v.play().catch(() => {}) : v.pause(); }, { threshold: 0.4 }).observe(v));
+})();
+
+/* summary table: one bar per split, scaled to the largest cost in that split */
+(() => {
+  const body = $("#cmp");
+  const max = SPLITS.map((_, i) => Math.max(...COST.map(([, , v]) => v[i])));
+  COST.forEach(([name, cls, v]) => {
+    const tr = document.createElement("tr"); tr.className = cls;
+    const th = document.createElement("td"); th.textContent = name; if (cls === "ppo") th.style.fontWeight = 700; tr.appendChild(th);
+    v.forEach((x, i) => {
+      const td = document.createElement("td");
+      const pct = cls === "ppo" ? "mốc" : "+" + fmt((x / COST[0][2][i] - 1) * 100) + "%";
+      td.innerHTML = `<div class="v"><span>${fmt(x)}</span><span class="pct">${pct}</span></div><div class="bar" style="width:${(x / max[i] * 100).toFixed(1)}%"></div>`;
+      tr.appendChild(td);
+    });
+    body.appendChild(tr);
+  });
+})();
+
+/* Fig 1: network schematic */
+(() => {
+  const svg = $("#net"), X0 = 250, X1 = 850, HALF = 22, stopX = i => 280 + i * 108;
+  const routes = [["A", 95, 180], ["B", 225, 160], ["C", 355, 140]];
+  const text = (x, y, s, opts = {}) => { const t = el("text", { x, y, "font-size": opts.size || 16, "text-anchor": opts.anchor || "start", class: opts.dim ? "d" : "" }, svg); if (opts.fill) t.style.fill = opts.fill; t.textContent = s; return t; };
+  const bus = (x, y, fill) => el("rect", { x: x - 14, y: y - 8, width: 28, height: 16, rx: 3, fill }, svg);
+  text(30, 26, "F = 12 xe: 9 chạy tuyến (3 mỗi tuyến) + 3 dự phòng ở depot", { dim: true, size: 15 });
+  // depot and its links to the first stop of each route
+  routes.forEach(([, y]) => el("path", { d: `M170 225 C210 225 210 ${y - HALF} ${X0} ${y - HALF}`, fill: "none", stroke: C.purple, "stroke-width": 2, "stroke-dasharray": "5 5" }, svg));
+  el("rect", { x: 30, y: 165, width: 140, height: 120, rx: 6, fill: C.purple, "fill-opacity": .12, stroke: C.purple, "stroke-width": 2 }, svg);
+  text(100, 190, "Depot", { anchor: "middle", fill: C.purple });
+  [212, 236, 260].forEach(y => bus(100, y, C.purple));
+  text(100, 306, "3 xe dự phòng", { anchor: "middle", size: 15, dim: true });
+  text(100, 326, "ra tuyến: ≈ 6 phút", { anchor: "middle", size: 15, dim: true });
+  routes.forEach(([name, y, base]) => {
+    el("path", { d: `M${X0} ${y - HALF} H${X1} A${HALF} ${HALF} 0 0 1 ${X1} ${y + HALF} H${X0} A${HALF} ${HALF} 0 0 1 ${X0} ${y - HALF} Z`, fill: "none", stroke: C.grey, "stroke-width": 3 }, svg);
+    text(X0, y - HALF - 14, `Tuyến ${name} · lượng khách cơ bản ${base} khách/giờ`, { size: 15 });
+    for (let i = 0; i < 6; i++) [y - HALF, y + HALF].forEach(yy => el("circle", { cx: stopX(i), cy: yy, r: 6, fill: C.bg, stroke: C.ink, "stroke-width": 1.5 }, svg));
+    // direction chevrons sit between stops: outbound on the upper lane, inbound on the lower
+    el("path", { d: `M${stopX(4.5) - 5} ${y - HALF - 6} l10 6 l-10 6`, fill: "none", stroke: C.dim, "stroke-width": 1.5 }, svg);
+    el("path", { d: `M${stopX(0.5) + 5} ${y + HALF - 6} l-10 6 l10 6`, fill: "none", stroke: C.dim, "stroke-width": 1.5 }, svg);
+  });
+  for (let i = 0; i < 6; i++) text(stopX(i), 95 + HALF + 20, "s" + i, { anchor: "middle", size: 13, dim: true });
+  // three buses per route, spread around the loop
+  [[95, [[390, -1], [740, -1], [560, 1]]], [225, [[330, -1], [680, 1], [440, 1]]], [355, [[610, -1], [340, 1], [770, 1]]]].forEach(([y, list]) =>
+    list.forEach(([x, side]) => bus(x, y + side * HALF, C.blue)));
+  // a queue at route A, outbound stop s3
+  const qx = stopX(3), qy = 95 - HALF;
+  for (let i = 0; i < 12; i++) el("circle", { cx: qx - 25 + (i % 6) * 10, cy: qy - 14 - Math.floor(i / 6) * 10, r: 4, fill: C.yellow }, svg);
+  text(qx, qy - 40, "ví dụ: 12 khách đang chờ ở s3", { anchor: "middle", size: 14, fill: C.yellow });
+  // one leg and one bus annotated
+  const lx = (stopX(4) + stopX(5)) / 2;
+  el("path", { d: `M${stopX(4)} 190 v-6 H${stopX(5)} v6`, fill: "none", stroke: C.dim }, svg);
+  text(lx, 178, "1 chặng ≈ 3 phút", { anchor: "middle", size: 14, dim: true });
+  text(770, 355 + HALF + 32, "xe buýt: tối đa 40 khách", { anchor: "middle", size: 14, fill: C.blue });
+})();
+
+/* Fig 2: agent-environment loop */
+(() => {
+  const svg = $("#loop");
+  const box = (x, y, w, h, title, sub) => {
+    el("rect", { x, y, width: w, height: h, fill: "none", stroke: C.rule, "stroke-width": 2 }, svg);
+    const t = el("text", { x: x + w / 2, y: y + 30, "text-anchor": "middle", "font-size": 20 }, svg); t.textContent = title;
+    const u = el("text", { x: x + w / 2, y: y + 56, "text-anchor": "middle", "font-size": 16, class: "d" }, svg); u.textContent = sub;
+  };
+  box(30, 30, 300, 230, "Môi trường", "trạng thái thật s_k");
+  box(570, 70, 300, 150, "Tác tử", "π_θ(a | o, m)");
+  const hidden = el("g", { style: "opacity:0;transition:opacity .4s" }, svg);
+  el("rect", { x: 50, y: 150, width: 260, height: 90, fill: "none", stroke: C.purple, "stroke-dasharray": "6 5", "stroke-width": 2 }, hidden);
+  [["bị che: điểm đến của khách", 182], ["bị che: nhu cầu tương lai", 210]].forEach(([t, y]) => { const e = el("text", { x: 180, y, "text-anchor": "middle", "font-size": 16, fill: C.purple }, hidden); e.textContent = t; });
+  const arrows = [[100, "o_k  quan sát", 1], [140, "m_k  mặt nạ 221 ô", 1], [200, "a_k  lệnh", -1], [240, "r_k = −c_k / 3000", -1]].map(([y, label, dir]) => {
+    const g = el("g", { style: "transition:opacity .3s" }, svg);
+    const x1 = dir > 0 ? 340 : 560, x2 = dir > 0 ? 560 : 340;
+    const line = el("line", { x1, x2, y1: y, y2: y, stroke: C.blue, "stroke-width": 3 }, g);
+    el("path", { d: `M${x2} ${y} l${-dir * 12} -7 l0 14 Z`, fill: C.blue }, g);
+    const t = el("text", { x: 450, y: y - 9, "text-anchor": "middle", "font-size": 16 }, g); t.textContent = label;
+    return { g, line };
+  });
+  const msgs = ["Môi trường chỉ đưa ra những gì cảm biến thấy: hàng chờ, tuổi chờ, xe, giãn cách.", "Mặt nạ đánh dấu ô vi phạm: cooldown, tối thiểu 2 xe mỗi tuyến, xe đang chở khách.", "Tác tử lấy mẫu một lệnh trong các ô còn hợp lệ.", "Môi trường chạy 2 phút, tính chi phí; reward là âm của chi phí chia 3000."];
+  let step = -1;
+  const show = () => {
+    arrows.forEach((a, i) => { a.g.style.opacity = step < 0 || i === step ? 1 : .25; a.line.style.stroke = i === step ? "var(--yellow)" : "var(--blue)"; });
+    $("#loopmsg").textContent = step < 0 ? "" : `${step + 1}/4: ${msgs[step]}`;
+  };
+  $("#loopnext").onclick = () => { step = (step + 1) % 4; show(); };
+  $("#loophid").onclick = e => { const on = e.currentTarget.getAttribute("aria-pressed") !== "true"; e.currentTarget.setAttribute("aria-pressed", on); hidden.style.opacity = on ? 1 : 0; };
+  show();
+})();
+
+/* Fig 3 */
+(() => {
+  const svg = $("#demand"), W = 900, L = 50, B = 205;
+  const lam = (t, p) => (t < 180 ? 180 * (1 + Math.exp(-((t - p) ** 2) / (2 * 20 ** 2))) : 0);
+  const X = t => L + (W - L - 10) * t / 240, Y = v => B - v * 0.45;
+  axis(svg, L, B, W - 10, B); axis(svg, L, 20, L, B);
+  [0, 60, 120, 180, 240].forEach(t => note(svg, X(t), B + 22, t, "middle"));
+  note(svg, W - 10, B + 42, "t (phút)", "end"); note(svg, L + 8, 28, "khách/giờ, tuyến A");
+  const fill = el("path", { fill: C.yellow, "fill-opacity": .18 }, svg);
+  const line = el("path", { fill: "none", stroke: C.yellow, "stroke-width": 3 }, svg);
+  el("line", { x1: X(180), x2: X(180), y1: 20, y2: B, stroke: C.red, "stroke-dasharray": "4 5" }, svg);
+  note(svg, X(180) + 6, 32, "t = 180: hết khách mới");
+  const slider = $("#peak"), out = $("#peakv");
+  const render = () => {
+    const p = +slider.value; out.textContent = "phút " + p;
+    let d = ""; for (let t = 0; t <= 240; t += 2) d += (t ? "L" : "M") + X(t) + " " + Y(lam(t, p)) + " ";
+    line.setAttribute("d", d); fill.setAttribute("d", d + `L${X(240)} ${B} L${X(0)} ${B}Z`);
+  };
+  slider.addEventListener("input", render); render();
+})();
+
+/* Fig 4: measured action mask, laid out by action family, bus and route.
+   Slot order follows bus_sim/oracle/actions.py: NOOP, DISPATCH, REASSIGN, SHORT_TURN (bus*4 + route), RECALL (bus), SET_HEADWAY (route*3 + headway). */
+(() => {
+  const BITS = {
+    "Phút 0": "10000000000000000000000000000000000001110111011100000000000000000011001100000101010100000110011000000000000000000000000000000000010001000000001000100000000100010000011101110111000000000000000001101101100000000110110110000",
+    "Phút 60": "10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000101101000"
+  };
+  const svg = $("#mask"), S = 14, G = 2;
+  const blocks = [
+    ["D", "DISPATCH (xe × tuyến)", 1, 16, 4, 20, 30], ["R", "REASSIGN (xe × tuyến)", 65, 16, 4, 320, 30], ["S", "SHORT_TURN (xe × tuyến)", 129, 16, 4, 620, 30],
+    ["N", "NOOP", 0, 1, 1, 20, 170], ["C", "RECALL (xe)", 193, 16, 1, 320, 170], ["H", "SET_HEADWAY (tuyến × 6/10/15 phút)", 209, 3, 4, 620, 170]
+  ];
+  const cells = [];
+  blocks.forEach(([k, title, start, cols, rows, x, y]) => {
+    note(svg, x, y - 10, title, "start", 15);
+    for (let i = 0; i < cols * rows; i++) {
+      // bus-indexed families run bus-major (bus*4 + route): column = bus, row = route
+      const col = k === "H" ? i % 3 : Math.floor(i / rows), row = k === "H" ? Math.floor(i / 3) : i % rows;
+      const r = el("rect", { x: x + col * (S + G), y: y + row * (S + G), width: S, height: S, "stroke-width": 1 }, svg);
+      cells.push([r, start + i, k === "N" ? C.dim : ACT[k][1]]);
+    }
+  });
+  ["A", "B", "C", "–"].forEach((n, i) => note(svg, 8, 30 + i * (S + G) + 11, n, "middle", 11));
+  const count = note(svg, 20, 280, "", "start", 16);
+  const show = key => {
+    const bits = BITS[key];
+    cells.forEach(([r, i, col]) => { const on = bits[i] === "1"; r.style.fill = on ? col : "none"; r.style.stroke = on ? col : "var(--rule)"; });
+    count.textContent = `${key}: ${[...bits].filter(b => b === "1").length} / 221 ô hợp lệ`;
+  };
+  segmented($("#maskt"), Object.keys(BITS), "Phút 0", show);
+  show("Phút 0");
+})();
+
+/* Fig 5 */
+(() => {
+  const svg = $("#area"), L = 40, B = 195, W = 900;
+  const X = t => L + (W - L - 10) * t, Y = v => B - v * 160;
+  axis(svg, L, B, W - 10, B); axis(svg, L, 20, L, B);
+  note(svg, L + 8, 28, "khách đang chờ"); note(svg, W - 10, B + 26, "thời gian", "end");
+  const area = el("path", { fill: C.yellow, "fill-opacity": .22 }, svg);
+  const line = el("path", { fill: "none", stroke: C.yellow, "stroke-width": 3 }, svg);
+  const f = {
+    reactive: t => .15 + .85 * Math.exp(-((t - .52) ** 2) / .02) + (t > .52 ? .1 * Math.exp(-(t - .52) * 4) : 0),
+    proactive: t => .15 + .42 * Math.exp(-((t - .5) ** 2) / .02)
+  };
+  const set = k => {
+    let d = ""; for (let i = 0; i <= 120; i++) { const t = i / 120; d += (i ? "L" : "M") + X(t) + " " + Y(f[k](t)) + " "; }
+    line.setAttribute("d", d); area.setAttribute("d", d + `L${X(1)} ${B} L${X(0)} ${B}Z`);
+    $("#reactive").setAttribute("aria-pressed", k === "reactive"); $("#proactive").setAttribute("aria-pressed", k === "proactive");
+  };
+  $("#reactive").onclick = () => set("reactive"); $("#proactive").onclick = () => set("proactive"); set("reactive");
+})();
+
+/* Fig 7: masked softmax demo */
+(() => {
+  const svg = $("#mdemo"), acts = [["NOOP", 0.4], ["DISPATCH", 2.0], ["SET_HEADWAY", 1.5], ["REASSIGN", 1.1], ["RECALL", -0.5], ["SHORT_TURN", 1.7]];
+  const masked = new Set(), L = 180, R = 800, rowH = 40;
+  const btns = $("#mbtns");
+  // NOOP is never masked in the environment, so at least one action always stays legal.
+  acts.forEach(([n], i) => { if (!i) return; const b = document.createElement("button"); b.className = "t"; b.textContent = n; b.setAttribute("aria-pressed", "false"); b.onclick = () => { masked.has(i) ? masked.delete(i) : masked.add(i); b.setAttribute("aria-pressed", masked.has(i)); draw(); }; btns.appendChild(b); });
+  const draw = () => {
+    svg.replaceChildren();
+    const e = acts.map(([, z]) => Math.exp(z)), full = e.reduce((a, b) => a + b), live = e.reduce((a, v, i) => a + (masked.has(i) ? 0 : v), 0) || 1;
+    acts.forEach(([n], i) => {
+      const y = 10 + i * rowH, p0 = e[i] / full, p1 = masked.has(i) ? 0 : e[i] / live;
+      const lab = el("text", { x: L - 12, y: y + 18, "text-anchor": "end", "font-size": 17 }, svg); lab.textContent = n;
+      el("rect", { x: L, y, width: (R - L) * p0, height: 12, fill: C.grey }, svg);
+      el("rect", { x: L, y: y + 14, width: Math.max((R - L) * p1, 0), height: 12, fill: C.green }, svg);
+      const t = el("text", { x: L + (R - L) * Math.max(p0, p1) + 10, y: y + 22, "font-size": 15, class: "d" }, svg);
+      t.textContent = masked.has(i) ? "bị mask: 0%" : (p0 * 100).toFixed(0) + "% → " + (p1 * 100).toFixed(0) + "%";
+      if (masked.has(i)) el("line", { x1: L, x2: R, y1: y + 20, y2: y + 20, stroke: C.red, "stroke-dasharray": "5 5" }, svg);
+    });
+  };
+  draw();
+})();
+
+/* Fig 8: every decision of one day (test_id, first day), one letter per 2-minute step; letters as in ACT. */
+(() => {
+  const DAY = [
+    ["PPO (huấn luyện lại)", 13313.3, "SDDHHHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNNHHNNNHHNNNHHNNNHNNNNN"],
+    ["Threshold", 16067.9, "CNNNNNNNNNDDDNNNNNNNNNDNNHNNNNNNHNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNCNNNNNNNCNNNNNNNNNNNNNNNNN"],
+    ["Proportional", 15752.4, "NNNNNNNNNNNNNNNNNNNNNNNNNNNNDDDHNNNNHNNNNNNNCNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN"]
+  ];
+  const box = $("#grid"), S = 22, G = 3, L = 52;
+  DAY.forEach(([name, cost, seq]) => {
+    const panel = document.createElement("div");
+    panel.innerHTML = `<h4>${name} <small>· chi phí ${fmt(cost)}</small></h4>`;
+    const svg = el("svg", { viewBox: `0 0 ${L + 10 * (S + G)} ${12 * (S + G) + 4}`, role: "img", "aria-label": `${name}: 120 lệnh trong ngày` }, panel);
+    for (let row = 0; row < 12; row++) {
+      note(svg, L - 8, row * (S + G) + S - 5, row * 20 + "′", "end", 13);
+      for (let col = 0; col < 10; col++) {
+        const k = seq[row * 10 + col];
+        const r = el("rect", { x: L + col * (S + G), y: row * (S + G), width: S, height: S, fill: ACT[k][1] }, svg);
+        if (k === "N") r.style.fillOpacity = .6;
+        el("title", {}, r).textContent = `phút ${(row * 10 + col) * 2}: ${ACT[k][0]}`;
+      }
+    }
+    box.appendChild(panel);
+  });
+})();
+
+/* figure legends: [colour, glyph, text] per figure element */
+(() => {
+  const acts = ["D", "S", "H", "R", "C", "N"].map(k => [ACT[k][1], "bar", ACT[k][0]]);
+  const legends = {
+    net: [[C.blue, "bar", "xe buýt"], [C.purple, "bar", "depot và xe dự phòng"], [C.yellow, "dot", "khách chờ"], [C.ink, "dot", "trạm"], [C.purple, "dash", "đường ra tuyến"]],
+    loop: [[C.blue, "line", "dữ liệu tác tử nhận"], [C.purple, "dash", "phần bị che"], [C.yellow, "line", "bước đang xem"]],
+    mask: acts.slice(0, 5),
+    mdemo: [[C.grey, "bar", "xác suất trước mask"], [C.green, "bar", "sau mask"], [C.red, "dash", "bị mask"]],
+    demand: [[C.yellow, "line", "cường độ khách đến"], [C.red, "dash", "t = 180, hết khách mới"]],
+    area: [[C.yellow, "line", "số khách đang chờ"], [C.yellow, "box", "diện tích = W (passenger-phút chờ)"]],
+    grid: acts
+  };
+  for (const [id, items] of Object.entries(legends)) {
+    const box = document.createElement("div"); box.className = "leg"; box.setAttribute("aria-label", "Chú thích");
+    items.forEach(([c, g, t]) => { const sp = document.createElement("span"); const k = document.createElement("i"); k.className = g; k.style.color = c; k.style.borderColor = c; if (g === "dot" || g === "box" || g === "bar") k.style.background = c; sp.append(k, t); box.appendChild(sp); });
+    document.getElementById(id).closest("figure").querySelector("figcaption").before(box);
+  }
+})();
+
+/* Cross-references: [n], §n, Hình n, Bảng n, Thuật toán n and Phụ lục X in running text link to their target.
+   Runs after KaTeX so math text is never split. */
+function linkRefs() {
+  [["figcaption > b", /^Hình (\d+)/, "figure", "fig-"], ["caption > b", /^Bảng (\d+)/, ".tw", "tab-"], [".ah > b", /^Thuật toán (\d+)/, ".algo", "alg-"]]
+    .forEach(([sel, re, box, prefix]) => document.querySelectorAll(sel).forEach(b => { const m = b.textContent.match(re); if (m) b.closest(box).id = prefix + m[1]; }));
+  const target = { "§": n => "s" + n, Hình: n => "fig-" + n, Bảng: n => "tab-" + n, "Thuật toán": n => "alg-" + n, "Phụ lục": () => "notation" };
+  const link = (href, text) => { const a = document.createElement("a"); a.href = "#" + href; a.textContent = text; return a; };
+  const re = /\[([1-7](?:,\s*[1-7])*)\]|(§)(\d)|(Hình|Bảng|Thuật toán|Phụ lục) (\d+|A)\b/g;
+  const walker = document.createTreeWalker($("article"), NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  while (walker.nextNode()) {
+    const n = walker.currentNode;
+    if (re.test(n.data) && !n.parentElement.closest("figcaption > b, caption > b, .ah > b, h2, .katex, code, a, svg, button, .refs")) nodes.push(n);
+    re.lastIndex = 0;
+  }
+  nodes.forEach(n => {
+    const out = document.createDocumentFragment(); let last = 0;
+    for (const m of n.data.matchAll(re)) {
+      out.append(n.data.slice(last, m.index));
+      if (m[1]) {
+        out.append("[");
+        m[1].split(/,\s*/).forEach((k, i) => { if (i) out.append(", "); out.append(link("ref-" + k, k)); });
+        out.append("]");
+      } else if (m[2]) out.append(link(target["§"](m[3]), m[0]));
+      else out.append(link(target[m[4]](m[5]), m[0]));
+      last = m.index + m[0].length;
+    }
+    out.append(n.data.slice(last));
+    n.replaceWith(out);
+  });
+}
+
+/* section nav: the same number as the section heading */
+(() => {
+  const nav = $("#toc"), secs = [...document.querySelectorAll("section[data-t]")];
+  const links = secs.map(sec => { const a = document.createElement("a"); a.href = "#" + sec.id; a.innerHTML = `${sec.dataset.num || "·"}<span>${sec.dataset.t}</span>`; nav.appendChild(a); return a; });
+  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) links.forEach((l, i) => l.classList.toggle("on", secs[i] === e.target)); }), { rootMargin: "-20% 0px -65% 0px" });
+  secs.forEach(sec => io.observe(sec));
+})();
+
+/* The dashboard opens over the article in a frame that stays loaded, so switching
+   back and forth keeps both the reading position and the running simulation. */
+(() => {
+  const frame = $("#dash");
+  const show = () => {
+    const on = location.hash === "#dashboard";
+    if (on && !frame.src) frame.src = "../visualize/";
+    frame.hidden = !on;
+    document.documentElement.classList.toggle("dash", on);
+  };
+  addEventListener("hashchange", show);
+  // The dashboard's "Bài viết" pill asks for the article back instead of reloading it.
+  addEventListener("message", e => {
+    if (e.origin !== location.origin || e.data !== "intro") return;
+    history.pushState(null, "", location.pathname);
+    show();
+  });
+  show();
+})();
+</script>
+</body>
+</html>

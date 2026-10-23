@@ -14,3 +14,7 @@ runs/**/*.log
 target/
 src/bus_sim_native.so
 crates/**/target/
+.env
+
+# Manim explainer video sources and renders; kept local only.
+bus-rl-explainer/

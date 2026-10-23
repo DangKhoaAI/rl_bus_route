@@ -1,0 +1,13 @@
+# Allowlist: the image needs only the kernel sources, the station packages,
+# configs and the dashboard page.
+*
+!Cargo.toml
+!Cargo.lock
+!crates
+!configs
+!src/bus_rl
+!src/bus_sim
+!web/station
+!web/intro
+crates/**/target
+**/__pycache__
