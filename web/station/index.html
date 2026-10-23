@@ -269,6 +269,7 @@ button:active { transform: scale(.98); }
 .log-set_headway { --tint: #4a8fd8; }
 .log-burst { --tint: #d64545; }
 .log-end { --tint: #555b66; }
+.log-noop { --tint: #c4c8cf; }
 .log-why { margin-top: .375rem; font-size: .75rem; line-height: 1.35; color: var(--muted); white-space: normal; }
 .why-state { display: flex; flex-wrap: wrap; gap: .25rem .75rem; }
 .why-route { display: inline-flex; align-items: center; gap: .3rem; }
@@ -1288,7 +1289,7 @@ function renderList() {
   if (!hasData) { patch($('#tabpanel'), '<span class="muted">Chưa có dữ liệu từ station API.</span>'); return; }
   let html;
   if (tab === 'buses') html = BUSES.map(busRow).join('');
-  else html = SIM.log.length ? SIM.log.map((l, i) => `<div class="row log-${l.code.split('(')[0].toLowerCase()}" style="cursor:default"><span class="muted num log-time">${stamp(l.t)}</span><span class="grow"><span class="log-code">${esc(l.code)}</span><span class="sub" style="white-space:normal">${esc(l.text)}</span>${l.why ? `<div class="log-why">${l.why}</div>` : ''}</span></div>`).join('') : `<span class="muted">Chưa có quyết định nào ngoài NOOP.</span>`;
+  else html = SIM.log.length ? SIM.log.map((l, i) => `<div class="row log-${l.code.split('(')[0].toLowerCase()}" style="cursor:default"><span class="muted num log-time">${stamp(l.t)}</span><span class="grow"><span class="log-code">${esc(l.code)}</span><span class="sub" style="white-space:normal">${esc(l.text)}</span>${l.why ? `<div class="log-why">${l.why}</div>` : ''}</span></div>`).join('') : `<span class="muted">Chưa có quyết định nào.</span>`;
   const panel = $('#tabpanel');
   patch(panel, html);
   if (tab === 'log' && logFollow) panel.scrollTop = panel.scrollHeight;
@@ -1703,10 +1704,9 @@ function applySnapshot(snap, decisions) {
     if (SIM.history.length > 200) SIM.history.shift();
   }
   decisions.forEach((d) => {
-    if (d.kind === 'NOOP') return;
     const [code, text, kind] = describeAction(d);
     logDecision(code, text, kind, d.time_s, explain(d.context));
-    if (d.kind !== 'SET_HEADWAY') showToast(d.kind, text);
+    if (d.kind !== 'SET_HEADWAY' && d.kind !== 'NOOP') showToast(d.kind, text);
   });
   if (snap.burst) noteBurst(snap.burst);
   $('#note').hidden = true;
@@ -1824,9 +1824,11 @@ function explain(context) {
   const state = `<div class="why-state">${routes.join('')}<span class="why-route">Bãi còn ${context.reserve} xe</span></div>`;
   const choices = context.top_choices.map((c) => {
     const p = Math.round(c.probability * 100);
-    const text = c.kind === 'NOOP' ? 'Không làm gì' : describeAction(c)[1];
+    const text = describeAction(c)[1];
     return `<li><span class="why-p"><i style="width:${p}%"></i></span><b>${p}%</b>${esc(text)}</li>`;
   });
+  // With one legal action the 100% is forced by the mask, not a choice the policy made.
+  if (context.legal_actions === 1) return state + '<div class="why-state">Không có lệnh nào khác được phép lúc này</div>';
   return state + (choices.length ? `<ol class="why-pick">${choices.join('')}</ol>` : '');
 }
 
@@ -1837,6 +1839,7 @@ function describeAction(d) {
     const h = d.headway_s / 60;
     return [`SET_HEADWAY(${d.route_id},${h})`, `${route(d.route_id)} xuất bến mỗi ${h} phút`, h < Math.max(...PHYS.headways) ? 'warn' : 'ok'];
   }
+  if (d.kind === 'NOOP') return ['NOOP', 'Giữ nguyên kế hoạch, không ra lệnh mới', 'mute'];
   if (d.kind === 'RECALL') return [`RECALL(${d.bus_id})`, `Gọi ${bus(d.bus_id)} về bãi`, 'mute'];
   const text = { DISPATCH: `Đưa ${bus(d.bus_id)} từ bãi vào ${route(d.route_id)}`, REASSIGN: `Chuyển ${bus(d.bus_id)} sang ${route(d.route_id)}`, SHORT_TURN: `${bus(d.bus_id)} quay đầu sớm trên ${route(d.route_id)}` }[d.kind];
   return [`${d.kind}(${d.bus_id},${d.route_id})`, text, 'info'];

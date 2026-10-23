@@ -235,10 +235,9 @@ def _commands(client, controller):
 
 def test_commands_carry_the_state_they_were_decided_from(client):
     decisions = _commands(client, "threshold")
-    commands = [d for d in decisions if d["kind"] != "NOOP"]
-    assert commands
-    assert all(d["context"] is None for d in decisions if d["kind"] == "NOOP")
-    for command in commands:
+    assert any(d["kind"] != "NOOP" for d in decisions)
+    # NOOP is explained too: holding the plan is a decision like any command.
+    for command in decisions:
         context = command["context"]
         assert [route["route_id"] for route in context["routes"]] == [0, 1, 2]
         # Recalls can park more than the three planned reserves.

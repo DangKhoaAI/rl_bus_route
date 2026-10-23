@@ -314,9 +314,8 @@ class SimulationService:
             time_s = int(env.kernel.current_time_s)
             mask = env.action_masks()
             action = simulation.controller.act(simulation.observation, mask)
-            context = None
-            if ACTION_TABLE[action].kind != "NOOP":
-                context = self._context(simulation, mask)
+            # NOOP is a decision too: holding the plan is explained like any command.
+            context = self._context(simulation, mask)
             simulation.observation, _, terminated, truncated, info = env.step(action)
             costs = info["costs"]
             records.append(
@@ -341,7 +340,7 @@ class SimulationService:
         return records
 
     def _context(self, simulation: Simulation, mask) -> DecisionContext:
-        """The state a command was decided from; call before the env steps."""
+        """The state a decision was made from; call before the env steps."""
         snapshot = self._snapshot(simulation)
         top_choices = []
         probabilities = getattr(simulation.controller, "action_probabilities", None)

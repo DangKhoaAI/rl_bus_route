@@ -211,7 +211,6 @@ class Decision(BaseModel):
     # Cost of the control interval this decision opened, so a caller that advances
     # several intervals can still total the episode.
     cost: float
-    # Null for NOOP: only commands are explained, and NOOP is most of the day.
     context: DecisionContext | None = None
 
 
