@@ -34,7 +34,7 @@ tests/
 └── integration/         # Cross-module tests, mirroring `src/bus_rl` (Python env,
                          # Rust FFI gate, RL) plus the CLI pipeline
 configs/                 # Run and experiment configurations
-scripts/                 # Build, benchmark, and profiling utilities
+scripts/                 # Native build and study-report utilities; see scripts/README.md
 docs/                    # Specifications, plans, and research notes
 reports/                 # Curated evidence; start at reports/README.md
 ```
@@ -51,7 +51,7 @@ not retained in the source tree.
 
 ```bash
 uv sync --locked --extra dev
-python scripts/build_native.py       # required: the Rust backend is the default
+uv run python scripts/build_native.py       # required: the Rust backend is the default
 uv run ruff check .
 uv run ruff format --check .
 uv run pytest -q
@@ -64,6 +64,8 @@ Tiny smoke (2 train / 1 val / 1 test days, 32 PPO steps) lives in
 `tests/integration/test_cli_pipeline.py`.
 
 ## CLI
+
+Quick workflow: [data → train → evaluate → report](scripts/README.md).
 
 Commands use `bus-rl <noun> <action>`:
 
@@ -313,7 +315,7 @@ own origin, so there is no separate frontend server to start.
 
 ```bash
 uv sync --locked --extra dev --extra server
-python scripts/build_native.py        # once: builds the Rust kernel
+uv run python scripts/build_native.py        # once: builds the Rust kernel
 SIMULATION__MANIFEST_PATH=data/generated/base/manifest.json \
   uv run uvicorn bus_rl.main:app --host 127.0.0.1 --port 8000
 # open http://127.0.0.1:8000/intro/ and /visualize/
@@ -371,7 +373,7 @@ shapes/dtypes, error mapping, ownership, batch lifecycle); it skips when the
 extension is not built.
 
 ```bash
-python scripts/build_native.py       # build and install src/bus_sim_native.so
+uv run python scripts/build_native.py       # build and install src/bus_sim_native.so
 cargo test -p bus-sim-core           # native unit tests
 uv run pytest -m native -q           # Python↔Rust interface contract
 ```

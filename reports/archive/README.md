@@ -15,3 +15,5 @@ Có thể xem lại toàn bộ bản trước khi dọn tại commit `782f3e4` t
 Dữ liệu từng ngày của study hiện tại vẫn giữ ở `runs/standard-v1/evidence/`.
 
 [Báo cáo cuối hiện tại](../README.md).
+
+Các script benchmark/phân tích thí nghiệm cũ đã được dọn khỏi `scripts/`; các lệnh lịch sử có thể dùng lại với source ở Git commit `fbb1c83`. Các lệnh hiện tại nằm trong `scripts/README.md` và CLI `uv run bus-rl`.

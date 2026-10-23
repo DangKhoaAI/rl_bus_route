@@ -44,3 +44,5 @@ Benchmarks (not quality gates):
   improvement claim.
 - A faster or leaner runtime does not prove a better policy on the same number of
   transitions.
+
+Các script benchmark/phân tích thí nghiệm cũ đã được dọn khỏi `scripts/`; các lệnh lịch sử có thể dùng lại với source ở Git commit `fbb1c83`. Các lệnh hiện tại nằm trong `scripts/README.md` và CLI `uv run bus-rl`.
