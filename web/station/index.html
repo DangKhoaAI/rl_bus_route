@@ -1451,7 +1451,9 @@ async function api(method, path, body) {
   const ms = (performance.now() - started).toFixed(0);
   if (!res.ok) {
     console.error(`[station-api] ${method} ${path} → ${res.status} in ${ms} ms`, body ?? '');
-    throw new Error(`${method} ${path} → ${res.status}`);
+    const error = new Error(`${method} ${path} → ${res.status}`);
+    error.status = res.status;
+    throw error;
   }
   const data = res.status === 204 ? null : await res.json();
   console.info(`[station-api] ${method} ${path} → ${res.status} in ${ms} ms`, data ? summarize(data) : '');
@@ -1654,6 +1656,8 @@ async function pollLive(live) {
       live.steps++;
       applySnapshot(res.snapshot, res.decisions);
     } catch (err) {
+      // The server session would otherwise hold one of its few slots until idle eviction.
+      api('DELETE', `/simulations/${live.id}`).catch(() => {});
       if (live === LIVE) showOffline(err);
       return;
     }
@@ -1666,7 +1670,10 @@ function showOffline(err) {
   liveError = err.message;
   resetSim();
   needsRender = true;
-  $('#note').textContent = `Không lấy được dữ liệu từ station API: ${err.message}`;
+  // 503 is the server's session limit, not an outage: say so, since waiting a few minutes fixes it.
+  $('#note').textContent = err.status === 503
+    ? 'Station đang chạy đủ số phiên tối đa; đóng bớt tab đang mở hoặc thử lại sau vài phút.'
+    : `Không lấy được dữ liệu từ station API: ${err.message}`;
   $('#note').hidden = false;
   $('#live').classList.add('paused');
   renderPanels(true);
@@ -1857,7 +1864,7 @@ function noteBurst(burst) {
     logDecision('BURST', text, 'warn');
     showToast('BURST', text);
   }
-  if (!LIVE.burstEnded && SIM.t >= burst.end_s) {
+  if (!LIVE.burstEnded && burst.end_s !== null) {
     LIVE.burstEnded = true;
     const minutes = Math.round((burst.end_s - burst.start_s) / 60);
     const text = `Hết đột biến tại ${stop}: thêm ${burst.added} khách trong ${minutes} phút`;

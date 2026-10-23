@@ -444,12 +444,13 @@ class SimulationService:
         """The surge as released by `time_s`; null before its first tick has been simulated."""
         if surge is None or surge.extras[0][0] * tick_s >= time_s:
             return None
+        end_s = (surge.extras[-1][0] + 1) * tick_s
         return Burst(
             route_id=surge.route_id,
             direction=surge.direction,
             stop_index=surge.stop_index,
             start_s=surge.extras[0][0] * tick_s,
-            end_s=(surge.extras[-1][0] + 1) * tick_s,
+            end_s=end_s if end_s <= time_s else None,
             added=sum(extra for tick, extra in surge.extras if tick * tick_s < time_s),
         )
 

@@ -166,7 +166,8 @@ class Burst(BaseModel):
     direction: int
     stop_index: int
     start_s: int
-    end_s: int
+    # Null while the surge is still releasing passengers, so its length is not given away early.
+    end_s: int | None
     added: int
 
 

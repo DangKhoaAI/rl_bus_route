@@ -163,6 +163,13 @@ def test_burst_surfaces_only_once_it_has_started(client):
     simulation_id = created["simulation_id"]
     try:
         assert created["burst"] is None
+        # Step until the surge shows: its end stays hidden while it is still running.
+        burst = None
+        while burst is None:
+            burst = client.post(
+                f"/simulations/{simulation_id}/steps", json={"decisions": 1}
+            ).json()["snapshot"]["burst"]
+        assert burst["end_s"] is None
         snapshot = client.post(
             f"/simulations/{simulation_id}/steps", json={"decisions": 200}
         ).json()["snapshot"]
