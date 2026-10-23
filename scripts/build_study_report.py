@@ -93,33 +93,26 @@ def image(plot):
     return ("image", buffer.getvalue())
 
 
-def savings_plot(comparisons, selected):
-    fig, ax = plt.subplots(figsize=(9, 3.8))
-    tick_labels = []
-    for i, split in enumerate(SPLITS):
-        policy = selected[split]
-        for j, baseline in enumerate(BASELINES):
-            row = comparisons[
-                (comparisons.policy == policy)
-                & (comparisons.split == split)
-                & (comparisons.baseline == baseline)
-            ].iloc[0]
-            y = i * 4 + j
-            color = COLORS[LABELS[policy]]
-            ax.plot(
-                [row.cost_saved_pct_ci95_low, row.cost_saved_pct_ci95_high],
-                [y, y],
-                color=color,
-                lw=2,
-            )
-            ax.scatter(row.cost_saved_pct, y, color=color, s=40, zorder=3)
-            tick_labels.append((y, f"{split.replace('test_', '')} / {BASELINES[baseline]}"))
-    ax.set_yticks([x[0] for x in tick_labels], [x[1] for x in tick_labels], fontsize=9)
-    ax.invert_yaxis()
+def savings_plot(comparisons, selected, split):
+    fig, ax = plt.subplots(figsize=(9, 2.8))
+    policy = selected[split]
+    color = COLORS[LABELS[policy]]
+    for y, baseline in enumerate(BASELINES):
+        row = comparisons[
+            (comparisons.policy == policy)
+            & (comparisons.split == split)
+            & (comparisons.baseline == baseline)
+        ].iloc[0]
+        ax.plot(
+            [row.cost_saved_pct_ci95_low, row.cost_saved_pct_ci95_high],
+            [y, y], color=color, lw=2,
+        )
+        ax.scatter(row.cost_saved_pct, y, color=color, s=40, zorder=3)
+    ax.set_yticks(range(len(BASELINES)), list(BASELINES.values()), fontsize=9)
+    ax.set_ylim(len(BASELINES) - 0.5, -0.5)
     ax.axvline(0, color="#555555", ls="--", lw=1)
-    ax.set_xlabel(
-        "Selected RL vs each RULE baseline: cost reduction (%) - paired 95% interval", fontsize=10
-    )
+    ax.set_title(f"{SPLITS[split][0]} — {LABELS[policy]}", fontsize=11)
+    ax.set_xlabel("Cost reduction (%) - paired 95% interval", fontsize=10)
     ax.grid(axis="x", alpha=0.2)
     for side in ("top", "right", "left"):
         ax.spines[side].set_visible(False)
@@ -238,12 +231,12 @@ def document(evidence):
         numeric_costs = [winner.total_cost_core, *[row.total_cost_core for row in baseline_rows]]
         row_index = len(rule_costs)
         rule_best.update(
-            (row_index, column + 2)
+            (row_index, column + 1)
             for column, cost in enumerate(numeric_costs)
             if math.isclose(cost, min(numeric_costs), rel_tol=1e-12, abs_tol=1e-12)
         )
         rule_costs.append(
-            [SPLITS[split][0], LABELS[winner.policy], *[fmt(cost) for cost in numeric_costs]]
+            [SPLITS[split][0], *[fmt(cost) for cost in numeric_costs]]
         )
         reductions = []
         for baseline in BASELINES:
@@ -355,17 +348,16 @@ def document(evidence):
                 ("h3", "1.1. Best RL so với các RULE baseline"),
                 (
                     "p",
-                    "Chọn RL có mean cost thấp nhất trong từng điều kiện test: RL-MLP10 ở điều kiện bình thường và gián đoạn giao thông; RL-Belief20-fade ở điều kiện tăng nhu cầu. Đây là lựa chọn mô tả trên kết quả đã đánh giá, không phải một cấu hình duy nhất thắng mọi điều kiện.",
+                    "Best RL: RL-MLP10 cho nhu cầu bình thường và gián đoạn giao thông; RL-Belief20-fade cho nhu cầu tăng đột biến.",
                 ),
                 table(
                     [
                         "Điều kiện",
-                        "Best RL",
-                        "Cost RL",
+                        "RL-MasablePPO",
                         *BASELINES.values(),
                     ],
                     rule_costs,
-                    [0.19, 0.20, 0.13, 0.14, 0.18, 0.16],
+                    [0.25, 0.18, 0.18, 0.20, 0.19],
                     best=rule_best,
                 ),
                 ("h3", "Mức giảm cost của Best RL (%) [CI 95%]"),
@@ -378,7 +370,7 @@ def document(evidence):
                     "legend",
                     "Ô xanh, chữ đậm: cost thấp nhất trong cùng điều kiện test. Mức giảm cost dương có lợi cho RL; CI được ghép cặp theo ngày, không bao gồm bất định do seed train.",
                 ),
-                savings_plot(comparisons, selected),
+                *(savings_plot(comparisons, selected, split) for split in SPLITS),
                 ("pagebreak", None),
                 ("h3", "1.2. So sánh các cấu hình RL với nhau"),
                 (

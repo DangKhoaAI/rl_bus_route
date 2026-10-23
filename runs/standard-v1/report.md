@@ -18,13 +18,13 @@
 
 #### 1.1. Best RL so với các RULE baseline
 
-Chọn RL có mean cost thấp nhất trong từng điều kiện test: RL-MLP10 ở điều kiện bình thường và gián đoạn giao thông; RL-Belief20-fade ở điều kiện tăng nhu cầu. Đây là lựa chọn mô tả trên kết quả đã đánh giá, không phải một cấu hình duy nhất thắng mọi điều kiện.
+Best RL: RL-MLP10 cho nhu cầu bình thường và gián đoạn giao thông; RL-Belief20-fade cho nhu cầu tăng đột biến.
 
-| Điều kiện | Best RL | Cost RL | RULE-Fixed | RULE-Proportional | RULE-Threshold |
-| --- | --- | --- | --- | --- | --- |
-| Nhu cầu bình thường | RL-MLP10 | 13,065.7 | 15,861.3 | 16,056.6 | 16,652.3 |
-| Nhu cầu tăng đột biến | RL-Belief20-fade | 25,178.5 | 33,747.4 | 27,980.7 | 26,531.9 |
-| Gián đoạn giao thông | RL-MLP10 | 13,412.4 | 16,307.8 | 16,549.8 | 16,924.6 |
+| Điều kiện | RL-MasablePPO | RULE-Fixed | RULE-Proportional | RULE-Threshold |
+| --- | --- | --- | --- | --- |
+| Nhu cầu bình thường | 13,065.7 | 15,861.3 | 16,056.6 | 16,652.3 |
+| Nhu cầu tăng đột biến | 25,178.5 | 33,747.4 | 27,980.7 | 26,531.9 |
+| Gián đoạn giao thông | 13,412.4 | 16,307.8 | 16,549.8 | 16,924.6 |
 
 #### Mức giảm cost của Best RL (%) [CI 95%]
 
