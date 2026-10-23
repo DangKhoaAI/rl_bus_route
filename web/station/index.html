@@ -217,6 +217,19 @@ button:active { transform: scale(.98); }
 .tabs button:hover { color: var(--ink); }
 .tab-clock { margin-left: auto; align-self: center; font: 600 .875rem var(--font-mono); color: var(--ink); font-variant-numeric: tabular-nums; }
 .tabs button[aria-selected="true"] { background: var(--panel-2); color: var(--ink); }
+.tabs .tab-grow { padding: .375rem; display: inline-flex; }
+.tabs .tab-grow[aria-pressed="true"] { background: var(--panel-2); color: var(--ink); }
+/* A tall list takes the whole right column, so the detail panel above it steps aside. */
+.stage.lists-tall { --lists-h: calc(100% - var(--edge) * 2); }
+.stage.lists-tall .side { display: none; }
+/* Minimized panels fold to their header; the KPI row keeps only total cost. */
+.min-btn { position: absolute; top: .375rem; right: .375rem; z-index: 1; width: 1.5rem; height: 1.5rem; border: 0; border-radius: .375rem; background: transparent; color: var(--muted); font: 700 1rem/1 var(--font-ui); cursor: pointer; }
+.min-btn:hover { background: var(--panel-2); color: var(--ink); }
+.tabs .min-btn { position: static; align-self: center; }
+.card.min > :not(:first-child):not(.min-btn) { display: none; }
+.lists.min { height: auto; }
+.kpis.min > .card:not(:last-of-type) { display: none; }
+@media (max-width: 900px) { .config, .map-key, .kpis, .side, .lists { position: relative; } }
 .tabpanel { overflow: auto; flex: 1; min-height: 0; scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
 .tabpanel::-webkit-scrollbar { width: .375rem; }
 .tabpanel::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: .1875rem; }
@@ -326,7 +339,7 @@ button:active { transform: scale(.98); }
   <main class="stage">
     <div class="viewport" id="viewport"><div class="labels" id="labels"></div></div>
 
-    <section class="card config" aria-label="Thiết lập thí nghiệm">
+    <section class="card config" id="config" aria-label="Thiết lập thí nghiệm">
       <h3>Thiết lập thí nghiệm</h3>
       <label>Bộ điều phối<select id="pick-controller" disabled></select></label>
       <label>Kịch bản<select id="pick-split" disabled></select></label>
@@ -346,7 +359,7 @@ button:active { transform: scale(.98); }
       </div>
     </section>
 
-    <div class="kpis">
+    <div class="kpis" id="kpis">
       <div class="card kpi">
         <span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="7" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14c3 0 5 2.2 5 5"/></svg></span>
         <span><small>Khách đang chờ</small><span class="v num" id="k-wait"></span><small id="k-wait-sub">đang kết nối API</small></span>
@@ -375,11 +388,14 @@ button:active { transform: scale(.98); }
 
     <aside class="card side" id="side" aria-live="polite"></aside>
 
-    <section class="card lists">
+    <section class="card lists" id="lists">
       <div class="tabs" role="tablist">
         <button role="tab" id="tab-buses" aria-selected="true" data-tab="buses">Xe</button>
         <button role="tab" id="tab-log" aria-selected="false" data-tab="log">Quyết định</button>
         <span class="tab-clock" id="log-clock" aria-label="Giờ mô phỏng">--:--:--</span>
+        <button class="tab-grow" id="lists-grow" aria-pressed="false" aria-label="Kéo dài khung danh sách" title="Kéo dài / thu gọn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 9 5-5 5 5M7 15l5 5 5-5"/></svg>
+        </button>
       </div>
       <div class="tabpanel" id="tabpanel" role="tabpanel"></div>
     </section>
@@ -1137,6 +1153,26 @@ function sideNoData() {
     <div class="statusrow">${status}</div>
     <div class="rows"><span class="muted">${liveError ? esc(liveError) : 'Trang chỉ hiển thị số liệu do station API trả về; không có bản dự phòng.'}</span></div>`;
 }
+// A function declaration, not a const: renderSide calls it before this point runs.
+function addMinButton(el, host = el) {
+  if (host.querySelector(':scope > .min-btn')) return;
+  const btn = document.createElement('button');
+  btn.className = 'min-btn';
+  const show = (on) => {
+    el.classList.toggle('min', on);
+    btn.textContent = on ? '+' : '–';
+    btn.setAttribute('aria-label', on ? 'Mở rộng khung' : 'Thu nhỏ khung');
+  };
+  show(storedJSON('station-minimized', []).includes(el.id));
+  btn.addEventListener('click', () => {
+    const on = !el.classList.contains('min');
+    show(on);
+    const ids = storedJSON('station-minimized', []).filter((id) => id !== el.id);
+    storeJSON('station-minimized', on ? [...ids, el.id] : ids);
+  });
+  host.appendChild(btn);
+}
+
 function renderSide() {
   const el = $('#side');
   if (!hasData) {
@@ -1144,6 +1180,7 @@ function renderSide() {
     el.classList.toggle('enter', sideShown !== state);
     sideShown = state;
     patch(el, sideNoData());
+    addMinButton(el);
     return;
   }
   const s = selection;
@@ -1152,6 +1189,7 @@ function renderSide() {
   sideShown = s;
   el.classList.toggle('enter', changed);
   patch(el, html);
+  addMinButton(el);
 }
 
 let tab = 'buses';
@@ -1403,6 +1441,25 @@ $('#runs-clear').addEventListener('click', () => {
   renderRuns();
 });
 renderRuns();
+
+/* ---------- panel size: stretch the list, minimize panels ---------- */
+// Both are kept per viewer, so a presenter's trimmed screen survives a reload.
+function storedJSON(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; }
+}
+function storeJSON(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* applies for this visit */ }
+}
+
+const setListsTall = (on) => {
+  $('.stage').classList.toggle('lists-tall', on);
+  $('#lists-grow').setAttribute('aria-pressed', on);
+  storeJSON('station-lists-tall', on);
+};
+$('#lists-grow').addEventListener('click', () => setListsTall(!$('.stage').classList.contains('lists-tall')));
+setListsTall(storedJSON('station-lists-tall', false));
+['#config', '#kpis', '#map-key'].forEach((sel) => addMinButton($(sel)));
+addMinButton($('#lists'), $('#lists .tabs'));
 
 const setPickersDisabled = (disabled) => PICKERS.forEach((sel) => { $(sel).disabled = disabled; });
 
