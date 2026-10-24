@@ -166,7 +166,14 @@ caption b { color: var(--ink); }
 </section>
 
 <section id="s2" data-num="2" data-t="Điều phối">
-  <h2><span class="num">2</span>Người điều phối làm gì</h2>
+  <h2><span class="num">2</span>Bốn cách điều phối</h2>
+  <p>Bốn người điều phối dùng cùng 12 xe và cùng 6 lệnh (Bảng 1); khác nhau ở cách quyết định lúc nào dùng lệnh nào.</p>
+  <ul class="t">
+    <li><b>Fixed</b>: không làm gì; 3 xe dự phòng nằm depot cả ca.</li>
+    <li><b>Threshold</b>: hàng chờ một tuyến vượt ngưỡng thì gửi thêm xe hoặc rút ngắn giãn cách.</li>
+    <li><b>Proportional</b>: chia xe cho các tuyến theo lượng khách vừa đến.</li>
+    <li><b>PPO</b>: không có luật viết sẵn; tự học cách chọn lệnh qua hàng nghìn ca mô phỏng [3, 4, 5, 6], để tổng chi phí cả ca nhỏ nhất [2].</li>
+  </ul>
   <div class="tw"><table>
     <caption><b>Bảng 1.</b> Sáu loại lệnh.</caption>
     <thead><tr><th>Lệnh</th><th>Tác dụng</th><th>Dùng khi</th></tr></thead>
@@ -179,22 +186,30 @@ caption b { color: var(--ink); }
       <tr><td><code>SET_HEADWAY</code></td><td>Đổi giãn cách xuất bến của một tuyến: 6, 10 hoặc 15 phút.</td><td>Dày chuyến khi đông, thưa khi vắng.</td></tr>
     </tbody>
   </table></div>
+</section>
+
+<section id="s3" data-num="3" data-t="Kịch bản">
+  <h2><span class="num">3</span>Kịch bản đánh giá</h2>
+  <p>Mỗi ngày mô phỏng là một kịch bản riêng: cao điểm ở tuyến nào, lúc nào, kẹt xe ra sao. PPO học trên 500 ngày, chọn mô hình trên 100 ngày khác, rồi được kiểm tra trên ba bộ, mỗi bộ 200 ngày chưa từng gặp.</p>
+  <div class="tw"><table>
+    <caption><b>Bảng 2.</b> Ba bộ kiểm tra.</caption>
+    <thead><tr><th>Bộ</th><th>Chuyện gì xảy ra</th><th>Kiểm tra điều gì</th></tr></thead>
+    <tbody>
+      <tr><td>Ngày thường</td><td>Giống ngày huấn luyện: một đợt cao điểm, kẹt xe nhẹ ngẫu nhiên.</td><td>Hiệu quả hằng ngày.</td></tr>
+      <tr><td>Burst</td><td>Thêm một trạm bỗng đông trong 5–10 phút: cứ 30 giây thêm 8–20 khách, bắt đầu khoảng phút 30–150.</td><td>Sự cố ngắn, bất ngờ, không có lúc học.</td></tr>
+      <tr><td>Traffic</td><td>Một tuyến chạy chậm 1,5–2 lần trong 30 phút.</td><td>Kẹt xe kéo dài, không có lúc học.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="s4" data-num="4" data-t="Một ca">
+  <h2><span class="num">4</span>Ra lệnh trong một ca</h2>
+  <p>Cứ 2 phút, người điều phối nhìn tình hình rồi chọn một lệnh (Hình 3). Hình 4 cho thấy mỗi cách điều phối dùng 6 lệnh ra sao.</p>
   <figure>
     <svg id="loop" viewBox="0 0 900 290" role="img" aria-label="Vòng lặp người điều phối và mô phỏng mỗi 2 phút"></svg>
     <div class="ctl"><button class="t" id="loopnext">Bước tiếp theo</button><button class="t" id="loophid" aria-pressed="false">Hiện phần bị che</button><span id="loopmsg" class="b"></span></div>
     <figcaption><b>Hình 3.</b> Một bước điều phối, lặp lại mỗi 2 phút. Người điều phối chỉ thấy những gì đã xảy ra, không thấy khách sắp tới [1].</figcaption>
   </figure>
-</section>
-
-<section id="s3" data-num="3" data-t="Controller">
-  <h2><span class="num">3</span>Bốn cách điều phối</h2>
-  <p>Bốn người điều phối dùng cùng 6 lệnh, cùng 12 xe; khác nhau ở cách quyết định lúc nào dùng lệnh nào (Hình 4).</p>
-  <ul class="t">
-    <li><b>Fixed</b>: không làm gì; 3 xe dự phòng nằm depot cả ca.</li>
-    <li><b>Threshold</b>: hàng chờ một tuyến vượt ngưỡng thì gửi thêm xe hoặc rút ngắn giãn cách.</li>
-    <li><b>Proportional</b>: chia xe cho các tuyến theo lượng khách vừa đến.</li>
-    <li><b>PPO</b>: không có luật viết sẵn; tự học cách chọn lệnh qua hàng nghìn ca mô phỏng [3, 4, 5, 6], để tổng chi phí cả ca nhỏ nhất [2].</li>
-  </ul>
   <figure>
     <video src="media/controllers.mp4" poster="media/controllers.jpg" controls muted playsinline preload="none" aria-label="Minh họa sáu lệnh điều phối, rồi chiến lược của Fixed, Threshold, Proportional và PPO trên cùng mạng ba tuyến"></video>
     <figcaption><b>Hình 4.</b> Minh họa, không phải số đo: trước hết là 6 lệnh; sau đó là cách mỗi controller dùng các lệnh đó. Thời điểm ra lệnh đổi theo từng ngày.</figcaption>
@@ -212,8 +227,8 @@ caption b { color: var(--ink); }
   </figure>
 </section>
 
-<section id="s4" data-num="4" data-t="Chi phí">
-  <h2><span class="num">4</span>Thế nào là điều phối tốt</h2>
+<section id="s5" data-num="5" data-t="Chi phí">
+  <h2><span class="num">5</span>Thế nào là điều phối tốt</h2>
   <ul class="t">
     <li>Mỗi ca được chấm bằng một con số gọi là chi phí, càng thấp càng tốt. Cứ 2 phút lại cộng thêm điểm phạt cho cả hai phía: khách (chờ, xe chật, bỏ về) và nhà xe (xe chạy, chạy rỗng, đổi lệnh).</li>
     <li>Nặng nhất là khách bỏ về: một người bằng 60 phút chờ.</li>
@@ -225,20 +240,6 @@ caption b { color: var(--ink); }
     <div class="ctl"><button class="t" id="reactive" aria-pressed="true">Phản ứng sau cao điểm</button><button class="t" id="proactive" aria-pressed="false">Đi trước cao điểm</button></div>
     <figcaption><b>Hình 6.</b> Minh họa: diện tích tô vàng là tổng thời gian chờ. Chỉ so hình dạng, không có số.</figcaption>
   </figure>
-</section>
-
-<section id="s5" data-num="5" data-t="Kịch bản">
-  <h2><span class="num">5</span>Kịch bản đánh giá</h2>
-  <p>Mỗi ngày mô phỏng là một kịch bản riêng: cao điểm ở tuyến nào, lúc nào, kẹt xe ra sao. PPO học trên 500 ngày, chọn mô hình trên 100 ngày khác, rồi được kiểm tra trên ba bộ, mỗi bộ 200 ngày chưa từng gặp.</p>
-  <div class="tw"><table>
-    <caption><b>Bảng 2.</b> Ba bộ kiểm tra.</caption>
-    <thead><tr><th>Bộ</th><th>Chuyện gì xảy ra</th><th>Kiểm tra điều gì</th></tr></thead>
-    <tbody>
-      <tr><td>Ngày thường</td><td>Giống ngày huấn luyện: một đợt cao điểm, kẹt xe nhẹ ngẫu nhiên.</td><td>Hiệu quả hằng ngày.</td></tr>
-      <tr><td>Burst</td><td>Thêm một trạm bỗng đông trong 5–10 phút: cứ 30 giây thêm 8–20 khách, bắt đầu khoảng phút 30–150.</td><td>Sự cố ngắn, bất ngờ, không có lúc học.</td></tr>
-      <tr><td>Traffic</td><td>Một tuyến chạy chậm 1,5–2 lần trong 30 phút.</td><td>Kẹt xe kéo dài, không có lúc học.</td></tr>
-    </tbody>
-  </table></div>
 </section>
 
 <section id="s6" data-num="6" data-t="Kết quả">
