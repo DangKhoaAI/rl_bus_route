@@ -98,9 +98,6 @@ caption b { color: var(--ink); }
 .cmp .bar { height: .45rem; margin-top: .3rem; background: var(--grey); opacity: .55; }
 .cmp tr.ppo .bar { background: var(--green); opacity: 1; }
 
-.panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.2rem 2rem; }
-.panels h4 { margin: 0 0 .3rem; font-size: .95rem; font-weight: 700; }
-.panels h4 small { font-weight: 400; color: var(--dim); }
 
 #toc { position: fixed; z-index: 5; left: 0; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: .1rem; font-size: .85rem; padding: 1.2rem 3rem 1.2rem 1rem; opacity: .4; transition: opacity .2s; }
 #toc:hover, #toc:focus-within { opacity: 1; }
@@ -113,7 +110,7 @@ caption b { color: var(--ink); }
 @media (max-width: 900px) { #toc { display: none; } }
 .refs { font-size: .9rem; max-width: 60rem; } .refs li { margin: .4rem 0; }
 
-@media (max-width: 760px) { section { min-height: auto; padding-left: 0; padding-block: 4.5rem 2.5rem; } .panels { grid-template-columns: 1fr; } }
+@media (max-width: 760px) { section { min-height: auto; padding-left: 0; padding-block: 4.5rem 2.5rem; } }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 </style>
 </head>
@@ -205,9 +202,15 @@ caption b { color: var(--ink); }
   </ul>
   <figure>
     <video src="media/controllers.mp4" poster="media/controllers.jpg" controls muted playsinline preload="none" aria-label="Minh họa sáu lệnh điều phối, rồi chiến lược của Fixed, Threshold, Proportional và PPO trên cùng mạng ba tuyến"></video>
-    <figcaption><b>Hình 4.</b> Minh họa, không phải số đo: trước hết là 6 lệnh, cùng màu với Hình 7; sau đó là cách mỗi controller dùng các lệnh đó. Thời điểm ra lệnh đổi theo từng ngày.</figcaption>
+    <figcaption><b>Hình 4.</b> Minh họa, không phải số đo: trước hết là 6 lệnh; sau đó là cách mỗi controller dùng các lệnh đó. Thời điểm ra lệnh đổi theo từng ngày.</figcaption>
   </figure>
-  <p>Bên trong PPO là một mạng nơ-ron nhỏ (Hình 5). Nó nhận mọi thứ người điều phối thấy, chấm điểm từng lệnh, gạch bỏ lệnh đang bị khóa, rồi chọn trong số còn lại. Một nhánh nữa đoán chi phí còn lại của ca; nhánh này chỉ dùng lúc học.</p>
+  <p>PPO có hai phần (Hình 5):</p>
+  <ul class="t">
+    <li><b>Actor</b> ra lệnh: nhìn tình hình rồi chọn một lệnh.</li>
+    <li><b>Critic</b> đoán: nhìn tình hình rồi đoán ca này còn tốn khoảng bao nhiêu.</li>
+    <li>Học bằng cách so: critic đoán còn tốn 100, actor gửi thêm xe cho tuyến A, rốt cuộc chỉ tốn 90. Lệnh đó tốt hơn dự đoán, nên lần sau gặp cảnh giống vậy actor hay chọn nó hơn. Nếu tốn 110 thì ngược lại.</li>
+    <li>Chạy thật chỉ cần actor; critic chỉ dùng lúc học.</li>
+  </ul>
   <figure>
     <video class="auto" src="media/policy_blocks.mp4" poster="media/policy_blocks.jpg" muted playsinline preload="metadata" aria-label="Sơ đồ khối của mạng PPO: cột quan sát, hai lớp chung, nhánh chọn lệnh đi qua bước khóa lệnh, nhánh đoán chi phí"></video>
     <figcaption><b>Hình 5.</b> Mạng của PPO. Cột bên trái là những gì người điều phối thấy; nhánh trên chấm điểm các lệnh, khối đỏ là bước khóa lệnh không hợp lệ; nhánh dưới đoán chi phí còn lại.</figcaption>
@@ -267,20 +270,6 @@ caption b { color: var(--ink); }
   </table></div>
 </section>
 
-<section id="s7" data-num="7" data-t="Hành vi">
-  <h2><span class="num">7</span>PPO học được gì</h2>
-  <ul class="t">
-    <li>Tung cả 3 xe dự phòng trong 3 bước đầu ca, trước khi hàng chờ kịp dài.</li>
-    <li>Sau đó gần như chỉ chỉnh giãn cách xuất bến, còn lại giữ nguyên.</li>
-    <li>Luật viết tay chờ hàng dài mới phản ứng: Proportional tới phút 56 mới đưa xe dự phòng ra.</li>
-  </ul>
-  <figure>
-    <div class="panels" id="grid"></div>
-    <figcaption><b>Hình 7.</b> 120 lệnh của ngày đầu bộ ngày thường, đo thật. Mỗi ô một bước 2 phút, mỗi hàng 20 phút; ô tối là NOOP. Fixed: 120 ô NOOP (chi phí 15.444,6).</figcaption>
-  </figure>
-  <p class="note">PPO ở đây là một lần huấn luyện lại cùng cấu hình, kém bản trong Bảng 3 ≈ 2,3%.</p>
-</section>
-
 <section id="refs" data-t="Tài liệu tham khảo">
   <h2>Tài liệu tham khảo</h2>
   <ol class="refs">
@@ -318,8 +307,6 @@ const COST = [
   ["Proportional", "", [16056.6, 27980.7, 16549.8]],
   ["Threshold", "", [16652.3, 26531.9, 16924.6]]
 ];
-/* Action colours of the per-day action grid. */
-const ACT = { N: ["NOOP", C.rule], D: ["DISPATCH", C.purple], S: ["SHORT_TURN", C.yellow], H: ["SET_HEADWAY", C.blue], R: ["REASSIGN", C.green], C: ["RECALL", C.red] };
 
 /* theme toggle, persisted per viewer */
 (() => {
@@ -473,40 +460,13 @@ addEventListener("load", linkRefs);
   document.querySelectorAll("video.auto").forEach(v => new IntersectionObserver(([e]) => { e.isIntersecting ? v.play().catch(() => {}) : v.pause(); }, { threshold: 0.4 }).observe(v));
 })();
 
-/* Fig 5: every decision of one day (test_id, first day), one letter per 2-minute step; letters as in ACT. */
-(() => {
-  const DAY = [
-    ["PPO (huấn luyện lại)", 13313.3, "SDDHHHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNHNHNNNHHNNNHHNNNHHNNNHNNNNN"],
-    ["Threshold", 16067.9, "CNNNNNNNNNDDDNNNNNNNNNDNNHNNNNNNHNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNCNNNNNNNCNNNNNNNNNNNNNNNNN"],
-    ["Proportional", 15752.4, "NNNNNNNNNNNNNNNNNNNNNNNNNNNNDDDHNNNNHNNNNNNNCNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN"]
-  ];
-  const box = $("#grid"), S = 22, G = 3, L = 52;
-  DAY.forEach(([name, cost, seq]) => {
-    const panel = document.createElement("div");
-    panel.innerHTML = `<h4>${name} <small>· chi phí ${fmt(cost)}</small></h4>`;
-    const svg = el("svg", { viewBox: `0 0 ${L + 10 * (S + G)} ${12 * (S + G) + 4}`, role: "img", "aria-label": `${name}: 120 lệnh trong ngày` }, panel);
-    for (let row = 0; row < 12; row++) {
-      note(svg, L - 8, row * (S + G) + S - 5, row * 20 + "′", "end", 13);
-      for (let col = 0; col < 10; col++) {
-        const k = seq[row * 10 + col];
-        const r = el("rect", { x: L + col * (S + G), y: row * (S + G), width: S, height: S, fill: ACT[k][1] }, svg);
-        if (k === "N") r.style.fillOpacity = .6;
-        el("title", {}, r).textContent = `phút ${(row * 10 + col) * 2}: ${ACT[k][0]}`;
-      }
-    }
-    box.appendChild(panel);
-  });
-})();
-
 /* figure legends: [colour, glyph, text] per figure element */
 (() => {
-  const acts = ["D", "S", "H", "R", "C", "N"].map(k => [ACT[k][1], "bar", ACT[k][0]]);
   const legends = {
     net: [[C.blue, "bar", "xe buýt"], [C.purple, "bar", "depot và xe dự phòng"], [C.yellow, "dot", "khách chờ"], [C.ink, "dot", "trạm"], [C.purple, "dash", "đường ra tuyến"]],
     loop: [[C.blue, "line", "dữ liệu trao đổi"], [C.purple, "dash", "phần bị che"], [C.yellow, "line", "bước đang xem"]],
     demand: [[C.yellow, "line", "lượng khách đến"], [C.red, "dash", "phút 180, hết khách mới"]],
-    area: [[C.yellow, "line", "số khách đang chờ"], [C.yellow, "box", "diện tích = tổng thời gian chờ"]],
-    grid: acts
+    area: [[C.yellow, "line", "số khách đang chờ"], [C.yellow, "box", "diện tích = tổng thời gian chờ"]]
   };
   for (const [id, items] of Object.entries(legends)) {
     const box = document.createElement("div"); box.className = "leg"; box.setAttribute("aria-label", "Chú thích");
