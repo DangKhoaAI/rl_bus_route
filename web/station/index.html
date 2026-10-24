@@ -124,6 +124,8 @@ button:active { transform: scale(.98); }
 /* Fleet-move toasts belong to the map; keep them off the table. */
 .stage:has(> .runs-view:not([hidden])) .toasts { display: none; }
 .runs { max-width: 56rem; margin: 0 auto; padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: .75rem; }
+.runs + .runs { margin-top: 1rem; }
+.runs[hidden] { display: none; }
 .runs-head { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
 .runs-head h3 { margin: 0 auto 0 0; font-size: 1rem; font-weight: 600; color: var(--ink); }
 .runs-empty { color: var(--muted); }
@@ -450,12 +452,28 @@ button:active { transform: scale(.98); }
           <button data-group="controller" aria-pressed="false">Theo controller</button>
         </div>
         <button id="runs-clear">Xoá</button>
+        <button id="runs-200" aria-pressed="false" aria-controls="runs-200-card">200 ngày</button>
       </div>
       <div class="runs-scroll"><table>
         <thead><tr id="runs-head-row"></tr></thead>
         <tbody id="runs-body"></tbody>
       </table></div>
       <p class="runs-empty" id="runs-empty">Chưa có ngày nào chạy hết ca. Cho mô phỏng chạy tới cuối ngày rồi đổi bộ điều phối để so trên cùng ngày.</p>
+    </section>
+    <!-- Precomputed with `bus-rl model evaluate` (runs/core-11/best.zip) and `bus-rl baseline run`
+         on the core manifest's test_id, test_ood_burst and test_ood_traffic splits, 200 days each. -->
+    <section class="card runs" id="runs-200-card" aria-label="Trung bình 200 ngày" hidden>
+      <div class="runs-head"><h3>Trung bình 200 ngày mỗi kịch bản (chạy sẵn)</h3></div>
+      <div class="runs-scroll"><table>
+        <thead><tr><th>Controller</th><th class="num">Ngày thường</th><th class="num">Burst</th><th class="num">Traffic</th></tr></thead>
+        <tbody>
+          <tr class="ctl-ppo"><td>ppo</td><td class="num best">13.371<small>rẻ nhất 200/200 ngày</small></td><td class="num best">25.577<small>rẻ nhất 115/200 ngày</small></td><td class="num best">13.675<small>rẻ nhất 200/200 ngày</small></td></tr>
+          <tr class="ctl-threshold"><td>threshold</td><td class="num">16.652<small>+24,5% · PPO rẻ hơn 200/200 ngày</small></td><td class="num">26.532<small>+3,7% · PPO rẻ hơn 129/200 ngày</small></td><td class="num">16.925<small>+23,8% · PPO rẻ hơn 200/200 ngày</small></td></tr>
+          <tr class="ctl-proportional"><td>proportional</td><td class="num">16.057<small>+20,1% · PPO rẻ hơn 200/200 ngày</small></td><td class="num">27.981<small>+9,4% · PPO rẻ hơn 143/200 ngày</small></td><td class="num">16.550<small>+21,0% · PPO rẻ hơn 200/200 ngày</small></td></tr>
+          <tr class="ctl-fixed"><td>fixed</td><td class="num">15.861<small>+18,6% · PPO rẻ hơn 200/200 ngày</small></td><td class="num">33.747<small>+31,9% · PPO rẻ hơn 196/200 ngày</small></td><td class="num">16.308<small>+19,3% · PPO rẻ hơn 200/200 ngày</small></td></tr>
+        </tbody>
+      </table></div>
+      <p class="runs-empty">Cost trung bình mỗi ngày, càng thấp càng tốt; % là tốn hơn PPO. Một ngày lẻ có thể khác: ở bộ Burst, Threshold tốt nhất 48 ngày, Proportional 37 ngày.</p>
     </section>
     </div>
 
@@ -1620,6 +1638,13 @@ $('#runs-clear').addEventListener('click', () => {
   renderRuns();
 });
 renderRuns();
+
+// The 200-day averages stay hidden until the presenter needs them for a question.
+$('#runs-200').addEventListener('click', (e) => {
+  const card = $('#runs-200-card');
+  card.hidden = !card.hidden;
+  e.currentTarget.setAttribute('aria-pressed', String(!card.hidden));
+});
 
 /* ---------- panel size: stretch the list, minimize panels ---------- */
 // Both are kept per viewer, so a presenter's trimmed screen survives a reload.
