@@ -179,12 +179,6 @@ caption b { color: var(--ink); }
       <tr><td><code>SET_HEADWAY</code></td><td>Đổi giãn cách xuất bến của một tuyến: 6, 10 hoặc 15 phút.</td><td>Dày chuyến khi đông, thưa khi vắng.</td></tr>
     </tbody>
   </table></div>
-  <h3>Luật chơi</h3>
-  <ul class="t">
-    <li>Xe đang chở khách không bị chuyển; mỗi tuyến luôn giữ ít nhất 2 xe.</li>
-    <li>Xe vừa nhận lệnh phải đợi 20 phút mới nhận lệnh khác; giãn cách của một tuyến vừa đổi phải đợi 10 phút mới đổi lại.</li>
-    <li>Lệnh nào phạm hai luật trên thì bị khóa trước, người điều phối chỉ chọn trong số lệnh còn lại. NOOP thì lúc nào cũng chọn được.</li>
-  </ul>
   <figure>
     <svg id="loop" viewBox="0 0 900 290" role="img" aria-label="Vòng lặp người điều phối và mô phỏng mỗi 2 phút"></svg>
     <div class="ctl"><button class="t" id="loopnext">Bước tiếp theo</button><button class="t" id="loophid" aria-pressed="false">Hiện phần bị che</button><span id="loopmsg" class="b"></span></div>
