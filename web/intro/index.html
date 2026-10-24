@@ -47,7 +47,8 @@ html.dash { overflow: hidden; }
 article { padding: 0 max(1rem, 4vw); }
 section { min-height: 100dvh; display: flex; flex-direction: column; justify-content: center; max-width: 80ch; margin-inline: auto; padding: 6rem 0 4rem; }
 section > * { width: 100%; }
-.title { margin-bottom: 1.4rem; }
+/* Same column as the sections, and starts below the fixed page switch. */
+.title { max-width: 80ch; margin: 0 auto 1.4rem; padding-top: 6rem; }
 .title h1 { font-weight: 400; font-size: clamp(2.2rem, 4.6vw, 3.8rem); line-height: 1.1; margin: 0 0 1rem; max-width: 22ch; letter-spacing: -.005em; }
 h2 { font-size: clamp(2rem, 4.2vw, 3.1rem); font-weight: 400; line-height: 1.12; margin: 0 0 .6rem; max-width: 22ch; }
 h2 .num { color: var(--dim); margin-right: .45em; font-feature-settings: "tnum"; }
